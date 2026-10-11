@@ -636,6 +636,12 @@ export function wireBooking(form) {
         return;
       }
       hint.textContent = '';
+      // A price beside each time only where the times differ in price — a
+      // rate by the hour (wiki/68). Where every time costs the same, the
+      // price is the services' and is said beside them: «09:00 · CHF 95» on
+      // thirty pills is one number read thirty times (11 October 2026).
+      const slotPrices = new Set(data.slots.map((one) => one.costs_minor ?? 0));
+      const pricedByTime = slotPrices.size > 1;
       for (const slot of data.slots) {
         const button = document.createElement('button');
         button.type = 'button';
@@ -646,8 +652,8 @@ export function wireBooking(form) {
           ? slot.ends ? `${dayAndHour(slot.start, false)} — ${dayAndHour(slot.ends, false)}` : dayAndHour(slot.start, false)
           : clock(slot.start);
         // What the booking starting here costs — the platform's number, every
-        // hour by its own row (wiki/68) — beside the time, whenever one came.
-        if (slot.costs_minor > 0) button.textContent += ` · ${money(slot.costs_minor, currency, pageLang())}`;
+        // hour by its own row (wiki/68) — beside the time, where it varies.
+        if (pricedByTime && slot.costs_minor > 0) button.textContent += ` · ${money(slot.costs_minor, currency, pageLang())}`;
         button.dataset.start = slot.start;
         button.addEventListener('click', () => {
           chosen = slot.start;
