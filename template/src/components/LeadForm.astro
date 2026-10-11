@@ -23,31 +23,37 @@
  */
 import { renderLeadForm } from '@jtakeit/kit/lead';
 import '@jtakeit/kit/lead.css';
-import { FORM, flPath } from '../copy/{{LOCALE}}';
+import { copyFor } from '../copy';
+import { localeOf, langOf, withLocale } from '../lib/locale';
 import { under } from '../lib/under';
-import { BLOCKS, LOCALE, words, type Field } from '../content/blocks';
+import { BLOCKS, words, type Field } from '../content/blocks';
+
+const locale = localeOf(Astro.url.pathname);
+const LANG = langOf(locale);
+const { FORM, flPath } = copyFor(locale);
 
 const declared: Field[] = BLOCKS.find((block) => block.type === 'cta_banner')?.asks ?? [];
 const asks = declared.map((ask) => ({
   key: ask.key,
-  label: words(ask.label, LOCALE),
+  label: words(ask.label, LANG),
   kind: ask.kind,
   required: ask.required,
   max: ask.max,
   min: ask.min,
-  options: (ask.options ?? []).map((value) => ({ value, label: words(ask.option_labels?.[value], LOCALE) })),
+  options: (ask.options ?? []).map((value) => ({ value, label: words(ask.option_labels?.[value], LANG) })),
 }));
 
 // `flPath` is undefined on a build without annotations, and the kit then
 // writes no `data-jtk-path` at all.
 //
-// The paths are the index page's: `copy/{{LOCALE}}` reads
-// `jtk/content/index.json`, and `blocks[5].title` is that document's fifth
+// The paths are the home page's of this language: its copy reads
+// `jtk/content/index.json` (or `jtk/content/<locale>.json`), and `blocks[5].title` is that document's fifth
 // block. On any other page the same path names a block that page does not
 // have, and the annotation lint says so seventy times on a site of eleven
 // pages (a bowling club, 8 October 2026). So the form annotates only where
 // its block lives; elsewhere it is the same form, editable from the index.
-const onIndex = ['/', `/${LOCALE}`, `/${LOCALE}/`].includes(Astro.url.pathname);
+const home = withLocale(locale, '/');
+const onIndex = [home, `${home}/`, `/${LANG}`, `/${LANG}/`].includes(Astro.url.pathname.replace(/^\/p\/[^/]+/, '') || '/');
 const at = (field: string) => (onIndex ? flPath('cta_banner', field) : undefined);
 const paths = {
   title: at('title'),

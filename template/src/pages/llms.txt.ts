@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { BUSINESS, INDEXABLE, PAGES, fullAddress } from '../data/site';
 import { allListed, href } from '../lib/entries';
+import { EVERY_LOCALE } from '../lib/locale';
 
 /**
  * A plain-text summary of the business for a language model that lands on the
@@ -19,7 +20,7 @@ export const GET: APIRoute = async () => {
   // What the owner writes, listed under its own heading. An assistant that
   // lands here is looking for what this business has said, and a title with an
   // address is the shortest honest form of it.
-  const collections = await allListed();
+  const collections = (await Promise.all(EVERY_LOCALE.map((locale) => allListed(locale)))).flat();
 
   const lines = [
     `# ${BUSINESS.name}`,

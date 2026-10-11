@@ -72,8 +72,18 @@ booking*. Empty means the front page.
 
 ```ts
 ---
-<BookingForm services={services} resources={masters} locale="de" combine={combine} scale={scale} kind={kind} currency="CHF" />
+<BookingForm services={services} resources={masters} locale="de" combine={combine} scale={scale} kind={kind} />
 ```
+
+**The currency is the site's, never the page's.** It is set once, in
+`jtk/site.json` (`"business": {"currency": "chf"}`) or on the Business facts in
+the panel, and the form, the price list and the total read it from there —
+`siteCurrency` in `src/lib/site.ts`, `money()` in `src/lib/money.ts`. Do not
+pass `currency="CHF"` or write a sign into a page: when the business changes its
+currency the diary and the payment follow, and a page with its own would go on
+saying francs. The platform's preflight reads the built prices and fails one in
+another currency. A price is whole minor units of the currency — 18000 is
+CHF 180, 1000 is ¥1000 — and `money()` counts the digits each currency has.
 
 The words that depend on the kind of business — «Записатися» or «Орендувати»,
 «Майстер» or «Авто», «Ви записані» or «Оренду підтверджено» — are the
@@ -111,6 +121,54 @@ changed in the panel needs no rebuild.
 Pass `resources` only when the visitor should choose; leave it out for a solo
 business and the platform assigns. The words are the component's, per locale;
 the page's own copy stays in `jtk/content`.
+
+## What the form does by default — and the rules behind it
+
+The kit's form arrives dressed (`@jtakeit/kit/elements/booking-ui`, on by
+default; `ui={false}` on `BookingForm` for the plain form, or the pieces by
+name: `ui="week parts"`). Each piece is an answer to something a visitor ran
+into on a real salon's page on 10 October 2026, and a site that draws its own
+form keeps the rules even where it changes the drawing:
+
+1. **Two steps.** What and when first — the services, whom, the day, the
+   time — then who is coming, with the choice summarised beside the name
+   (what, with whom, when and until when, how long) and a *Change* back. One
+   form throughout: with scripts off it is the whole form at once.
+2. **The day is a week of seven**, rolling from today, arrows a week either
+   way, the business's closed days (`open`, from `jtk/bookings.json`'s hours)
+   struck out. **Never yesterday**: the input's `min` is written when the site
+   is built, and a site built on Friday is read on Saturday — the floor is the
+   browser's today, in the browser's own day, not UTC's.
+3. **The times by the part of the day** — morning before noon, afternoon
+   before four, evening after — one part showing at a time, so thirty pills
+   are a dozen and nothing scrolls; each tab says its hours, not a count. A
+   part of one or two times joins its neighbour: no «Evening 16:00–16:00».
+4. **A master chosen greys out the services they do not do** («not with
+   Noa»), unticks them, and *Anyone* brings them back. The other direction —
+   a service chosen, the masters who do not do it — the platform's answer
+   says. Pass each resource's `does` (the entry's list) for this to work.
+5. **A time picked stays picked** when a service is added or taken away, if
+   the same start is still offered; when it is not, a line says why — the
+   visit is a different length now — rather than the pick vanishing.
+6. **The end of the visit** under the times, from the platform's own `ends`:
+   «Until about 10:45 · 1 h 15 min». Never the page's arithmetic.
+7. **A 24-hour clock in every language.** The sites are Swiss, German and
+   Ukrainian; «11:15 AM» reads as foreign.
+8. **The success is a screen of its own**: the steps and the summary go, the
+   line says *you are booked* and *with Noa*, and **the link is shown whole,
+   with Copy, under a sentence that says to keep it** — it is the booking's
+   only key. The platform's visitor page (`/_booking/<token>`) wears the
+   site's clothes through `public/_jtk/booking.css`, which the scaffold ships;
+   keep its tokens in step with the site's.
+9. **The Turnstile widget in the page's colours and language**, from the
+   root's `color-scheme` and `lang` — never the browser's. A light site once
+   showed a dark box saying «Успешно».
+10. **The hint says what is missing**: *pick a service* when a day is chosen
+    and no service, *choose a day* the other way round, and never a 404 page.
+
+`booking.css` keeps `.is-replaced` (the native day input and select, hidden
+but submitted) and `[data-stage]` (which step shows) — keep both whatever
+else is restyled.
 
 ## Its look is the site's to give
 

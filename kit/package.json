@@ -1,6 +1,6 @@
 {
   "name": "@jtakeit/kit",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "The framework-free half of a site on jtakeit: the booking form as an element and as markup, for Astro through @jtakeit/astro and for any other generator directly",
   "license": "MIT",
   "type": "module",
@@ -19,6 +19,10 @@
     "./booking/words": {
       "types": "./types/words.d.ts",
       "default": "./lib/booking/words.mjs"
+    },
+    "./booking/parts": {
+      "types": "./types/parts.d.ts",
+      "default": "./lib/booking/parts.mjs"
     },
     "./lead": {
       "types": "./types/lead.d.ts",
@@ -42,6 +46,10 @@
       "types": "./types/elements-booking.d.ts",
       "default": "./elements/booking.js"
     },
+    "./elements/booking-ui": {
+      "types": "./types/booking-ui.d.ts",
+      "default": "./elements/booking-ui.js"
+    },
     "./elements/lead": {
       "types": "./types/elements-lead.d.ts",
       "default": "./elements/lead.js"
@@ -59,6 +67,13 @@
     "./progress": {
       "types": "./types/progress.d.ts",
       "default": "./lib/progress.mjs"
+    },
+    "./phases": {
+      "types": "./types/phases.d.ts",
+      "default": "./lib/phases.mjs"
+    },
+    "./writing": {
+      "default": "./elements/writing.js"
     },
     "./content": {
       "types": "./types/content.d.ts",

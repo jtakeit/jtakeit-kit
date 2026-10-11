@@ -6,7 +6,7 @@
  * buttons, the way the scaffold's booking.md asks. Keep the `data-*` hooks and
  * the `[hidden]` rule below whatever you do to the rest.
  */
-.booking { display: grid; gap: var(--space-4, 1rem); max-width: 34rem; }
+.booking { display: grid; gap: var(--space-4, 1rem); max-width: 34rem; scroll-margin-top: 5rem; }
 
 /* The kind's words, until the platform has said them: the space kept, the
    salon's word not shown at a car rental. */
@@ -29,6 +29,60 @@
 .booking__links { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; margin: 0; }
 .booking__done-line { font-weight: 600; margin: 0; }
 .booking__done-when { margin: 0; }
+
+/* The look, by default (booking-ui.js): legible, and the site's to restyle.
+   Keep `.is-replaced` and `[data-stage]` whatever you do to the rest. */
+.booking > * { min-width: 0; }
+.booking__ends { margin: 0.35rem 0 0; }
+.booking__service.is-off { opacity: 0.5; cursor: default; }
+.booking__service-off { font-size: 0.8em; opacity: 0.75; }
+/* the native control stays for the form; the drawn one is what is seen */
+.booking .is-replaced { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); opacity: 0; pointer-events: none; }
+/* the week of days */
+.booking__days-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin: 0 0 0.4rem; }
+.booking__days-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0.3rem; }
+.booking__day, .booking__days-arrow, .booking__part, .booking__next, .booking__back, .booking__dd-trigger, .booking__dd-option, .booking__keep-copy {
+  font: inherit; color: inherit; background: transparent; border: 1px solid var(--color-line, currentColor); border-radius: var(--radius-sm, 0.5rem); cursor: pointer;
+}
+.booking__day { display: grid; gap: 0.1rem; padding: 0.4rem 0.1rem; text-align: center; line-height: 1.2; }
+.booking__day-wd { font-size: 0.7em; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; }
+.booking__day:disabled, .booking__days-arrow:disabled { opacity: 0.35; cursor: default; }
+.booking__day.is-chosen { background: var(--color-ink, #111); color: var(--color-bg, #fff); border-color: var(--color-ink, #111); }
+.booking__days-arrow { padding: 0.3rem 0.6rem; }
+/* the times by the part of the day */
+.booking__parts { display: flex; flex-wrap: wrap; gap: 0.25rem; margin: 0 0 0.5rem; }
+.booking__part { padding: 0.3rem 0.7rem; border-radius: 999px; }
+.booking__part.is-current { background: var(--color-ink, #111); color: var(--color-bg, #fff); border-color: var(--color-ink, #111); }
+.booking__part-n { font-size: 0.8em; opacity: 0.75; margin-left: 0.35rem; }
+/* the two steps */
+.booking__stepper { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin: 0; padding: 0; list-style: none; opacity: 0.75; }
+.booking__step { display: inline-flex; align-items: center; gap: 0.4rem; }
+.booking__step-n { display: inline-grid; place-items: center; width: 1.4rem; height: 1.4rem; border: 1px solid currentColor; border-radius: 999px; font-size: 0.8em; }
+.booking__step.is-current { opacity: 1; font-weight: 600; }
+.booking__step.is-current .booking__step-n, .booking__step.is-done .booking__step-n { background: var(--color-ink, #111); color: var(--color-bg, #fff); border-color: var(--color-ink, #111); }
+.booking[data-stage='1'] > [data-step='2'], .booking[data-stage='2'] > [data-step='1'] { display: none; }
+.booking[data-stage='done'] > .booking__stepper, .booking[data-stage='done'] > .booking__summary, .booking[data-stage='done'] > .booking__need, .booking[data-stage='done'] > .booking__next { display: none; }
+.booking__next { padding: 0.6rem 1.2rem; }
+.booking__need { margin: 0; color: var(--color-danger, #b3261e); }
+.booking__summary { display: grid; gap: 0.6rem; padding: 0.9rem 1rem; border: 1px solid var(--line, #e5e1d8); border-radius: var(--radius-sm, 0.5rem); }
+.booking__summary-label { margin: 0; font-size: 0.75em; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.7; }
+.booking__summary-list { display: grid; gap: 0.4rem; margin: 0; }
+.booking__summary-row dt { font-size: 0.8em; opacity: 0.7; }
+.booking__summary-row dd { margin: 0; }
+.booking__back { justify-self: start; padding: 0.3rem 0.8rem; border-radius: 999px; }
+/* the drawn choice of whom */
+.booking__dd { position: relative; }
+.booking__dd-trigger { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; width: 100%; padding: 0.55rem 0.75rem; text-align: left; }
+.booking__dd-list { position: absolute; inset-inline: 0; top: calc(100% + 0.25rem); z-index: 5; display: grid; padding: 0.25rem; background: var(--color-bg, #fff); border: 1px solid var(--line, #e5e1d8); border-radius: var(--radius-sm, 0.5rem); box-shadow: 0 10px 30px -12px rgb(0 0 0 / 0.3); }
+.booking__dd-option { border: 0; padding: 0.5rem 0.6rem; text-align: left; }
+.booking__dd-option:hover, .booking__dd-option:focus-visible { background: var(--line, #e5e1d8); }
+.booking__dd-option.is-chosen { font-weight: 600; }
+.booking__dd-option:disabled { opacity: 0.45; cursor: default; }
+/* the link, kept */
+.booking__keep { display: grid; gap: 0.4rem; }
+.booking__keep-row { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.booking__keep-link { flex: 1; min-width: 12rem; font: inherit; }
+.booking__keep-copy, .booking__keep-open { display: inline-flex; align-items: center; padding: 0.45rem 0.8rem; text-decoration: none; }
 
 /* `hidden` means hidden, whatever the element's class says: every state here
    is shown and hidden by the attribute, and a class that sets `display` would

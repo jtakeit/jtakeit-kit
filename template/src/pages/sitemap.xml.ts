@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { INDEXABLE, PAGES, canonicalFor } from '../data/site';
 import { allListed, href } from '../lib/entries';
+import { EVERY_LOCALE } from '../lib/locale';
 
 /**
  * The pages are written by hand in `PAGES` rather than generated, so that
@@ -22,7 +23,7 @@ export const GET: APIRoute = async () => {
     for (const page of PAGES) {
       urls.push({ loc: canonicalFor(page.path), priority: page.priority });
     }
-    for (const { collection, entries } of await allListed()) {
+    for (const { collection, entries } of (await Promise.all(EVERY_LOCALE.map((locale) => allListed(locale)))).flat()) {
       for (const entry of entries) {
         // Below every page of the site and above nothing: an entry is worth
         // crawling and is not what the site is for.

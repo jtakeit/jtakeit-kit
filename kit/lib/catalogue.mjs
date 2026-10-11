@@ -1346,13 +1346,28 @@ const sharedBlocks = existsSync(sharedFile)
 const byType = new Map(catalogue.blocks.map((block) => [block.type, block]));
 const disagreements = [];
 
+/** `/de/services/x` without its language: `/services/x`. The site's own language has no prefix. */
+function basePathOf(path, locales) {
+  for (const locale of locales) {
+    if (path === `/${locale}` || path === `/${locale}/`) return '/';
+    if (path.startsWith(`/${locale}/`)) return path.slice(locale.length + 1);
+  }
+  return path;
+}
+
 for (const page of pages) {
   const onThePage = annotationsByPage.get(page.path);
   if (onThePage === undefined) {
     // A collection with `pages: false` builds no page for its entries: they
     // are read by the page that lists them and by the diary.
+    // Said by the entry's own collection, or by its address — with the
+    // language in front of it for an entry in another one: `/de/services/x`
+    // is the `services` collection's as much as `/services/x` is (wiki/75 of
+    // the platform; a German salon's eight services were each reported as a
+    // page the build did not produce, 10 October 2026).
+    const bare = basePathOf(page.path, catalogue.locales ?? []);
     const listedOnly = collections.some(
-      (c) => c.pages === false && page.path.startsWith(`${c.prefix}/`),
+      (c) => c.pages === false && (page.collection === c.name || bare.startsWith(`${c.prefix}/`)),
     );
     if (listedOnly) {
       /*
@@ -1502,8 +1517,9 @@ for (const [where, found] of annotationsByPage) {
        * against the entry's own type.
        */
       const entry = pages.find((one) => one.path === address);
+      // By the entry's collection, or its address without the language.
       const listedOnly = entry !== undefined && collections.some(
-        (c) => c.pages === false && address.startsWith(`${c.prefix}/`),
+        (c) => c.pages === false && (entry.collection === c.name || basePathOf(address, catalogue.locales ?? []).startsWith(`${c.prefix}/`)),
       );
       if (listedOnly) {
         const m = /^blocks\[(\d+)\]\.([A-Za-z0-9_]+)/.exec(inner);

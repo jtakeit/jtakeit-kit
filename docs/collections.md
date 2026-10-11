@@ -36,6 +36,25 @@ price list are the same mechanism with different words.
 
 ---
 
+## A blog, turned on
+
+The scaffold keeps one ready and off. `jtk create --blog` turns it on, or two
+lines at the foot of `src/content/blocks.ts` do:
+
+```ts
+BLOCKS.push(BLOG_POST);
+COLLECTIONS.push(BLOG_COLLECTION);
+```
+
+`BLOG_POST` is the post type with the five reserved keys; `BLOG_COLLECTION` is
+`blog` at `/blog`, newest first. The listing is
+`src/pages/[...lang]/blog/index.astro`, which builds itself once the collection
+is there (and at `/de/blog` for a site in German); a post's page is
+`[...entry].astro`, the feed `/blog/rss.xml`. Write the first posts as
+`jtk/content/blog/<slug>.json` — a blog launched empty says the business
+stopped caring before it started. What follows is how any other collection is
+made.
+
 ## What you write
 
 **One entry in `src/content/blocks.ts`**, beside the blocks:
@@ -218,6 +237,14 @@ data-jtk-path="page:/blog/healing:blocks[0].title"
 The admin resolves it against that page, writes it there, and the post's own
 page updates with it. `fl-check` holds the claim from the other end: an address
 this site did not build, or a field that page does not offer, fails.
+
+**Annotate only what the owner taps.** On a tile that is the title and the
+cover. The date and the excerpt are `no_tap_target` on the post type — edited
+in the panel beside the post — and a `page:` path to one is refused by the
+platform's build (`JTK_E_ANNOTATION_UNKNOWN … has no field for`). Draw them
+with `data-jtk-fixed`, which says the words are not this page's to edit, and
+the check is satisfied both ways. The scaffold's blog listing does exactly
+this.
 
 **Only where a page renders another page's content.** A heading you wrote in
 *this* page's document is this page's, however much it looks like a tile.

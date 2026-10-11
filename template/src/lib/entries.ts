@@ -73,14 +73,21 @@ export async function rendered(entry: Entry) {
 }
 
 /** Every entry of a collection, listable, in order. */
-export async function listed(name: string): Promise<Entry[]> {
+/** The slug an entry shares across its languages: `de/first-look` is `first-look`. */
+export function slugOf(entry: Entry): string {
+  const locale = String(entry.data.locale ?? '');
+  return locale === '' ? entry.id : entry.id.slice(locale.length + 1);
+}
+
+/** The entries of one language — the site's own for `''` — in the collection's order, the unfinished ones dropped. */
+export async function listed(name: string, locale = ''): Promise<Entry[]> {
   const collection = collectionNamed(name);
   // `as never` for the same reason: with no collections the parameter's type is
   // `never`, and a string is not assignable to it. The name has already been
   // checked against COLLECTIONS by collectionNamed above.
   const all = (await getCollection(name as never)) as unknown as Entry[];
 
-  const out = all.filter((entry) => entry.data.visible !== false);
+  const out = all.filter((entry) => entry.data.visible !== false && String(entry.data.locale ?? '') === locale);
   const by = collection.order?.by;
   if (by === undefined || by === 'manual') return out;
 
@@ -93,18 +100,35 @@ export async function listed(name: string): Promise<Entry[]> {
  * and llms.txt — which list addresses, and an entry of a collection without
  * pages (a rate, a table) has none: it is a row of its collection's listing.
  */
-export async function allListed(): Promise<{ collection: Collection; entries: Entry[] }[]> {
+export async function allListed(locale = ''): Promise<{ collection: Collection; entries: Entry[] }[]> {
   return Promise.all(
     COLLECTIONS.filter((collection) => collection.pages !== false).map(async (collection) => ({
       collection,
-      entries: await listed(collection.name),
+      entries: await listed(collection.name, locale),
     })),
   );
 }
 
 /** Where one entry lives. `id` is the file's name under the collection. */
+/** The entry's address: `/blog/first-look`, or `/de/blog/first-look` for its German. */
 export function href(collection: Collection, entry: Entry): string {
-  return `${base()}${collection.prefix.replace(/^\//, '')}/${entry.id}/`;
+  return `${base()}${routeOf(collection, entry)}/`;
+}
+
+/** The route Astro builds for an entry, without the base: `de/blog/first-look`. */
+export function routeOf(collection: Collection, entry: Entry): string {
+  const locale = String(entry.data.locale ?? '');
+  return `${locale === '' ? '' : `${locale}/`}${collection.prefix.replace(/^\//, '')}/${slugOf(entry)}`;
+}
+
+/** The other languages this entry exists in, as `<Layout alternates>` wants them. */
+export async function alternatesOf(collection: Collection, entry: Entry): Promise<{ locale: string; path: string }[]> {
+  const slug = slugOf(entry);
+  const all = (await getCollection(collection.name as never)) as unknown as Entry[];
+  const found = all
+    .filter((one) => slugOf(one) === slug && one.data.visible !== false)
+    .map((one) => ({ locale: String(one.data.locale ?? ''), path: `/${routeOf(collection, one)}` }));
+  return found.length > 1 ? found : [];
 }
 
 function compare(a: unknown, b: unknown): number {

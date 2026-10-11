@@ -25,23 +25,30 @@
  * the design pass is every `data-jtk-path`.
  */
 import Layout from '../layouts/Layout.astro';
+import { siteCurrency } from '../lib/site';
 import BookingForm from '../components/BookingForm.astro';
 import { Image } from 'astro:assets';
-import { BLOCKS, COLLECTIONS, LOCALE, MODULES, words, type Collection, type Field } from '../content/blocks';
-import { listed, type Entry } from '../lib/entries';
+import { BLOCKS, COLLECTIONS, MODULES, words, type Collection, type Field } from '../content/blocks';
+import { listed, slugOf, type Entry } from '../lib/entries';
+import { EVERY_LOCALE, langOf, withLocale } from '../lib/locale';
 import { isUpload, uploaded } from '../lib/uploads';
 import { photo } from '../lib/photos';
 import { money as priced } from '../lib/money';
 
 export async function getStaticPaths() {
-  return COLLECTIONS.filter((one) => one.pages === false).map((collection) => ({
-    params: { listing: collection.prefix.replace(/^\//, '') },
-    props: { collection },
-  }));
+  // A listing per language: `/services`, and `/de/services` beside it.
+  return COLLECTIONS.filter((one) => one.pages === false).flatMap((collection) =>
+    EVERY_LOCALE.map((locale) => ({
+      params: { listing: `${locale === '' ? '' : `${locale}/`}${collection.prefix.replace(/^\//, '')}` },
+      props: { collection, locale },
+    })),
+  );
 }
 
-const { collection } = Astro.props as { collection: Collection };
-const entries: Entry[] = await listed(collection.name);
+const { collection, locale } = Astro.props as { collection: Collection; locale: string };
+const entries: Entry[] = await listed(collection.name, locale);
+// A listing exists in every language the site has.
+const alternates = EVERY_LOCALE.map((one) => ({ locale: one, path: withLocale(one, collection.prefix) }));
 const type = BLOCKS.find((one) => one.type === collection.type);
 
 // The fields a row shows: those the owner edits by tapping them. The rest —
@@ -51,19 +58,19 @@ const shown: Field[] = (type?.fields ?? []).filter(
   (field) => TAPPABLE.has(field.kind) && field.client_editable !== false && field.no_tap_target !== true && field.multiple !== true,
 );
 
-const lang = LOCALE.slice(0, 2);
+const lang = langOf(locale).slice(0, 2);
 const settingsFiles = import.meta.glob<{ blocks?: Record<string, unknown>[] }>('/jtk/bookings.json', { eager: true, import: 'default' });
 const settings = Object.values(settingsFiles)[0]?.blocks?.[0] ?? {};
-const siteFiles = import.meta.glob<{ business?: { currency?: string } }>('/jtk/site.json', { eager: true, import: 'default' });
-const currency = Object.values(siteFiles)[0]?.business?.currency ?? '';
+// The site's, as the platform wrote it (lib/site): never a page's own.
+const currency = siteCurrency;
 
 /** A length as the trade says it: whole days, whole hours, or minutes. */
 function length(minutes: number): string {
   const [unit, n] = minutes % 1440 === 0 ? ['day', minutes / 1440] : minutes % 60 === 0 ? ['hour', minutes / 60] : ['minute', minutes];
-  return new Intl.NumberFormat(LOCALE, { style: 'unit', unit, unitDisplay: 'long' }).format(n);
+  return new Intl.NumberFormat(langOf(locale), { style: 'unit', unit, unitDisplay: 'long' }).format(n);
 }
 
-const money = (minor: number): string => priced(minor, currency, LOCALE);
+const money = (minor: number): string => priced(minor, currency, langOf(locale));
 
 const bookings = MODULES.bookings;
 const sells = bookings?.services === collection.name;
@@ -72,22 +79,31 @@ const form = sells
       services: entries
         .filter((entry) => typeof entry.data.takes === 'number')
         .map((entry) => ({
-          slug: entry.id,
+          slug: slugOf(entry),
           title: String(entry.data.title ?? entry.id),
           takes: entry.data.takes as number,
           costs: typeof entry.data.costs === 'number' ? entry.data.costs : undefined,
           group: typeof entry.data.group === 'string' ? entry.data.group : undefined,
         })),
       resources: bookings?.resources
-        ? (await listed(bookings.resources)).map((entry) => ({ slug: entry.id, title: String(entry.data.title ?? entry.id) }))
+        ? (await listed(bookings.resources, locale)).map((entry) => ({
+            slug: slugOf(entry),
+            title: String(entry.data.title ?? entry.id),
+            // What each does, for the form to grey the other services out once
+            // they are chosen; empty is everything.
+            does: ((entry.data.does as { service: string }[] | undefined) ?? []).map((row) => row.service),
+          }))
         : [],
+      // The days the business opens, for the week of days: a closed day is
+      // not a choice.
+      open: [...new Set(((settings.hours as { day: string }[] | undefined) ?? []).map((row) => row.day))],
     }
   : undefined;
 
-const heading = words(collection.label);
+const heading = words(collection.label, langOf(locale));
 ---
 
-<Layout title={heading} description="">
+<Layout title={heading} description="" alternates={alternates}>
   <main id="content">
     <section class="listing">
       {/* The collection's own name, from the catalogue: the repository's, not a
@@ -96,7 +112,7 @@ const heading = words(collection.label);
       <ul class="listing-rows">
         {
           entries.map((entry) => {
-            const at = `${collection.prefix}/${entry.id}`;
+            const at = withLocale(locale, `${collection.prefix}/${slugOf(entry)}`);
             return (
               <li class="listing-row">
                 {shown.map((field) => {
@@ -127,6 +143,7 @@ const heading = words(collection.label);
           <BookingForm
             services={form.services}
             resources={form.resources}
+            open={form.open}
             locale={(['uk', 'de', 'en'].includes(lang) ? lang : 'en') as 'uk' | 'de' | 'en'}
             combine={settings.combine === true}
             scale={typeof settings.scale === 'string' ? settings.scale : ''}

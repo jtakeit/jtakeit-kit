@@ -8,6 +8,8 @@ export interface Named {
   /** `'person'` for a price times the party — a class per place, shoes; the list says so and the running total multiplies. */
   per?: 'booking' | 'person';
   group?: string;
+  /** For a resource: the services they perform, by slug. The element greys the others out once they are chosen. */
+  does?: string[];
 }
 
 export interface BookingFormProps {
@@ -24,6 +26,10 @@ export interface BookingFormProps {
   /** The element around the form, `jtk-booking`; `''` for none. */
   tag?: string;
   now?: Date;
+  /** The days the business opens, by name (`monday`…); the week of days strikes the others out. */
+  open?: string[];
+  /** The form's look — two steps, the week, the parts of the day, the drawn choice — on by default; `false` for the plain form, or the ones wanted: `'week parts'`. */
+  ui?: boolean | string;
 }
 
 /** What the form sends to /api/book, as `data-sends` says it. */

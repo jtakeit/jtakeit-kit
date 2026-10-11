@@ -4,7 +4,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { join, relative, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { HAST_PLUGINS } from '../../markdown.mjs';
-import { BLOCKS, type Collection } from '../content/blocks';
+import { BLOCKS, LOCALES, type Collection } from '../content/blocks';
 // The one place that says what a specimen is called. The meta plugin needs the
 // same answer — an address nobody can find is a draft the edge hands to
 // anybody — and a rule written twice is a rule that ends up meaning two things.
@@ -48,7 +48,7 @@ export function entries(collection: Collection): Loader {
   return {
     name: 'jtakeit-entries',
     async load(ctx: LoaderContext) {
-      const base = join(process.cwd(), 'jtk', 'content', collection.prefix.replace(/^\//, ''));
+      const prefix = collection.prefix.replace(/^\//, '');
       // No `image:` here on purpose. The processor's image option is
       // `{ domains, remotePatterns }` — which remote pictures may be fetched —
       // and not the site's `{ layout }`. Passing the latter type-checked as
@@ -59,7 +59,14 @@ export function entries(collection: Collection): Loader {
       /** Whatever this collection's own entries show, for the specimens below. */
       const seen: string[] = [];
 
-      for (const file of await jsonUnder(base)) {
+      // Every language the site has: its own under `jtk/content/<prefix>/`,
+      // the others under `jtk/content/<locale>/<prefix>/` — the platform's
+      // own layout for a document at `/de/blog/first-look`. An entry in
+      // another language is `<locale>/<slug>` here and carries `locale`,
+      // so a listing can take its own and a route can put the language in
+      // front (docs/languages.md).
+      const roots = ['', ...LOCALES].map((locale) => ({ locale, base: join(process.cwd(), 'jtk', 'content', locale, prefix) }));
+      for (const { locale, base } of roots) for (const file of await jsonUnder(base)) {
         const raw = await readFile(file, 'utf8');
         const document = JSON.parse(raw) as {
           blocks?: Record<string, unknown>[];
@@ -74,13 +81,16 @@ export function entries(collection: Collection): Loader {
         const post = blocks[0] ?? {};
         const body = typeof post.body === 'string' ? post.body : '';
 
-        const id = relative(base, file).split(sep).join('/').replace(/\.json$/, '');
+        const slug = relative(base, file).split(sep).join('/').replace(/\.json$/, '');
+        const id = locale === '' ? slug : `${locale}/${slug}`;
         const rendered = await drawn(renderer, body, pathToFileURL(file));
 
         ctx.store.set({
           id,
           data: {
             ...post,
+            /** `''` for the site's own language, `'de'` for its German. */
+            locale,
             /** Everything after the post, for the template to render. */
             rest: await written(renderer, blocks.slice(1), file),
             /** Whether the site lists it. The page itself is always built. */

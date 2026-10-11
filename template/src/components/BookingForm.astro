@@ -24,6 +24,7 @@
  * what the platform books against; titles are what the visitor reads.
  */
 import { renderBookingForm } from '@jtakeit/kit/booking';
+import { siteCurrency } from '../lib/site';
 import '@jtakeit/kit/booking.css';
 import { under } from '../lib/under';
 
@@ -39,6 +40,8 @@ interface Named {
   per?: 'booking' | 'person';
   /** A heading the services are listed under, where the catalogue groups them. */
   group?: string;
+  /** For a resource: the services they perform, by slug — the form greys the others out once they are chosen. */
+  does?: string[];
 }
 
 interface Props {
@@ -71,11 +74,19 @@ interface Props {
    * platform has said them, rather than shown in a salon's for a moment.
    */
   kind?: string;
+  /** The days the business opens, by name — the week of days strikes the others out. From `jtk/bookings.json`'s hours. */
+  open?: string[];
+  /**
+   * The form's look — two steps, the week of days, the times by the part of
+   * the day, the drawn choice of whom — on by default (`@jtakeit/kit`'s
+   * `booking-ui`). `false` for the plain form, or the pieces by name.
+   */
+  ui?: boolean | string;
 }
 
-const { services, resources = [], locale, daysAhead = 30, combine = false, currency = 'CHF', scale = '', kind = '' } = Astro.props;
+const { services, resources = [], locale, daysAhead = 30, combine = false, currency = siteCurrency, scale = '', kind = '', open = [], ui = true } = Astro.props;
 
-const html = renderBookingForm({ services, resources, locale, daysAhead, combine, currency, scale, kind, api: under('/api/') });
+const html = renderBookingForm({ services, resources, locale, daysAhead, combine, currency, scale, kind, open, ui, api: under('/api/') });
 ---
 
 <Fragment set:html={html} />

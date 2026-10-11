@@ -1,0 +1,70 @@
+---
+/**
+ * The blog's listing — `/blog`, and `/de/blog` for each other language.
+ *
+ * Built only when the site has a collection named `blog`: turned on with
+ * `jtk create --blog`, or by the two lines at the foot of
+ * `src/content/blocks.ts` (`BLOCKS.push(BLOG_POST)`,
+ * `COLLECTIONS.push(BLOG_COLLECTION)`). A site without one builds nothing
+ * here. A collection whose prefix is not `/blog` writes its own listing page
+ * the same way (docs/collections.md).
+ *
+ * The heading is the collection's own name, fixed. Each tile's words are
+ * that post's, and only what the owner edits by tapping is annotated: the
+ * title and the cover, with the post's page-qualified path, so a tap opens
+ * the post. The date and the excerpt are drawn plain — they are
+ * `no_tap_target`, edited in the panel beside the post, and the platform's
+ * build refuses a tap on them (JTK_E_ANNOTATION_UNKNOWN).
+ */
+import { Image } from 'astro:assets';
+import Layout from '../../../layouts/Layout.astro';
+import { COLLECTIONS, words } from '../../../content/blocks';
+import { listed, href, slugOf } from '../../../lib/entries';
+import { isUpload, uploaded } from '../../../lib/uploads';
+import { photo } from '../../../lib/photos';
+import { EVERY_LOCALE, localeParams, langOf, withLocale } from '../../../lib/locale';
+
+export function getStaticPaths() {
+  return COLLECTIONS.some((one) => one.name === 'blog' && one.pages !== false) ? localeParams() : [];
+}
+
+const locale = Astro.params.lang ?? '';
+const LANG = langOf(locale);
+const blog = COLLECTIONS.find((one) => one.name === 'blog')!;
+const posts = await listed('blog', locale);
+const heading = words(blog.label, LANG);
+const when = new Intl.DateTimeFormat(LANG, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+const dated = (value: unknown): string => {
+  const day = new Date(String(value ?? ''));
+  return Number.isNaN(day.getTime()) ? '' : when.format(day);
+};
+// A listing exists in every language the site has.
+const alternates = EVERY_LOCALE.map((one) => ({ locale: one, path: withLocale(one, blog.prefix) }));
+---
+
+<Layout title={heading} description="" alternates={alternates}>
+  <main id="content">
+    <section class="listing listing--posts">
+      <h1 data-jtk-fixed>{heading}</h1>
+      <ul class="posts">
+        {posts.map((post) => {
+          const at = withLocale(locale, `${blog.prefix}/${slugOf(post)}`);
+          const src = typeof post.data.cover === 'string' ? post.data.cover : '';
+          const cover = src ? (isUpload(src) ? uploaded(src) : photo(src)) : undefined;
+          return (
+            <li class="post-card">
+              <a href={href(blog, post)}>
+                {cover && (
+                  <Image src={cover} alt={String(post.data.title ?? '')} data-jtk-path={`page:${at}:blocks[0].cover`} widths={[480, 960]} sizes="(min-width: 900px) 30rem, 92vw" layout="none" />
+                )}
+                {dated(post.data.date) && <time datetime={String(post.data.date)} data-jtk-fixed>{dated(post.data.date)}</time>}
+                <h2 data-jtk-path={`page:${at}:blocks[0].title`}>{String(post.data.title ?? '')}</h2>
+                {typeof post.data.excerpt === 'string' && post.data.excerpt !== '' && <p data-jtk-fixed>{post.data.excerpt}</p>}
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  </main>
+</Layout>

@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { COLLECTIONS, words } from '../content/blocks';
 import { INDEXABLE, canonicalFor } from '../data/site';
 import { allListed, href } from '../lib/entries';
+import { EVERY_LOCALE } from '../lib/locale';
 
 /**
  * One feed per collection, at `/blog/rss.xml`.
@@ -16,15 +17,17 @@ import { allListed, href } from '../lib/entries';
  */
 export async function getStaticPaths() {
   // A collection without pages has no feed: its entries have no address.
-  return COLLECTIONS.filter((collection) => collection.pages !== false).map((collection) => ({
-    params: { feed: `${collection.prefix.replace(/^\//, '')}/rss` },
-    props: { name: collection.name },
-  }));
+  return COLLECTIONS.filter((collection) => collection.pages !== false).flatMap((collection) =>
+    EVERY_LOCALE.map((locale) => ({
+      params: { feed: `${locale === '' ? '' : `${locale}/`}${collection.prefix.replace(/^\//, '')}/rss` },
+      props: { name: collection.name, locale },
+    })),
+  );
 }
 
 export const GET: APIRoute = async ({ props }) => {
-  const name = (props as { name: string }).name;
-  const all = await allListed();
+  const { name, locale } = props as { name: string; locale: string };
+  const all = await allListed(locale);
   const found = all.find((one) => one.collection.name === name);
   const entries = INDEXABLE && found ? found.entries : [];
 

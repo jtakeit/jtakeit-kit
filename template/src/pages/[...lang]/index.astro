@@ -41,13 +41,21 @@
  * one — on a page carrying strong photographs it is usually the right one. See
  * `docs/surface.md` of @jtakeit/astro.
  */
-import Layout from '../layouts/Layout.astro';
-import Hero from '../components/Hero.astro';
-import Blocks from '../components/Blocks.astro';
-import HeroField from '../components/motion/HeroField.astro';
-import Pattern from '../components/surface/Pattern.astro';
-import { HOME } from '../copy/{{LOCALE}}';
-import design from '../../jtk/design.json';
+import Layout from '../../layouts/Layout.astro';
+import Hero from '../../components/Hero.astro';
+import Blocks from '../../components/Blocks.astro';
+import HeroField from '../../components/motion/HeroField.astro';
+import Pattern from '../../components/surface/Pattern.astro';
+import { copyFor } from '../../copy';
+import { readPage } from '../../lib/page';
+import { localeParams, withLocale } from '../../lib/locale';
+
+export const getStaticPaths = localeParams;
+
+const locale = Astro.params.lang ?? '';
+const { HOME } = copyFor(locale);
+const own = readPage(withLocale(locale, '/'));
+import design from '../../../jtk/design.json';
 
 const painted =
   design.field !== '' && Array.isArray(design.colors) && design.colors.length === 4;
@@ -56,7 +64,7 @@ const surface = design.surface ?? {};
 const grounded = Boolean(surface.pattern);
 ---
 
-<Layout title={HOME.title} description={HOME.description} suffix={false}>
+<Layout title={HOME.title} description={HOME.description} suffix={false} alternates={own.alternates}>
   {
     grounded && (
       <Pattern

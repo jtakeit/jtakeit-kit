@@ -10,16 +10,28 @@
  * jtk/site.json by the platform; it is for showing a price, nothing more.
  */
 export function money(minor: number, currency: string | undefined, locale: string): string {
-  const value = minor / 100;
-  const digits = Number.isInteger(value) ? 0 : 2;
+  // In the currency's own minor unit (11 October 2026): a hundredth of a
+  // franc, a whole yen — ISO 4217's digits, which `Intl` carries.
+  const places = currency ? digitsOf(currency, locale) : 2;
+  const value = minor / 10 ** places;
+  const digits = Number.isInteger(value) ? 0 : places;
   if (!currency) {
-    return new Intl.NumberFormat(locale, { minimumFractionDigits: digits, maximumFractionDigits: 2 }).format(value);
+    return new Intl.NumberFormat(locale, { minimumFractionDigits: digits, maximumFractionDigits: places }).format(value);
   }
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: currency.toUpperCase(),
     currencyDisplay: 'narrowSymbol',
     minimumFractionDigits: digits,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: places,
   }).format(value);
+}
+
+/** How many digits a currency's minor unit has, by ISO 4217 as `Intl` knows it. */
+export function digitsOf(currency: string, locale = 'en'): number {
+  try {
+    return new Intl.NumberFormat(locale, { style: 'currency', currency: currency.toUpperCase() }).resolvedOptions().maximumFractionDigits ?? 2;
+  } catch {
+    return 2;
+  }
 }

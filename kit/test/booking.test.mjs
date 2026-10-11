@@ -157,3 +157,30 @@ test('a price per person says so, and an add-on is listed under its own heading'
   assert.ok(html.indexOf('value="shoes"') > html.indexOf('value="yoga"'), 'the add-on after the services');
   for (const locale of LOCALES) { assert.ok(wordsFor(locale).perPerson, locale); assert.ok(wordsFor(locale).addOns, locale); }
 });
+
+test('the look is on by default, and the form carries what it reads: the open days, what each resource does, the end of the visit, the link kept', () => {
+  const html = renderBookingForm({
+    services, locale: 'en', combine: true, now,
+    resources: [{ slug: 'noa', title: 'Noa', does: ['cut', 'colour'] }, { slug: 'jonas', title: 'Jonas' }],
+    open: ['tuesday', 'wednesday'],
+  });
+  assert.ok(html.includes('data-ui="steps week parts select"'));
+  assert.ok(html.includes('data-open="tuesday,wednesday"'));
+  assert.ok(html.includes('<option value="noa" data-does="cut,colour">Noa</option>'));
+  assert.ok(html.includes('<option value="jonas">Jonas</option>'));
+  assert.ok(html.includes('<p class="booking__ends" data-ends hidden></p>'));
+  assert.ok(html.includes('data-keep-link'));
+  assert.ok(html.includes('data-keep-copy'));
+  // The plain form, or the pieces by name.
+  assert.ok(!renderBookingForm({ services, locale: 'en', now, ui: false }).includes('data-ui'));
+  assert.ok(renderBookingForm({ services, locale: 'en', now, ui: 'week parts' }).includes('data-ui="week parts"'));
+  // Every language says the look's words, with the same holes.
+  for (const locale of LOCALES) {
+    const words = wordsFor(locale);
+    for (const key of ['notWith', 'retime', 'until', 'withNamed', 'keep', 'copy', 'stepWhat', 'stepWho', 'morning', 'afternoon', 'evening', 'prevWeek', 'nextWeek']) {
+      assert.ok(typeof words[key] === 'string' && words[key].length > 0, `${locale}.${key}`);
+    }
+    assert.ok(words.until.includes('{time}'), `${locale}.until`);
+    assert.ok(words.withNamed.includes('{who}') && words.notWith.includes('{who}'), `${locale} {who}`);
+  }
+});

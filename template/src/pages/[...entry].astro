@@ -28,10 +28,12 @@
  * the site. Every place that *lists* entries filters — see `src/lib/entries.ts`
  * — and this one renders.
  */
-import { everyEntry, rendered } from '../lib/entries';
+import { everyEntry, rendered, listed, routeOf, slugOf, alternatesOf } from '../lib/entries';
+import { siteCurrency } from '../lib/site';
+import { langOf } from '../lib/locale';
 import { Image } from 'astro:assets';
 import Layout from '../layouts/Layout.astro';
-import { BLOCKS, COLLECTIONS, LOCALE, MODULES, words, type Field } from '../content/blocks';
+import { BLOCKS, COLLECTIONS, MODULES, words, type Field } from '../content/blocks';
 import { isUpload, uploaded } from '../lib/uploads';
 import { photo } from '../lib/photos';
 import { money as priced } from '../lib/money';
@@ -47,7 +49,8 @@ export async function getStaticPaths() {
     const entries = await everyEntry(collection.name);
     for (const entry of entries) {
       paths.push({
-        params: { entry: `${collection.prefix.replace(/^\//, '')}/${entry.id}` },
+        // `de/blog/healing` for an entry written in German (docs/languages.md).
+        params: { entry: routeOf(collection, entry) },
         props: { entry, collection },
       });
     }
@@ -56,6 +59,10 @@ export async function getStaticPaths() {
 }
 
 const { entry, collection } = Astro.props;
+/** The entry's language: `''` for the site's own, `'de'` for one under `jtk/content/de/`. */
+const locale = String(entry.data.locale ?? '');
+const LANG = langOf(locale);
+const alternates = await alternatesOf(collection, entry);
 
 /*
  * Whether this entry's type has a body at all. A post has; a car, a doctor, an
@@ -116,16 +123,16 @@ const TAPPABLE = new Set(['text', 'textarea', 'richtext_lite', 'markdown', 'medi
 const tappable = (field: Field) =>
   TAPPABLE.has(field.kind) && field.client_editable !== false && field.no_tap_target !== true;
 
-const siteFiles = import.meta.glob<{ business?: { currency?: string } }>('/jtk/site.json', { eager: true, import: 'default' });
-const currency = Object.values(siteFiles)[0]?.business?.currency ?? '';
+// The site's, as the platform wrote it (lib/site): never a page's own.
+const currency = siteCurrency;
 
 /** A length as the trade says it: whole days, whole hours, or minutes. */
 function length(minutes: number): string {
   const [unit, n] = minutes % 1440 === 0 ? ['day', minutes / 1440] : minutes % 60 === 0 ? ['hour', minutes / 60] : ['minute', minutes];
-  return new Intl.NumberFormat(LOCALE, { style: 'unit', unit, unitDisplay: 'long' }).format(n);
+  return new Intl.NumberFormat(LANG, { style: 'unit', unit, unitDisplay: 'long' }).format(n);
 }
 
-const money = (minor: number): string => priced(minor, currency, LOCALE);
+const money = (minor: number): string => priced(minor, currency, LANG);
 
 /** 540 is 09:00. */
 function clock(minutes: number): string {
@@ -136,7 +143,7 @@ function clock(minutes: number): string {
 const WEEK = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 function weekday(day: string): string {
   const at = WEEK.indexOf(day);
-  return at < 0 ? day : new Intl.DateTimeFormat(LOCALE, { weekday: 'long', timeZone: 'UTC' }).format(new Date(Date.UTC(2024, 0, 1 + at)));
+  return at < 0 ? day : new Intl.DateTimeFormat(LANG, { weekday: 'long', timeZone: 'UTC' }).format(new Date(Date.UTC(2024, 0, 1 + at)));
 }
 
 /*
@@ -147,7 +154,7 @@ const titles = new Map<string, Map<string, string>>();
 async function titlesOf(name: string | undefined): Promise<Map<string, string>> {
   if (!name || !COLLECTIONS.some((one) => one.name === name)) return new Map();
   if (!titles.has(name)) {
-    titles.set(name, new Map((await everyEntry(name)).map((one) => [one.id, String(one.data.title ?? one.id)])));
+    titles.set(name, new Map((await listed(name, locale)).map((one) => [slugOf(one), String(one.data.title ?? one.id)])));
   }
   return titles.get(name)!;
 }
@@ -161,14 +168,14 @@ async function spoken(field: Field, value: unknown): Promise<string> {
     case 'time_of_day': return clock(Number(value));
     case 'date': {
       const day = new Date(String(value));
-      return Number.isNaN(day.getTime()) ? String(value) : new Intl.DateTimeFormat(LOCALE, { dateStyle: 'long', timeZone: 'UTC' }).format(day);
+      return Number.isNaN(day.getTime()) ? String(value) : new Intl.DateTimeFormat(LANG, { dateStyle: 'long', timeZone: 'UTC' }).format(day);
     }
     case 'select': {
       const label = field.option_labels?.[String(value)];
-      if (label !== undefined) return words(label);
+      if (label !== undefined) return words(label, LANG);
       return WEEK.includes(String(value)) ? weekday(String(value)) : String(value);
     }
-    case 'bool': return value === true ? words(field.label) : '';
+    case 'bool': return value === true ? words(field.label, LANG) : '';
     case 'ref': return (await titlesOf(field.ref)).get(String(value)) ?? String(value);
     case 'list': return '';
     default:
@@ -207,7 +214,7 @@ for (const field of BLOCKS.find((one) => one.type === collection.type)?.fields ?
   if (DRAWN.has(field.key)) continue;
   const value = data[field.key];
   if (value === undefined || value === null || value === '') continue;
-  const label = words(field.label);
+  const label = words(field.label, LANG);
   const path = `blocks[0].${field.key}`;
 
   if (field.kind === 'media') {
@@ -265,7 +272,7 @@ const schema = {
 };
 ---
 
-<Layout title={said('title') || title} description={said('description') || excerpt} schema={schema}>
+<Layout title={said('title') || title} description={said('description') || excerpt} schema={schema} alternates={alternates}>
   <main id="content">
     <article class="entry">
       <h1 data-jtk-path="blocks[0].title">{title}</h1>
@@ -288,12 +295,15 @@ const schema = {
           <dl class="entry-facts">
             {facts.map((fact) => (
               <div class="entry-fact" data-field={fact.key}>
-                <dt>{fact.label}</dt>
+                {/* The label is the catalogue's; a value with no path is edited in
+                    the panel beside the page, not by tapping — both are said fixed,
+                    so the check does not read them as words the owner cannot reach. */}
+                <dt data-jtk-fixed>{fact.label}</dt>
                 {fact.kind === 'text' && (
-                  <dd data-jtk-path={fact.path}>{fact.href ? <a href={fact.href}>{fact.text}</a> : fact.text}</dd>
+                  <dd data-jtk-path={fact.path} data-jtk-fixed={fact.path ? undefined : true}>{fact.href ? <a href={fact.href}>{fact.text}</a> : fact.text}</dd>
                 )}
                 {fact.kind === 'rows' && (
-                  <dd><ul>{fact.rows.map((row) => <li>{row}</li>)}</ul></dd>
+                  <dd data-jtk-fixed><ul>{fact.rows.map((row) => <li>{row}</li>)}</ul></dd>
                 )}
                 {fact.kind === 'picture' && (
                   <dd>

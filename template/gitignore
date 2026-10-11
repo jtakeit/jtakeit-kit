@@ -14,3 +14,9 @@ jtk-content.json
 # a post's body is markdown — `![alt](media/<site>/<hash>.jpg)` — resolved
 # relative to the file, so the build puts the file exactly where the body says.
 jtk/content/**/media/
+
+
+# The dev session's watch key (jtkit session): the page reads the platform's
+# half through it. One session's, read-only, dead with the session — and not
+# in git all the same.
+jtk/session.json

@@ -28,12 +28,20 @@
  * send what people write in it, which is a broken product rather than a legal
  * opinion.
  */
-import Layout from '../layouts/Layout.astro';
-import { PRIVACY } from '../copy/{{LOCALE}}';
-import { PROCESSING_URL } from '../content/blocks';
+import Layout from '../../layouts/Layout.astro';
+import { copyFor } from '../../copy';
+import { localeParams, withLocale, EVERY_LOCALE } from '../../lib/locale';
+
+export const getStaticPaths = localeParams;
+
+const locale = Astro.params.lang ?? '';
+const { PRIVACY } = copyFor(locale);
+// A page written in code exists in every language the site has.
+const alternates = EVERY_LOCALE.map((one) => ({ locale: one, path: withLocale(one, '/privacy') }));
+import { PROCESSING_URL } from '../../content/blocks';
 ---
 
-<Layout title={PRIVACY.title} description={PRIVACY.intro}>
+<Layout title={PRIVACY.title} description={PRIVACY.intro} alternates={alternates}>
   <main class="prose" data-jtk-fixed>
     <h1>{PRIVACY.title}</h1>
     <p class="lead">{PRIVACY.intro}</p>

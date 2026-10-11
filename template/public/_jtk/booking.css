@@ -1,0 +1,167 @@
+/*
+ * The visitor's booking page — `/_booking/<token>`, served by the platform on
+ * this site's host: the booking, add to calendar, move, cancel — in the site's
+ * clothes. The platform's page links this file when it is here; without it
+ * the page is plain. Its markup is the platform's: ids (`title`, `site`,
+ * `state`, `when`, `what`, `with`, `note`, `actions`, `ics`, `tg`, `move`,
+ * `cancel`, `mover`, `month`, `days-row`, `prev`, `next`, `slots`, `err`) and
+ * a few classes (`btn`, `row`, `quiet`, `days`, `days-row`, `days-arrow`,
+ * `is-chosen`, `month`, `slots`).
+ *
+ * A file under `public/` is served as it is, so it cannot read the site's own
+ * stylesheet: the tokens are repeated here. A variant that changes the palette
+ * in `src/styles/global.css` changes these too.
+ */
+:root {
+  color-scheme: light;
+  --paper: #ffffff;
+  --panel: #ffffff;
+  --paper-deep: #f4f2ee;
+  --ink: #16130f;
+  --ink-quiet: #6f6a63;
+  --line: #e2ded7;
+  --accent: #2f5bff;
+}
+html {
+  background: var(--paper-deep);
+}
+body {
+  margin: 0;
+  min-height: 100dvh;
+  display: grid;
+  place-items: start center;
+  padding: clamp(1.5rem, 5vw, 4rem) 1rem;
+  background: var(--paper-deep);
+  color: var(--ink);
+  font: 16px/1.55 system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+main {
+  width: min(100%, 30rem);
+  box-sizing: border-box;
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 1.25rem;
+}
+h1 {
+  margin: 0 0 0.25rem;
+  font-size: clamp(1.75rem, 1.3rem + 1.5vw, 2.25rem);
+  line-height: 1.1;
+}
+.site {
+  margin: 0 0 1.25rem;
+  color: var(--ink-quiet);
+  opacity: 1;
+}
+.state {
+  display: inline-block;
+  margin: 0 0 1.25rem;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--ink);
+}
+dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.5rem 1.25rem;
+  margin: 0 0 1.25rem;
+  padding: 1rem 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+dt {
+  opacity: 1;
+  color: var(--ink-quiet);
+}
+dd {
+  margin: 0;
+}
+.quiet {
+  margin: 0;
+  opacity: 1;
+  color: var(--ink-quiet);
+  font-size: 0.9375rem;
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+button,
+a.btn {
+  font: inherit;
+  font-size: 0.9375rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  text-decoration: none;
+}
+button:hover,
+a.btn:hover {
+  border-color: var(--ink);
+}
+button.primary {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+  border-color: var(--line);
+}
+#mover {
+  margin-top: 1.25rem;
+  padding: 1rem 1.1rem;
+  border-radius: 1rem;
+  background: var(--paper-deep);
+}
+#l-pick {
+  margin: 0 0 0.5rem;
+  color: var(--ink-quiet);
+  font-size: 0.9375rem;
+}
+.month {
+  margin: 0.5rem 0 0.4rem;
+  opacity: 1;
+  font-weight: 600;
+}
+.days-row button {
+  border-color: var(--line);
+  background: var(--panel);
+  border-radius: 0.7rem;
+}
+.days-row button.is-chosen,
+.days-row button.is-chosen:hover {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+.days-row button:disabled {
+  opacity: 0.35;
+}
+.days-arrow {
+  border-radius: 0.7rem;
+}
+.slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+.slots button {
+  padding: 0.5rem 0.4rem;
+  border-radius: 0.6rem;
+  background: var(--panel);
+}
+.err {
+  margin-top: 0.75rem;
+  color: #b3261e;
+}

@@ -20,9 +20,12 @@
  * landing page, which is why this walks the document rather than looking blocks
  * up by name.
  */
-import { PAGE, pathAt } from '../copy/{{LOCALE}}';
+import { copyFor } from '../copy';
+import { localeOf } from '../lib/locale';
 import LeadForm from './LeadForm.astro';
 import design from '../../jtk/design.json';
+
+const { PAGE, pathAt } = copyFor(localeOf(Astro.url.pathname));
 
 /*
  * The edge and the entrance, out of the design document rather than typed here.

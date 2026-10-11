@@ -697,6 +697,157 @@ export interface Collection {
 export const COLLECTIONS: Collection[] = [];
 
 /**
+ * A blog, ready to turn on — not on: a blog is a commitment somebody asked
+ * for (docs/collections.md), and a site that never posts says so louder than
+ * one without a blog.
+ *
+ * On is two lines at the foot of this file, which `jtk create --blog` writes:
+ *
+ *   BLOCKS.push(BLOG_POST);
+ *   COLLECTIONS.push(BLOG_COLLECTION);
+ *
+ * Then the posts are `jtk/content/blog/<slug>.json` (and
+ * `jtk/content/de/blog/<slug>.json` for one in German), the listing is
+ * `src/pages/[...lang]/blog/index.astro`, a post's page is `[...entry].astro`,
+ * the feed `/blog/rss.xml`. The five reserved keys of an entry are all here;
+ * `date` and `excerpt` are drawn on the listing and are no tap targets.
+ */
+export const BLOG_POST: Block = {
+  "type": "post",
+  "v": 1,
+  "label": {
+    "uk": "Допис",
+    "en": "Post",
+    "de": "Beitrag",
+    "ru": "Запись",
+    "es": "Entrada",
+    "it": "Articolo",
+    "pt": "Artigo",
+    "fr": "Article"
+  },
+  "fields": [
+    {
+      "key": "title",
+      "label": {
+        "uk": "Заголовок",
+        "en": "Title",
+        "de": "Titel",
+        "ru": "Заголовок",
+        "es": "Título",
+        "it": "Titolo",
+        "pt": "Título",
+        "fr": "Titre"
+      },
+      "kind": "text",
+      "required": true,
+      "max": 90,
+      "client_editable": true,
+      "seo_sensitive": true
+    },
+    {
+      "key": "date",
+      "label": {
+        "uk": "Дата",
+        "en": "Date",
+        "de": "Datum",
+        "ru": "Дата",
+        "es": "Fecha",
+        "it": "Data",
+        "pt": "Data",
+        "fr": "Date"
+      },
+      "kind": "date",
+      "required": true,
+      "client_editable": true,
+      "no_tap_target": true
+    },
+    {
+      "key": "excerpt",
+      "label": {
+        "uk": "Анонс",
+        "en": "Excerpt",
+        "de": "Anriss",
+        "ru": "Анонс",
+        "es": "Extracto",
+        "it": "Estratto",
+        "pt": "Resumo",
+        "fr": "Chapeau"
+      },
+      "kind": "textarea",
+      "max": 200,
+      "client_editable": true,
+      "no_tap_target": true
+    },
+    {
+      "key": "cover",
+      "label": {
+        "uk": "Обкладинка",
+        "en": "Cover",
+        "de": "Titelbild",
+        "ru": "Обложка",
+        "es": "Portada",
+        "it": "Copertina",
+        "pt": "Capa",
+        "fr": "Couverture"
+      },
+      "kind": "media",
+      "client_editable": true
+    },
+    {
+      "key": "body",
+      "label": {
+        "uk": "Текст допису",
+        "en": "Text",
+        "de": "Text",
+        "ru": "Текст записи",
+        "es": "Texto",
+        "it": "Testo",
+        "pt": "Texto",
+        "fr": "Texte"
+      },
+      "kind": "markdown",
+      "max": 40000,
+      "client_editable": true
+    }
+  ]
+};
+
+export const BLOG_COLLECTION: Collection = {
+  "name": "blog",
+  "label": {
+    "uk": "Блог",
+    "en": "Blog",
+    "de": "Blog",
+    "ru": "Блог",
+    "es": "Blog",
+    "it": "Blog",
+    "pt": "Blog",
+    "fr": "Blog"
+  },
+  "one": {
+    "uk": "допис",
+    "en": "post",
+    "de": "Beitrag",
+    "ru": "запись",
+    "es": "entrada",
+    "it": "articolo",
+    "pt": "artigo",
+    "fr": "article"
+  },
+  "icon": "lucide:newspaper",
+  "prefix": "/blog",
+  "type": "post",
+  "order": {
+    "by": "date",
+    "desc": true
+  },
+  "per_page": 10,
+  "body": [
+    "text"
+  ]
+};
+
+/**
  * The domain modules this site turns on, and what each is pointed at:
  *
  *   export const MODULES: Modules = { bookings: { services: 'services', resources: 'masters' } };

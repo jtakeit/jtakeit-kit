@@ -1,0 +1,56 @@
+---
+/**
+ * The languages this page exists in, as links — the switcher.
+ *
+ * Built from `alternates`, which is the list of languages that **exist** for
+ * this page (`readPage(path).alternates`, `alternatesOf(collection, entry)`),
+ * and never by swapping a prefix into the current address: that is the shape
+ * that gives somebody a 404 the first time a page has no translation — on a
+ * blog, where most posts are written once, that is most of them.
+ *
+ * Each language is named in itself («Deutsch», «English»), by the browser's
+ * own `Intl.DisplayNames`, so there are no words here to translate. Nothing
+ * is drawn for a page in one language.
+ *
+ * `Layout.astro` places it; move it into the site's header when the design
+ * has one, and restyle `.languages` like anything else.
+ */
+import { LOCALE } from '../content/blocks';
+import { under } from '../lib/under';
+
+interface Props {
+  alternates: { locale: string; path: string }[];
+  /** The language of the page it is on: `''` for the site's own. */
+  current: string;
+  class?: string;
+}
+
+const { alternates, current, class: className } = Astro.props;
+
+const ordered = [...alternates].sort((a, b) => (a.locale === '' ? -1 : b.locale === '' ? 1 : a.locale.localeCompare(b.locale)));
+const nameOf = (tag: string): string => {
+  try {
+    const said = new Intl.DisplayNames([tag], { type: 'language' }).of(tag) ?? tag;
+    return said.charAt(0).toLocaleUpperCase(tag) + said.slice(1);
+  } catch {
+    return tag;
+  }
+};
+const tagOf = (locale: string) => (locale === '' ? LOCALE : locale);
+---
+
+{ordered.length > 1 && (
+  <nav class:list={['languages', className]} aria-label="Language" data-jtk-fixed>
+    {ordered.map((other) => (
+      <a
+        href={under(other.path)}
+        hreflang={tagOf(other.locale)}
+        lang={tagOf(other.locale)}
+        aria-current={other.locale === current ? 'true' : undefined}
+        title={nameOf(tagOf(other.locale))}
+      >
+        {tagOf(other.locale).slice(0, 2).toUpperCase()}
+      </a>
+    ))}
+  </nav>
+)}

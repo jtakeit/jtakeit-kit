@@ -18,7 +18,9 @@ exception is a collection's entries — [collections.md](collections.md).
 Five things, and every one of them is small.
 
 **A route** — `src/pages/prices.astro`. Designed like the home page: it is a
-page of this site, not a subpage of a template.
+page of this site, not a subpage of a template. On a site in more than one
+language it is `src/pages/[...lang]/prices.astro` and builds at `/prices` and
+`/de/prices` both — see languages.md, «What you write».
 
 **Its blocks in the catalogue.** `src/content/blocks.ts` describes every block
 on every page of the site; a new page usually brings one or two new types with
@@ -133,6 +135,29 @@ It has the same three stages as everything else: a draft while it is being
 typed, a saved version, and what the world sees. It is stored as a page that no
 route renders, which is why none of that had to be built twice — the platform's
 wiki/28 has the argument.
+
+## The icon
+
+The picture in the browser tab, on a phone's home screen and beside the site in
+search results. **Ask for it in the brief** — «is there a logo or a mark, as a
+file?» — the way you ask for the address: it is the business's, not a design
+choice, and a site launched without one shows a blank page in every tab it is
+open in.
+
+One file is the whole icon; `src/lib/icon.ts` renders the rest at build time:
+
+- **`public/favicon.svg`** — the mark as SVG. `jtk create` writes a stand-in
+  there: the business's initials, light on dark (`data-jtk-monogram`). Say it
+  back to the developer as a stand-in, and replace it when the mark arrives.
+- **`public/icon.png`** — the mark as a picture (square, 180px or more), when
+  it is not a vector. It wins over the SVG, and the layout links only the PNGs.
+
+The 32px tab icon and the 180px home-screen icon (`/favicon-32.png`,
+`/apple-touch-icon.png`) are made from that one file, so there is nothing else
+to keep in step. A square mark reads best; a wide logo is fitted inside the
+square with transparent sides — crop it to the symbol or the first letter if it
+has one. The platform's `preflight` fails a site whose layout links an icon the
+build does not have, and says when the site still wears the monogram.
 
 ## Every address inside the site goes under the base
 

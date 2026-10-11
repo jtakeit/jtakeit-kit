@@ -1,4 +1,4 @@
-import type { Shown } from '../copy/{{LOCALE}}';
+import type { Shown } from '../copy/make';
 import { LOCALES } from '../content/blocks';
 
 /**

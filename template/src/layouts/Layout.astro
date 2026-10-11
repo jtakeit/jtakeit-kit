@@ -9,7 +9,10 @@ import DESIGN from '../../jtk/design.json';
  */
 import { BUSINESS, INDEXABLE, SCHEMA_TYPE, canonicalFor } from '../data/site';
 import { under } from '../lib/under';
-import { META } from '../copy/{{LOCALE}}';
+import { copyFor } from '../copy';
+import { localeOf, langOf } from '../lib/locale';
+import Languages from '../components/Languages.astro';
+import { RASTER_MARK } from '../lib/icon';
 import '../styles/global.css';
 
 interface Props {
@@ -32,6 +35,12 @@ interface Props {
 }
 
 const { title, description, suffix = true, schema, bodyClass, alternates = [] } = Astro.props;
+// The page's language, from its address: `/de/…` is German. The copy is that
+// language's where the site has registered it (src/copy/index.ts); `lang`
+// is the page's whatever the copy says.
+const locale = localeOf(Astro.url.pathname);
+const COPY = copyFor(locale);
+const META = { ...COPY.META, lang: langOf(locale) };
 
 const canonical = canonicalFor(Astro.url.pathname);
 // `under` and not a leading slash: `new URL('/og.jpg', …)` throws away the
@@ -221,9 +230,10 @@ const businessSchema = {
 
     {/* Under the base, like every other address written by hand here: served
         from `/p/<slug>/` these are three 404s and a page with no icon. */}
-    <link rel="icon" href={under('/favicon.svg')} type="image/svg+xml" />
+    {/* The icon: one source, the PNGs rendered from it (src/lib/icon.ts). */}
+    {!RASTER_MARK && <link rel="icon" href={under('/favicon.svg')} type="image/svg+xml" />}
     <link rel="icon" href={under('/favicon-32.png')} sizes="32x32" type="image/png" />
-    <link rel="apple-touch-icon" href={under('/favicon.png')} />
+    <link rel="apple-touch-icon" href={under('/apple-touch-icon.png')} />
 
     {/*
       Marks the document as scripted before first paint, so every hidden start
@@ -235,6 +245,10 @@ const businessSchema = {
 
   <body class={bodyClass}>
     <slot />
+    {/* The switcher, drawn only on a page that exists in more than one
+        language. Here so a second language works the day it is declared;
+        move it into the header when the design has one. */}
+    <Languages alternates={alternates} current={locale} class="languages--corner" />
 
     <script>
       /*

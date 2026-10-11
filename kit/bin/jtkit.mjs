@@ -11,6 +11,8 @@
  *       the annotation lint the platform's build runs, on this working tree
  *   jtkit progress [--root .] [--json]
  *       where the site is, read off the files: the brief, the pages, the entries, what is missing
+ *   jtkit session <session_id> <watch_key> [--api <url>] [--root .]   |   jtkit session --forget
+ *       let the page the dev server serves read the platform's half through the dev session
  */
 import { pathToFileURL } from 'node:url';
 import { join, dirname, resolve } from 'node:path';
@@ -46,6 +48,37 @@ switch (command) {
       console.error(`jtkit apply: ${why.message}`);
       process.exit(1);
     }
+    break;
+  }
+  case 'session': {
+    // The dev session's watch key, kept beside the content and out of git:
+    // the dev server presents it for one read-only answer — where the site
+    // is on the platform and what the developer can do in the panel — which
+    // the page then shows bottom right (elements/writing.js).
+    const { writeFileSync, unlinkSync, mkdirSync, existsSync } = await import('node:fs');
+    const root = resolve(flag('root', process.cwd()));
+    const file = join(root, 'jtk', 'session.json');
+    if (has('forget')) {
+      if (existsSync(file)) unlinkSync(file);
+      console.log('forgotten: the page no longer reads the platform');
+      break;
+    }
+    const takesValue = new Set(['--api', '--root']);
+    const positional = [];
+    for (let i = 0; i < rest.length; i++) {
+      if (takesValue.has(rest[i])) { i++; continue; }
+      if (rest[i].startsWith('--')) continue;
+      positional.push(rest[i]);
+    }
+    const [session, key] = positional;
+    if (!session || !key) {
+      console.error("jtkit session <session_id> <watch_key> [--api <url>] — both are in open_dev_session's answer");
+      process.exit(1);
+    }
+    const api = flag('api', process.env.JTK_API_URL || 'https://api.jtakeit.com').replace(/\/$/, '');
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, JSON.stringify({ session, key, api }, null, 2) + '\n');
+    console.log(`${relative(process.cwd(), file)} written — the page the dev server serves now shows the platform's half through session ${session} at ${api}. Not in git; jtkit session --forget drops it.`);
     break;
   }
   case 'progress': {

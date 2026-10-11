@@ -84,15 +84,49 @@ own language.
 
 ## What you write
 
-```
-src/pages/prices.astro          jtk/content/prices.json
-src/pages/de/prices.astro       jtk/content/de/prices.json
+The scaffold already speaks every language `LOCALES` names: its routes, its
+entries, its listings, its feed, its switcher and its `hreflang` read the
+language off the address. Adding German is four things, and none of them is a
+route:
+
+1. **Declare it.** `export const LOCALES: string[] = ['de'];` in
+   `src/content/blocks.ts`.
+2. **The words that are not content.** Copy `src/copy/<your locale>.ts` to
+   `src/copy/de.ts`, point its import at `jtk/content/de.json`, set `lang: 'de'`
+   and translate the strings. Register it in `src/copy/index.ts`:
+   `import { COPY as de } from './de';` and `{ '': own, de }`. A language
+   declared and not registered renders with the site's own words — untranslated,
+   not broken.
+3. **The documents.** The German home page is **`jtk/content/de.json`**
+   (`"path": "/de"`, `"locale": "de"`) — not `jtk/content/de/index.json`: the
+   platform keeps the page at `/de` in the file named for it, as it keeps
+   `/prices` in `prices.json`. Every other German page is
+   `jtk/content/de/<page>.json` (`"path": "/de/prices"`), and every German entry
+   `jtk/content/de/<collection>/<slug>.json` with `"collection"` and
+   `"locale": "de"` beside the path.
+4. **`PAGES`** in `src/data/site.ts`: the German addresses, so they are in the
+   sitemap.
+
+The routes are `src/pages/[...lang]/…`: `index.astro` and `privacy.astro` are
+there already and build at `/` and `/de`, `/privacy` and `/de/privacy`. A page
+you add for every language goes beside them:
+
+```astro
+---
+import { localeParams, withLocale } from '../../lib/locale';
+import { readPage } from '../../lib/page';
+import { copyFor } from '../../copy';
+export const getStaticPaths = localeParams;
+const locale = Astro.params.lang ?? '';          // '' for the site's own
+const page = readPage(withLocale(locale, '/prices'));
+const C = copyFor(locale);
+---
+<Layout title={page.seo.title} description={page.seo.description} alternates={page.alternates}>
 ```
 
-Two routes and two documents. They may render the same components or different
-ones; a language version is a page, and a page is yours.
-
-Both go in `PAGES` in `src/data/site.ts`, so both are in the sitemap.
+A page that exists in one language only stays an ordinary route
+(`src/pages/impressum.astro`) — the language route is for pages that exist in
+all of them.
 
 ## `hreflang`, which is the part that costs money
 
@@ -152,6 +186,15 @@ locale of the page rendering it.
 
 A **page** in a language it does not have is not the admin's to make: a page is
 a file you wrote, so it reports the gap and you fill it.
+
+## The switcher is drawn for you
+
+`src/components/Languages.astro` draws it from `alternates`, names each
+language in itself (`Intl.DisplayNames` — no words to translate) and draws
+nothing on a page in one language. `Layout.astro` places it in a corner of
+every page so a second language works the day it is declared; move it into the
+header when the design has one. Pass `alternates` to `<Layout>` on every page
+you write — the scaffold's routes all do.
 
 ## The switcher must never rewrite the address
 

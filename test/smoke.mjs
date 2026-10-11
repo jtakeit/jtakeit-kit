@@ -68,6 +68,17 @@ try {
   execFileSync('node', [bin, 'catalogue', '--emit-only'], { cwd: site, stdio: 'pipe' });
   if (JSON.parse(readFileSync(join(site, 'jtk/bookings.json'), 'utf8')).blocks[0].zone !== 'Europe/Zurich') fail('the tool wrote over a diary that was already there');
 
+  // A blog, turned on by --blog: the two lines at the foot of blocks.ts, and
+  // the listing page that builds itself once the collection is there.
+  execFileSync('node', [bin, 'create', 'smoke-blog', '--locale', 'en', '--blog', '--out', join(dir, 'blog'), '--no-git'], { stdio: 'pipe' });
+  const blogged = readFileSync(join(dir, 'blog', 'src/content/blocks.ts'), 'utf8');
+  if (!blogged.includes('BLOCKS.push(BLOG_POST);') || !blogged.includes('COLLECTIONS.push(BLOG_COLLECTION);')) fail('--blog did not turn the blog on');
+  if (!existsSync(join(dir, 'blog', 'src/pages/[...lang]/blog/index.astro'))) fail('the blog listing is not scaffolded');
+  if (readFileSync(join(site, 'src/content/blocks.ts'), 'utf8').includes('turned on by `jtk create --blog`')) fail('a site without --blog has a blog');
+  for (const one of ['src/copy/index.ts', 'src/copy/make.ts', 'src/lib/locale.ts', 'src/components/Languages.astro', 'src/pages/[...lang]/index.astro']) {
+    if (!existsSync(join(site, one))) fail(`missing ${one}`);
+  }
+
   // A booking kit, laid out: the kit is the platform's (jtakeit:///kits/<kind>.md);
   // this one is made up and small, to hold the laying out, not the kinds.
   const kitFile = join(dir, 'kit.json');

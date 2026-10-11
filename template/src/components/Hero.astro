@@ -8,8 +8,11 @@
  * somebody edits the other. Astro's frontmatter is TypeScript rather than JSX,
  * so a local variable holding the markup is not an option; a component is.
  */
-import { block, flPath, picture, HOME } from '../copy/{{LOCALE}}';
+import { copyFor } from '../copy';
+import { localeOf } from '../lib/locale';
 import Shot from './Shot.astro';
+
+const { block, flPath, picture, HOME } = copyFor(localeOf(Astro.url.pathname));
 
 /*
  * The hero's photograph, where the document has one.

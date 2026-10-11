@@ -1,6 +1,6 @@
 {
   "name": "@jtakeit/astro",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "The Astro scaffold and the catalogue tool for a site on jtakeit — the platform's contract, ready to build on",
   "license": "MIT",
   "type": "module",
@@ -35,7 +35,7 @@
     "release": "node scripts/release.mjs"
   },
   "dependencies": {
-    "@jtakeit/kit": "0.4.0"
+    "@jtakeit/kit": "0.5.0"
   },
   "workspaces": [
     "kit"

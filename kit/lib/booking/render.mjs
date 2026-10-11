@@ -49,6 +49,7 @@ export const SENDS = Object.freeze(['service', 'services', 'resource', 'class', 
  * @property {{ day: string, from: number, until: number, costs: number }[]} [rates] a price by the hour of the week instead of `costs`: the list says «from …», and the price is the slot's, printed beside the time
  * @property {string} [per]   `'person'` for a price times the party — a class per place, shoes; the list says so and the running total multiplies
  * @property {string} [group] a heading the services are listed under
+ * @property {string[]} [does] for a resource: the services they perform, by slug — the element greys the others out once they are chosen; empty or absent is everything
  */
 
 /**
@@ -73,6 +74,8 @@ export function priceFrom(one) {
  * @property {string} [api]         where `/api/` is from this page — under the preview it carries a path, so pass the address as your generator writes a root-relative one (Astro's `under('/api/')`)
  * @property {string} [tag]         the element's name around the form, `jtk-booking`; `''` for none
  * @property {Date} [now]           the day the picker starts from; the build's, by default
+ * @property {string[]} [open]      the days the business opens, by name (`monday`…) — the week of days strikes the others out; empty is every day
+ * @property {boolean | string} [ui] the form's look — two steps, the week of days, the times by the part of the day, the drawn choice of whom — on by default; `false` for the plain form, or the ones wanted by name: `'week parts'`
  */
 
 const ESCAPE = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -103,8 +106,8 @@ function priceSaid(one, currency, lang) {
  */
 export function renderBookingForm(props) {
   const {
-    services, resources = [], locale, daysAhead = 30, combine = false, currency = 'CHF', scale = '', kind = '',
-    api = '/api/', tag = 'jtk-booking', now = new Date(),
+    services, resources = [], locale, daysAhead = 30, combine = false, currency = '', scale = '', kind = '',
+    api = '/api/', tag = 'jtk-booking', now = new Date(), open = [], ui = true,
   } = props;
   if (!Array.isArray(services)) throw new TypeError('renderBookingForm: services is a list of { slug, title }');
   const unsaid = kind !== '' && kind !== 'salon';
@@ -151,7 +154,7 @@ export function renderBookingForm(props) {
       <label class="field__label" for="booking-resource" data-say="resource">${esc(WORDS.resource)}</label>
       <select class="field__input" id="booking-resource" name="resource" data-say-wait>
         <option value="" data-say="any">${esc(WORDS.any)}</option>
-        ${resources.map((one) => `<option value="${esc(one.slug)}">${esc(one.title)}</option>`).join('\n')}
+        ${resources.map((one) => `<option value="${esc(one.slug)}"${Array.isArray(one.does) && one.does.length > 0 ? ` data-does="${esc(one.does.join(','))}"` : ''}>${esc(one.title)}</option>`).join('\n')}
       </select>
     </div>`
     : '';
@@ -162,7 +165,7 @@ export function renderBookingForm(props) {
   // title, which the owner edits on the entry. None is the owner's to edit
   // here, and `jtk catalogue` asked whose all seventeen were on a fresh
   // restaurant (30 September 2026).
-  const form = `<form class="booking${unsaid ? ' booking--unsaid' : ''}" data-booking data-locale="${esc(locale)}" data-currency="${esc(currency)}" data-words="${esc(JSON.stringify(WORDS))}" data-scale="${esc(scale)}" data-api="${esc(api)}" data-sends="${SENDS.join(',')}" novalidate data-jtk-fixed>
+  const form = `<form class="booking${unsaid ? ' booking--unsaid' : ''}" data-booking data-locale="${esc(locale)}" data-currency="${esc(currency)}" data-words="${esc(JSON.stringify(WORDS))}" data-scale="${esc(scale)}" data-api="${esc(api)}" data-sends="${SENDS.join(',')}" data-open="${esc(open.join(','))}"${ui ? ` data-ui="${ui === true ? 'steps week parts select' : esc(ui)}"` : ''} novalidate data-jtk-fixed>
   <noscript><p class="booking__note">${esc(WORDS.noScript)}</p></noscript>
 
   <div class="field">
@@ -201,6 +204,7 @@ export function renderBookingForm(props) {
     <legend class="field__label">${esc(WORDS.time)}</legend>
     <p class="booking__hint" data-times-hint aria-live="polite">${esc(WORDS.pick)}</p>
     <div class="booking__slots" data-slots></div>
+    <p class="booking__ends" data-ends hidden></p>
     <p class="booking__total" data-stay-total hidden></p>
   </fieldset>
 
@@ -231,6 +235,14 @@ export function renderBookingForm(props) {
     <p class="booking__done-line" data-done-line></p>
     <p class="booking__done-when" data-done-when></p>
     <p class="booking__done-when" data-done-what hidden></p>
+    <div class="booking__keep" data-keep hidden>
+      <p class="booking__note" data-keep-note></p>
+      <div class="booking__keep-row">
+        <input class="field__input booking__keep-link" type="text" readonly data-keep-link>
+        <button type="button" class="booking__keep-copy" data-keep-copy></button>
+        <a class="booking__keep-open" data-keep-open></a>
+      </div>
+    </div>
     <p class="booking__note" data-pay-note hidden></p>
     <p class="booking__links">
       <a data-pay hidden></a>
