@@ -184,3 +184,18 @@ test('the look is on by default, and the form carries what it reads: the open da
     assert.ok(words.withNamed.includes('{who}') && words.notWith.includes('{who}'), `${locale} {who}`);
   }
 });
+
+test('the services with no heading come after every heading, whatever order they came in', () => {
+  const mixed = [
+    { slug: 'tea', title: 'Tea', takes: 15, costs: 500 },
+    { slug: 'cut', title: 'Haircut', takes: 45, costs: 5500, group: 'Hair' },
+    { slug: 'gel', title: 'Gel', takes: 60, costs: 4000, group: 'Nails' },
+  ];
+  const html = renderBookingForm({ services: mixed, locale: 'en', combine: true, now });
+  const hair = html.indexOf('>Hair</p>');
+  const nails = html.indexOf('>Nails</p>');
+  const tea = html.indexOf('value="tea"');
+  assert.ok(hair > 0 && nails > hair, 'the headings in the order the services came');
+  assert.ok(tea > nails, 'the service with no heading after the last one');
+  assert.equal(html.match(/booking__run-title/g).length, 2, 'and under none of its own');
+});

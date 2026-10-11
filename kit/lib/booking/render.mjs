@@ -48,7 +48,7 @@ export const SENDS = Object.freeze(['service', 'services', 'resource', 'class', 
  * @property {number} [costs] minor units, for the same
  * @property {{ day: string, from: number, until: number, costs: number }[]} [rates] a price by the hour of the week instead of `costs`: the list says «from …», and the price is the slot's, printed beside the time
  * @property {string} [per]   `'person'` for a price times the party — a class per place, shoes; the list says so and the running total multiplies
- * @property {string} [group] a heading the services are listed under
+ * @property {string} [group] a heading the services are listed under — the words (an option's label, a category's title), not the stored value; services with none are listed after every heading
  * @property {string[]} [does] for a resource: the services they perform, by slug — the element greys the others out once they are chosen; empty or absent is everything
  */
 
@@ -123,6 +123,14 @@ export function renderBookingForm(props) {
     if (run) run.items.push(one);
     else runs.push({ group, items: [one] });
   }
+  // The services with no heading go after every run that has one, wherever
+  // the first of them came: drawn first, they read as the run above the first
+  // heading, and drawn between two they read as the one before. A group is
+  // the heading's words — an option's label, a category's title — never the
+  // stored value; the page that reads the catalogue resolves it (12 October
+  // 2026: the scaffold passed `entry.data.group` itself).
+  const loose = runs.findIndex((r) => r.group === '');
+  if (loose >= 0 && runs.length > 1) runs.push(...runs.splice(loose, 1));
 
   const today = now.toISOString().slice(0, 10);
   const last = new Date(now.getTime() + daysAhead * 86_400_000).toISOString().slice(0, 10);
