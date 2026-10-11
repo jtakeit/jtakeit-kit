@@ -148,6 +148,89 @@ edits an entry by opening it.
 A field the entry page does not render is `no_tap_target: true` — that is
 usually `date` and `excerpt`, which live on the listing rather than on the post.
 
+## Categories, tags and trees — a `ref`, not a feature
+
+There is no taxonomy in the catalogue and no "category" kind, on purpose (the
+platform's wiki/78, 12 October 2026). A category is an entry of a collection,
+and what is in it points at it with a `ref`: the platform already stores,
+lists, translates and orders entries, and the owner adds a category in the
+panel the way they add a post. Four patterns, by name — use these, not a
+`select` of categories the owner cannot extend and not a free-text field:
+
+| pattern | what you declare | what the scaffold does with it |
+| --- | --- | --- |
+| **group by a select** | `group: 'course'` on the collection, `course` a `select` with `options` and `option_labels` | the listing's headings are the labels, in the options' order |
+| **category** (group by a ref) | a `categories` collection, and on the grouped one `group: 'category'` with `category: ref categories` | the headings are the categories' titles in the page's language, in the categories' own order, each annotated as that category's title |
+| **tree** | on `category`, `parent: ref categories` — a ref into its own collection | a category's page shows the trail of its parents above the title and its children below |
+| **tags** (many-to-many) | a `tags` collection, and `tags: list of { tag: ref tags }` — a list whose row is one ref, the shape the diary's `does: [{ service }]` has | each tag on a post links to the tag's page; the tag's page lists its posts |
+
+```ts
+// The category pattern, whole — a salon whose owner adds categories herself.
+BLOCKS.push(
+  { type: 'category', v: 1, label: 'Category', fields: [
+    { key: 'title',  label: 'Name',   kind: 'text', required: true, max: 60, client_editable: true },
+    { key: 'parent', label: 'Inside', kind: 'ref', ref: 'categories', client_editable: true }, // the tree; leave it out for a flat list
+  ] },
+  { type: 'service', v: 1, label: 'Service', fields: [
+    { key: 'title',    label: 'Name',     kind: 'text', required: true, max: 80, client_editable: true },
+    { key: 'takes',    label: 'Takes',    kind: 'duration', required: true, client_editable: true },
+    { key: 'category', label: 'Category', kind: 'ref', ref: 'categories', client_editable: true },
+  ] },
+);
+COLLECTIONS.push(
+  { name: 'categories', label: 'Categories', prefix: '/categories', type: 'category' },
+  { name: 'services', label: 'Services', prefix: '/services', type: 'service', pages: false, group: 'category' },
+);
+
+// The tags pattern: a list of one ref.
+{ key: 'tags', label: 'Tags', kind: 'list', client_editable: true,
+  of: [{ key: 'tag', label: 'Tag', kind: 'ref', ref: 'tags', client_editable: true }] }
+```
+
+**What `jtk catalogue` refuses**, as the platform does: a `group` naming a
+field the type has not got, a `group` that is neither a select nor a ref, a
+`group` that is a ref into the collection itself (that is a tree — make it a
+`parent` field and group by something else), and a `ref` anywhere — a list's
+row included — naming a collection the catalogue does not declare. A `parent`
+ref into its own collection is accepted: a loop (`a → b → a`) is refused by
+the platform where the value is written, and the scaffold's walks stop at one
+anyway, and at twelve levels.
+
+**One field, read by three.** `group` decides the listing's headings, the
+admin's list of entries, and the booking form's runs of services. A heading is
+words, never the stored value: a select's label (or the option where it has
+none), a category's title — in the page's language, the site's own language
+standing in for a category nobody has translated yet. Entries with no group, or
+with one that is no heading (a renamed option, a hidden category), come last
+under none.
+
+**What the scaffold already draws**, so a design pass keeps it rather than
+writes it:
+
+- `[...listing].astro` (a collection with `pages: false`) lists a grouped
+  collection under its headings and hands the booking form the same headings.
+- `[...entry].astro` is every entry's **archive page**: below the post, the
+  entries of the other collections that point at it — through a top-level
+  `ref` or a `ref` in a list's rows — under each collection's label, in its
+  own order, hidden ones left out, each linked to its page (or its row on the
+  listing, for a collection without pages). At most the referencing
+  collection's `per_page` of them, then «+N» — not pages of their own: an
+  address under a collection's prefix is an entry's to the platform, and
+  `/tags/red/2` is nobody's. A ref's value on an entry links to the entry it
+  names.
+- `src/lib/entries.ts` has the reading for your own pages: `groupsOf(collection,
+  entries, locale)` (the runs, each with its `heading`), `referrersOf(collection,
+  entry)`, `treeOf(collection, entry)` and `titlePath(collection, entry)` (the
+  annotation for an entry's title drawn on another page). The rules themselves
+  are `src/lib/groups.ts`, which imports nothing and is tested on its own.
+
+**Annotation.** A heading that is a category's title is that category's words:
+it carries `page:/categories/<slug>:blocks[0].title`, as a listing's row does,
+and a tap opens the category. A select's label, a collection's label and «+N»
+are the repository's — `data-jtk-fixed`. A `ref`, a `select` and a list of refs
+are edited in the panel beside the page, never by tapping, and neither the
+platform's build nor `jtk catalogue` asks an element of them.
+
 ## Pictures in a body
 
 Ordinary markdown, and the address is a media key exactly as everywhere else:
