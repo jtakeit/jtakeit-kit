@@ -1,6 +1,20 @@
 import { base } from './under';
 import { getCollection, render } from 'astro:content';
-import { COLLECTIONS, type Collection } from '../content/blocks';
+import { BLOCKS, COLLECTIONS, words, type Collection, type Field } from '../content/blocks';
+import { langOf } from './locale';
+import {
+  ancestors,
+  capped,
+  grouped,
+  groupField,
+  pointersInto,
+  pointsAt,
+  refHeadings,
+  selectHeadings,
+  treeFields,
+  type Group,
+  type Heading,
+} from './groups';
 
 /**
  * Reading a collection: which entries there are, in the order the site lists
@@ -134,4 +148,124 @@ export async function alternatesOf(collection: Collection, entry: Entry): Promis
 function compare(a: unknown, b: unknown): number {
   if (typeof a === 'number' && typeof b === 'number') return a - b;
   return String(a ?? '').localeCompare(String(b ?? ''));
+}
+
+/*
+ * ── groups, trees and what points at an entry ───────────────────────────────
+ *
+ * The rules are `groups.ts`'s (wiki/78 of the platform, 12 October 2026); what
+ * is here is the reading — which entries, in which language, by `listed()`, so
+ * a hidden entry heads nothing, is under nothing and points at nothing.
+ */
+
+/** The fields of a collection's entry type. */
+export function fieldsOf(collection: Collection): Field[] {
+  return BLOCKS.find((one) => one.type === collection.type)?.fields ?? [];
+}
+
+/**
+ * The annotation for an entry's title drawn on *another* page — a heading of
+ * a listing, a row of an archive — or `undefined` where the title is not the
+ * owner's to tap there, and the words are drawn `data-jtk-fixed`.
+ *
+ * `page:<address>:blocks[0].title`, the convention every listing already
+ * follows (docs/collections.md): the admin resolves it against the entry's
+ * own document, whether that entry has a page or is a row of its listing.
+ */
+export function titlePath(collection: Collection, entry: Entry): string | undefined {
+  const title = fieldsOf(collection).find((one) => one.key === 'title');
+  if (title === undefined || title.client_editable === false || title.no_tap_target === true) return undefined;
+  return `page:/${routeOf(collection, entry)}:blocks[0].title`;
+}
+
+/**
+ * The entries of a grouped collection under their headings — or `undefined`
+ * for a collection that declares no `group`, which a listing draws flat.
+ *
+ * A select's headings are its options' labels in the page's language; a
+ * ref's are the titles of the referenced collection's entries, in that
+ * collection's order, the site's own language standing in for a category
+ * not translated yet. What has no group, or one that is not a heading (a
+ * renamed option, a hidden category), comes last under none.
+ */
+export async function groupsOf(collection: Collection, entries: Entry[], locale = ''): Promise<Group<Entry>[] | undefined> {
+  const field = groupField(collection, fieldsOf(collection));
+  if (field === undefined) return undefined;
+
+  let headings: Heading[];
+  if (field.kind === 'select') {
+    headings = selectHeadings(field, (text) => words(text, langOf(locale)));
+  } else {
+    const target = COLLECTIONS.find((one) => one.name === field.ref);
+    if (target === undefined) return undefined;
+    headings = refHeadings(
+      await listed(target.name, locale),
+      locale === '' ? [] : await listed(target.name, ''),
+      slugOf,
+      (one) => titlePath(target, one),
+    );
+  }
+  return grouped(entries, field.key, headings);
+}
+
+/** One collection's entries pointing at an entry, as many as its page shows, and how many more there are. */
+export interface Referrers {
+  collection: Collection;
+  entries: Entry[];
+  more: number;
+}
+
+/**
+ * What points at an entry from the other collections: a category's services,
+ * a tag's posts, a master's reviews — the archive an entry's page lists.
+ *
+ * Through a top-level `ref` or a `ref` in the rows of a list (tags). In the
+ * order of `COLLECTIONS`, each collection's entries in its own order, in the
+ * entry's language, hidden ones left out, and at most the referencing
+ * collection's `per_page` of them (`capped` says why not pages of their own).
+ * A collection's own entries pointing into it are a tree — see `treeOf`.
+ */
+export async function referrersOf(collection: Collection, entry: Entry): Promise<Referrers[]> {
+  const locale = String(entry.data.locale ?? '');
+  const slug = slugOf(entry);
+  const out: Referrers[] = [];
+  for (const other of COLLECTIONS) {
+    if (other.name === collection.name) continue;
+    const pointers = pointersInto(collection.name, fieldsOf(other));
+    if (pointers.length === 0) continue;
+    const found = (await listed(other.name, locale)).filter((one) => pointsAt(one, pointers, slug));
+    if (found.length === 0) continue;
+    const { shown, more } = capped(found, other.per_page);
+    out.push({ collection: other, entries: shown, more });
+  }
+  return out;
+}
+
+/**
+ * Where an entry sits in a tree its collection makes with a `ref` into
+ * itself (`parent: ref categories`): the trail from the root down to its
+ * parent, and its children in the collection's order. Empty for a collection
+ * that is no tree, and for a root with no children.
+ */
+export async function treeOf(collection: Collection, entry: Entry): Promise<{ trail: Entry[]; children: Entry[]; more: number }> {
+  const field = treeFields(collection, fieldsOf(collection))[0];
+  if (field === undefined) return { trail: [], children: [], more: 0 };
+  const locale = String(entry.data.locale ?? '');
+  const all = await listed(collection.name, locale);
+  const bySlug = new Map(all.map((one) => [slugOf(one), one]));
+  const parentOf = new Map<string, string>();
+  for (const one of all) {
+    const parent = one.data[field.key];
+    if (typeof parent === 'string') parentOf.set(slugOf(one), parent);
+  }
+  const slug = slugOf(entry);
+  // The entry itself may be hidden and still built (it is being looked at
+  // before it is out), so its own parent is read off it, not off the list.
+  const own = entry.data[field.key];
+  if (typeof own === 'string') parentOf.set(slug, own);
+  const trail = ancestors(slug, parentOf, new Set(bySlug.keys()))
+    .map((one) => bySlug.get(one)!)
+    .reverse();
+  const { shown, more } = capped(all.filter((one) => one.data[field.key] === slug && slugOf(one) !== slug), collection.per_page);
+  return { trail, children: shown, more };
 }

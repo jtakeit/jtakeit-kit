@@ -20,6 +20,19 @@
  * that books them. `jtk create --kit` points the module's `page` setting here,
  * so the panel's *Try booking* opens it.
  *
+ * ── a grouped collection ────────────────────────────────────────────────────
+ *
+ * A collection with `group` is listed under its headings (`groupsOf` in
+ * lib/entries, the rules in lib/groups): a select's option labels in the
+ * options' order, or the titles of the referenced collection's entries in that
+ * collection's order — a salon's categories the owner adds in the panel. A
+ * category's title is that entry's words, so the heading carries its
+ * `page:<address>:blocks[0].title`; a select's label is the repository's and
+ * is fixed. What has no group comes last, under no heading. The booking form
+ * is handed the same headings, words and not the stored value (12 October
+ * 2026: it was handed `entry.data.group`, a field no catalogue was obliged to
+ * have, and the option's raw value where it had).
+ *
  * Plain on purpose, like `[...entry].astro`: this is what makes a site built
  * from a kit buildable on its first commit, not its design. What must survive
  * the design pass is every `data-jtk-path`.
@@ -29,7 +42,7 @@ import { siteCurrency } from '../lib/site';
 import BookingForm from '../components/BookingForm.astro';
 import { Image } from 'astro:assets';
 import { BLOCKS, COLLECTIONS, MODULES, words, type Collection, type Field } from '../content/blocks';
-import { listed, slugOf, type Entry } from '../lib/entries';
+import { groupsOf, listed, slugOf, type Entry } from '../lib/entries';
 import { EVERY_LOCALE, langOf, withLocale } from '../lib/locale';
 import { isUpload, uploaded } from '../lib/uploads';
 import { photo } from '../lib/photos';
@@ -50,6 +63,13 @@ const entries: Entry[] = await listed(collection.name, locale);
 // A listing exists in every language the site has.
 const alternates = EVERY_LOCALE.map((one) => ({ locale: one, path: withLocale(one, collection.prefix) }));
 const type = BLOCKS.find((one) => one.type === collection.type);
+// Under their headings where the collection is grouped; one run with none
+// where it is not, which draws exactly the flat list it always was.
+const groups = (await groupsOf(collection, entries, locale)) ?? [{ entries }];
+const isGrouped = groups.some((one) => one.heading !== undefined);
+// A row's title is a heading under the group's, and the page's second level
+// where there are no groups.
+const RowTitle = isGrouped ? 'h3' : 'h2';
 
 // The fields a row shows: those the owner edits by tapping them. The rest —
 // a select, a number, a list of hours — are edited in the panel beside it.
@@ -76,22 +96,27 @@ const bookings = MODULES.bookings;
 const sells = bookings?.services === collection.name;
 const form = sells
   ? {
-      services: entries
-        .filter((entry) => typeof entry.data.takes === 'number')
-        .map((entry) => ({
-          slug: slugOf(entry),
-          title: String(entry.data.title ?? entry.id),
-          takes: entry.data.takes as number,
-          costs: typeof entry.data.costs === 'number' ? entry.data.costs : undefined,
-          group: typeof entry.data.group === 'string' ? entry.data.group : undefined,
-        })),
+      // In the listing's order, group by group, each service carrying its
+      // heading's words: the form draws a heading once per run, in the order
+      // the runs come, and the run with none last.
+      services: groups.flatMap((run) =>
+        run.entries
+          .filter((entry) => typeof entry.data.takes === 'number')
+          .map((entry) => ({
+            slug: slugOf(entry),
+            title: String(entry.data.title ?? entry.id),
+            takes: entry.data.takes as number,
+            costs: typeof entry.data.costs === 'number' ? entry.data.costs : undefined,
+            group: run.heading?.text,
+          })),
+      ),
       resources: bookings?.resources
         ? (await listed(bookings.resources, locale)).map((entry) => ({
             slug: slugOf(entry),
             title: String(entry.data.title ?? entry.id),
             // What each does, for the form to grey the other services out once
             // they are chosen; empty is everything.
-            does: ((entry.data.does as { service: string }[] | undefined) ?? []).map((row) => row.service),
+            does: (Array.isArray(entry.data.does) ? (entry.data.does as { service: string }[]) : []).map((row) => row.service),
           }))
         : [],
       // The days the business opens, for the week of days: a closed day is
@@ -109,32 +134,43 @@ const heading = words(collection.label, langOf(locale));
       {/* The collection's own name, from the catalogue: the repository's, not a
           field of any entry — fixed, as the check asks it to be said. */}
       <h1 data-jtk-fixed>{heading}</h1>
-      <ul class="listing-rows">
-        {
-          entries.map((entry) => {
-            const at = withLocale(locale, `${collection.prefix}/${slugOf(entry)}`);
-            return (
-              <li class="listing-row">
-                {shown.map((field) => {
-                  const value = entry.data[field.key];
-                  if (value === undefined || value === null || value === '') return null;
-                  const path = `page:${at}:blocks[0].${field.key}`;
-                  if (field.kind === 'media') {
-                    const src = String(value);
-                    const file = isUpload(src) ? uploaded(src) : photo(src);
-                    if (!file) return null;
-                    return <Image src={file} alt={String(entry.data.title ?? '')} data-jtk-path={path} widths={[480, 960]} sizes="(min-width: 900px) 20rem, 92vw" layout="none" />;
-                  }
-                  if (field.kind === 'duration') return <span data-jtk-path={path}>{length(Number(value))}</span>;
-                  if (field.kind === 'money') return <span data-jtk-path={path}>{money(Number(value))}</span>;
-                  if (field.key === 'title') return <h2 data-jtk-path={path}>{String(value)}</h2>;
-                  return <p data-jtk-path={path}>{String(value)}</p>;
-                })}
-              </li>
-            );
-          })
-        }
-      </ul>
+      {
+        groups.map((run) => (
+          <Fragment>
+            {/* A category's title is that entry's, and taps open it; a
+                select's label is the repository's, fixed. */}
+            {run.heading && (
+              <h2 class="listing-group" data-jtk-path={run.heading.path} data-jtk-fixed={run.heading.path ? undefined : true}>{run.heading.text}</h2>
+            )}
+            <ul class="listing-rows">
+              {
+                run.entries.map((entry) => {
+                  const at = withLocale(locale, `${collection.prefix}/${slugOf(entry)}`);
+                  return (
+                    <li class="listing-row" id={`${collection.name}-${slugOf(entry)}`}>
+                      {shown.map((field) => {
+                        const value = entry.data[field.key];
+                        if (value === undefined || value === null || value === '') return null;
+                        const path = `page:${at}:blocks[0].${field.key}`;
+                        if (field.kind === 'media') {
+                          const src = String(value);
+                          const file = isUpload(src) ? uploaded(src) : photo(src);
+                          if (!file) return null;
+                          return <Image src={file} alt={String(entry.data.title ?? '')} data-jtk-path={path} widths={[480, 960]} sizes="(min-width: 900px) 20rem, 92vw" layout="none" />;
+                        }
+                        if (field.kind === 'duration') return <span data-jtk-path={path}>{length(Number(value))}</span>;
+                        if (field.kind === 'money') return <span data-jtk-path={path}>{money(Number(value))}</span>;
+                        if (field.key === 'title') return <RowTitle data-jtk-path={path}>{String(value)}</RowTitle>;
+                        return <p data-jtk-path={path}>{String(value)}</p>;
+                      })}
+                    </li>
+                  );
+                })
+              }
+            </ul>
+          </Fragment>
+        ))
+      }
     </section>
 
     {

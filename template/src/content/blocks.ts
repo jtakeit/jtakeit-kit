@@ -636,7 +636,22 @@ export interface Collection {
   one?: Text;
   /** The sentence under the collection's title in the admin. */
   intro?: Text;
-  /** A `select` field of `type` the entries are grouped by — a menu's courses. */
+  /**
+   * A field of `type` the entries are grouped by — a menu's courses, a
+   * salon's categories. Read by three: the listing draws its headings, the
+   * admin lists entries under them, the booking form offers services by them.
+   *
+   * A `select` is a group that is a value: the headings are its options, in
+   * their order, by their `option_labels`, and renaming one is a commit.
+   *
+   * A `ref` to **another** collection is a group that is an entry (since 12
+   * October 2026, the platform's wiki/78): `category: ref categories`, and
+   * the owner adds a category in the panel, titles it in every language and
+   * orders it; the headings are those titles in that collection's order. Never
+   * a ref into this collection itself — that is a tree, a `parent` field, and
+   * `jtk catalogue` refuses it as a group. docs/collections.md has the
+   * category, tag and tree patterns whole.
+   */
   group?: string;
   /** Where entries live: `/blog` gives `/blog/aftercare`. No trailing slash. */
   prefix: string;
@@ -683,7 +698,11 @@ export interface Collection {
    * entries wherever the database felt like.
    */
   order?: { by: string; desc?: boolean };
-  /** Paginate the listing. Absent means one page, however many there are. */
+  /**
+   * Paginate the listing. Absent means one page, however many there are. An
+   * entry's page that lists what points at it (a tag's posts) shows at most
+   * this many of this collection's.
+   */
   per_page?: number;
   /**
    * `false` for a collection whose entries have no page of their own — a
