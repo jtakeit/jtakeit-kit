@@ -29,6 +29,7 @@
  * — and this one renders.
  */
 import { everyEntry, rendered, listed, routeOf, slugOf, alternatesOf } from '../lib/entries';
+import { siteCurrency } from '../lib/site';
 import { langOf } from '../lib/locale';
 import { Image } from 'astro:assets';
 import Layout from '../layouts/Layout.astro';
@@ -122,8 +123,8 @@ const TAPPABLE = new Set(['text', 'textarea', 'richtext_lite', 'markdown', 'medi
 const tappable = (field: Field) =>
   TAPPABLE.has(field.kind) && field.client_editable !== false && field.no_tap_target !== true;
 
-const siteFiles = import.meta.glob<{ business?: { currency?: string } }>('/jtk/site.json', { eager: true, import: 'default' });
-const currency = Object.values(siteFiles)[0]?.business?.currency ?? '';
+// The site's, as the platform wrote it (lib/site): never a page's own.
+const currency = siteCurrency;
 
 /** A length as the trade says it: whole days, whole hours, or minutes. */
 function length(minutes: number): string {

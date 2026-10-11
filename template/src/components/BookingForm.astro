@@ -24,6 +24,7 @@
  * what the platform books against; titles are what the visitor reads.
  */
 import { renderBookingForm } from '@jtakeit/kit/booking';
+import { siteCurrency } from '../lib/site';
 import '@jtakeit/kit/booking.css';
 import { under } from '../lib/under';
 
@@ -83,7 +84,7 @@ interface Props {
   ui?: boolean | string;
 }
 
-const { services, resources = [], locale, daysAhead = 30, combine = false, currency = 'CHF', scale = '', kind = '', open = [], ui = true } = Astro.props;
+const { services, resources = [], locale, daysAhead = 30, combine = false, currency = siteCurrency, scale = '', kind = '', open = [], ui = true } = Astro.props;
 
 const html = renderBookingForm({ services, resources, locale, daysAhead, combine, currency, scale, kind, open, ui, api: under('/api/') });
 ---

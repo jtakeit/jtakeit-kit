@@ -106,7 +106,7 @@ function priceSaid(one, currency, lang) {
  */
 export function renderBookingForm(props) {
   const {
-    services, resources = [], locale, daysAhead = 30, combine = false, currency = 'CHF', scale = '', kind = '',
+    services, resources = [], locale, daysAhead = 30, combine = false, currency = '', scale = '', kind = '',
     api = '/api/', tag = 'jtk-booking', now = new Date(), open = [], ui = true,
   } = props;
   if (!Array.isArray(services)) throw new TypeError('renderBookingForm: services is a list of { slug, title }');

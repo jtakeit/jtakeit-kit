@@ -25,6 +25,7 @@
  * the design pass is every `data-jtk-path`.
  */
 import Layout from '../layouts/Layout.astro';
+import { siteCurrency } from '../lib/site';
 import BookingForm from '../components/BookingForm.astro';
 import { Image } from 'astro:assets';
 import { BLOCKS, COLLECTIONS, MODULES, words, type Collection, type Field } from '../content/blocks';
@@ -60,8 +61,8 @@ const shown: Field[] = (type?.fields ?? []).filter(
 const lang = langOf(locale).slice(0, 2);
 const settingsFiles = import.meta.glob<{ blocks?: Record<string, unknown>[] }>('/jtk/bookings.json', { eager: true, import: 'default' });
 const settings = Object.values(settingsFiles)[0]?.blocks?.[0] ?? {};
-const siteFiles = import.meta.glob<{ business?: { currency?: string } }>('/jtk/site.json', { eager: true, import: 'default' });
-const currency = Object.values(siteFiles)[0]?.business?.currency ?? '';
+// The site's, as the platform wrote it (lib/site): never a page's own.
+const currency = siteCurrency;
 
 /** A length as the trade says it: whole days, whole hours, or minutes. */
 function length(minutes: number): string {

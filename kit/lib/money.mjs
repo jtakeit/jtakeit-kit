@@ -15,16 +15,36 @@
  * @returns {string}
  */
 export function money(minor, currency, locale) {
-  const value = minor / 100;
-  const digits = Number.isInteger(value) ? 0 : 2;
+  // In the currency's own minor unit (11 October 2026): a hundredth of a
+  // franc, a whole yen, a thousandth of a dinar — ISO 4217's digits, which
+  // `Intl` carries and the platform counts by too. A hundredth everywhere
+  // showed ¥1000 as «¥10».
+  const places = currency ? digitsOf(currency, locale) : 2;
+  const value = minor / 10 ** places;
+  const digits = Number.isInteger(value) ? 0 : places;
   if (!currency) {
-    return new Intl.NumberFormat(locale, { minimumFractionDigits: digits, maximumFractionDigits: 2 }).format(value);
+    return new Intl.NumberFormat(locale, { minimumFractionDigits: digits, maximumFractionDigits: places }).format(value);
   }
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: currency.toUpperCase(),
     currencyDisplay: 'narrowSymbol',
     minimumFractionDigits: digits,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: places,
   }).format(value);
+}
+
+/**
+ * How many digits a currency's minor unit has, by ISO 4217 as `Intl` knows it.
+ *
+ * @param {string} currency
+ * @param {string} [locale]
+ * @returns {number}
+ */
+export function digitsOf(currency, locale = 'en') {
+  try {
+    return new Intl.NumberFormat(locale, { style: 'currency', currency: currency.toUpperCase() }).resolvedOptions().maximumFractionDigits ?? 2;
+  } catch {
+    return 2;
+  }
 }

@@ -72,8 +72,18 @@ booking*. Empty means the front page.
 
 ```ts
 ---
-<BookingForm services={services} resources={masters} locale="de" combine={combine} scale={scale} kind={kind} currency="CHF" />
+<BookingForm services={services} resources={masters} locale="de" combine={combine} scale={scale} kind={kind} />
 ```
+
+**The currency is the site's, never the page's.** It is set once, in
+`jtk/site.json` (`"business": {"currency": "chf"}`) or on the Business facts in
+the panel, and the form, the price list and the total read it from there —
+`siteCurrency` in `src/lib/site.ts`, `money()` in `src/lib/money.ts`. Do not
+pass `currency="CHF"` or write a sign into a page: when the business changes its
+currency the diary and the payment follow, and a page with its own would go on
+saying francs. The platform's preflight reads the built prices and fails one in
+another currency. A price is whole minor units of the currency — 18000 is
+CHF 180, 1000 is ¥1000 — and `money()` counts the digits each currency has.
 
 The words that depend on the kind of business — «Записатися» or «Орендувати»,
 «Майстер» or «Авто», «Ви записані» or «Оренду підтверджено» — are the

@@ -203,7 +203,9 @@ export function wireBooking(form) {
   const offered = new Map();
   /** @type {Record<string, number>} */ let prices = {};
   /** @type {Record<string, string>} */ let classOf = {};
-  let currency = form.dataset.currency || 'CHF';
+  // The site's, from the page, and then the platform's own answer below: no
+  // sign made up while it is asked (11 October 2026).
+  let currency = form.dataset.currency || '';
 
   /** @type {string | null} */ let chosen = null;
   let zone = '';
