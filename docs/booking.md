@@ -56,15 +56,33 @@ focus ring where the site draws none — and the ARIA it depends on are put on
 the page by the element itself, so a form restyled from nothing keeps them.
 
 **What the element draws itself** carries `booking__*` classes, to style and
-not to rename: a button per free time (`booking__slot`), the week of days
-(`booking__days`, `booking__day`, `booking__days-arrow`), the parts of the day
-(`booking__parts`, `booking__part`), the two steps (`booking__stepper`,
-`booking__step`, `booking__next`, `booking__need`, `booking__summary`,
-`booking__back`) and the drawn choice of whom (`booking__dd`,
-`booking__dd-trigger`, `booking__dd-option`). Their state is ARIA, not a class:
-chosen is `aria-pressed="true"`, the current step `aria-current="step"`, the
-chosen option `aria-selected="true"`, what cannot be chosen `disabled`. The
-end of the component's `<style>` styles every one of them — start there.
+not to rename:
+
+| piece | classes |
+|---|---|
+| a free time | `booking__slot` |
+| the week of days | `booking__days`, `booking__days-head`, `booking__days-month`, `booking__days-nav`, `booking__days-arrow`, `booking__days-row`, `booking__day`, `booking__day-wd`, `booking__day-n` |
+| the parts of the day | `booking__parts`, `booking__part`, `booking__part-n` |
+| the two steps | `booking__stepper`, `booking__step`, `booking__step-n`, `booking__next`, `booking__need`, `booking__summary`, `booking__summary-label`, `booking__summary-list`, `booking__summary-row`, `booking__back` |
+| the drawn choice of whom | `booking__dd`, `booking__dd-trigger`, `booking__dd-value`, `booking__dd-mark`, `booking__dd-list`, `booking__dd-option` |
+| a service the chosen one does not do | `booking__service-off` (also `data-service-off`), inside the row, which gets `data-off` |
+
+Style their state by attribute, not by class (the `is-*` classes are still
+set, for an older site's CSS): chosen is `aria-pressed="true"`, the chosen
+option `aria-selected="true"`, a step `data-state="current|done|ahead"` (and
+`aria-current="step"` on the current one), what cannot be chosen `disabled`.
+The end of the component's `<style>` styles every one of them — start there.
+
+Two things about Astro's scoped `<style>` that save a debugging session: what
+the element draws has no scope attribute, so reach it as `.form
+:global(.booking__slot)` — and `.form > *` misses it too; write `.form >
+:global(*)`. And the wide layout may break on the container
+(`@container`, as the component does) or on the viewport (`@media`), whichever
+the site's design already uses.
+
+A move between the two steps takes the focus to the step's name, not to the
+first field (WCAG 2.4.3): a screen reader says where it is, and the next Tab
+is the step's first control.
 
 `npx @jtakeit/astro a11y` reads the built pages against WCAG 2.1 AA and drives
 the form through every state; run it on the dressed copy before the push.

@@ -304,6 +304,9 @@ export function twoSteps(form, words, lang) {
     for (const step of /** @type {NodeListOf<HTMLElement>} */ (stepper.querySelectorAll('.booking__step'))) {
       step.classList.toggle('is-current', step.dataset.at === to);
       step.classList.toggle('is-done', to === 'done' || Number(step.dataset.at) < Number(to));
+      // The step's state as an attribute too, so a site styles a step behind
+      // without a class of the kit's: `data-state="done|current|ahead"`.
+      step.dataset.state = step.dataset.at === to ? 'current' : to === 'done' || Number(step.dataset.at) < Number(to) ? 'done' : 'ahead';
       if (step.dataset.at === to) step.setAttribute('aria-current', 'step');
       else step.removeAttribute('aria-current');
     }

@@ -550,7 +550,7 @@ const w = form.words;
     border-radius: 999px;
     font-size: 0.8em;
   }
-  .form :global(:is(.booking__step[aria-current='step'], .booking__step.is-done) .booking__step-n) {
+  .form :global(.booking__step:is([data-state='current'], [data-state='done']) .booking__step-n) {
     background: var(--ink);
     color: var(--paper);
     border-color: var(--ink);
