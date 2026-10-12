@@ -47,7 +47,11 @@ const canonical = canonicalFor(Astro.url.pathname);
 // path this build is served under, which under the studio's preview is the
 // whole of the site's address. src/lib/under.ts has the argument.
 const ogImage = new URL(under('/og.jpg'), Astro.site).href;
-const fullTitle = suffix ? `${title}${META.titleSuffix}` : title;
+// Never an empty <title> (WCAG 2.4.2): a page whose own title nobody has
+// written yet is named after the business, which is what a visitor would
+// call it anyway (12 October 2026: the home page of a fresh site had none).
+const named = title.trim() || BUSINESS.name || '';
+const fullTitle = suffix && title.trim() ? `${named}${META.titleSuffix}` : named;
 
 /**
  * One business, described once, on every page. The `@id` is stable across the
@@ -115,8 +119,25 @@ const invertedPage = paperLuma !== null && inkLuma !== null && paperLuma < inkLu
  */
 if (DESIGN.paper) palette['--paper'] = DESIGN.paper;
 if (DESIGN.paper) palette['--lift'] = invertedPage ? 'var(--ink)' : '#ffffff';
+/*
+ * And which way «recessed» goes. `--paper-deep` is a light grey in global.css,
+ * right below white and a pale band under a dark page's light words — an FAQ
+ * read 1.03:1 (12 October 2026). On a dark page it is the paper a step
+ * darker.
+ */
+// A light page keeps global.css's grey, which is what every site has drawn.
+if (DESIGN.paper && invertedPage) palette['--paper-deep'] = 'color-mix(in srgb, var(--paper) 82%, #000000)';
 if (DESIGN.ink) palette['--ink'] = DESIGN.ink;
 if (DESIGN.accent) palette['--accent'] = DESIGN.accent;
+/*
+ * The words a button carries on the accent, by the accent's own lightness:
+ * near-black on a light accent, white on a dark one — whichever reads further
+ * from it (WCAG 1.4.3). The two meet at a luminance of 0.195. It was white
+ * whatever the accent, and white on a dark page's amber read 1.98:1
+ * (12 October 2026). A variant may still set --on-accent itself.
+ */
+const accentLuma = DESIGN.accent ? luminance(DESIGN.accent) : null;
+if (accentLuma !== null) palette['--on-accent'] = accentLuma > 0.195 ? '#16130f' : '#ffffff';
 if (DESIGN.ground) palette['--fl-ground'] = DESIGN.ground;
 (DESIGN.colors ?? []).forEach((colour: string, i: number) => {
   if (colour) palette[`--fl-c${i + 1}`] = colour;
@@ -244,6 +265,14 @@ const businessSchema = {
   </head>
 
   <body class={bodyClass}>
+    {/*
+      The first stop of the keyboard, straight to what the page is about
+      (WCAG 2.4.1): every page puts its content in <main id="content">. Out of
+      sight until it is focused, then the first thing on the screen. The words
+      were in the copy since the scaffold had a copy, and nothing drew them
+      (12 October 2026).
+    */}
+    <a class="skip-link" href="#content">{COPY.A11Y.skipToContent}</a>
     <slot />
     {/* The switcher, drawn only on a page that exists in more than one
         language. Here so a second language works the day it is declared;

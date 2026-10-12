@@ -38,10 +38,18 @@
   --paper-deep: #f4f2ee;
 
   --ink: #16130f;
-  --ink-quiet: #6f6a63;
+  /*
+   * The quiet ink is the ink, quietened towards the paper — not a colour of
+   * its own. A fixed grey was right on white and 3.45:1 on a dark page, where
+   * nobody had thought to change it (12 October 2026). Two thirds of the ink
+   * keeps it above 4.5:1 on the paper and on a panel either way.
+   */
+  --ink-quiet: color-mix(in srgb, var(--ink) 66%, var(--paper));
   --line: #e2ded7;
 
   --accent: #2f5bff;
+  /* Words on the accent: Layout.astro chooses from the accent's lightness. */
+  --on-accent: #ffffff;
   /* The accent as text: a step towards the ink, following a live accent. */
   --accent-ink: color-mix(in srgb, var(--accent) 70%, var(--ink));
   --danger: #b3261e;
@@ -246,7 +254,7 @@ h1 {
 
 .btn {
   padding: 0.75rem 1.5rem;
-  color: #fff;
+  color: var(--on-accent);
   background: var(--accent);
   border: none;
   border-radius: var(--r-2);
@@ -552,6 +560,13 @@ h1 {
   color: var(--paper);
   border-color: var(--ink);
 }
+/* Quiet words inside a filled choice — the weekday in a chosen day, a count
+   in the current part of the day — take the fill's own text colour: the quiet
+   ink on the ink read 2.1:1 to 3.1:1 (WCAG 1.4.3, 12 October 2026). */
+.booking__day.is-chosen .booking__day-wd,
+.booking__part.is-current .booking__part-n {
+  color: inherit;
+}
 .booking__day-n {
   font-size: 1.125rem;
 }
@@ -593,7 +608,7 @@ h1 {
   border: 0;
   border-radius: 999px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   cursor: pointer;
 }
 .booking__summary {
@@ -780,4 +795,30 @@ h1 {
   content: '/';
   margin-right: 0.5rem;
   color: var(--ink-quiet);
+}
+
+/*
+ * The skip link (Layout.astro): off-screen until a keyboard reaches it, then
+ * pinned to the top corner above everything, in the page's own ink and paper.
+ */
+.skip-link {
+  position: fixed;
+  left: 0.75rem;
+  top: 0.75rem;
+  z-index: 1000;
+  padding: 0.6rem 1rem;
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: var(--r-2);
+  text-decoration: none;
+}
+/* Clipped rather than moved off the page: moving it made focusing it scroll
+   some pages, and the link landed outside the screen it was meant to start. */
+.skip-link:not(:focus) {
+  clip-path: inset(50%);
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
 }
