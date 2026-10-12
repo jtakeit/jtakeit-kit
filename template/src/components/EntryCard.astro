@@ -1,0 +1,63 @@
+---
+/**
+ * One entry as a tile of a listing — the blog's, and every collection's with
+ * pages (`EntryListing.astro`). Linked to the entry's page.
+ *
+ * It draws the reserved keys an entry may have (docs/collections.md): the
+ * cover, the date, the title, the excerpt — whichever the type declares and
+ * the entry fills in. Each is that entry's words, not the listing's, so what
+ * the owner edits by tapping carries the entry's page-qualified path
+ * (`page:/blog/first-look:blocks[0].title`), and a tap opens the entry. The
+ * date and the excerpt are `no_tap_target` on a post — edited in the panel
+ * beside it, and a tap on them refused by the platform's build — so they are
+ * drawn `data-jtk-fixed`, and so is a title the type keeps from the owner.
+ *
+ * Plain, like the rest: the design pass restyles `.post-card` and keeps
+ * every annotation.
+ */
+import { Image } from 'astro:assets';
+import { fieldsOf, href, routeOf, slugOf, titlePath, type Entry } from '../lib/entries';
+import { langOf } from '../lib/locale';
+import { isUpload, uploaded } from '../lib/uploads';
+import { photo } from '../lib/photos';
+import type { Collection } from '../content/blocks';
+
+interface Props {
+  collection: Collection;
+  entry: Entry;
+  locale: string;
+  /** The title's level: `h2` on a flat listing, `h3` under a group's heading. */
+  level?: 'h2' | 'h3';
+}
+
+const { collection, entry, locale, level = 'h2' } = Astro.props;
+const Title = level;
+const fields = fieldsOf(collection);
+const field = (key: string) => fields.find((one) => one.key === key);
+
+const title = String(entry.data.title ?? slugOf(entry));
+const titleAt = titlePath(collection, entry);
+
+const coverField = field('cover');
+const src = coverField?.kind === 'media' && typeof entry.data.cover === 'string' ? entry.data.cover : '';
+const cover = src ? (isUpload(src) ? uploaded(src) : photo(src)) : undefined;
+const coverAt =
+  coverField && coverField.client_editable !== false && coverField.no_tap_target !== true
+    ? `page:/${routeOf(collection, entry)}:blocks[0].cover`
+    : undefined;
+
+const when = new Intl.DateTimeFormat(langOf(locale), { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+const day = field('date') ? new Date(String(entry.data.date ?? '')) : new Date(Number.NaN);
+const dated = Number.isNaN(day.getTime()) ? '' : when.format(day);
+
+const excerpt = field('excerpt') && typeof entry.data.excerpt === 'string' ? entry.data.excerpt : '';
+---
+
+<li class="post-card">
+  <a href={href(collection, entry)}>
+    {cover && <Image src={cover} alt={title} data-jtk-path={coverAt} widths={[480, 960]} sizes="(min-width: 900px) 30rem, 92vw" layout="none" />}
+    {dated && <time datetime={String(entry.data.date)} data-jtk-fixed>{dated}</time>}
+    <Title data-jtk-path={titleAt} data-jtk-fixed={titleAt ? undefined : true}>{title}</Title>
+    {excerpt !== '' && <p data-jtk-fixed>{excerpt}</p>}
+  </a>
+</li>

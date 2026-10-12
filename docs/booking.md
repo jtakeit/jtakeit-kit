@@ -49,12 +49,16 @@ document, which the owner edits under the diary; publish writes it to
 ```astro
 ---
 import BookingForm from '../components/BookingForm.astro';
-import { listed } from '../lib/entries';                                // src/lib/entries.ts: the visible entries, in the collection's order
+import { listed, groupsOf, collectionNamed } from '../lib/entries';    // src/lib/entries.ts: the visible entries, in the collection's order
 import bookings from '../../jtk/bookings.json';
-const services = (await listed('services')).map((e) => ({
+const all = await listed('services');
+// Under the collection's `group` where it has one: the runs in the headings' order,
+// each heading the words (a select's label, a category's title), never the stored value.
+const runs = (await groupsOf(collectionNamed('services'), all)) ?? [{ entries: all }];
+const services = runs.flatMap((run) => run.entries.map((e) => ({
   slug: e.id, title: String(e.data.title),
-  takes: e.data.takes, costs: e.data.costs, rates: e.data.rates, group: e.data.group, // for the checklist's total and headings; `rates` says «from …»
-}));
+  takes: e.data.takes, costs: e.data.costs, rates: e.data.rates, group: run.heading?.text, // for the checklist's total and headings; `rates` says «from …»
+})));
 const masters  = (await listed('masters')).map((e) => ({ slug: e.id, title: String(e.data.title) }));
 const combine  = bookings.blocks[0].combine === true;                  // jtk/bookings.json, the owner's setting
 const scale    = bookings.blocks[0].scale ?? '';                      // 'daily' for a business that lets things by the day
@@ -95,7 +99,9 @@ set to anything else those few words are held back until the platform has
 said them, and shown in the salon's only if it does not answer at all.
 
 With `combine` on — the module's setting, the owner's to flip — the services
-are a checklist under their `group` headings with a running total of minutes
+are a checklist under their group's headings (the collection's `group`,
+docs/collections.md — a select's labels or a category's titles; the services
+with none after them) with a running total of minutes
 and money, and the visit is booked as one: the same person, the sum of the
 lengths, the sum of the prices. Off, the form is one choice, as it always was.
 Only services with a `takes` belong on the form; a price-list row without one
@@ -226,8 +232,10 @@ site is attached to this address".
 What the module reads is a record the diary occupies or offers, and the panel
 draws it as a form. Shape the two entry types for that, not for the blog:
 
-- **A service** is short fields — `title`, `takes`, `costs`, a `group` if the
-  price list has headings, one line — with **no `body`** and **`pages: false`**
+- **A service** is short fields — `title`, `takes`, `costs`, the field the
+  collection's `group` names if the price list has headings (a `select`, or a
+  `ref` to a categories collection the owner extends — docs/collections.md),
+  one line — with **no `body`** and **`pages: false`**
   on the collection. It is a row of the price list the form reads, not a page.
 - **A resource** — a master, a chair, a table, a room — is a `title` with its
   own `hours`, what it `does`, `seats` or `spots`, a line and a photograph if

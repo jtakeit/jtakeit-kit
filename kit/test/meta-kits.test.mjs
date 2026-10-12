@@ -89,6 +89,10 @@ test('a kit is checked for its shape, and its settings and entries are the platf
   assert.deepEqual(doc, { path: '/rates/day', collection: 'services', visible: true, seo: { title: '', description: '' }, blocks: [{ _key: 'kit00001', type: 'tariff', v: 1, title: 'Доба', takes: 1440 }] });
   assert.equal(kitEntries(kit, 'pl')[0][1].blocks[0].title, 'Day', 'a language the kit has not got reads as English');
   assert.equal(kitLanguage('de-CH'), 'de');
+
+  // A list is the value, not words per language: a master's `does`, a post's tags.
+  const listed = { ...kit, entries: [{ collection: 'cars', slug: 'combi', fields: { title: 'Combi', does: [{ service: 'day' }] } }] };
+  assert.deepEqual(kitEntries(listed, 'uk')[0][1].blocks[0].does, [{ service: 'day' }]);
 });
 
 test('a kit goes into a catalogue file without writing over what the site already has', () => {

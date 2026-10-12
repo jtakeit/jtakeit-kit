@@ -9,6 +9,7 @@ import { BLOCKS, LOCALES, type Collection } from '../content/blocks';
 // same answer — an address nobody can find is a draft the edge hands to
 // anybody — and a rule written twice is a rule that ends up meaning two things.
 import { specimenId } from '../../specimens.mjs';
+import { shownAt } from './schedule';
 
 /**
  * Reading a collection's entries out of the repository.
@@ -58,6 +59,8 @@ export function entries(collection: Collection): Loader {
       ctx.store.clear();
       /** Whatever this collection's own entries show, for the specimens below. */
       const seen: string[] = [];
+      /** The clock a schedule is read against: once, so one load has one answer. */
+      const now = Date.now();
 
       // Every language the site has: its own under `jtk/content/<prefix>/`,
       // the others under `jtk/content/<locale>/<prefix>/` — the platform's
@@ -71,6 +74,8 @@ export function entries(collection: Collection): Loader {
         const document = JSON.parse(raw) as {
           blocks?: Record<string, unknown>[];
           visible?: boolean;
+          show_at?: unknown;
+          hide_at?: unknown;
           seo?: Record<string, unknown>;
         };
         const blocks = document.blocks ?? [];
@@ -93,8 +98,18 @@ export function entries(collection: Collection): Loader {
             locale,
             /** Everything after the post, for the template to render. */
             rest: await written(renderer, blocks.slice(1), file),
-            /** Whether the site lists it. The page itself is always built. */
-            visible: document.visible !== false,
+            /*
+             * Whether the site lists it. The page itself is always built.
+             *
+             * `visible: false`, or a `show_at` still ahead or a `hide_at`
+             * already behind (lib/schedule): the platform turns those two into
+             * `visible: false` before a build of its own, and this is the same
+             * rule for `astro dev`, which reads the files as they are. The
+             * clock is read once per load — a post whose hour comes while the
+             * dev server runs appears when the collections are loaded again
+             * (a restart), not on its own.
+             */
+            visible: shownAt(document, now),
             /*
              * What the post is found by, where it is not what it is called.
              *

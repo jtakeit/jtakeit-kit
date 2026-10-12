@@ -21,6 +21,6 @@ export function specimenAddresses(
   blocks: { type: string; views?: { key: string }[] }[],
   locales?: string[],
 ): string[];
-export function hiddenEntries(root?: string): Promise<string[]>;
+export function hiddenEntries(root?: string, now?: number): Promise<string[]>;
 export function buildMeta(what?: MetaInput): Promise<Meta>;
 export function writeMeta(dir: string, what?: MetaInput): Promise<Meta>;

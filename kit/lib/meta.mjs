@@ -34,6 +34,7 @@
  */
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join, relative, sep } from 'node:path';
+import { shownAt } from './schedule.mjs';
 
 /** The id of one specimen, which is also its address under the collection. */
 export function specimenId(type, view) {
@@ -76,12 +77,16 @@ export function specimenAddresses(collections, blocks, locales = []) {
  *
  * A document, not frontmatter: an entry is a page of blocks in a `.json`
  * file. Only an entry carries `visible` at all; a page has none and is not a
- * draft. `=== false` and not falsy: absent means listed.
+ * draft. `=== false` and not falsy: absent means listed — and so does a
+ * schedule that has come and not gone (`shownAt`, schedule.mjs): a `show_at`
+ * still ahead or a `hide_at` behind is a draft at the moment of the build,
+ * as it is on the platform, which writes it `visible: false` before building.
  *
  * @param {string} [root] where the content is, `jtk/content` under the working directory
+ * @param {number} [now] the clock a schedule is read against, the build's by default
  * @returns {Promise<string[]>}
  */
-export async function hiddenEntries(root = join(process.cwd(), 'jtk', 'content')) {
+export async function hiddenEntries(root = join(process.cwd(), 'jtk', 'content'), now = Date.now()) {
   const out = [];
   const walk = async (at) => {
     let entries;
@@ -104,7 +109,10 @@ export async function hiddenEntries(root = join(process.cwd(), 'jtk', 'content')
       } catch {
         continue; // unreadable JSON is the build's error to report, not this one
       }
-      if (document?.visible === false) {
+      // A schedule is an entry's (it names its collection); a page carries
+      // none, and `visible: false` is read wherever it is written, as before.
+      const isEntry = typeof document?.collection === 'string' && document.collection !== '';
+      if (document?.visible === false || (isEntry && !shownAt(document, now))) {
         const name = relative(root, full).split(sep).join('/').replace(/\.json$/, '');
         out.push(`/${name}/`);
       }

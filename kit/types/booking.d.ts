@@ -7,6 +7,7 @@ export interface Named {
   rates?: { day: string; from: number; until: number; costs: number }[];
   /** `'person'` for a price times the party — a class per place, shoes; the list says so and the running total multiplies. */
   per?: 'booking' | 'person';
+  /** The heading a service is listed under: the words — an option's label, a category's title — not the stored value. Services with none come after every heading. */
   group?: string;
   /** For a resource: the services they perform, by slug. The element greys the others out once they are chosen. */
   does?: string[];

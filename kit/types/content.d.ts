@@ -1,5 +1,5 @@
 /** The published content as one document, from the files in `jtk/` — what the build renders from. */
-export function collectContent(root: string, options?: { dir?: string }): Promise<{
+export function collectContent(root: string, options?: { dir?: string; now?: number }): Promise<{
   schema_version: number;
   content_rev: number;
   site: { slug: string; locale: string; media_base: string; business: Record<string, unknown> };

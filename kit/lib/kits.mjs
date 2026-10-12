@@ -137,7 +137,11 @@ export function kitEntries(kit, locale) {
     const collection = kit.catalogue.collections.find((one) => one.name === entry.collection);
     const block = { _key: `kit${String(i + 1).padStart(5, '0')}`, type: collection.type, v: 1 };
     for (const [key, value] of Object.entries(entry.fields)) {
-      block[key] = value !== null && typeof value === 'object' ? (value[lang] ?? '') : value;
+      // An object is the words per language; a list — a master's `does`, a
+      // post's `tags: [{ tag }]` — is the value itself. It was read as a map
+      // of languages and laid out as '' (12 October 2026), which broke the
+      // listing that maps a resource's `does`.
+      block[key] = Array.isArray(value) ? value : value !== null && typeof value === 'object' ? (value[lang] ?? '') : value;
     }
     const path = `${collection.prefix}/${entry.slug}`;
     const doc = { path, collection: collection.name, visible: true, seo: { title: '', description: '' }, blocks: [block] };

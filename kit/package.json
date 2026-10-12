@@ -1,6 +1,6 @@
 {
   "name": "@jtakeit/kit",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "The framework-free half of a site on jtakeit: the booking form as an element and as markup, for Astro through @jtakeit/astro and for any other generator directly",
   "license": "MIT",
   "type": "module",

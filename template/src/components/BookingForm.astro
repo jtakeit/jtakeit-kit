@@ -38,7 +38,7 @@ interface Named {
   rates?: { day: string; from: number; until: number; costs: number }[];
   /** `'person'` for a price times the party — a class per place, shoes. */
   per?: 'booking' | 'person';
-  /** A heading the services are listed under, where the catalogue groups them. */
+  /** A heading the services are listed under, where the catalogue groups them: the words (an option's label, a category's title), not the stored value — `groupsOf` in lib/entries resolves them. */
   group?: string;
   /** For a resource: the services they perform, by slug — the form greys the others out once they are chosen. */
   does?: string[];

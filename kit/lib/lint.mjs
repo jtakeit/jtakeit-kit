@@ -301,6 +301,8 @@ export async function lint(options = {}) {
   // Entries of a collection without pages: on their listing, annotated there.
   const pageless = new Set((registry?.collections ?? []).filter((one) => one.pages === false).map((one) => one.name));
   const everywhere = [...htmlByPath.values()].join('\n');
+  // `visible` as collectContent read it: false for `visible: false` and for a
+  // schedule not come or gone (schedule.mjs) — a listing leaves both out.
   const listable = (page) => page.visible !== false;
   for (const one of registry?.collections ?? []) {
     if (one.pages !== false) continue;

@@ -27,13 +27,26 @@
  * and the studio's edge serves such a page only to a session that is editing
  * the site. Every place that *lists* entries filters — see `src/lib/entries.ts`
  * — and this one renders.
+ *
+ * ── what points here, and where it sits ─────────────────────────────────────
+ *
+ * An entry's page is also its archive (the platform's wiki/78, 12 October
+ * 2026): below the post, the entries of the other collections that point at
+ * it — a category's services, a tag's posts — under each collection's name,
+ * in its order, linked to their pages; for a category in a tree, what points
+ * at the categories under it as well, each once. And where the collection is a tree
+ * (`parent: ref categories`), the trail of its parents above the title and its
+ * children below. `referrersOf` and `treeOf` in lib/entries read them; the
+ * titles carry `page:<address>:blocks[0].title`, as a listing's do.
  */
-import { everyEntry, rendered, listed, routeOf, slugOf, alternatesOf } from '../lib/entries';
+import { everyEntry, rendered, linksToListing, listed, listingHref, routeOf, slugOf, alternatesOf, href, referrersOf, titlePath, treeOf, type Entry } from '../lib/entries';
+import { copyFor } from '../copy';
+import { under } from '../lib/under';
 import { siteCurrency } from '../lib/site';
-import { langOf } from '../lib/locale';
+import { langOf, withLocale } from '../lib/locale';
 import { Image } from 'astro:assets';
 import Layout from '../layouts/Layout.astro';
-import { BLOCKS, COLLECTIONS, MODULES, words, type Field } from '../content/blocks';
+import { BLOCKS, COLLECTIONS, MODULES, words, type Collection, type Field } from '../content/blocks';
 import { isUpload, uploaded } from '../lib/uploads';
 import { photo } from '../lib/photos';
 import { money as priced } from '../lib/money';
@@ -62,6 +75,7 @@ const { entry, collection } = Astro.props;
 /** The entry's language: `''` for the site's own, `'de'` for one under `jtk/content/de/`. */
 const locale = String(entry.data.locale ?? '');
 const LANG = langOf(locale);
+const { LISTING } = copyFor(locale);
 const alternates = await alternatesOf(collection, entry);
 
 /*
@@ -151,12 +165,29 @@ function weekday(day: string): string {
  * resource's `does` names services of the diary's own.
  */
 const titles = new Map<string, Map<string, string>>();
+const addresses = new Map<string, Map<string, string>>();
 async function titlesOf(name: string | undefined): Promise<Map<string, string>> {
   if (!name || !COLLECTIONS.some((one) => one.name === name)) return new Map();
   if (!titles.has(name)) {
-    titles.set(name, new Map((await listed(name, locale)).map((one) => [slugOf(one), String(one.data.title ?? one.id)])));
+    const target = COLLECTIONS.find((one) => one.name === name)!;
+    const all = await listed(name, locale);
+    // A title in the site's own language stands in for one not translated
+    // yet — a German post's tag reads «Rot» once somebody writes it, and «Red»
+    // until then rather than its slug — as a group's heading does.
+    const own = locale === '' ? [] : await listed(name, '');
+    titles.set(name, new Map([...own, ...all].map((one) => [slugOf(one), String(one.data.title ?? one.id)])));
+    // Where each has a page, for a ref to be a link: a post's tags lead to
+    // the tags' pages, which list the posts (12 October 2026).
+    addresses.set(name, new Map(target.pages === false ? [] : all.map((one) => [slugOf(one), href(target, one)])));
   }
   return titles.get(name)!;
+}
+
+/** The page a ref's value has, where its collection gives entries pages and the entry is listed. */
+async function linkOf(field: Field, value: unknown): Promise<string | undefined> {
+  if (field.kind !== 'ref' || typeof value !== 'string') return undefined;
+  await titlesOf(field.ref);
+  return addresses.get(field.ref ?? '')?.get(value);
 }
 
 /** One value as words, for a field that is drawn plain. */
@@ -207,7 +238,7 @@ type Fact =
   | { key: string; label: string; kind: 'pictures'; pictures: Picture[] }
   | { key: string; label: string; kind: 'picture'; file: ImageMetadata; path: string }
   | { key: string; label: string; kind: 'text'; text: string; path?: string; href?: string }
-  | { key: string; label: string; kind: 'rows'; rows: string[] };
+  | { key: string; label: string; kind: 'rows'; rows: { text: string; href?: string }[] };
 
 const facts: Fact[] = [];
 for (const field of BLOCKS.find((one) => one.type === collection.type)?.fields ?? []) {
@@ -230,18 +261,21 @@ for (const field of BLOCKS.find((one) => one.type === collection.type)?.fields ?
     continue;
   }
   if (field.kind === 'list') {
-    const rows: string[] = [];
+    const rows: { text: string; href?: string }[] = [];
+    // A row that is one ref — a post's tags, `list of { tag: ref tags }` —
+    // links to that entry's page, the way a single ref does.
+    const only = field.of?.length === 1 ? field.of[0] : undefined;
     for (const row of records(value)) {
       const line = await rowSaid(field.of ?? [], row);
-      if (line !== '') rows.push(line);
+      if (line !== '') rows.push({ text: line, href: only ? await linkOf(only, row[only.key]) : undefined });
     }
     if (rows.length > 0) facts.push({ key: field.key, label, kind: 'rows', rows });
     continue;
   }
   const text = await spoken(field, value);
   if (text === '') continue;
-  const href = field.kind === 'url' ? String(value) : field.kind === 'email' ? `mailto:${value}` : field.kind === 'tel' ? `tel:${String(value).replace(/[^+\d]/g, '')}` : undefined;
-  facts.push({ key: field.key, label, kind: 'text', text, href, path: tappable(field) ? path : undefined });
+  const link = field.kind === 'url' ? String(value) : field.kind === 'email' ? `mailto:${value}` : field.kind === 'tel' ? `tel:${String(value).replace(/[^+\d]/g, '')}` : await linkOf(field, value);
+  facts.push({ key: field.key, label, kind: 'text', text, href: link, path: tappable(field) ? path : undefined });
 }
 
 /**
@@ -264,6 +298,21 @@ const seo = (data.seo ?? {}) as Record<string, unknown>;
 const said = (key: string): string =>
   typeof seo[key] === 'string' ? (seo[key] as string).trim() : '';
 
+/*
+ * The archive: what points here from the other collections, and this entry's
+ * place in its own collection's tree. A row's address is its page, or its row
+ * on the listing for a collection without pages (`[...listing].astro` gives
+ * each row an id for that).
+ */
+const referrers = await referrersOf(collection, entry);
+const tree = await treeOf(collection, entry);
+const rowHref = (of: Collection, one: Entry): string =>
+  of.pages === false ? `${under(withLocale(locale, of.prefix))}/#${of.name}-${slugOf(one)}` : href(of, one);
+const archive = [
+  ...(tree.children.length > 0 ? [{ collection, entries: tree.children, more: tree.more }] : []),
+  ...referrers,
+];
+
 const schema = {
   '@type': 'Article',
   headline: title,
@@ -275,6 +324,17 @@ const schema = {
 <Layout title={said('title') || title} description={said('description') || excerpt} schema={schema} alternates={alternates}>
   <main id="content">
     <article class="entry">
+      {
+        tree.trail.length > 0 && (
+          <nav class="entry-trail">
+            <ol>
+              {tree.trail.map((one) => (
+                <li><a href={href(collection, one)} data-jtk-path={titlePath(collection, one)} data-jtk-fixed={titlePath(collection, one) ? undefined : true}>{String(one.data.title ?? slugOf(one))}</a></li>
+              ))}
+            </ol>
+          </nav>
+        )
+      }
       <h1 data-jtk-path="blocks[0].title">{title}</h1>
 
       {
@@ -303,7 +363,7 @@ const schema = {
                   <dd data-jtk-path={fact.path} data-jtk-fixed={fact.path ? undefined : true}>{fact.href ? <a href={fact.href}>{fact.text}</a> : fact.text}</dd>
                 )}
                 {fact.kind === 'rows' && (
-                  <dd data-jtk-fixed><ul>{fact.rows.map((row) => <li>{row}</li>)}</ul></dd>
+                  <dd data-jtk-fixed><ul>{fact.rows.map((row) => <li>{row.href ? <a href={row.href}>{row.text}</a> : row.text}</li>)}</ul></dd>
                 )}
                 {fact.kind === 'picture' && (
                   <dd>
@@ -400,5 +460,34 @@ const schema = {
         })
       }
     </article>
+
+    {/*
+      What points here, under each collection's name — the catalogue's, so
+      fixed — and each entry by its own title, annotated as that entry's
+      field. A collection with more than its `per_page` shows that many and
+      says how many more in the page's language («And 3 more», `LISTING` in
+      src/copy) — linked to that collection's listing where it has one by
+      the rule (`linksToListing`: no pages of its own, or `listing: true`),
+      words otherwise.
+    */}
+    {
+      archive.map((one) => (
+        <section class="entry-refs" data-collection={one.collection.name}>
+          <h2 data-jtk-fixed>{words(one.collection.label, LANG)}</h2>
+          <ul>
+            {one.entries.map((row) => (
+              <li>
+                <a href={rowHref(one.collection, row)} data-jtk-path={titlePath(one.collection, row)} data-jtk-fixed={titlePath(one.collection, row) ? undefined : true}>{String(row.data.title ?? slugOf(row))}</a>
+              </li>
+            ))}
+          </ul>
+          {one.more > 0 && (
+            linksToListing(one.collection)
+              ? <p class="entry-refs-more" data-jtk-fixed><a href={listingHref(one.collection, locale)}>{LISTING.more(one.more)}</a></p>
+              : <p class="entry-refs-more" data-jtk-fixed>{LISTING.more(one.more)}</p>
+          )}
+        </section>
+      ))
+    }
   </main>
 </Layout>

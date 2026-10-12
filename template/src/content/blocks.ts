@@ -580,12 +580,16 @@ export const BLOCKS: Block[] = [
  * So there is no "blog feature" on the platform. A blog is one collection whose
  * prefix is `/blog` and whose entries are ordered by date; a portfolio, a price
  * list, a menu or a vacancy board are the same mechanism with different words,
- * and adding one is this array plus the two routes that render it.
+ * and adding one is this array: the scaffold has the routes that render it.
  *
- * ── the two routes you owe a collection ─────────────────────────────────────
+ * ── the routes a collection gets ────────────────────────────────────────────
  *
- *   src/pages/blog/index.astro      the listing — an ordinary page of yours
- *   src/pages/blog/[...slug].astro  one entry, from the content collection
+ *   src/pages/[...listing].astro    the listing at its prefix — always for a
+ *                                   collection without pages; for one with,
+ *                                   only with `listing: true`, paged by
+ *                                   per_page at <prefix>/page/2 — or a page of
+ *                                   yours at the prefix, which takes it over
+ *   src/pages/[...entry].astro      one entry, and what points at it
  *
  * `fl-catalogue` checks the declaration; the build checks the rendering, the
  * same way it checks every other annotated field.
@@ -636,7 +640,22 @@ export interface Collection {
   one?: Text;
   /** The sentence under the collection's title in the admin. */
   intro?: Text;
-  /** A `select` field of `type` the entries are grouped by — a menu's courses. */
+  /**
+   * A field of `type` the entries are grouped by — a menu's courses, a
+   * salon's categories. Read by three: the listing draws its headings, the
+   * admin lists entries under them, the booking form offers services by them.
+   *
+   * A `select` is a group that is a value: the headings are its options, in
+   * their order, by their `option_labels`, and renaming one is a commit.
+   *
+   * A `ref` to **another** collection is a group that is an entry (since 12
+   * October 2026, the platform's wiki/78): `category: ref categories`, and
+   * the owner adds a category in the panel, titles it in every language and
+   * orders it; the headings are those titles in that collection's order. Never
+   * a ref into this collection itself — that is a tree, a `parent` field, and
+   * `jtk catalogue` refuses it as a group. docs/collections.md has the
+   * category, tag and tree patterns whole.
+   */
   group?: string;
   /** Where entries live: `/blog` gives `/blog/aftercare`. No trailing slash. */
   prefix: string;
@@ -683,7 +702,13 @@ export interface Collection {
    * entries wherever the database felt like.
    */
   order?: { by: string; desc?: boolean };
-  /** Paginate the listing. Absent means one page, however many there are. */
+  /**
+   * Paginate the listing (`listing: true`): this many to a page, page two
+   * at `<prefix>/page/2` (docs/collections.md, «The listing»). Absent means one
+   * page, however many there are, and so does a collection without pages. An
+   * entry's page that lists what points at it (a tag's posts) shows at most
+   * this many of this collection's, and a line to the listing for the rest.
+   */
   per_page?: number;
   /**
    * `false` for a collection whose entries have no page of their own — a
@@ -692,6 +717,14 @@ export interface Collection {
    * per entry, which is what a blog wants.
    */
   pages?: boolean;
+  /**
+   * `true` for a listing at the prefix — `/works`, paged at `/works/page/2`
+   * — drawn by the scaffold where the repository has no page there of its own.
+   * Off unless said: a page nobody asked for is an address on a client's site
+   * nobody designed. Only for a collection whose entries have pages; the
+   * catalogue refuses it on one without, whose prefix is its listing already.
+   */
+  listing?: boolean;
 }
 
 export const COLLECTIONS: Collection[] = [];

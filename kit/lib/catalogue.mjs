@@ -51,6 +51,7 @@ import { dirname, join, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { E, isAdvice, isPlatformCode, LOCAL } from './codes.mjs';
+import { shownAt } from './schedule.mjs';
 
 // What this tool calls itself in a catalogue it writes. Bumped when the shape
 // it emits changes; the `contract` beside it moves only when the format does.
@@ -587,9 +588,47 @@ for (const collection of collections) {
     }
   }
 
+  /*
+   * What the entries are grouped by: a select, or a ref to another
+   * collection, and nothing else — the platform's validateEntryGroup, mirrored
+   * (12 October 2026, wiki/78). Free text would be a list of one-entry groups
+   * with three spellings of "manicure". A ref into the collection itself is a
+   * tree, which is a `parent` field and takes no part in grouping: an entry
+   * heading its own siblings is a listing nobody can order.
+   */
+  if (collection.group !== undefined && collection.group !== '') {
+    const groupWhere = `${where}.group`;
+    const by = field(collection.group);
+    if (by === undefined) {
+      fault(E.COLLECTION, groupWhere, `grouped by "${collection.group}", which ${collection.type} does not declare`);
+    } else if (by.kind === 'ref' && by.ref === collection.name) {
+      fault(E.COLLECTION, groupWhere, `grouped by ${collection.type}.${collection.group}, which points into "${collection.name}" itself — group by another collection, and make a tree with a parent field`);
+    } else if (by.kind !== 'select' && by.kind !== 'ref') {
+      fault(E.COLLECTION, groupWhere, `grouped by ${collection.type}.${collection.group}, which is "${by.kind}" — group by a select, or by a ref to another collection`);
+    }
+  }
+
   const perPage = collection.per_page ?? 0;
   if (!Number.isInteger(perPage) || perPage < 0 || perPage > 200) {
     fault(E.COLLECTION, where, 'per_page must be between 1 and 200, or absent for one page');
+  }
+
+  /*
+   * A listing at the prefix, asked for (the platform's CollectionDef.Listing,
+   * 12 October 2026): the scaffold draws one only where a collection says
+   * `listing: true`, because a page nobody asked for is an address on a
+   * client's site nobody designed. Only for a collection whose entries have
+   * pages — one without is listed on its prefix's page already, which the
+   * repository writes.
+   */
+  if (collection.listing !== undefined && typeof collection.listing !== 'boolean') {
+    fault(E.COLLECTION, `${where}.listing`, `listing is ${JSON.stringify(collection.listing)} — true, or absent for no listing at the prefix`);
+  } else if (collection.listing === true && collection.pages === false) {
+    fault(
+      E.COLLECTION,
+      `${where}.listing`,
+      `collection "${collection.name}" has no pages of its own, so its prefix's page is the listing already — the repository writes it; \`listing\` is for a collection whose entries have pages`,
+    );
   }
 
   /*
@@ -617,6 +656,30 @@ for (const collection of collections) {
       fault(E.COLLECTION, where, `body names "${kind}", which is what an entry *is* — a post cannot hold itself`);
     }
   }
+}
+
+/*
+ * Every `ref`, wherever it is — a block's field, a row of a list, the page's
+ * SEO, the business facts — names a collection this catalogue declares. The
+ * platform's validateRefs, mirrored on 12 October 2026, when a ref became
+ * the way a site has categories and tags (wiki/78): `tags: list of { tag:
+ * ref tags }` with no `tags` collection is a field whose every value points
+ * nowhere, and the judge refused it while this said nothing.
+ */
+{
+  const names = new Set(collections.map((one) => one.name));
+  const walk = (where, fields) => {
+    for (const one of fields ?? []) {
+      const at = `${where}.${one.key}`;
+      if (one.kind === 'ref' && !names.has(one.ref)) {
+        fault(E.COLLECTION, `${at}.ref`, `${at} refers to collection ${JSON.stringify(one.ref ?? '')}, which this catalogue does not declare`);
+      }
+      walk(at, one.of);
+    }
+  };
+  catalogue.blocks.forEach((block, at) => walk(`blocks[${at}]`, block.fields));
+  walk('page_seo', catalogue.page_seo);
+  walk('business_facts', catalogue.business_facts);
 }
 
 /*
@@ -1346,6 +1409,21 @@ const sharedBlocks = existsSync(sharedFile)
 const byType = new Map(catalogue.blocks.map((block) => [block.type, block]));
 const disagreements = [];
 
+/*
+ * Which fields a page must carry a tap target for: the platform's own rule,
+ * `tappable()` in its sitebuild/annotation-lint.mjs, copied (12 October 2026).
+ *
+ * This used to ask it of every field but a bool or a `no_tap_target`, which
+ * is stricter than the judge in exactly the shapes wiki/78 made the way a
+ * site has categories and tags: a service's `category: ref categories`, a
+ * dish's `course` select, a work's `tags: [{ tag }]` were each reported as a
+ * control that edits nothing — they are edited in the panel beside the page,
+ * and the platform's build asks no element of them. A field outside the rule
+ * may still be annotated; it is accepted, never required.
+ */
+const TAPPABLE = new Set(['text', 'textarea', 'richtext_lite', 'markdown', 'media', 'money', 'duration']);
+const tappable = (field) => TAPPABLE.has(field.kind) && field.client_editable !== false && field.no_tap_target !== true;
+
 /** `/de/services/x` without its language: `/services/x`. The site's own language has no prefix. */
 function basePathOf(path, locales) {
   for (const locale of locales) {
@@ -1371,6 +1449,13 @@ for (const page of pages) {
     );
     if (listedOnly) {
       /*
+       * A hidden one is on no listing — `visible: false`, or a schedule not
+       * come or gone (schedule.mjs), which the platform writes `visible:
+       * false` before its build — and is owed nowhere, as the platform's
+       * lint says (`listable`). This asked it of a hidden one too.
+       */
+      if (!shownAt(page)) continue;
+      /*
        * No page of its own, so its fields are annotated on the listing as
        * `page:<address>:<field>` — and the platform's lint fails a build
        * where one is not. This used to `continue` here and let the platform
@@ -1389,7 +1474,7 @@ for (const page of pages) {
           const value = block[field.key];
           const empty = value === undefined || value === null || value === '' ||
             (Array.isArray(value) && value.length === 0);
-          if (empty || field.no_tap_target || field.kind === 'bool' || (field.kind === 'media' && field.multiple)) continue;
+          if (empty || !tappable(field) || (field.kind === 'media' && field.multiple)) continue;
           if (!everywhere.has(`page:${page.path}:blocks[${at}].${field.key}`)) {
             disagreements.push(
               `${page.path}: blocks[${at}].${field.key} is on no page — an entry without a page of its own is annotated on its listing as page:${page.path}:blocks[${at}].${field.key}`,
@@ -1419,6 +1504,12 @@ for (const page of pages) {
       if (empty || field.no_tap_target || field.kind === 'bool') continue;
 
       const path = `blocks[${at}].${field.key}`;
+      // Outside the platform's rule and not a list (whose rows are asked one
+      // by one below): accepted where it is annotated, asked for nowhere.
+      if (field.kind !== 'list' && !tappable(field)) {
+        onThePage.delete(path);
+        continue;
+      }
 
       /*
        * A gallery: one field, many pictures, and each picture is its own tap
@@ -1455,6 +1546,10 @@ for (const page of pages) {
           for (const sub of field.of ?? []) {
             if (sub.no_tap_target || !row[sub.key]) continue;
             const rowPath = `blocks[${at}].${field.key}[${i}].${sub.key}`;
+            if (!tappable(sub)) {
+              onThePage.delete(rowPath);
+              continue;
+            }
             if (!onThePage.has(rowPath)) {
               disagreements.push(`${rowPath} is declared and the page does not render it`);
             }

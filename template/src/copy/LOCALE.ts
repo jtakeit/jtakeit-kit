@@ -9,9 +9,12 @@
  * exports below look ordinary — nothing in a component has to know where its
  * text came from.
  *
- * Two things did not move, because they are not content:
- *   META  — the `<html lang>` value and the title suffix
- *   A11Y  — the skip link
+ * Three things did not move, because they are not content:
+ *   META     — the `<html lang>` value and the title suffix
+ *   A11Y     — the skip link
+ *   LISTING  — «And 3 more» under an archive, and a paged listing's
+ *              «Previous», «Next», «Page 2 of 5»: the scaffold's sentences
+ *              around the owner's entries, not the owner's
  *
  * Comments and identifiers stay English. The values are the client's language.
  *
@@ -58,9 +61,15 @@ export const STRINGS: Strings = {
     askBody: '{{UI_PRIVACY_ASK_BODY}}',
     ownTitle: '{{UI_PRIVACY_OWN_TITLE}}',
   },
+  listing: {
+    more: '{{UI_MORE}}',
+    previous: '{{UI_PREVIOUS}}',
+    next: '{{UI_NEXT}}',
+    pageOf: '{{UI_PAGE_OF}}',
+  },
   a11y: { skipToContent: '{{UI_SKIP_TO_CONTENT}}' },
 };
 
 export const COPY = makeCopy(page, STRINGS);
-export const { META, HOME, FORM, PRIVACY, A11Y, PAGE, block, str, rows, picture, gallery, flPath, pathAt } = COPY;
+export const { META, HOME, FORM, PRIVACY, LISTING, A11Y, PAGE, block, str, rows, picture, gallery, flPath, pathAt } = COPY;
 export type { Shown } from './make';
