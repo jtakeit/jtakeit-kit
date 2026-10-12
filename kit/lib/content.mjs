@@ -10,6 +10,7 @@
  */
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
+import { shownAt } from './schedule.mjs';
 
 /** @param {string} path */
 async function readJSON(path) {
@@ -59,9 +60,10 @@ export function sharedLocaleOf(name) {
  * anyway with the site's facts left empty — the annotations do not depend on
  * them.
  * @param {string} root the site's root, holding `jtk/`
- * @param {{ dir?: string }} [options] `dir`: where `jtk/` is, relative to the root
+ * @param {{ dir?: string; now?: number }} [options] `dir`: where `jtk/` is, relative to the root; `now`: the clock a `show_at`/`hide_at` is read against
  */
 export async function collectContent(root, options = {}) {
+  const now = options.now ?? Date.now();
   const dir = join(root, options.dir ?? 'jtk');
   const site = (await readJSON(join(dir, 'site.json'))) ?? {};
   const pages = [];
@@ -72,7 +74,10 @@ export async function collectContent(root, options = {}) {
     const collected = { path: page.path, seo: page.seo ?? {}, blocks: page.blocks ?? [] };
     if (typeof page.collection === 'string' && page.collection !== '') {
       collected.collection = page.collection;
-      collected.visible = page.visible !== false;
+      // Hidden by `visible: false`, or by a schedule not come or gone
+      // (schedule.mjs) — read by the clock of this check, as the platform's
+      // build reads it by its own.
+      collected.visible = shownAt(page, now);
     }
     pages.push(collected);
   }

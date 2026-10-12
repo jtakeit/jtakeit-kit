@@ -51,6 +51,7 @@ import { dirname, join, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { E, isAdvice, isPlatformCode, LOCAL } from './codes.mjs';
+import { shownAt } from './schedule.mjs';
 
 // What this tool calls itself in a catalogue it writes. Bumped when the shape
 // it emits changes; the `contract` beside it moves only when the format does.
@@ -1429,6 +1430,13 @@ for (const page of pages) {
       (c) => c.pages === false && (page.collection === c.name || bare.startsWith(`${c.prefix}/`)),
     );
     if (listedOnly) {
+      /*
+       * A hidden one is on no listing — `visible: false`, or a schedule not
+       * come or gone (schedule.mjs), which the platform writes `visible:
+       * false` before its build — and is owed nowhere, as the platform's
+       * lint says (`listable`). This asked it of a hidden one too.
+       */
+      if (!shownAt(page)) continue;
       /*
        * No page of its own, so its fields are annotated on the listing as
        * `page:<address>:<field>` — and the platform's lint fails a build

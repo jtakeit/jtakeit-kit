@@ -427,3 +427,10 @@ or a `hide_at` already behind is not visible, and `visible: false` hides an
 entry whatever its dates say. Loaded once — a post whose hour comes while the
 dev server runs appears on the next start. A value that is not a time is no
 schedule; the platform refuses one where it is written.
+
+**A local `astro build` reads them the same way**, by the build's clock: the
+kit (`@jtakeit/kit`'s `lib/schedule.mjs`, which the template's copy is held to
+by a test) lists a scheduled entry among the drafts in `dist/_meta.json`, and
+`jtk catalogue --dist` treats it as hidden — an entry without a page that is
+not out yet is owed no annotation on its listing, exactly as one with
+`visible: false` is not.

@@ -20,7 +20,12 @@
  * is written; a file edited by hand that says `"next week"` is shown, rather
  * than hidden for a reason nobody can see.
  *
- * Imports nothing, so Node tests it on its own (`test/schedule.test.mjs`).
+ * The kit asks the same question for `_meta.json`'s drafts and the content its
+ * check reads (`@jtakeit/kit`'s lib/schedule.mjs). A copy, not an import: this
+ * scaffold is built against the published kit, which may not have that file
+ * yet. `test/schedule.test.mjs` holds the two to one answer, case for case.
+ *
+ * Imports nothing, so Node tests it on its own.
  */
 
 /** What this reads of an entry's file. */

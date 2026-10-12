@@ -38,3 +38,18 @@ test('a value that is not a time is no schedule', () => {
   assert.equal(shownAt({ show_at: '', hide_at: null }, now), true);
   assert.equal(shownAt({ hide_at: 1760270400000 }, now), true, 'a number is not RFC 3339');
 });
+
+// The scaffold's copy and the kit's rule are one rule: the scaffold is built
+// against the published kit, so it carries its own (see kit/lib/schedule.mjs).
+test("the scaffold's rule answers as the kit's, case for case", async () => {
+  const kit = await import('../kit/lib/schedule.mjs');
+  const times = ['2026-10-01T00:00:00Z', '2026-10-12T12:00:00Z', '2026-10-20T07:00:00Z', 'next week', '', undefined, 7];
+  for (const visible of [undefined, true, false]) {
+    for (const show_at of times) {
+      for (const hide_at of times) {
+        const document = { visible, show_at, hide_at };
+        assert.equal(shownAt(document, now), kit.shownAt(document, now), JSON.stringify(document));
+      }
+    }
+  }
+});
