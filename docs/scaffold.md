@@ -93,6 +93,26 @@ scaffold's is a build that installs from scratch.
 of which the platform answers beside the site ([lead-form.md](lead-form.md),
 [booking.md](booking.md)).
 
+## Accessibility
+
+The scaffold is held to WCAG 2.1 AA ([accessibility](accessibility.md)), and
+what you write on top of it is yours to keep there. The rules an agent breaks
+most:
+
+- every photograph has alt text that says what it shows, or `alt=""` if it is
+  decoration;
+- one `h1` a page, then `h2`, then `h3` — no level skipped for a size;
+- link words say where they go, never «here» or «more»;
+- the palette you set keeps text at 4.5:1 — set `--ink`, `--paper` and
+  `--accent` together, and `--on-accent` when the accent is light on a light
+  page;
+- an outline is never removed without another focus style;
+- every page's content stays in `<main id="content">`, where the skip link
+  goes.
+
+`npx @jtakeit/astro a11y` reads your `./dist` the way the kit's CI reads the
+scaffold.
+
 ## Astro only
 
 Today Astro is the only generator the platform supports: collecting a
