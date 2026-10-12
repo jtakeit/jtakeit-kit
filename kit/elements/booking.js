@@ -14,6 +14,8 @@
  *   POST /api/book                  → { id, state, amount_minor, currency, token, manage_path, telegram_url }
  *   POST /api/pay                   → { url } — only when amount_minor > 0
  *
+ * Every request names the protocol version: `X-Jtk-Booking: 1` (BOOKING_PROTOCOL).
+ *
  * The visitor's own page — cancel, move, add to calendar — is served by the
  * platform at `manage_path`; this form only has to link to it.
  *
@@ -90,6 +92,17 @@ export function lasting(minutes, words) {
  * Wires one form. Idempotent: a form already wired is left alone.
  * @param {HTMLFormElement} form
  */
+/**
+ * The booking protocol's version this element speaks, named on every request
+ * (the platform's wiki/79). A page is a file in a build: when the platform
+ * changes, a site keeps the kit it was built with, and the platform answers it
+ * by this number for as long as a live site speaks it — so it moves only with
+ * a change the platform cannot make by adding, and the platform says which
+ * versions it answers when it refuses one.
+ */
+export const BOOKING_PROTOCOL = 1;
+const SPOKEN = { 'x-jtk-booking': String(BOOKING_PROTOCOL) };
+
 export function wireBooking(form) {
   if (form.dataset.jtkWired === '1') return;
   form.dataset.jtkWired = '1';
@@ -185,7 +198,7 @@ export function wireBooking(form) {
     to.setDate(to.getDate() + 1);
     if (first) {
       const params = new URLSearchParams({ service: first, from: from.toISOString(), to: to.toISOString() });
-      void fetch(api + 'availability?' + params.toString(), { cache: 'no-store' })
+      void fetch(api + 'availability?' + params.toString(), { cache: 'no-store', headers: SPOKEN })
         .then((r) => (r.ok ? r.json() : {}))
         .then((data) => {
           hear(data.words);
@@ -223,7 +236,7 @@ export function wireBooking(form) {
 
   // The widget, if this host has one. Asked at runtime so the site carries
   // no key: which widget covers a host is the platform's to decide.
-  void fetch(api + 'turnstile', { cache: 'no-store' })
+  void fetch(api + 'turnstile', { cache: 'no-store', headers: SPOKEN })
     .then((r) => r.json())
     .then((data) => {
       if (!data.sitekey) return;
@@ -611,7 +624,7 @@ export function wireBooking(form) {
     if (n !== null) params.set('count', String(n));
 
     try {
-      const answer = await fetch(api + 'availability?' + params.toString(), { cache: 'no-store' });
+      const answer = await fetch(api + 'availability?' + params.toString(), { cache: 'no-store', headers: SPOKEN });
       if (!answer.ok) throw new Error(await answer.text());
       if (mine !== asking) return;
       const data = await answer.json();
@@ -784,7 +797,7 @@ export function wireBooking(form) {
       }
       const answer = await fetch(api + 'book', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...SPOKEN },
         body: JSON.stringify(body),
       });
       if (answer.status === 409) { say(words.taken); await load(); return; }
@@ -876,7 +889,7 @@ export function wireBooking(form) {
         event.preventDefault();
         const answer = await fetch(api + 'pay', {
           method: 'POST',
-          headers: { 'content-type': 'application/json' },
+          headers: { 'content-type': 'application/json', ...SPOKEN },
           body: JSON.stringify({ booking: made.id, return: made.manage_path || '/' }),
         });
         if (!answer.ok) { say(await reason(answer)); return; }
