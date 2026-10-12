@@ -50,8 +50,8 @@ COLLECTIONS.push(BLOG_COLLECTION);
 `blog` at `/blog`, newest first. The listing is
 `src/pages/[...lang]/blog/index.astro`, which builds itself once the collection
 is there (and at `/de/blog` for a site in German) and lists every post on one
-page — it is a listing of the repository's own, so the scaffold's paged one
-leaves `/blog` to it (see «The listing» below); a post's page is
+page — a listing of the repository's own, which the scaffold's paged one
+(«The listing», below) never draws over; a post's page is
 `[...entry].astro`, the feed `/blog/rss.xml`. Write the first posts as
 `jtk/content/blog/<slug>.json` — a blog launched empty says the business
 stopped caring before it started. What follows is how any other collection is
@@ -85,10 +85,10 @@ export const COLLECTIONS: Collection[] = [
 }
 ```
 
-**And nothing else.** The listing comes with the scaffold (below). Write one
-of your own only where the design wants it — `src/pages/works.astro` or
-`src/pages/[...lang]/works/index.astro` for `/works` — and it takes the
-address over:
+**And, if the site wants one, a listing at the prefix**: `listing: true` on
+the collection and the scaffold draws it (below), or a page of your own —
+`src/pages/works.astro` or `src/pages/[...lang]/works/index.astro` for
+`/works` — designed like every other:
 
 ```astro
 ---
@@ -104,19 +104,33 @@ collection's own order.
 
 ## The listing
 
-Every collection is listed at its `prefix`, in every language the site has
-(`/works`, `/de/works`), built by `src/pages/[...listing].astro`:
+A collection **without pages** (`pages: false`) is always listed at its
+prefix, in every language (`/services`, `/de/services`), by
+`src/pages/[...listing].astro`: its entries as rows, every field the owner taps
+annotated `page:<the entry's path>:blocks[0].<field>`. The platform frames that
+page to show an entry and refuses a build without it. One page whatever its
+`per_page` — an entry on page two is one the frame cannot find.
 
-- **A collection without pages** (`pages: false`): its entries as rows, every
-  field the owner taps annotated `page:<the entry's path>:blocks[0].<field>`.
-  One page whatever its `per_page` — the panel frames the prefix to show any of
-  its entries, and an entry on page two is one the frame cannot find.
-- **A collection with pages**: its entries as tiles (`EntryCard.astro`, the
-  blog's tile too) linked to their pages — the cover, the date, the title and
-  the excerpt where the type has them — `per_page` to a page, through Astro's
-  `paginate()`. Grouped under its headings where it has a `group`, the page
-  cut out of the grouped list, so a heading's run crossing the cut opens the
-  next page under the same heading. Hidden entries are on no page.
+A collection **with pages** gets a listing at its prefix **only when it asks**:
+
+```ts
+{ name: 'works', label: 'Works', prefix: '/works', type: 'work', per_page: 12, listing: true }
+```
+
+**Why opt-in.** A page nobody asked for is an address on a client's site that
+nobody designed — it is crawled, linked from search, shared — so a site gains
+one only by its developer's word. Without `listing`, the build has exactly the
+routes it had: the entries' pages, and nothing at `/works`. The platform takes
+the key in `jtk/catalogue.json` (its `CollectionDef.Listing`) and refuses it on
+a collection without pages (`JTK_E_COLLECTION_INVALID`), and so does
+`jtk catalogue`: that prefix is its listing already.
+
+With `listing: true` the scaffold draws its entries as tiles
+(`EntryCard.astro`, the blog's tile too) linked to their pages — the cover, the
+date, the title and the excerpt where the type has them — `per_page` to a page,
+through Astro's `paginate()`. Grouped under its headings where it has a
+`group`, the page cut out of the grouped list, so a heading's run crossing the
+cut opens the next page under the same heading. Hidden entries are on no page.
 
 **Page two is `<prefix>/page/2`, not `<prefix>/2`.** Everything under a prefix
 is an entry's address, and the platform takes a bare number for a slug: an
@@ -129,8 +143,9 @@ and the build refuses it by name rather than drawing one of the two.
 **Your own listing wins.** Where `src/pages/<prefix>.astro`,
 `src/pages/<prefix>/index.astro` or the same under `[...lang]/` exists — the
 blog's does — the scaffold builds nothing at that prefix and no pages under
-it: the page is yours, paging included. Draw `EntryListing.astro` in it to keep
-the scaffold's pages, or delete it to hand the address back.
+it, `listing` or not: the page is yours, paging included. Draw
+`EntryListing.astro` in it to keep the scaffold's pages, or delete it and say
+`listing: true` to hand the address back.
 
 **Annotation** is every listing's: an entry's words with its page-qualified
 path, a category heading as that category's title, and the collection's label,
@@ -142,7 +157,7 @@ a select's label and the way between pages («Previous», «Page 2 of 5»,
 | | |
 | --- | --- |
 | `src/pages/[...entry].astro` | one entry of **any** collection. Ships with the scaffold; a new collection needs no new route |
-| `src/pages/[...listing].astro` | every collection's listing at its prefix, paged by `per_page` at `<prefix>/page/2` (`[...listing]/page/[page].astro`) |
+| `src/pages/[...listing].astro` | the listing at the prefix of a collection without pages, and of one with `listing: true` — paged by `per_page` at `<prefix>/page/2` (`[...listing]/page/[page].astro`) |
 | `/blog/rss.xml` | one feed per collection |
 | `sitemap.xml`, `llms.txt` | the entries are in both, the unfinished ones in neither |
 | `dist/_meta.json` | the list of unfinished entries, which is what lets the studio's edge keep them private |
@@ -248,9 +263,9 @@ under none.
 **What the scaffold already draws**, so a design pass keeps it rather than
 writes it:
 
-- `[...listing].astro` lists a grouped collection under its headings — with
-  pages or without — and, for the diary's services, hands the booking form the
-  same headings.
+- `[...listing].astro` lists a grouped collection under its headings — one
+  without pages, or one with `listing: true` — and, for the diary's
+  services, hands the booking form the same headings.
 - `[...entry].astro` is every entry's **archive page**: below the post, the
   entries of the other collections that point at it — through a top-level
   `ref` or a `ref` in a list's rows — under each collection's label, in its
@@ -261,7 +276,9 @@ writes it:
   collection's order — the walk down is bounded as the trail up is. At most
   the referencing collection's `per_page` of them, then a line that says how
   many more in the page's language («And 3 more», `LISTING.more` in
-  `src/copy`), linked to that collection's listing — not pages of their own:
+  `src/copy`), linked to that collection's listing where it has one by the
+  rule — no pages of its own, or `listing: true` — and plain words otherwise;
+  not pages of their own:
   `/tags/red/page/2` would be an address under the tags' prefix no entry
   owns. A ref's value on an entry links to the entry it names.
 - `src/lib/entries.ts` has the reading for your own pages: `groupsOf(collection,

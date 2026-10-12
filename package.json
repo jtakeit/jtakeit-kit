@@ -31,7 +31,7 @@
     "agent"
   ],
   "scripts": {
-    "test": "node test/smoke.mjs && node --test test/groups.test.mjs test/schedule.test.mjs && npm test --workspace kit",
+    "test": "node test/smoke.mjs && node --test test/groups.test.mjs test/schedule.test.mjs test/listing.test.mjs && npm test --workspace kit",
     "release": "node scripts/release.mjs"
   },
   "dependencies": {

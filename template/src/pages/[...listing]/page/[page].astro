@@ -10,9 +10,11 @@
  * `/works/page/1` for the way back to the first page, which is `/works`.
  * `listingHref` writes them all, under the build's base.
  *
- * Only for a collection with pages that the scaffold lists (`listsPaged`): a
- * collection without pages is one page, and one whose repository wrote its own
- * listing pages it itself, if it wants to.
+ * Only for a collection with pages that the scaffold lists (`listsPaged`:
+ * `listing: true`, and no page of the repository's at the prefix): a
+ * collection without pages is one page, one that did not ask has no listing,
+ * and one whose repository wrote its own listing pages it itself, if it wants
+ * to.
  */
 import type { GetStaticPaths } from 'astro';
 import EntryListing from '../../../components/EntryListing.astro';

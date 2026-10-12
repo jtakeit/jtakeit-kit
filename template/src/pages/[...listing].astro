@@ -5,12 +5,13 @@
  *
  * ── a collection with pages ─────────────────────────────────────────────────
  *
- * Listed at its prefix too (12 October 2026), as tiles linked to the entries'
- * pages and `per_page` of them to a page: `EntryListing.astro` draws it, here
- * for page one and in `[...listing]/page/[page].astro` for the rest, and
- * lib/entries says why page two is `<prefix>/page/2`. Unless the repository
- * wrote its own listing at that prefix (the blog's
- * `[...lang]/blog/index.astro`), which then has the address to itself.
+ * Listed at its prefix too when it asks — `listing: true`, never by default
+ * (lib/listing says why) — as tiles linked to the entries' pages and
+ * `per_page` of them to a page: `EntryListing.astro` draws it, here for page
+ * one and in `[...listing]/page/[page].astro` for the rest, and lib/entries
+ * says why page two is `<prefix>/page/2`. Not where the repository wrote its
+ * own listing at that prefix (the blog's `[...lang]/blog/index.astro`), which
+ * then has the address to itself.
  *
  * Everything below is about a collection without pages.
  *

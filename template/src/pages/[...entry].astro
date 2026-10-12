@@ -39,7 +39,7 @@
  * children below. `referrersOf` and `treeOf` in lib/entries read them; the
  * titles carry `page:<address>:blocks[0].title`, as a listing's do.
  */
-import { everyEntry, rendered, listed, listingHref, routeOf, slugOf, alternatesOf, href, referrersOf, titlePath, treeOf, type Entry } from '../lib/entries';
+import { everyEntry, rendered, linksToListing, listed, listingHref, routeOf, slugOf, alternatesOf, href, referrersOf, titlePath, treeOf, type Entry } from '../lib/entries';
 import { copyFor } from '../copy';
 import { under } from '../lib/under';
 import { siteCurrency } from '../lib/site';
@@ -466,8 +466,9 @@ const schema = {
       fixed — and each entry by its own title, annotated as that entry's
       field. A collection with more than its `per_page` shows that many and
       says how many more in the page's language («And 3 more», `LISTING` in
-      src/copy), linked to that collection's listing at its prefix — which
-      every collection has: the scaffold's, or one the repository wrote.
+      src/copy) — linked to that collection's listing where it has one by
+      the rule (`linksToListing`: no pages of its own, or `listing: true`),
+      words otherwise.
     */}
     {
       archive.map((one) => (
@@ -481,7 +482,9 @@ const schema = {
             ))}
           </ul>
           {one.more > 0 && (
-            <p class="entry-refs-more" data-jtk-fixed><a href={listingHref(one.collection, locale)}>{LISTING.more(one.more)}</a></p>
+            linksToListing(one.collection)
+              ? <p class="entry-refs-more" data-jtk-fixed><a href={listingHref(one.collection, locale)}>{LISTING.more(one.more)}</a></p>
+              : <p class="entry-refs-more" data-jtk-fixed>{LISTING.more(one.more)}</p>
           )}
         </section>
       ))

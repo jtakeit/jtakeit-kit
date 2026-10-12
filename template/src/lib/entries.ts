@@ -18,6 +18,7 @@ import {
   type Group,
   type Heading,
 } from './groups';
+import { drawsPagedListing } from './listing';
 
 /**
  * Reading a collection: which entries there are, in the order the site lists
@@ -310,11 +311,14 @@ export async function treeOf(collection: Collection, entry: Entry): Promise<{ tr
 /*
  * ── a collection's listing, and its pages ───────────────────────────────────
  *
- * Every collection is listed at its prefix (12 October 2026). One without
- * pages always was (`[...listing].astro`, which the platform frames to show
- * an entry); one with pages is listed there too now, unless the repository
- * wrote a listing of its own — the blog's `src/pages/[...lang]/blog/index.astro`
- * is one — which then owns the address, and its pages, whole.
+ * A collection without pages is always listed at its prefix
+ * (`[...listing].astro`, which the platform frames to show an entry). One with
+ * pages is listed there only when it says `listing: true` — opt-in, because a
+ * page nobody asked for is an address on a client's site nobody designed
+ * (lib/listing has the rule) — and not even then where the repository wrote a
+ * listing of its own at the prefix (the blog's
+ * `src/pages/[...lang]/blog/index.astro`), which owns the address, and its
+ * pages, whole.
  *
  * ── why page 2 is `<prefix>/page/2` and not `<prefix>/2` ────────────────────
  *
@@ -351,10 +355,17 @@ export function ownListing(collection: Collection): boolean {
   ].some((file) => existsSync(file));
 }
 
-/** Whether the scaffold lists a collection with pages at its prefix (`[...listing].astro`). */
+/**
+ * Whether the scaffold lists a collection with pages at its prefix
+ * (`[...listing].astro`): only one that says `listing: true` and has no page
+ * of the repository's there (lib/listing).
+ */
 export function listsPaged(collection: Collection): boolean {
-  return collection.pages !== false && !ownListing(collection);
+  return drawsPagedListing(collection, ownListing(collection));
 }
+
+/** Whether «And 3 more» links to a collection's listing (lib/listing). */
+export { linksToListing } from './listing';
 
 /** A collection's listing in a language, page `n`: `/works/`, `/de/works/page/2/`. */
 export function listingHref(collection: Collection, locale: string, n = 1): string {

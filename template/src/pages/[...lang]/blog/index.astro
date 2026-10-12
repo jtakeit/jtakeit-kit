@@ -6,9 +6,9 @@
  * `jtk create --blog`, or by the two lines at the foot of
  * `src/content/blocks.ts` (`BLOCKS.push(BLOG_POST)`,
  * `COLLECTIONS.push(BLOG_COLLECTION)`). A site without one builds nothing
- * here. Any other collection with pages is listed by the scaffold at its
- * prefix (`[...listing].astro`), or by a page of its own written like this
- * one (docs/collections.md).
+ * here. Any other collection with pages is listed at its prefix only when it
+ * asks: by the scaffold (`listing: true`, `[...listing].astro`), or by a page
+ * of its own written like this one (docs/collections.md).
  *
  * The heading is the collection's own name, fixed. Each tile is that
  * post's (`EntryCard.astro`, which every collection's listing draws too): the
@@ -18,10 +18,10 @@
  * build refuses a tap on them (JTK_E_ANNOTATION_UNKNOWN).
  *
  * Because this file exists, the scaffold's own listing (`[...listing].astro`)
- * leaves `/blog` to it (`ownListing` in lib/entries) — and with it the
- * paging: this page lists every post, whatever `per_page` says. Draw
- * `EntryListing.astro` here instead, or delete the file, for the scaffold's
- * pages at `/blog/page/2`.
+ * leaves `/blog` to it even with `listing: true` (`ownListing` in
+ * lib/entries) — and with it the paging: this page lists every post, whatever
+ * `per_page` says. Draw `EntryListing.astro` here instead, or delete the file
+ * and say `listing: true`, for the scaffold's pages at `/blog/page/2`.
  */
 import Layout from '../../../layouts/Layout.astro';
 import EntryCard from '../../../components/EntryCard.astro';

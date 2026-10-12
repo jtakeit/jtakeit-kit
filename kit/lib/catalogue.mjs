@@ -614,6 +614,24 @@ for (const collection of collections) {
   }
 
   /*
+   * A listing at the prefix, asked for (the platform's CollectionDef.Listing,
+   * 12 October 2026): the scaffold draws one only where a collection says
+   * `listing: true`, because a page nobody asked for is an address on a
+   * client's site nobody designed. Only for a collection whose entries have
+   * pages — one without is listed on its prefix's page already, which the
+   * repository writes.
+   */
+  if (collection.listing !== undefined && typeof collection.listing !== 'boolean') {
+    fault(E.COLLECTION, `${where}.listing`, `listing is ${JSON.stringify(collection.listing)} — true, or absent for no listing at the prefix`);
+  } else if (collection.listing === true && collection.pages === false) {
+    fault(
+      E.COLLECTION,
+      `${where}.listing`,
+      `collection "${collection.name}" has no pages of its own, so its prefix's page is the listing already — the repository writes it; \`listing\` is for a collection whose entries have pages`,
+    );
+  }
+
+  /*
    * What a post may hold, and the one type it must.
    *
    * A post is a sequence: its opening prose, then runs of prose and whatever

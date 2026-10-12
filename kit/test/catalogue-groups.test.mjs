@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 const tool = fileURLToPath(new URL('../lib/catalogue.mjs', import.meta.url));
 
 /** The tool's findings on a declaration, as one string; '' when it accepts it. */
-function judged({ group, extra = [], collections = [] }) {
+function judged({ group, extra = [], collections = [], emitted }) {
   const dir = mkdtempSync(join(tmpdir(), 'jtk-groups-'));
   try {
     const declaration = {
@@ -38,6 +38,7 @@ function judged({ group, extra = [], collections = [] }) {
     const file = join(dir, 'declaration.mjs');
     writeFileSync(file, Object.entries(declaration).map(([k, v]) => `export const ${k} = ${JSON.stringify(v)};`).join('\n'));
     const run = spawnSync('node', [tool, '--emit-only', '--root', dir, '--declaration', 'declaration.mjs'], { encoding: 'utf8' });
+    if (emitted) emitted(run.status === 0 ? JSON.parse(readFileSync(join(dir, 'jtk', 'catalogue.json'), 'utf8')) : undefined);
     return run.status === 0 ? '' : run.stderr;
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -66,4 +67,15 @@ test('tags are a list of one ref, and every ref names a declared collection', ()
   assert.match(judged({ extra: [tags] }), /JTK_E_COLLECTION\w* .*blocks\[0\]\.tags\.tag\.ref: .*"tags", which this catalogue does not declare/);
   const tagType = { name: 'tags', label: 'Tags', prefix: '/tags', type: 'category' };
   assert.equal(judged({ extra: [tags], collections: [tagType] }), '');
+});
+
+test('a listing at the prefix is asked for with listing: true, passed through, and refused on a collection without pages', () => {
+  const kinds = (more) => [{ name: 'kinds', label: 'Kinds', prefix: '/kinds', type: 'category', ...more }];
+  let catalogue;
+  assert.equal(judged({ collections: kinds({ listing: true }), emitted: (one) => { catalogue = one; } }), '');
+  assert.equal(catalogue.collections.find((one) => one.name === 'kinds').listing, true, 'the catalogue carries it to the platform');
+  assert.equal(judged({ collections: kinds({ listing: false }) }), '');
+  assert.match(judged({ collections: kinds({ listing: true, pages: false }) }), /\.listing/);
+  assert.match(judged({ collections: kinds({ listing: true, pages: false }) }), /has no pages of its own/);
+  assert.match(judged({ collections: kinds({ listing: 'yes' }) }), /listing is "yes"/);
 });

@@ -584,7 +584,9 @@ export const BLOCKS: Block[] = [
  *
  * ── the routes a collection gets ────────────────────────────────────────────
  *
- *   src/pages/[...listing].astro    the listing at its prefix, paged by
+ *   src/pages/[...listing].astro    the listing at its prefix — always for a
+ *                                   collection without pages; for one with,
+ *                                   only with `listing: true`, paged by
  *                                   per_page at <prefix>/page/2 — or a page of
  *                                   yours at the prefix, which takes it over
  *   src/pages/[...entry].astro      one entry, and what points at it
@@ -701,8 +703,8 @@ export interface Collection {
    */
   order?: { by: string; desc?: boolean };
   /**
-   * Paginate the listing: this many to a page, page two at
-   * `<prefix>/page/2` (docs/collections.md, «The listing»). Absent means one
+   * Paginate the listing (`listing: true`): this many to a page, page two
+   * at `<prefix>/page/2` (docs/collections.md, «The listing»). Absent means one
    * page, however many there are, and so does a collection without pages. An
    * entry's page that lists what points at it (a tag's posts) shows at most
    * this many of this collection's, and a line to the listing for the rest.
@@ -715,6 +717,14 @@ export interface Collection {
    * per entry, which is what a blog wants.
    */
   pages?: boolean;
+  /**
+   * `true` for a listing at the prefix — `/works`, paged at `/works/page/2`
+   * — drawn by the scaffold where the repository has no page there of its own.
+   * Off unless said: a page nobody asked for is an address on a client's site
+   * nobody designed. Only for a collection whose entries have pages; the
+   * catalogue refuses it on one without, whose prefix is its listing already.
+   */
+  listing?: boolean;
 }
 
 export const COLLECTIONS: Collection[] = [];
