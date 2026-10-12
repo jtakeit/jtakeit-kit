@@ -39,5 +39,9 @@
   },
   "workspaces": [
     "kit"
-  ]
+  ],
+  "devDependencies": {
+    "axe-core": "4.14.0",
+    "playwright-core": "1.64.0"
+  }
 }
