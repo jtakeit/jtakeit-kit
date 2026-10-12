@@ -64,6 +64,9 @@ export function weekStrip(input, options) {
   const max = parseDay(input.max) ?? new Date(floor.getFullYear(), floor.getMonth() + 2, floor.getDate());
   const monthName = new Intl.DateTimeFormat(options.lang, { month: 'long', year: 'numeric' });
   const weekday = new Intl.DateTimeFormat(options.lang, { weekday: 'short' });
+  // The month, for a screen reader: «Mon 12» read alone is a day of no
+  // month, and a week that runs from one month into the next has two.
+  const month = new Intl.DateTimeFormat(options.lang, { month: 'long' });
   const plus = (d, n) => { const out = new Date(d); out.setDate(out.getDate() + n); return out; };
   const choosable = (d) => d >= floor && d <= max && open.has(DAY_NAMES[(d.getDay() + 6) % 7]);
 
@@ -96,10 +99,19 @@ export function weekStrip(input, options) {
         ${week.map((d) => {
           const value = ymd(d);
           const ok = choosable(d);
-          return `<button type="button" class="booking__day${value === chosen ? ' is-chosen' : ''}" data-day="${value}"${ok ? '' : ' disabled'} aria-pressed="${value === chosen}"><span class="booking__day-wd">${weekday.format(d)}</span><span class="booking__day-n">${d.getDate()}</span></button>`;
+          return `<button type="button" class="booking__day${value === chosen ? ' is-chosen' : ''}" data-day="${value}"${ok ? '' : ' disabled'} aria-pressed="${value === chosen}"><span class="booking__day-wd">${weekday.format(d)}</span> <span class="booking__day-n">${d.getDate()}</span><span class="booking__sr"> ${month.format(d)}</span></button>`;
         }).join('')}
       </div>`;
   }
+  // A redraw replaces the buttons, and the one that had the focus with them:
+  // a keyboard was left on the page's top after every press (WCAG 2.4.3,
+  // 12 October 2026). The same button, or the arrow beside a disabled one,
+  // takes it back.
+  const refocus = (selector) => {
+    const again = /** @type {HTMLButtonElement | null} */ (root.querySelector(selector));
+    const to = again && !again.disabled ? again : /** @type {HTMLButtonElement | null} */ (root.querySelector('[data-go]:not(:disabled), [data-day]:not(:disabled)'));
+    to?.focus();
+  };
   root.addEventListener('click', (event) => {
     const target = event.target instanceof Element ? event.target : null;
     const arrow = target?.closest('[data-go]');
@@ -107,16 +119,28 @@ export function weekStrip(input, options) {
       start = plus(start, Number(arrow.dataset.go));
       if (start < floor) start = new Date(floor);
       draw();
+      refocus(`[data-go="${arrow.dataset.go}"]`);
       return;
     }
     const dayButton = target?.closest('[data-day]');
     if (dayButton instanceof HTMLButtonElement && !dayButton.disabled) {
-      input.value = dayButton.dataset.day ?? '';
+      const value = dayButton.dataset.day ?? '';
+      input.value = value;
       input.dispatchEvent(new Event('change', { bubbles: true }));
       draw();
+      refocus(`[data-day="${value}"]`);
     }
   });
-  input.addEventListener('change', draw);
+  input.addEventListener('change', () => {
+    const had = root.contains(document.activeElement) ? /** @type {HTMLElement} */ (document.activeElement).dataset : null;
+    draw();
+    if (had?.day) refocus(`[data-day="${had.day}"]`);
+  });
+  // The label still names the hidden input; a press on it goes to the days.
+  input.labels?.[0]?.addEventListener('click', (event) => {
+    event.preventDefault();
+    refocus('.booking__day.is-chosen');
+  });
   draw();
 }
 
@@ -134,7 +158,10 @@ export function partsOfDay(form, words) {
   slots.dataset.parts = '1';
   const tabs = document.createElement('div');
   tabs.className = 'booking__parts';
-  tabs.setAttribute('role', 'tablist');
+  // Pressed buttons in a group, not tabs: a tablist promises arrow keys and
+  // panels, and this has neither — the times under it are the fieldset's.
+  tabs.setAttribute('role', 'group');
+  if (words.time) tabs.setAttribute('aria-label', words.time);
   tabs.hidden = true;
   slots.insertAdjacentElement('beforebegin', tabs);
   const timeOf = (pill) => to24((pill.textContent ?? '').trim()).slice(0, 5);
@@ -149,7 +176,7 @@ export function partsOfDay(form, words) {
     }
     for (const tab of /** @type {NodeListOf<HTMLElement>} */ (tabs.querySelectorAll('.booking__part'))) {
       tab.classList.toggle('is-current', tab.dataset.part === current);
-      tab.setAttribute('aria-selected', String(tab.dataset.part === current));
+      tab.setAttribute('aria-pressed', String(tab.dataset.part === current));
     }
   };
   const sort = () => {
@@ -163,7 +190,7 @@ export function partsOfDay(form, words) {
     tabs.innerHTML = PARTS.filter((part) => have.has(part))
       .map((part) => {
         const own = pills.filter((pill) => parts.get(pill) === part).map(timeOf);
-        return `<button type="button" class="booking__part" role="tab" data-part="${part}">${words[part] ?? part}<span class="booking__part-n">${own[0]}–${own[own.length - 1]}</span></button>`;
+        return `<button type="button" class="booking__part" data-part="${part}">${words[part] ?? part}<span class="booking__part-n">${own[0]}–${own[own.length - 1]}</span></button>`;
       })
       .join('');
     tabs.hidden = have.size < 2;
@@ -193,6 +220,9 @@ export function partsOfDay(form, words) {
  * @param {string} lang
  */
 export function twoSteps(form, words, lang) {
+  // A scroll the visitor did not ask for glides only for one who has not
+  // asked for less motion.
+  const smooth = () => (matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
   if (form.dataset.steps === '1') return;
   form.dataset.steps = '1';
   const firstHalf = new Set(['service', 'resource', 'day', 'back', 'hours', 'party', 'quantity', 'class']);
@@ -207,7 +237,7 @@ export function twoSteps(form, words, lang) {
   const stepper = document.createElement('ol');
   stepper.className = 'booking__stepper';
   stepper.innerHTML = [words.stepWhat ?? 'What and when', words.stepWho ?? 'Who is coming']
-    .map((name, i) => `<li class="booking__step" data-at="${i + 1}"><span class="booking__step-n">${i + 1}</span>${name}</li>`)
+    .map((name, i) => `<li class="booking__step" data-at="${i + 1}" tabindex="-1"><span class="booking__step-n">${i + 1}</span>${name}</li>`)
     .join('');
   form.prepend(stepper);
 
@@ -219,6 +249,8 @@ export function twoSteps(form, words, lang) {
   const need = document.createElement('p');
   need.className = 'booking__need';
   need.dataset.step = '1';
+  // Said as it appears, not only drawn in red.
+  need.setAttribute('role', 'alert');
   need.hidden = true;
   need.textContent = words.needAll ?? 'Pick a service, a day and a time first.';
   const times = form.querySelector('[data-times]');
@@ -259,6 +291,8 @@ export function twoSteps(form, words, lang) {
     for (const step of /** @type {NodeListOf<HTMLElement>} */ (stepper.querySelectorAll('.booking__step'))) {
       step.classList.toggle('is-current', step.dataset.at === to);
       step.classList.toggle('is-done', to === 'done' || Number(step.dataset.at) < Number(to));
+      if (step.dataset.at === to) step.setAttribute('aria-current', 'step');
+      else step.removeAttribute('aria-current');
     }
     if (to === '2') {
       const c = chosen();
@@ -273,15 +307,25 @@ export function twoSteps(form, words, lang) {
         </dl>
         <button type="button" class="booking__back">${words.change ?? 'Change'}</button>`;
       summary.querySelector('.booking__back')?.addEventListener('click', () => stage('1'));
-      /** @type {HTMLInputElement | null} */ (form.querySelector('input[name=name]'))?.focus({ preventScroll: true });
     }
-    if (moved && to !== 'done') form.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    // A move to another step takes the focus to that step's name, so a
+    // screen reader says where it is and the next Tab is the step's first
+    // control. Only a move: a field changed on the second step redraws the
+    // summary and leaves the focus where the visitor is — it went back to
+    // the name on every Tab out of it (WCAG 2.4.3, 12 October 2026). The
+    // answer takes the focus itself (the element's `done`).
+    if (moved && to !== 'done') {
+      /** @type {HTMLElement | null} */ (stepper.querySelector('.booking__step.is-current'))?.focus({ preventScroll: true });
+      form.scrollIntoView({ block: 'start', behavior: smooth() });
+    }
   };
 
   next.addEventListener('click', () => {
     const c = chosen();
     const ready = c.services.length > 0 && /** @type {HTMLInputElement | null} */ (form.querySelector('input[name=day]'))?.value && c.time;
     need.hidden = Boolean(ready);
+    // Written again each time, so a second press is said a second time.
+    if (!ready) need.textContent = words.needAll ?? 'Pick a service, a day and a time first.';
     if (ready) stage('2');
   });
   form.addEventListener('change', () => {
@@ -292,7 +336,7 @@ export function twoSteps(form, words, lang) {
     const settle = () => {
       if (done.hidden || form.dataset.stage === 'done') return;
       stage('done');
-      form.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      form.scrollIntoView({ block: 'start', behavior: smooth() });
     };
     new MutationObserver(settle).observe(done, { attributes: true, attributeFilter: ['hidden'] });
     settle();
@@ -328,11 +372,17 @@ export function drawnSelect(select) {
   select.tabIndex = -1;
   select.insertAdjacentElement('afterend', root);
   const label = select.labels?.[0];
-  if (label) trigger.setAttribute('aria-label', label.textContent?.trim() ?? '');
+  // A press on the label goes to the drawn control, not the hidden one.
+  label?.addEventListener('click', (event) => { event.preventDefault(); trigger.focus(); });
+  if (label) list.setAttribute('aria-label', label.textContent?.trim() ?? '');
 
   const draw = () => {
     const current = select.options[select.selectedIndex];
     trigger.innerHTML = `<span class="booking__dd-value">${current?.textContent ?? ''}</span><span class="booking__dd-mark" aria-hidden="true">▾</span>`;
+    // Named by the label and the value both: the label alone hid what is
+    // chosen, and broke the rule that a control's name holds the words drawn
+    // on it (WCAG 2.5.3) — a voice user says what they see.
+    if (label) trigger.setAttribute('aria-label', `${label.textContent?.trim() ?? ''}: ${current?.textContent?.trim() ?? ''}`);
     list.innerHTML = [...select.options]
       .map((o) => `<button type="button" class="booking__dd-option${o.selected ? ' is-chosen' : ''}" role="option" aria-selected="${o.selected}" data-value="${o.value.replace(/"/g, '&quot;')}"${o.disabled ? ' disabled' : ''}>${o.textContent}</button>`)
       .join('');
@@ -364,6 +414,9 @@ export function drawnSelect(select) {
   });
   document.addEventListener('click', (event) => {
     if (!list.hidden && event.target instanceof Node && !root.contains(event.target)) open(false);
+  });
+  root.addEventListener('focusout', (event) => {
+    if (!list.hidden && !(event.relatedTarget instanceof Node && root.contains(event.relatedTarget))) open(false);
   });
   new MutationObserver(draw).observe(select, { childList: true, subtree: true, attributes: true });
   select.addEventListener('change', draw);

@@ -34,7 +34,9 @@ test('one choice by default, a checklist with the running total when combined', 
   const many = renderBookingForm({ services, locale: 'en', combine: true, currency: 'CHF', now });
   assert.ok(many.includes('<fieldset class="booking__services" data-services>'));
   assert.ok(many.includes('<input type="checkbox" name="service" value="cut" data-takes="45" data-costs="5500">'));
-  assert.ok(many.includes('<p class="booking__run-title">Hair</p>'));
+  // A run with a heading is a group named by it (WCAG 1.3.1).
+  assert.ok(many.includes('role="group" aria-labelledby="booking-run-0"'));
+  assert.ok(many.includes('<p class="booking__run-title" id="booking-run-0">Hair</p>'));
   assert.equal(many.match(/booking__run-title/g).length, 1, 'a heading once, for a run of services');
   assert.ok(many.includes('[data-total]') || many.includes('data-total'));
 });
@@ -153,7 +155,7 @@ test('a price per person says so, and an add-on is listed under its own heading'
   });
   assert.ok(html.includes('data-per="person"'));
   assert.ok(html.includes('per person'));
-  assert.ok(html.includes('<p class="booking__run-title">Add-ons</p>'));
+  assert.match(html, /<p class="booking__run-title" id="booking-run-\d+">Add-ons<\/p>/);
   assert.ok(html.indexOf('value="shoes"') > html.indexOf('value="yoga"'), 'the add-on after the services');
   for (const locale of LOCALES) { assert.ok(wordsFor(locale).perPerson, locale); assert.ok(wordsFor(locale).addOns, locale); }
 });

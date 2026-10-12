@@ -27,18 +27,39 @@ export function wireLead(form) {
   if (!status || !button) return;
   const original = label?.textContent ?? '';
 
+  /*
+   * A sentence about a field is said on the field (WCAG 3.3.1): the input is
+   * marked invalid and described by the sentence, so a screen reader reads
+   * it when the field is reached and not only when it appears. It was drawn
+   * under the field and tied to nothing (12 October 2026).
+   */
+  /** @param {string} field */
+  const inputOf = (field) => /** @type {HTMLInputElement | null} */ (form.elements.namedItem(field));
+
   /** @param {string} field @param {string} message */
   const showError = (field, message) => {
     /** @type {HTMLElement | null} */ const el = form.querySelector(`[data-error-for="${field}"]`);
     if (!el) return;
     el.textContent = message;
     el.hidden = !message;
+    const input = inputOf(field);
+    if (!input || !message) return;
+    if (!el.id) el.id = `${form.id || 'lead'}-${field}-error`;
+    input.setAttribute('aria-invalid', 'true');
+    const described = (input.getAttribute('aria-describedby') ?? '').split(/\s+/).filter(Boolean);
+    if (!described.includes(el.id)) input.setAttribute('aria-describedby', [...described, el.id].join(' '));
   };
 
   const clearErrors = () => {
     for (const el of /** @type {NodeListOf<HTMLElement>} */ (form.querySelectorAll('[data-error-for]'))) {
       el.textContent = '';
       el.hidden = true;
+      const input = inputOf(el.dataset.errorFor ?? '');
+      if (!input) continue;
+      input.removeAttribute('aria-invalid');
+      const rest = (input.getAttribute('aria-describedby') ?? '').split(/\s+/).filter((id) => id && id !== el.id);
+      if (rest.length) input.setAttribute('aria-describedby', rest.join(' '));
+      else input.removeAttribute('aria-describedby');
     }
   };
 
@@ -49,15 +70,16 @@ export function wireLead(form) {
     form.removeAttribute('data-state');
 
     const data = new FormData(form);
-    let ok = true;
+    /** @type {HTMLInputElement | null} */ let first = null;
     for (const field of ['name', 'contact']) {
-      const input = /** @type {HTMLInputElement | null} */ (form.elements.namedItem(field));
+      const input = inputOf(field);
       if (!input?.value.trim()) {
         showError(field, input?.dataset.message ?? '');
-        ok = false;
+        first ??= input;
       }
     }
-    if (!ok) return;
+    // And the visitor is taken to the first thing to fix (3.3.1).
+    if (first) { first.focus(); return; }
 
     button.disabled = true;
     if (label) label.textContent = form.dataset.sending ?? original;

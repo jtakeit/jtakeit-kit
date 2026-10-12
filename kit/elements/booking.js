@@ -294,10 +294,25 @@ export function wireBooking(form) {
   function quantityChosen() {
     return quantityField.hidden ? 1 : Number(quantity.value) || 1;
   }
-  /** @param {string} text */
-  function say(text) {
+  // The fields the last refusal was about: marked invalid and described by
+  // the sentence, so a screen reader reads it on the field itself and not
+  // only as it appears (WCAG 3.3.1, 12 October 2026).
+  /** @type {HTMLElement[]} */ let blamed = [];
+  /** @param {string} text @param {HTMLElement[]} [fields] the fields it is about */
+  function say(text, fields = []) {
     error.textContent = text;
     error.hidden = text === '';
+    for (const field of blamed) {
+      field.removeAttribute('aria-invalid');
+      const rest = (field.getAttribute('aria-describedby') ?? '').split(/\s+/).filter((id) => id && id !== error.id);
+      if (rest.length) field.setAttribute('aria-describedby', rest.join(' '));
+      else field.removeAttribute('aria-describedby');
+    }
+    blamed = text === '' || !error.id ? [] : fields;
+    for (const field of blamed) {
+      field.setAttribute('aria-invalid', 'true');
+      field.setAttribute('aria-describedby', [field.getAttribute('aria-describedby'), error.id].filter(Boolean).join(' '));
+    }
   }
 
   // A refusal as a sentence in the visitor's language. The platform answers
@@ -729,8 +744,14 @@ export function wireBooking(form) {
     const email = String(data.get('email') ?? '').trim();
     if (picked().length === 0) { say(words.pickService); return; }
     if (!chosen) { say(words.pick); return; }
-    if (name === '') { /** @type {HTMLInputElement} */ (q('[name=name]')).focus(); return; }
-    if (phone === '' && email === '') { say(words.needContact); return; }
+    /** @type {HTMLInputElement} */ const nameInput = q('[name=name]');
+    if (name === '') { say(words.needName, [nameInput]); nameInput.focus(); return; }
+    if (phone === '' && email === '') {
+      /** @type {HTMLInputElement} */ const phoneInput = q('[name=phone]');
+      say(words.needContact, [phoneInput, q('[name=email]')]);
+      phoneInput.focus();
+      return;
+    }
 
     submit.disabled = true;
     submit.textContent = words.sending;
@@ -824,10 +845,14 @@ export function wireBooking(form) {
       link.setAttribute('aria-label', words.manage);
       link.addEventListener('focus', () => link.select());
       copy.textContent = words.copy;
+      /** @type {HTMLElement | null} */ const told = q('[data-keep-said]');
       copy.addEventListener('click', async () => {
         try { await navigator.clipboard.writeText(href); } catch { link.select(); document.execCommand('copy'); }
         copy.textContent = words.copied;
-        setTimeout(() => { copy.textContent = words.copy; }, 1600);
+        // Said as well as drawn: a button's own words changing under the
+        // focus is read by some screen readers and not by others.
+        if (told) told.textContent = words.copied;
+        setTimeout(() => { copy.textContent = words.copy; if (told) told.textContent = ''; }, 1600);
       });
       open.href = href;
       open.textContent = words.open;

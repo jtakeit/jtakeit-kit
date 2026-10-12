@@ -142,8 +142,8 @@ export function renderBookingForm(props) {
   const servicesField = combine
     ? `<fieldset class="booking__services" data-services>
         <legend class="field__label" data-say="services">${esc(WORDS.services)}</legend>
-        ${[...timedRuns, ...(addOns.length ? [{ group: WORDS.addOns, items: addOns }] : [])].map((run) => `<div class="booking__run">
-            ${run.group !== '' ? `<p class="booking__run-title">${esc(run.group)}</p>` : ''}
+        ${[...timedRuns, ...(addOns.length ? [{ group: WORDS.addOns, items: addOns }] : [])].map((run, i) => `<div class="booking__run"${run.group !== '' ? ` role="group" aria-labelledby="booking-run-${i}"` : ''}>
+            ${run.group !== '' ? `<p class="booking__run-title" id="booking-run-${i}">${esc(run.group)}</p>` : ''}
             ${run.items.map((one) => `<label class="booking__service">
                 <input type="checkbox" name="service" value="${esc(one.slug)}" data-takes="${esc(one.takes ?? 0)}" data-costs="${esc(one.costs ?? 0)}"${one.per === 'person' ? ' data-per="person"' : ''}>
                 <span class="booking__service-name">${esc(one.title)}</span>
@@ -235,7 +235,7 @@ export function renderBookingForm(props) {
 
   <div class="booking__challenge" data-challenge hidden></div>
 
-  <p class="field__error" data-booking-error role="alert" hidden></p>
+  <p class="field__error" id="booking-error" data-booking-error role="alert" hidden></p>
 
   <button class="booking__submit" type="submit" data-submit data-say="book">${esc(WORDS.book)}</button>
 
@@ -250,6 +250,7 @@ export function renderBookingForm(props) {
         <button type="button" class="booking__keep-copy" data-keep-copy></button>
         <a class="booking__keep-open" data-keep-open></a>
       </div>
+      <span class="booking__sr" role="status" data-keep-said></span>
     </div>
     <p class="booking__note" data-pay-note hidden></p>
     <p class="booking__links">
