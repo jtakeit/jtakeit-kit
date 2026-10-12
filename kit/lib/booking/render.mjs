@@ -8,11 +8,14 @@
  * what they answer. Nothing about availability is computed on the page, and
  * nothing about the visitor's choice is trusted by the server.
  *
- * This is the markup `@jtakeit/astro`'s `BookingForm.astro` used to carry
- * itself; it is a string now so a site on any generator can put the same form
- * on a page: Eleventy in a shortcode, Next in `dangerouslySetInnerHTML`, a
- * Node script in a template literal. Keep the `data-*` hooks and the input
- * `name`s whatever you do to its classes: the element reads those, and the
+ * Two ways to the same form. `renderBookingForm` writes it as a string, for a
+ * site on any generator: Eleventy in a shortcode, Next in
+ * `dangerouslySetInnerHTML`, a Node script in a template literal.
+ * `bookingForm` gives what that string is made of — the words, the services
+ * in their runs, the form's attributes, the days — for a page that writes the
+ * markup itself, the way `@jtakeit/astro`'s `BookingForm.astro` does, so the
+ * markup is the site's and only the facts are the kit's. Either way, keep the
+ * hooks (`./hooks.mjs`): the element reads those and nothing else, and the
  * platform reads what the element sends.
  *
  * ── what the page passes in ─────────────────────────────────────────────────
@@ -87,31 +90,45 @@ function esc(value) {
 /**
  * A service's price as the list says it: the price, or «from …» for one
  * priced by the hour of the week — whose price is the slot's and is printed
- * beside the time once one is chosen (wiki/68).
+ * beside the time once one is chosen (wiki/68). Plain text, not escaped.
  * @param {Named} one
  * @param {string} currency
  * @param {string} lang
+ * @param {Record<string, string>} words
  */
-function priceSaid(one, currency, lang) {
-  if (one.costs) return ` · ${esc(money(one.costs, currency, lang))}`;
+function priceText(one, currency, lang, words) {
+  if (one.costs) return money(one.costs, currency, lang);
   const least = priceFrom(one);
-  return least > 0 ? ` · ${esc(wordsFor(lang).from)} ${esc(money(least, currency, lang))}` : '';
+  return least > 0 ? `${words.from} ${money(least, currency, lang)}` : '';
 }
 
 /**
- * The booking form as HTML.
+ * @typedef {object} BookingForm
+ * @property {Record<string, string>} words  the form's words, in the page's language; the platform's answer replaces the kind's
+ * @property {string} lang                 the language tag prices and days are written in
+ * @property {boolean} combine             a checklist, or one `<select>`
+ * @property {{ group: string; items: (Named & { meta: string })[] }[]} runs  the checklist's runs, headings in order, the ones with none after them, the add-ons last under their own; `meta` is «45 min · CHF 95»
+ * @property {Named[]} services            for one `<select>`, as they came
+ * @property {(Named & { does: string })[]} resources  the choice of whom — empty for none; `does` is the slugs, joined, for `data-does`
+ * @property {string} today                the day input's `min`
+ * @property {string} last                 its `max`
+ * @property {Record<string, string>} attrs  every attribute of the `<form>`, `data-booking` and `novalidate` among them — spread them on it
+ */
+
+/**
+ * What the booking form is made of, for a page that writes the markup.
  *
  * @param {BookingFormProps} props
- * @returns {string}
+ * @returns {BookingForm}
  */
-export function renderBookingForm(props) {
+export function bookingForm(props) {
   const {
     services, resources = [], locale, daysAhead = 30, combine = false, currency = '', scale = '', kind = '',
-    api = '/api/', tag = 'jtk-booking', now = new Date(), open = [], ui = true,
+    api = '/api/', now = new Date(), open = [], ui = true,
   } = props;
-  if (!Array.isArray(services)) throw new TypeError('renderBookingForm: services is a list of { slug, title }');
+  if (!Array.isArray(services)) throw new TypeError('bookingForm: services is a list of { slug, title }');
   const unsaid = kind !== '' && kind !== 'salon';
-  const WORDS = wordsFor(locale, scale);
+  const words = wordsFor(locale, scale);
   const lang = { de: 'de-CH', uk: 'uk-UA', ru: 'ru-RU', es: 'es-ES', it: 'it-IT', pt: 'pt-PT', fr: 'fr-FR' }[locale] ?? 'en';
 
   // The checklist's runs, in the order the services came, each heading once.
@@ -139,15 +156,62 @@ export function renderBookingForm(props) {
   // its own heading, after the services, and rides on the visit (wiki/70).
   const addOns = runs.flatMap((run) => run.items.filter((one) => !one.takes && (one.costs || priceFrom(one))));
   const timedRuns = runs.map((run) => ({ ...run, items: run.items.filter((one) => !addOns.includes(one)) })).filter((run) => run.items.length > 0);
+  /** @param {Named} one */
+  const meta = (one) => [one.takes ? `${one.takes} min` : '', priceText(one, currency, lang, words), one.per === 'person' ? words.perPerson : ''].filter(Boolean).join(' · ');
+
+  // Fixed, the whole form, as the lead form's labels are: every word in it is
+  // the platform's — spoken in the business's kind from the availability
+  // answer, «Забронювати» over the build's «Записатися» — or an entry's own
+  // title, which the owner edits on the entry. None is the owner's to edit
+  // here, and `jtk catalogue` asked whose all seventeen were on a fresh
+  // restaurant (30 September 2026).
+  /** @type {Record<string, string>} */
+  const attrs = {
+    'data-booking': '',
+    'data-locale': locale,
+    'data-currency': currency,
+    'data-words': JSON.stringify(words),
+    'data-scale': scale,
+    'data-api': api,
+    'data-sends': SENDS.join(','),
+    'data-open': open.join(','),
+    ...(ui ? { 'data-ui': ui === true ? 'steps week parts select' : String(ui) } : {}),
+    ...(unsaid ? { 'data-unsaid': '' } : {}),
+    // Its own name as its value: Astro drops a boolean attribute spread as
+    // '', and the browser's own check stopped every booking without a name
+    // before the form could say so (12 October 2026).
+    novalidate: 'novalidate',
+    'data-jtk-fixed': '',
+  };
+
+  return {
+    words, lang, combine, today, last, attrs, services,
+    runs: [...timedRuns, ...(addOns.length ? [{ group: words.addOns, items: addOns }] : [])].map((run) => ({ ...run, items: run.items.map((one) => ({ ...one, meta: meta(one) })) })),
+    resources: resources.length > 1 ? resources.map((one) => ({ ...one, does: Array.isArray(one.does) ? one.does.join(',') : '' })) : [],
+  };
+}
+
+/**
+ * The booking form as HTML — `bookingForm`'s facts in the kit's own markup.
+ *
+ * @param {BookingFormProps} props
+ * @returns {string}
+ */
+export function renderBookingForm(props) {
+  const { tag = 'jtk-booking', kind = '' } = props;
+  if (!Array.isArray(props.services)) throw new TypeError('renderBookingForm: services is a list of { slug, title }');
+  const { words: WORDS, combine, runs, services, resources, today, last, attrs } = bookingForm(props);
+  const unsaid = kind !== '' && kind !== 'salon';
+
   const servicesField = combine
     ? `<fieldset class="booking__services" data-services>
         <legend class="field__label" data-say="services">${esc(WORDS.services)}</legend>
-        ${[...timedRuns, ...(addOns.length ? [{ group: WORDS.addOns, items: addOns }] : [])].map((run, i) => `<div class="booking__run"${run.group !== '' ? ` role="group" aria-labelledby="booking-run-${i}"` : ''}>
+        ${runs.map((run, i) => `<div class="booking__run"${run.group !== '' ? ` role="group" aria-labelledby="booking-run-${i}"` : ''}>
             ${run.group !== '' ? `<p class="booking__run-title" id="booking-run-${i}">${esc(run.group)}</p>` : ''}
-            ${run.items.map((one) => `<label class="booking__service">
+            ${run.items.map((one) => `<label class="booking__service" data-service-row>
                 <input type="checkbox" name="service" value="${esc(one.slug)}" data-takes="${esc(one.takes ?? 0)}" data-costs="${esc(one.costs ?? 0)}"${one.per === 'person' ? ' data-per="person"' : ''}>
-                <span class="booking__service-name">${esc(one.title)}</span>
-                <span class="booking__service-meta">${one.takes ? `${esc(one.takes)} min` : ''}${priceSaid(one, currency, lang)}${one.per === 'person' ? ` · ${esc(WORDS.perPerson)}` : ''}</span>
+                <span class="booking__service-name" data-service-name>${esc(one.title)}</span>
+                <span class="booking__service-meta">${esc(one.meta)}</span>
               </label>`).join('\n')}
           </div>`).join('\n')}
         <p class="booking__total" data-total hidden></p>
@@ -157,53 +221,48 @@ export function renderBookingForm(props) {
           ${services.map((one) => `<option value="${esc(one.slug)}">${esc(one.title)}</option>`).join('\n')}
         </select>`;
 
-  const resourcesField = resources.length > 1
-    ? `<div class="field">
+  const resourcesField = resources.length > 0
+    ? `<div class="field" data-field>
       <label class="field__label" for="booking-resource" data-say="resource">${esc(WORDS.resource)}</label>
       <select class="field__input" id="booking-resource" name="resource" data-say-wait>
         <option value="" data-say="any">${esc(WORDS.any)}</option>
-        ${resources.map((one) => `<option value="${esc(one.slug)}"${Array.isArray(one.does) && one.does.length > 0 ? ` data-does="${esc(one.does.join(','))}"` : ''}>${esc(one.title)}</option>`).join('\n')}
+        ${resources.map((one) => `<option value="${esc(one.slug)}"${one.does ? ` data-does="${esc(one.does)}"` : ''}>${esc(one.title)}</option>`).join('\n')}
       </select>
     </div>`
     : '';
 
-  // Fixed, the whole form, as the lead form's labels are: every word in it is
-  // the platform's — spoken in the business's kind from the availability
-  // answer, «Забронювати» over the build's «Записатися» — or an entry's own
-  // title, which the owner edits on the entry. None is the owner's to edit
-  // here, and `jtk catalogue` asked whose all seventeen were on a fresh
-  // restaurant (30 September 2026).
-  const form = `<form class="booking${unsaid ? ' booking--unsaid' : ''}" data-booking data-locale="${esc(locale)}" data-currency="${esc(currency)}" data-words="${esc(JSON.stringify(WORDS))}" data-scale="${esc(scale)}" data-api="${esc(api)}" data-sends="${SENDS.join(',')}" data-open="${esc(open.join(','))}"${ui ? ` data-ui="${ui === true ? 'steps week parts select' : esc(ui)}"` : ''} novalidate data-jtk-fixed>
+  const said = Object.entries(attrs).map(([key, value]) => (value === '' || value === key ? ` ${key}` : ` ${key}="${esc(value)}"`)).join('');
+  const form = `<form class="booking${unsaid ? ' booking--unsaid' : ''}"${said}>
   <noscript><p class="booking__note">${esc(WORDS.noScript)}</p></noscript>
 
-  <div class="field">
+  <div class="field" data-field>
     ${servicesField}
   </div>
 
   ${resourcesField}
 
-  <div class="field">
+  <div class="field" data-field>
     <label class="field__label" for="booking-day">${esc(WORDS.day)}</label>
     <input class="field__input" id="booking-day" name="day" type="date" min="${today}" max="${last}" required>
   </div>
 
-  <div class="field" data-back-field hidden>
+  <div class="field" data-field data-back-field hidden>
     <label class="field__label" for="booking-back">${esc(WORDS.back)}</label>
     <input class="field__input" id="booking-back" name="back" type="date" min="${today}">
     <p class="booking__hint" data-length hidden></p>
   </div>
 
-  <div class="field" data-hours-field hidden>
+  <div class="field" data-field data-hours-field hidden>
     <label class="field__label" for="booking-hours">${esc(WORDS.hours)}</label>
     <select class="field__input" id="booking-hours" name="hours"></select>
   </div>
 
-  <div class="field" data-party-field hidden>
+  <div class="field" data-field data-party-field hidden>
     <label class="field__label" for="booking-party">${esc(WORDS.party)}</label>
     <select class="field__input" id="booking-party" name="party"></select>
   </div>
 
-  <div class="field" data-quantity-field hidden>
+  <div class="field" data-field data-quantity-field hidden>
     <label class="field__label" for="booking-quantity">${esc(WORDS.quantity)}</label>
     <select class="field__input" id="booking-quantity" name="quantity"></select>
   </div>
@@ -216,19 +275,19 @@ export function renderBookingForm(props) {
     <p class="booking__total" data-stay-total hidden></p>
   </fieldset>
 
-  <div class="field">
+  <div class="field" data-field>
     <label class="field__label" for="booking-name">${esc(WORDS.name)} <span aria-hidden="true">*</span></label>
     <input class="field__input" id="booking-name" name="name" type="text" autocomplete="name" required maxlength="120">
   </div>
-  <div class="field">
+  <div class="field" data-field>
     <label class="field__label" for="booking-phone">${esc(WORDS.phone)}</label>
     <input class="field__input" id="booking-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="40">
   </div>
-  <div class="field">
+  <div class="field" data-field>
     <label class="field__label" for="booking-email">${esc(WORDS.email)}</label>
     <input class="field__input" id="booking-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="120">
   </div>
-  <div class="field">
+  <div class="field" data-field>
     <label class="field__label" for="booking-note">${esc(WORDS.note)}</label>
     <textarea class="field__input field__input--area" id="booking-note" name="note" rows="3" maxlength="2000"></textarea>
   </div>

@@ -24,6 +24,10 @@
       "types": "./types/parts.d.ts",
       "default": "./lib/booking/parts.mjs"
     },
+    "./booking/hooks": {
+      "types": "./types/hooks.d.ts",
+      "default": "./lib/booking/hooks.mjs"
+    },
     "./lead": {
       "types": "./types/lead.d.ts",
       "default": "./lib/lead/render.mjs"

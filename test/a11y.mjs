@@ -128,6 +128,37 @@ for (const [scheme, palette] of Object.entries(schemes)) {
 }
 write('jtk/design.json', design);
 
+// ── the booking form as an agent leaves it ───────────────────────────────────
+// The scaffold's form is a base to copy and dress (docs/booking.md): every
+// class renamed, the look gone, the contact fields wrapped in a row of their
+// own, a field the business never asks for left out. The hooks are all it
+// keeps, and the element must still draw, refuse and book — said, focused and
+// tied to the fields — with only the rules it puts on the page itself.
+{
+  const component = 'src/components/BookingForm.astro';
+  const original = read(component);
+  const copied = original
+    .replace(/\n<style>[\s\S]*?<\/style>/, '')
+    .replace(/class="([^"]+)"/g, (_, names) => `class="${names.split(' ').map((n) => `mine-${n}`).join(' ')}"`)
+    .replace(/\s*<div class="mine-field" data-field data-quantity-field hidden>[\s\S]*?<\/div>/, '')
+    .replace(/(<div class="mine-field" data-field>\s*<label class="mine-label" for="booking-name">)/, '<div class="mine-row">\n$1')
+    .replace(/(<textarea[^>]*\/>\s*<\/div>)/, '$1\n</div>');
+  if (copied.includes('data-quantity-field') || !copied.includes('mine-row')) throw new Error('a11y: the copied form was not made as meant');
+  write(component, copied);
+  try {
+    execFileSync('npm', ['run', 'build'], { cwd: site, stdio: 'pipe' });
+    const results = await audit({ dist: join(site, 'dist'), schemes: ['light'], from: site, pages: ['/services/'], log: (line) => console.log(`[copy] ${line}`) });
+    for (const r of results) r.scheme = 'copy';
+    all.push(...results);
+  } catch (why) {
+    console.error(String(why.stdout ?? ''), String(why.stderr ?? ''));
+    console.error('a11y: the copied form\'s build failed');
+    process.exit(1);
+  } finally {
+    write(component, original);
+  }
+}
+
 const lines = report(all);
 const seconds = ((Date.now() - started) / 1000).toFixed(1);
 if (scratch && !args.includes('--keep')) rmSync(scratch, { recursive: true, force: true });

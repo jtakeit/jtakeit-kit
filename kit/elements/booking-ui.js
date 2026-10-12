@@ -75,6 +75,7 @@ export function weekStrip(input, options) {
   root.setAttribute('role', 'group');
   root.setAttribute('aria-label', input.labels?.[0]?.textContent?.trim() || options.words.day || 'Day');
   input.classList.add('is-replaced');
+  input.dataset.replaced = '';
   input.setAttribute('aria-hidden', 'true');
   input.tabIndex = -1;
   input.insertAdjacentElement('afterend', root);
@@ -139,7 +140,7 @@ export function weekStrip(input, options) {
   // The label still names the hidden input; a press on it goes to the days.
   input.labels?.[0]?.addEventListener('click', (event) => {
     event.preventDefault();
-    refocus('.booking__day.is-chosen');
+    refocus('[data-day][aria-pressed="true"]');
   });
   draw();
 }
@@ -171,7 +172,7 @@ export function partsOfDay(form, words) {
   let current = '';
 
   const show = () => {
-    for (const pill of /** @type {NodeListOf<HTMLElement>} */ (slots.querySelectorAll('.booking__slot'))) {
+    for (const pill of /** @type {NodeListOf<HTMLElement>} */ (slots.querySelectorAll('[data-slot]'))) {
       pill.hidden = current !== '' && parts.get(pill) !== current;
     }
     for (const tab of /** @type {NodeListOf<HTMLElement>} */ (tabs.querySelectorAll('.booking__part'))) {
@@ -180,13 +181,13 @@ export function partsOfDay(form, words) {
     }
   };
   const sort = () => {
-    const pills = /** @type {HTMLElement[]} */ ([...slots.querySelectorAll('.booking__slot')]);
+    const pills = /** @type {HTMLElement[]} */ ([...slots.querySelectorAll('[data-slot]')]);
     // A time on the pill is the platform's clock in the site's language;
     // the hour read off it on 24 hours whatever that clock says.
     const sorted = partsOf(pills.map(hourOf));
     pills.forEach((pill, i) => parts.set(pill, sorted[i]));
     const have = new Set(sorted);
-    const chosen = pills.find((pill) => pill.classList.contains('is-chosen'));
+    const chosen = pills.find((pill) => pill.getAttribute('aria-pressed') === 'true');
     tabs.innerHTML = PARTS.filter((part) => have.has(part))
       .map((part) => {
         const own = pills.filter((pill) => parts.get(pill) === part).map(timeOf);
@@ -226,16 +227,22 @@ export function twoSteps(form, words, lang) {
   if (form.dataset.steps === '1') return;
   form.dataset.steps = '1';
   const firstHalf = new Set(['service', 'resource', 'day', 'back', 'hours', 'party', 'quantity', 'class']);
-  for (const child of /** @type {HTMLElement[]} */ ([...form.children])) {
-    const control = child.querySelector('input, select, textarea');
+  // The pieces sorted into the steps: every field by its hook, wherever the
+  // site's markup put it — in a grid, in two columns, in a card. A form of an
+  // older kit marked no fields, and its children are the pieces.
+  const marked = /** @type {HTMLElement[]} */ ([...form.querySelectorAll('[data-field], [data-times], [data-challenge], [data-submit]')]);
+  const pieces = marked.some((el) => el.matches('[data-field]')) ? marked : /** @type {HTMLElement[]} */ ([...form.children]);
+  for (const piece of pieces) {
+    const control = piece.matches('input, select, textarea') ? piece : piece.querySelector('input, select, textarea');
     const name = control instanceof HTMLInputElement || control instanceof HTMLSelectElement || control instanceof HTMLTextAreaElement ? control.name : '';
-    const first = child.matches('[data-times]') || firstHalf.has(name) || child.tagName === 'NOSCRIPT' || child.matches('[data-done]');
-    child.dataset.step = first ? '1' : '2';
+    const first = piece.matches('[data-times]') || firstHalf.has(name) || piece.tagName === 'NOSCRIPT';
+    piece.dataset.step = first ? '1' : '2';
   }
   for (const el of form.querySelectorAll('[data-done], [data-booking-error]')) /** @type {HTMLElement} */ (el).dataset.step = 'both';
 
   const stepper = document.createElement('ol');
   stepper.className = 'booking__stepper';
+  stepper.dataset.stepUi = '';
   stepper.innerHTML = [words.stepWhat ?? 'What and when', words.stepWho ?? 'Who is coming']
     .map((name, i) => `<li class="booking__step" data-at="${i + 1}" tabindex="-1"><span class="booking__step-n">${i + 1}</span>${name}</li>`)
     .join('');
@@ -245,10 +252,12 @@ export function twoSteps(form, words, lang) {
   next.type = 'button';
   next.className = 'booking__next';
   next.dataset.step = '1';
+  next.dataset.stepUi = '';
   next.textContent = words.next ?? 'Continue';
   const need = document.createElement('p');
   need.className = 'booking__need';
   need.dataset.step = '1';
+  need.dataset.stepUi = '';
   // Said as it appears, not only drawn in red.
   need.setAttribute('role', 'alert');
   need.hidden = true;
@@ -260,17 +269,21 @@ export function twoSteps(form, words, lang) {
   const summary = document.createElement('div');
   summary.className = 'booking__summary';
   summary.dataset.step = '2';
-  form.insertBefore(summary, form.querySelector('[data-step="2"]'));
+  summary.dataset.stepUi = '';
+  // Before the first piece of the second step, in whatever holds it.
+  const firstOfTwo = form.querySelector('[data-step="2"]');
+  if (firstOfTwo?.parentElement) firstOfTwo.parentElement.insertBefore(summary, firstOfTwo);
+  else form.append(summary);
 
   const chosen = () => {
     const names = /** @type {HTMLInputElement[]} */ ([...form.querySelectorAll('input[name=service]:checked')])
-      .map((box) => box.closest('.booking__service')?.querySelector('.booking__service-name')?.textContent?.trim() ?? box.value);
+      .map((box) => box.closest('[data-service-row], .booking__service, label')?.querySelector('[data-service-name], .booking__service-name')?.textContent?.trim() ?? box.value);
     const single = /** @type {HTMLSelectElement | null} */ (form.querySelector('select[name=service]'));
     if (single) names.push(single.options[single.selectedIndex]?.textContent?.trim() ?? '');
     const who = /** @type {HTMLSelectElement | null} */ (form.querySelector('select[name=resource]'));
     const dayValue = /** @type {HTMLInputElement | null} */ (form.querySelector('input[name=day]'))?.value ?? '';
     const dayDate = parseDay(dayValue);
-    const slot = /** @type {HTMLElement | null} */ (form.querySelector('.booking__slot.is-chosen'));
+    const slot = /** @type {HTMLElement | null} */ (form.querySelector('[data-slot][aria-pressed="true"]'));
     const ends = /** @type {HTMLElement | null} */ (form.querySelector('[data-ends]'));
     return {
       services: names.filter(Boolean),
@@ -368,6 +381,7 @@ export function drawnSelect(select) {
   list.hidden = true;
   root.append(trigger, list);
   select.classList.add('is-replaced');
+  select.dataset.replaced = '';
   select.setAttribute('aria-hidden', 'true');
   select.tabIndex = -1;
   select.insertAdjacentElement('afterend', root);

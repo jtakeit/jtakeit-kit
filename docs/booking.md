@@ -5,18 +5,69 @@ own host answer everything a visitor needs, and nothing about availability is
 computed in the repository — which is what lets the owner change their hours
 in the admin and have the site offer them the next minute, with no rebuild.
 
-Template: `src/components/BookingForm.astro` — a wrapper over
-[`@jtakeit/kit`](https://github.com/jtakeit/jtakeit-kit/tree/main/kit): the markup from `renderBookingForm`, the
-behaviour from the `<jtk-booking>` element, the legible-and-nothing-more styles
-from `@jtakeit/kit/booking.css`. Restyle the markup; the behaviour is the
-platform's protocol and is the kit's to keep, not the site's to rewrite. The
-contract in full is
+Template: `src/components/BookingForm.astro` — **a working base to copy and
+dress in the site's design.** The markup is written out in the file, every
+field of it, with the scaffold's look in a `<style>` beside it; the behaviour
+is [`@jtakeit/kit`](https://github.com/jtakeit/jtakeit-kit/tree/main/kit)'s
+`<jtk-booking>` element, imported at the bottom. The markup, its classes, its
+order and its look are the site's; the behaviour is the platform's protocol and
+is the kit's to keep, not the site's to rewrite. The contract in full is
 [bookings-on-the-site](https://jtakeit.com/docs/guides/bookings-on-the-site)
 in the platform's docs.
 
-A site on another generator takes the same two pieces without Astro:
-`renderBookingForm(...)` at build time, where the booking page is made, and
+A site on another generator takes the same pieces without Astro: the markup
+from `renderBookingForm(...)` at build time — or written out like the
+component, from `bookingForm(...)`'s facts — and
 `import '@jtakeit/kit/elements/booking'` once on the page.
+
+## Copy it, keep the hooks, design the rest
+
+The element finds everything in the form by a **hook** — a `data-*` attribute
+or an input's `name` — and never by a class. So a form can be rebuilt from the
+component in any design: rename every class, put the contact fields in a row,
+wrap the times in a card, draw a checkbox as a chip. Keep the hooks and it
+books. The list, with what each is for, is `@jtakeit/kit/booking/hooks`:
+
+- **Always** — the form cannot book without them: `form[data-booking]` with the
+  attributes `bookingForm` gives (`{...form.attrs}`: `data-api`, `data-sends`,
+  `data-locale`, `novalidate`…); `[name=service]` (a `<select>`, or checkboxes
+  inside `[data-service-row]` labels for several); `[name=day]`;
+  `[data-times]` around `[data-times-hint]` and an empty `[data-slots]`;
+  `[name=name]`, `[name=phone]`, `[name=email]`; an empty, hidden
+  `[data-challenge]`; `[data-booking-error]`; `[data-submit]`; a hidden
+  `[data-done]` holding `[data-done-line]`, `[data-done-when]`,
+  `[data-manage]`, `[data-pay-note]` and `[data-pay]`.
+- **Asked** — hidden; shown by the element only when the platform's answer
+  asks: `[data-party-field]` around `[name=party]`, `[data-quantity-field]`,
+  `[data-hours-field]`, `[data-back-field]` with `[name=back]` and
+  `[data-length]`, and `[name=resource]` where the visitor chooses whom. A
+  business that never asks may leave one out; the platform's preflight fails
+  the page where it does ask.
+- **Said** — where the element writes what happened: `[data-field]` on each
+  field's wrapper (what the two steps sort, and what goes once booked),
+  `[data-total]`, `[data-ends]`, `[data-stay-total]`, `[data-done-what]`,
+  `[data-keep]` and the link to keep, `[data-telegram]`, `[name=note]`. Left
+  out, that line is not said.
+
+A hook left out is said in the browser's console when the page loads. The rules
+the behaviour cannot work without — `[hidden]` means hidden, which step shows
+(`data-stage`), the native control kept under a drawn one (`data-replaced`), a
+focus ring where the site draws none — and the ARIA it depends on are put on
+the page by the element itself, so a form restyled from nothing keeps them.
+
+**What the element draws itself** carries `booking__*` classes, to style and
+not to rename: a button per free time (`booking__slot`), the week of days
+(`booking__days`, `booking__day`, `booking__days-arrow`), the parts of the day
+(`booking__parts`, `booking__part`), the two steps (`booking__stepper`,
+`booking__step`, `booking__next`, `booking__need`, `booking__summary`,
+`booking__back`) and the drawn choice of whom (`booking__dd`,
+`booking__dd-trigger`, `booking__dd-option`). Their state is ARIA, not a class:
+chosen is `aria-pressed="true"`, the current step `aria-current="step"`, the
+chosen option `aria-selected="true"`, what cannot be chosen `disabled`. The
+end of the component's `<style>` styles every one of them — start there.
+
+`npx @jtakeit/astro a11y` reads the built pages against WCAG 2.1 AA and drives
+the form through every state; run it on the dressed copy before the push.
 
 ## Turning it on
 
@@ -130,9 +181,9 @@ the page's own copy stays in `jtk/content`.
 
 ## What the form does by default — and the rules behind it
 
-The kit's form arrives dressed (`@jtakeit/kit/elements/booking-ui`, on by
-default; `ui={false}` on `BookingForm` for the plain form, or the pieces by
-name: `ui="week parts"`). Each piece is an answer to something a visitor ran
+The element draws its pieces over the form (`@jtakeit/kit/elements/booking-ui`,
+on by default; `ui={false}` on `BookingForm` for the plain form, or the pieces
+by name: `ui="week parts"`). Each piece is an answer to something a visitor ran
 into on a real salon's page on 10 October 2026, and a site that draws its own
 form keeps the rules even where it changes the drawing:
 
@@ -172,21 +223,15 @@ form keeps the rules even where it changes the drawing:
 10. **The hint says what is missing**: *pick a service* when a day is chosen
     and no service, *choose a day* the other way round, and never a 404 page.
 
-`booking.css` keeps `.is-replaced` (the native day input and select, hidden
-but submitted) and `[data-stage]` (which step shows) — keep both whatever
-else is restyled.
-
 ## Its look is the site's to give
 
-The component is a reference for the flow, not a design. It ships with
-class names — `field`, `field__input`, `booking__slot`, `booking__submit` —
-and a minimal `<style>` that makes it legible and nothing more. **Restyle
-it before it goes out**, the way you restyle everything else the scaffold
-ships: the site's own field styles, the site's own buttons for the time
-slots and the press, the site's panel around it. A booking form that looks
-like a browser default on a page that does not is the first thing the
-studio sees. Keep the `data-*` hooks and the input `name`s: the script is
-wired to them.
+The component's `<style>` is the scaffold's look: neutral, legible, in the
+site's tokens. **Restyle it before it goes out**, the way you restyle
+everything else the scaffold ships: the site's own fields, the site's own
+buttons for the times and the press, the site's panel around it. A booking form
+in the scaffold's clothes on a page designed otherwise is the first thing the
+studio sees. The classes in the file are scoped to it and are yours to rename;
+the hooks above are what the element reads.
 
 ## What the component does, in order
 
