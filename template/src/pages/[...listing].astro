@@ -1,7 +1,18 @@
 ---
 /**
  * The listing of a collection without pages — and, for the diary's services,
- * the page a visitor books on.
+ * the page a visitor books on — and page one of a collection's with pages.
+ *
+ * ── a collection with pages ─────────────────────────────────────────────────
+ *
+ * Listed at its prefix too (12 October 2026), as tiles linked to the entries'
+ * pages and `per_page` of them to a page: `EntryListing.astro` draws it, here
+ * for page one and in `[...listing]/page/[page].astro` for the rest, and
+ * lib/entries says why page two is `<prefix>/page/2`. Unless the repository
+ * wrote its own listing at that prefix (the blog's
+ * `[...lang]/blog/index.astro`), which then has the address to itself.
+ *
+ * Everything below is about a collection without pages.
  *
  * ── why every such collection has one ───────────────────────────────────────
  *
@@ -40,9 +51,10 @@
 import Layout from '../layouts/Layout.astro';
 import { siteCurrency } from '../lib/site';
 import BookingForm from '../components/BookingForm.astro';
+import EntryListing from '../components/EntryListing.astro';
 import { Image } from 'astro:assets';
 import { BLOCKS, COLLECTIONS, MODULES, words, type Collection, type Field } from '../content/blocks';
-import { groupsOf, listed, slugOf, type Entry } from '../lib/entries';
+import { groupsOf, listed, listingPages, listingRoute, listsPaged, slugOf, type Entry } from '../lib/entries';
 import { EVERY_LOCALE, langOf, withLocale } from '../lib/locale';
 import { isUpload, uploaded } from '../lib/uploads';
 import { photo } from '../lib/photos';
@@ -50,18 +62,22 @@ import { money as priced } from '../lib/money';
 
 export async function getStaticPaths() {
   // A listing per language: `/services`, and `/de/services` beside it.
-  return COLLECTIONS.filter((one) => one.pages === false).flatMap((collection) =>
+  return COLLECTIONS.filter((one) => one.pages === false || listsPaged(one)).flatMap((collection) =>
     EVERY_LOCALE.map((locale) => ({
-      params: { listing: `${locale === '' ? '' : `${locale}/`}${collection.prefix.replace(/^\//, '')}` },
+      params: { listing: listingRoute(collection, locale) },
       props: { collection, locale },
     })),
   );
 }
 
 const { collection, locale } = Astro.props as { collection: Collection; locale: string };
-const entries: Entry[] = await listed(collection.name, locale);
 // A listing exists in every language the site has.
 const alternates = EVERY_LOCALE.map((one) => ({ locale: one, path: withLocale(one, collection.prefix) }));
+
+// A collection with pages: its first page, and nothing below applies.
+const paged = collection.pages !== false ? await listingPages(collection, locale) : undefined;
+
+const entries: Entry[] = paged ? [] : await listed(collection.name, locale);
 const type = BLOCKS.find((one) => one.type === collection.type);
 // Under their headings where the collection is grouped; one run with none
 // where it is not, which draws exactly the flat list it always was.
@@ -128,6 +144,10 @@ const form = sells
 const heading = words(collection.label, langOf(locale));
 ---
 
+{paged && (
+  <EntryListing collection={collection} locale={locale} entries={paged.entries.slice(0, paged.size)} current={1} last={paged.last} alternates={alternates} />
+)}
+{!paged && (
 <Layout title={heading} description="" alternates={alternates}>
   <main id="content">
     <section class="listing">
@@ -191,3 +211,4 @@ const heading = words(collection.label, langOf(locale));
     }
   </main>
 </Layout>
+)}

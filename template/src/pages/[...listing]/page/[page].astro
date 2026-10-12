@@ -1,0 +1,54 @@
+---
+/**
+ * Page two and on of a collection's listing — `/works/page/2`, and
+ * `/de/works/page/2` for its German. Page one is `[...listing].astro`, at the
+ * prefix itself; both are drawn by `EntryListing.astro`.
+ *
+ * `paginate()` cuts the listing into the collection's `per_page`, and page one
+ * of what it returns is dropped here, because page one has an address of its
+ * own and is built by the other route. Its URLs are not used: they would say
+ * `/works/page/1` for the way back to the first page, which is `/works`.
+ * `listingHref` writes them all, under the build's base.
+ *
+ * Only for a collection with pages that the scaffold lists (`listsPaged`): a
+ * collection without pages is one page, and one whose repository wrote its own
+ * listing pages it itself, if it wants to.
+ */
+import type { GetStaticPaths } from 'astro';
+import EntryListing from '../../../components/EntryListing.astro';
+import { COLLECTIONS, type Collection } from '../../../content/blocks';
+import { listingPages, listingRoute, listsPaged, type Entry } from '../../../lib/entries';
+import { EVERY_LOCALE, withLocale } from '../../../lib/locale';
+
+export const getStaticPaths = (async ({ paginate }) => {
+  const paths = [];
+  for (const collection of COLLECTIONS.filter(listsPaged)) {
+    const lasts = new Map<string, number>();
+    const cut = [];
+    for (const locale of EVERY_LOCALE) {
+      const { entries, size, last } = await listingPages(collection, locale);
+      lasts.set(locale, last);
+      cut.push(...paginate(entries, { pageSize: size, params: { listing: listingRoute(collection, locale) }, props: { collection, locale } }).slice(1));
+    }
+    for (const one of cut) {
+      const n = one.props.page.currentPage;
+      // The same page in another language, where that language has as many.
+      const alternates = EVERY_LOCALE.filter((other) => (lasts.get(other) ?? 1) >= n).map((other) => ({
+        locale: other,
+        path: `${withLocale(other, collection.prefix)}/page/${n}`,
+      }));
+      paths.push({ ...one, props: { ...one.props, alternates: alternates.length > 1 ? alternates : [] } });
+    }
+  }
+  return paths;
+}) satisfies GetStaticPaths;
+
+const { collection, locale, page, alternates } = Astro.props as {
+  collection: Collection;
+  locale: string;
+  page: { data: Entry[]; currentPage: number; lastPage: number };
+  alternates: { locale: string; path: string }[];
+};
+---
+
+<EntryListing collection={collection} locale={locale} entries={page.data} current={page.currentPage} last={page.lastPage} alternates={alternates} />

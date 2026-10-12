@@ -33,12 +33,14 @@
  * An entry's page is also its archive (the platform's wiki/78, 12 October
  * 2026): below the post, the entries of the other collections that point at
  * it — a category's services, a tag's posts — under each collection's name,
- * in its order, linked to their pages. And where the collection is a tree
+ * in its order, linked to their pages; for a category in a tree, what points
+ * at the categories under it as well, each once. And where the collection is a tree
  * (`parent: ref categories`), the trail of its parents above the title and its
  * children below. `referrersOf` and `treeOf` in lib/entries read them; the
  * titles carry `page:<address>:blocks[0].title`, as a listing's do.
  */
-import { everyEntry, rendered, listed, routeOf, slugOf, alternatesOf, href, referrersOf, titlePath, treeOf, type Entry } from '../lib/entries';
+import { everyEntry, rendered, listed, listingHref, routeOf, slugOf, alternatesOf, href, referrersOf, titlePath, treeOf, type Entry } from '../lib/entries';
+import { copyFor } from '../copy';
 import { under } from '../lib/under';
 import { siteCurrency } from '../lib/site';
 import { langOf, withLocale } from '../lib/locale';
@@ -73,6 +75,7 @@ const { entry, collection } = Astro.props;
 /** The entry's language: `''` for the site's own, `'de'` for one under `jtk/content/de/`. */
 const locale = String(entry.data.locale ?? '');
 const LANG = langOf(locale);
+const { LISTING } = copyFor(locale);
 const alternates = await alternatesOf(collection, entry);
 
 /*
@@ -462,7 +465,9 @@ const schema = {
       What points here, under each collection's name — the catalogue's, so
       fixed — and each entry by its own title, annotated as that entry's
       field. A collection with more than its `per_page` shows that many and
-      says how many more, with a link to its listing where it has one.
+      says how many more in the page's language («And 3 more», `LISTING` in
+      src/copy), linked to that collection's listing at its prefix — which
+      every collection has: the scaffold's, or one the repository wrote.
     */}
     {
       archive.map((one) => (
@@ -476,9 +481,7 @@ const schema = {
             ))}
           </ul>
           {one.more > 0 && (
-            one.collection.pages === false
-              ? <p data-jtk-fixed><a href={`${under(withLocale(locale, one.collection.prefix))}/`}>+{one.more}</a></p>
-              : <p data-jtk-fixed>+{one.more}</p>
+            <p class="entry-refs-more" data-jtk-fixed><a href={listingHref(one.collection, locale)}>{LISTING.more(one.more)}</a></p>
           )}
         </section>
       ))

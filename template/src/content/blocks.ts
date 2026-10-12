@@ -580,12 +580,14 @@ export const BLOCKS: Block[] = [
  * So there is no "blog feature" on the platform. A blog is one collection whose
  * prefix is `/blog` and whose entries are ordered by date; a portfolio, a price
  * list, a menu or a vacancy board are the same mechanism with different words,
- * and adding one is this array plus the two routes that render it.
+ * and adding one is this array: the scaffold has the routes that render it.
  *
- * ── the two routes you owe a collection ─────────────────────────────────────
+ * ── the routes a collection gets ────────────────────────────────────────────
  *
- *   src/pages/blog/index.astro      the listing — an ordinary page of yours
- *   src/pages/blog/[...slug].astro  one entry, from the content collection
+ *   src/pages/[...listing].astro    the listing at its prefix, paged by
+ *                                   per_page at <prefix>/page/2 — or a page of
+ *                                   yours at the prefix, which takes it over
+ *   src/pages/[...entry].astro      one entry, and what points at it
  *
  * `fl-catalogue` checks the declaration; the build checks the rendering, the
  * same way it checks every other annotated field.
@@ -699,9 +701,11 @@ export interface Collection {
    */
   order?: { by: string; desc?: boolean };
   /**
-   * Paginate the listing. Absent means one page, however many there are. An
+   * Paginate the listing: this many to a page, page two at
+   * `<prefix>/page/2` (docs/collections.md, «The listing»). Absent means one
+   * page, however many there are, and so does a collection without pages. An
    * entry's page that lists what points at it (a tag's posts) shows at most
-   * this many of this collection's.
+   * this many of this collection's, and a line to the listing for the rest.
    */
   per_page?: number;
   /**

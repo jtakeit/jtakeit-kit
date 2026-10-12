@@ -57,6 +57,17 @@ export interface Strings {
     askBody: string;
     ownTitle: string;
   };
+  /**
+   * A listing's few words, and an archive's: «And {n} more» under a capped
+   * list of what points at an entry, and a paged listing's way between its
+   * pages. `{n}` and `{total}` are filled in, as numbers in this language.
+   */
+  listing: {
+    more: string;
+    previous: string;
+    next: string;
+    pageOf: string;
+  };
   a11y: { skipToContent: string };
 }
 
@@ -142,11 +153,22 @@ export function makeCopy(page: HomeDocument, S: Strings) {
     demoNote: S.form.demoNote,
   } as const;
 
+  const count = new Intl.NumberFormat(S.lang);
+  const filled = (text: string, n: number, total = 0): string =>
+    text.replace('{n}', count.format(n)).replace('{total}', count.format(total));
+  const LISTING = {
+    more: (n: number): string => filled(S.listing.more, n),
+    previous: S.listing.previous,
+    next: S.listing.next,
+    pageOf: (n: number, total: number): string => filled(S.listing.pageOf, n, total),
+  } as const;
+
   return {
     META,
     HOME,
     FORM,
     PRIVACY: S.privacy,
+    LISTING,
     A11Y: S.a11y,
     PAGE: blocks as readonly Block[],
     block,

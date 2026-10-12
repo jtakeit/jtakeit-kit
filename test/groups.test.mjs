@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ancestors, capped, DEEPEST, grouped, groupField, pointersInto, pointsAt, refHeadings, selectHeadings, treeFields,
+  ancestors, capped, DEEPEST, descendants, grouped, groupField, pointersInto, pointsAt, pointsAtAny, refHeadings, selectHeadings, treeFields,
 } from '../template/src/lib/groups.ts';
 
 const e = (id, data) => ({ id, data });
@@ -100,6 +100,32 @@ test('a tree is walked to its root, and a loop or a chain past the limit ends th
   const deep = new Set();
   for (let i = 0; i < 100; i++) { chain.set(`c${i}`, `c${i + 1}`); deep.add(`c${i + 1}`); }
   assert.equal(ancestors('c0', chain, deep).length, DEEPEST);
+});
+
+test("a category's descendants: every level down, each once, loops and hidden branches and depth bounded", () => {
+  const parentOf = new Map([['nails', 'beauty'], ['hair', 'beauty'], ['gel', 'nails'], ['tips', 'gel'], ['brows', 'hidden'], ['a', 'b'], ['b', 'a']]);
+  const known = new Set(['beauty', 'nails', 'hair', 'gel', 'tips', 'brows', 'a', 'b']);
+  assert.deepEqual(descendants('beauty', parentOf, known), ['nails', 'hair', 'gel', 'tips'], 'nearest first');
+  assert.deepEqual(descendants('gel', parentOf, known), ['tips']);
+  assert.deepEqual(descendants('tips', parentOf, known), []);
+  assert.deepEqual(descendants('a', parentOf, known), ['b'], 'a loop written by hand is walked once');
+  assert.deepEqual(descendants('beauty', parentOf, new Set(['beauty', 'hair', 'gel', 'tips'])), ['hair'], 'a hidden category hides what is under it');
+
+  const chain = new Map();
+  const deep = new Set(['c0']);
+  for (let i = 0; i < 100; i++) { chain.set(`c${i + 1}`, `c${i}`); deep.add(`c${i + 1}`); }
+  assert.equal(descendants('c0', chain, deep).length, DEEPEST);
+});
+
+test('an entry pointing at a category or one under it is found once, through either shape', () => {
+  const service = [{ key: 'category', kind: 'ref', ref: 'categories' }, { key: 'also', kind: 'list', of: [{ key: 'category', kind: 'ref', ref: 'categories' }] }];
+  const pointers = pointersInto('categories', service);
+  const slugs = new Set(['beauty', 'nails', 'gel']);
+  assert.ok(pointsAtAny(e('a', { category: 'gel' }), pointers, slugs));
+  assert.ok(pointsAtAny(e('b', { also: [{ category: 'hair' }, { category: 'nails' }] }), pointers, slugs));
+  assert.ok(!pointsAtAny(e('c', { category: 'hair' }), pointers, slugs));
+  const all = [e('a', { category: 'gel', also: [{ category: 'beauty' }] }), e('c', { category: 'hair' }), e('d', { category: 'beauty' })];
+  assert.deepEqual(all.filter((one) => pointsAtAny(one, pointers, slugs)).map((one) => one.id), ['a', 'd'], 'once each, in the order they came');
 });
 
 test("back-references are capped at the referencing collection's per_page, and say how many more", () => {

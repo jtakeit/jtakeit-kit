@@ -21,7 +21,7 @@ contract below is the only thing the platform will hold the repository to.
 | `{{PHONE_REGION}}` | `CH` — the region `libphonenumber` parses the number in |
 | `{{SCHEMA_TYPE}}` | `LocalBusiness`, or `--schema-type HairSalon` |
 | `{{PREVIEW_URL}}` | `http://localhost:4321/` — where `astro dev` says it is; every build the platform makes passes `SITE_URL` |
-| `{{UI_*}}` | the form's and the privacy page's sentences in the site's language |
+| `{{UI_*}}` | the form's, the privacy page's and a listing's sentences («And 3 more», «Page 2 of 5») in the site's language |
 
 An unreplaced `{{` anywhere in the tree is a scaffold bug; the package's smoke
 test fails on one.

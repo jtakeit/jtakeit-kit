@@ -23,7 +23,8 @@
  *   `does: [{ service }]` has always had.
  *
  * And from the other side, an entry's page lists what points at it: a
- * category's page its services, a tag's page its posts. That is the archive
+ * category's page its services (and those of the categories under it), a
+ * tag's page its posts. That is the archive
  * page, and it is the entry route's (`[...entry].astro`), not a new one.
  *
  * ── why this file imports nothing ───────────────────────────────────────────
@@ -205,10 +206,21 @@ export function pointersInto(target: string, fields: FieldShape[]): Pointer[] {
 
 /** Whether an entry points at `slug` through any of `pointers`. */
 export function pointsAt(entry: Entry, pointers: Pointer[], slug: string): boolean {
+  return pointsAtAny(entry, pointers, new Set([slug]));
+}
+
+/**
+ * Whether an entry points at any of `slugs` — a category or one of the
+ * categories under it (`descendants`). One answer per entry however many of
+ * them it names, which is what keeps a service filed under both `nails` and
+ * `nails/gel` to one row of the archive.
+ */
+export function pointsAtAny(entry: Entry, pointers: Pointer[], slugs: ReadonlySet<string>): boolean {
+  const named = (value: unknown): boolean => typeof value === 'string' && slugs.has(value);
   return pointers.some((pointer) => {
     const value = entry.data[pointer.field];
-    if (pointer.row === undefined) return value === slug;
-    return Array.isArray(value) && value.some((row) => row !== null && typeof row === 'object' && (row as Record<string, unknown>)[pointer.row!] === slug);
+    if (pointer.row === undefined) return named(value);
+    return Array.isArray(value) && value.some((row) => row !== null && typeof row === 'object' && named((row as Record<string, unknown>)[pointer.row!]));
   });
 }
 
@@ -234,6 +246,43 @@ export function ancestors(slug: string, parentOf: Map<string, string>, known: Se
 }
 
 /**
+ * Everything under an entry in a tree, nearest first, the entry itself not
+ * among them: `beauty` → `[nails, hair, nails/gel]`. What a category's page
+ * lists is what points at it *or at anything under it* — the gel manicure is
+ * a nail service and a beauty service both.
+ *
+ * Bounded the way {@link ancestors} is: a slug met again is not walked again
+ * (a loop written by hand), the walk stops {@link DEEPEST} levels down, and
+ * only an entry in `known` — listed, so not hidden — is a child; a hidden
+ * category hides its own subtree from the walk, as it hides it from the trail.
+ */
+export function descendants(slug: string, parentOf: Map<string, string>, known: Set<string>): string[] {
+  const childrenOf = new Map<string, string[]>();
+  for (const [child, parent] of parentOf) {
+    if (!known.has(child)) continue;
+    const run = childrenOf.get(parent);
+    if (run) run.push(child);
+    else childrenOf.set(parent, [child]);
+  }
+  const out: string[] = [];
+  const seen = new Set<string>([slug]);
+  let level = [slug];
+  for (let depth = 0; depth < DEEPEST && level.length > 0; depth++) {
+    const next: string[] = [];
+    for (const at of level) {
+      for (const child of childrenOf.get(at) ?? []) {
+        if (seen.has(child)) continue;
+        seen.add(child);
+        out.push(child);
+        next.push(child);
+      }
+    }
+    level = next;
+  }
+  return out;
+}
+
+/**
  * Fields of a type that point into its own collection — `parent` on a
  * category. Only a single `ref`: a list of them is a graph, not a tree, and
  * nothing here pretends to draw one.
@@ -248,7 +297,9 @@ export function treeFields(collection: CollectionShape, fields: FieldShape[]): F
  *
  * A cap and not pages of their own: an address under a collection's prefix is
  * an entry's address to the platform (its edge, its editor, its sitemap), and
- * `/tags/red/2` would be one no entry owns. Without a `per_page` the
+ * `/tags/red/2` would be one no entry owns. The rest are on the referencing
+ * collection's own listing, which pages (`listingPages` in entries.ts), and
+ * the line that says how many links there. Without a `per_page` the
  * collection is one page however long (`Collection.per_page`), and so is this.
  */
 export function capped<T>(items: T[], cap: number | undefined): { shown: T[]; more: number } {

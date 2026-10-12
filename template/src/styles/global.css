@@ -700,7 +700,11 @@ h1 {
   z-index: 20;
 }
 
-/* The blog's listing (pages/[...lang]/blog/index.astro): plain, like Blocks. */
+/*
+ * A collection's tiles — the blog's listing (pages/[...lang]/blog/index.astro)
+ * and every collection's (components/EntryListing.astro, EntryCard.astro):
+ * plain, like Blocks.
+ */
 .posts {
   display: grid;
   gap: 2rem;
@@ -726,6 +730,14 @@ h1 {
   margin: 0;
   color: var(--ink-quiet);
 }
+.listing-pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin: 3rem 0 0;
+  font-size: 0.875rem;
+}
 
 /*
  * Groups, archives and trails (pages/[...listing].astro, [...entry].astro;
@@ -750,6 +762,10 @@ h1 {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+.entry-refs-more {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
 }
 .entry-trail ol {
   display: flex;
