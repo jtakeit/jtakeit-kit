@@ -363,8 +363,45 @@ export async function lint(options = {}) {
  * The command: print the findings the way the build does, and exit 1 on any.
  * @param {{ root?: string, dist?: string, siteURL?: string }} options
  */
+/**
+ * The files under a built directory the platform never publishes: a path with
+ * a segment that starts with a dot, `.well-known/` at the root aside — the
+ * rule the platform's upload and edge keep (its wiki/81). A directory is said
+ * once, with a slash.
+ * @param {string} dir
+ * @returns {Promise<string[]>}
+ */
+export async function withheldIn(dir) {
+  /** @type {string[]} */
+  const out = [];
+  /** @param {string} at @param {string} rel */
+  async function walk(at, rel) {
+    let entries;
+    try {
+      entries = await readdir(at, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const path = rel === '' ? entry.name : `${rel}/${entry.name}`;
+      const dotted = entry.name.startsWith('.') && !(rel === '' && entry.name === '.well-known');
+      if (dotted) out.push(entry.isDirectory() ? `${path}/` : path);
+      else if (entry.isDirectory()) await walk(join(at, entry.name), path);
+    }
+  }
+  await walk(dir, '');
+  return out.sort();
+}
+
 export async function lintCommand(options) {
   const out = await lint(options);
+  // Said, and not a failure: the platform leaves these out of the upload and
+  // its preflight fails the site until a build without them is served. Here
+  // they are caught before the push, which is when they are cheapest.
+  const withheld = await withheldIn(options.dist ?? join(options.root ?? process.cwd(), 'dist'));
+  if (withheld.length > 0) {
+    console.error(`  not published: ${withheld.join(', ')} — a path starting with a dot is never served (.well-known/ aside). It comes from the repository (usually public/): remove it there, and change any secret it held — it is in the history.`);
+  }
   for (const one of out.findings) console.error('  ' + said(one.code, one.says));
   if (out.line !== '') (out.ok ? console.log : console.error)('  ' + out.line);
   return out.ok ? 0 : 1;
