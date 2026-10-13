@@ -77,3 +77,17 @@ test('no catalogue is refused, not skipped', async () => {
   const out = await lint({ root });
   assert.deepEqual(out.findings.map((one) => one.code), [CODES.CATALOGUE_MISSING]);
 });
+
+// The files the platform never publishes, found in dist before the push
+// (the platform's wiki/81): a dot in any part of the path, .well-known aside.
+test('withheldIn finds what the platform will not publish', async () => {
+  const { mkdtemp, mkdir, writeFile } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { withheldIn } = await import('../lib/lint.mjs');
+  const dir = await mkdtemp(join(tmpdir(), 'withheld-'));
+  for (const rel of ['index.html', '.env', '.git/HEAD', 'img/.DS_Store', '.well-known/security.txt', '_astro/a.js']) {
+    await mkdir(join(dir, rel, '..'), { recursive: true });
+    await writeFile(join(dir, rel), 'x');
+  }
+  assert.deepEqual(await withheldIn(dir), ['.env', '.git/', 'img/.DS_Store']);
+});

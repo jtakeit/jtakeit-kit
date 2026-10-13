@@ -4,6 +4,7 @@
  *
  *   jtk create <slug> …     scaffold a site (lib/create.mjs)
  *   jtk catalogue …         write jtk/catalogue.json and check it (lib/catalogue.mjs)
+ *   jtk a11y …              read the built pages against WCAG 2.1 AA (lib/a11y.mjs)
  */
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -29,6 +30,16 @@ switch (command) {
     await import('@jtakeit/kit/catalogue');
     break;
   }
+  case 'a11y': {
+    const { main } = await import(pathToFileURL(join(HERE, '..', 'lib', 'a11y.mjs')).href);
+    try {
+      await main(rest);
+    } catch (why) {
+      console.error(`jtk a11y: ${why instanceof Error ? why.message : why}`);
+      process.exit(1);
+    }
+    break;
+  }
   default: {
     const { usage } = await import(pathToFileURL(join(HERE, '..', 'lib', 'create.mjs')).href);
     console.error(`@jtakeit/astro — the scaffold and the catalogue tool for a site on jtakeit
@@ -37,6 +48,9 @@ switch (command) {
   jtk catalogue [--emit-only] [--dist ./dist] [--judge]
                                   write jtk/catalogue.json from src/content/blocks.ts and
                                   check it against the built pages
+  jtk a11y [--dist ./dist] [/path …]
+                                  read the built pages against WCAG 2.1 AA in Chrome
+                                  (npm i -D playwright-core axe-core first)
 
 ${usage()}
 

@@ -35,3 +35,7 @@ jobs:
         run: |
           node bin/jtk.mjs create probe --out /tmp/probe --kit salon --locale en --no-git
           cd /tmp/probe && npm install --no-audit --no-fund "$GITHUB_WORKSPACE/kit" && npm run build
+      - name: The scaffold's pages read against WCAG 2.1 AA
+        # The probe above, seeded with real content and read in the runner's
+        # Chrome by `jtk a11y`, in a light and a dark palette (docs/accessibility.md).
+        run: node test/a11y.mjs --site /tmp/probe

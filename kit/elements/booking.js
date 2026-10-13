@@ -14,6 +14,8 @@
  *   POST /api/book                  → { id, state, amount_minor, currency, token, manage_path, telegram_url }
  *   POST /api/pay                   → { url } — only when amount_minor > 0
  *
+ * Every request names the protocol version: `X-Jtk-Booking: 1` (BOOKING_PROTOCOL).
+ *
  * The visitor's own page — cancel, move, add to calendar — is served by the
  * platform at `manage_path`; this form only has to link to it.
  *
@@ -22,9 +24,14 @@
  * Import this module once on the page and every `<form data-booking>` is
  * wired: the ones inside a `<jtk-booking>` by the element's own lifecycle,
  * which also covers markup the panel places later (`fl:placed`); the ones
- * written bare by a walk of the document at load. The markup is
- * `renderBookingForm`'s (`@jtakeit/kit/booking`); a hand-written form keeps
- * its `data-*` hooks and input `name`s.
+ * written bare by a walk of the document at load. The markup is the site's —
+ * the scaffold's `BookingForm.astro` written out, or `renderBookingForm`'s
+ * (`@jtakeit/kit/booking`) — and the element finds everything in it by a
+ * `data-*` hook or an input's `name`, never by a class: the list is
+ * `@jtakeit/kit/booking/hooks`. A hook left out is said in the console and
+ * its field is never shown; the CSS the behaviour needs (`[hidden]`, the
+ * steps, the native control under a drawn one) and the ARIA it depends on are
+ * put on the page by the element, so a form restyled from nothing keeps them.
  *
  * ── a stay of several nights ────────────────────────────────────────────────
  *
@@ -47,6 +54,40 @@
 import { money } from '../lib/money.mjs';
 import { wordsFor } from '../lib/booking/words.mjs';
 import { dressBooking } from './booking-ui.js';
+import { lacking } from '../lib/booking/hooks.mjs';
+
+/**
+ * The rules the behaviour cannot work without, whatever the site's own CSS
+ * says — put on the page once, by the element, at the lowest specificity
+ * that still wins where it must. Not a look: every state here is shown and
+ * hidden by the `hidden` attribute, the two steps by `data-stage`, a drawn
+ * control over a native one by `data-replaced`; a form an agent dressed from
+ * nothing lost all three with `booking.css` (12 October 2026). The first two
+ * are `!important`, as `hidden` is: a site's `display: grid` on a piece of
+ * the second step drew it on the first.
+ */
+const BASE = `
+[data-booking] [hidden] { display: none !important; }
+[data-booking][data-unsaid] :is([data-say], [data-say-wait]) { visibility: hidden; }
+:where([data-booking]) :where([data-replaced], .is-replaced, [data-sr], .booking__sr) {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+:where([data-booking]) :where([data-replaced], .is-replaced) { opacity: 0; pointer-events: none; }
+[data-booking][data-stage='1'] [data-step='2'], [data-booking][data-stage='2'] [data-step='1'],
+[data-booking][data-stage='done'] [data-step-ui] { display: none !important; }
+:where([data-booking] :focus-visible) { outline: 2px solid currentColor; outline-offset: 2px; }
+`;
+
+function putBase() {
+  if (typeof document === 'undefined' || document.querySelector('style[data-jtk-booking]')) return;
+  const style = document.createElement('style');
+  style.dataset.jtkBooking = '';
+  style.textContent = BASE;
+  // First in <head>, so a site's own rule of the same weight wins.
+  document.head.prepend(style);
+}
+let wiredCount = 0;
 
 // The words that depend on the kind of business, as the platform says them:
 // its availability answer carries the form's, in every language, the site's
@@ -90,9 +131,24 @@ export function lasting(minutes, words) {
  * Wires one form. Idempotent: a form already wired is left alone.
  * @param {HTMLFormElement} form
  */
+/**
+ * The booking protocol's version this element speaks, named on every request
+ * (the platform's wiki/79). A page is a file in a build: when the platform
+ * changes, a site keeps the kit it was built with, and the platform answers it
+ * by this number for as long as a live site speaks it — so it moves only with
+ * a change the platform cannot make by adding, and the platform says which
+ * versions it answers when it refuses one.
+ */
+export const BOOKING_PROTOCOL = 1;
+const SPOKEN = { 'x-jtk-booking': String(BOOKING_PROTOCOL) };
+
 export function wireBooking(form) {
   if (form.dataset.jtkWired === '1') return;
   form.dataset.jtkWired = '1';
+
+  putBase();
+  const missing = lacking(form);
+  if (missing.length > 0) console.error(`booking form: it has no ${missing.join(', ')}, and cannot book without them — the hooks are listed in @jtakeit/kit/booking/hooks`);
 
   /** @type {Record<string, string>} */
   // The form's own words under the page's: a form rendered by an older kit
@@ -102,8 +158,10 @@ export function wireBooking(form) {
   // once there is one, wins — an owner may switch without a rebuild.
   let daily = form.dataset.scale === 'daily';
   const api = form.dataset.api ?? '/api/';
-  /** @template {HTMLElement} T @param {string} sel @returns {T} */
-  const q = (sel) => /** @type {any} */ (form.querySelector(sel));
+  // A hook the form left out is an element of its kind that is never on the
+  // page: the field it stands for is never shown, and nothing here throws.
+  /** @template {HTMLElement} T @param {string} sel @param {string} [tag] @returns {T} */
+  const q = (sel, tag = 'div') => /** @type {any} */ (form.querySelector(sel) ?? document.createElement(tag));
   const lang = form.dataset.locale ?? 'en';
   const pageLang = () => document.documentElement.lang || 'en';
 
@@ -111,6 +169,12 @@ export function wireBooking(form) {
   const select = /** @type {HTMLSelectElement | null} */ (form.querySelector('select[name=service]'));
   const boxes = /** @type {HTMLInputElement[]} */ ([...form.querySelectorAll('input[type=checkbox][name=service]')]);
   const total = /** @type {HTMLElement | null} */ (form.querySelector('[data-total]'));
+  // A checkbox's row and the service's name in it, by their hooks; the
+  // classes of an older kit's markup where a form has no hooks.
+  /** @param {HTMLInputElement} box */
+  const rowOf = (box) => /** @type {HTMLElement | null} */ (box.closest('[data-service-row], .booking__service, label'));
+  /** @param {Element} row */
+  const nameIn = (row) => /** @type {HTMLElement | null} */ (row.querySelector('[data-service-name], .booking__service-name'));
   const picked = () => (select ? (select.value ? [select.value] : []) : boxes.filter((b) => b.checked).map((b) => b.value));
   function showTotal() {
     if (!total) return;
@@ -126,14 +190,14 @@ export function wireBooking(form) {
     total.hidden = false;
   }
   const resource = /** @type {HTMLSelectElement | null} */ (form.querySelector('[name=resource]'));
-  /** @type {HTMLSelectElement} */ const party = q('[name=party]');
-  /** @type {HTMLSelectElement} */ const quantity = q('[name=quantity]');
+  /** @type {HTMLSelectElement} */ const party = q('[name=party]', 'select');
+  /** @type {HTMLSelectElement} */ const quantity = q('[name=quantity]', 'select');
   /** @type {HTMLElement} */ const quantityField = q('[data-quantity-field]');
-  /** @type {HTMLSelectElement} */ const hours = q('[name=hours]');
+  /** @type {HTMLSelectElement} */ const hours = q('[name=hours]', 'select');
   /** @type {HTMLElement} */ const hoursField = q('[data-hours-field]');
   /** @type {HTMLElement} */ const partyField = q('[data-party-field]');
-  /** @type {HTMLInputElement} */ const day = q('[name=day]');
-  /** @type {HTMLElement | null} */ const ends = q('[data-ends]');
+  /** @type {HTMLInputElement} */ const day = q('[name=day]', 'input');
+  /** @type {HTMLElement | null} */ const ends = form.querySelector('[data-ends]');
   // The day's floor is the browser's today, not the build's: `min` was
   // written when the site was built, and a site built on Friday is read on
   // Saturday (10 October 2026).
@@ -156,10 +220,24 @@ export function wireBooking(form) {
   /** @type {HTMLElement} */ const error = q('[data-booking-error]');
   /** @type {HTMLButtonElement} */ const submit = q('[data-submit]');
   /** @type {HTMLElement} */ const challenge = q('[data-challenge]');
-  /** @type {HTMLInputElement} */ const back = q('[name=back]');
+  /** @type {HTMLInputElement} */ const back = q('[name=back]', 'input');
   /** @type {HTMLElement} */ const backField = q('[data-back-field]');
   /** @type {HTMLElement} */ const lengthHint = q('[data-length]');
   /** @type {HTMLElement} */ const stayTotal = q('[data-stay-total]');
+
+  // The ARIA the behaviour depends on, whatever the copy kept: the hint is
+  // read as it changes, the refusal as it appears, the answer takes the focus
+  // and is read, and a refusal is tied to its fields by the error's id.
+  if (!hint.hasAttribute('aria-live')) hint.setAttribute('aria-live', 'polite');
+  if (!error.getAttribute('role')) error.setAttribute('role', 'alert');
+  if (!error.id) error.id = `jtk-booking-error-${++wiredCount}`;
+  {
+    /** @type {HTMLElement} */ const answerBox = q('[data-done]');
+    if (!answerBox.getAttribute('role')) answerBox.setAttribute('role', 'status');
+    if (!answerBox.hasAttribute('tabindex')) answerBox.tabIndex = -1;
+    const keepSaid = form.querySelector('[data-keep-said]');
+    if (keepSaid && !keepSaid.getAttribute('role')) keepSaid.setAttribute('role', 'status');
+  }
 
   /** @param {Record<string, Record<string, string>>} [all] */
   function hear(all) {
@@ -172,11 +250,15 @@ export function wireBooking(form) {
         el.textContent = words[el.dataset.say ?? ''] ?? el.textContent;
       }
     }
+    unsay();
+  }
+  function unsay() {
     form.classList.remove('booking--unsaid');
+    delete form.dataset.unsaid;
   }
   // Held back at most this long: a platform that is slow to answer is not
   // a reason for a form without a button.
-  setTimeout(() => form.classList.remove('booking--unsaid'), 3000);
+  setTimeout(unsay, 3000);
   {
     const first = select?.options[0]?.value ?? boxes[0]?.value ?? '';
     const from = new Date();
@@ -185,10 +267,11 @@ export function wireBooking(form) {
     to.setDate(to.getDate() + 1);
     if (first) {
       const params = new URLSearchParams({ service: first, from: from.toISOString(), to: to.toISOString() });
-      void fetch(api + 'availability?' + params.toString(), { cache: 'no-store' })
+      void fetch(api + 'availability?' + params.toString(), { cache: 'no-store', headers: SPOKEN })
         .then((r) => (r.ok ? r.json() : {}))
         .then((data) => {
           hear(data.words);
+          hearCombine(data.combine);
           sayEmptyServices(data.empty_services ?? []);
         })
         .catch(() => hear());
@@ -207,6 +290,23 @@ export function wireBooking(form) {
   // sign made up while it is asked (11 October 2026).
   let currency = form.dataset.currency || '';
 
+  // One service or several, as the platform answers it now: the owner flips
+  // `combine` in the panel and a checklist built while it was on keeps to one
+  // choice once it is off, rather than offering two the booking refuses.
+  let single = false;
+  /** @param {unknown} said */
+  function hearCombine(said) {
+    if (typeof said !== 'boolean' || boxes.length === 0) return;
+    single = !said;
+    if (!single) return;
+    let kept = false;
+    for (const box of boxes) {
+      if (box.checked && kept) box.checked = false;
+      if (box.checked) kept = true;
+    }
+    showTotal();
+  }
+
   /** @type {string | null} */ let chosen = null;
   let zone = '';
   let turnstileToken = '';
@@ -223,7 +323,7 @@ export function wireBooking(form) {
 
   // The widget, if this host has one. Asked at runtime so the site carries
   // no key: which widget covers a host is the platform's to decide.
-  void fetch(api + 'turnstile', { cache: 'no-store' })
+  void fetch(api + 'turnstile', { cache: 'no-store', headers: SPOKEN })
     .then((r) => r.json())
     .then((data) => {
       if (!data.sitekey) return;
@@ -294,10 +394,25 @@ export function wireBooking(form) {
   function quantityChosen() {
     return quantityField.hidden ? 1 : Number(quantity.value) || 1;
   }
-  /** @param {string} text */
-  function say(text) {
+  // The fields the last refusal was about: marked invalid and described by
+  // the sentence, so a screen reader reads it on the field itself and not
+  // only as it appears (WCAG 3.3.1, 12 October 2026).
+  /** @type {HTMLElement[]} */ let blamed = [];
+  /** @param {string} text @param {HTMLElement[]} [fields] the fields it is about */
+  function say(text, fields = []) {
     error.textContent = text;
     error.hidden = text === '';
+    for (const field of blamed) {
+      field.removeAttribute('aria-invalid');
+      const rest = (field.getAttribute('aria-describedby') ?? '').split(/\s+/).filter((id) => id && id !== error.id);
+      if (rest.length) field.setAttribute('aria-describedby', rest.join(' '));
+      else field.removeAttribute('aria-describedby');
+    }
+    blamed = text === '' || !error.id ? [] : fields;
+    for (const field of blamed) {
+      field.setAttribute('aria-invalid', 'true');
+      field.setAttribute('aria-describedby', [field.getAttribute('aria-describedby'), error.id].filter(Boolean).join(' '));
+    }
   }
 
   // A refusal as a sentence in the visitor's language. The platform answers
@@ -485,7 +600,7 @@ export function wireBooking(form) {
     const can = who && !who.startsWith('class:') && !who.startsWith('empty:') && does.has(who) ? does.get(who) : null;
     let moved = false;
     for (const box of boxes) {
-      const row = box.closest('.booking__service');
+      const row = rowOf(box);
       const off = can !== null && !can.has(box.value);
       if (off && !box.disabled) {
         box.disabled = true;
@@ -496,12 +611,14 @@ export function wireBooking(form) {
         offByMe.delete(box);
       }
       row?.classList.toggle('is-off', offByMe.has(box));
-      let note = row?.querySelector('.booking__service-off') ?? null;
+      if (row) row.toggleAttribute('data-off', offByMe.has(box));
+      let note = row?.querySelector('[data-service-off], .booking__service-off') ?? null;
       if (offByMe.has(box) && row) {
-        const nameEl = row.querySelector('.booking__service-name');
+        const nameEl = nameIn(row);
         if (!note && nameEl) {
           note = document.createElement('span');
           note.className = 'booking__service-off';
+          note.setAttribute('data-service-off', '');
           nameEl.insertAdjacentElement('afterend', note);
         }
         if (note) note.textContent = words.notWith.replace('{who}', name.split(' ')[0] || name);
@@ -550,7 +667,8 @@ export function wireBooking(form) {
       const box = boxes.find((b) => b.value === one.slug);
       if (box && !box.disabled) {
         box.disabled = true;
-        const name = box.closest('.booking__service')?.querySelector('.booking__service-name');
+        const row = rowOf(box);
+        const name = row ? nameIn(row) : null;
         if (name) name.textContent = said;
         if (box.checked) { box.checked = false; showTotal(); moved = true; }
       }
@@ -579,6 +697,7 @@ export function wireBooking(form) {
       return;
     }
     hint.textContent = '…';
+    slots.setAttribute('aria-busy', 'true');
 
     const from = new Date(day.value + 'T00:00:00');
     const to = new Date(from);
@@ -596,11 +715,12 @@ export function wireBooking(form) {
     if (n !== null) params.set('count', String(n));
 
     try {
-      const answer = await fetch(api + 'availability?' + params.toString(), { cache: 'no-store' });
+      const answer = await fetch(api + 'availability?' + params.toString(), { cache: 'no-store', headers: SPOKEN }).finally(() => slots.removeAttribute('aria-busy'));
       if (!answer.ok) throw new Error(await answer.text());
       if (mine !== asking) return;
       const data = await answer.json();
       hear(data.words);
+      hearCombine(data.combine);
       lastClasses = data.classes ?? [];
       lastResources = data.resources ?? [];
       offerChoices(lastClasses, lastResources, data.empty_classes ?? []);
@@ -646,6 +766,7 @@ export function wireBooking(form) {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'booking__slot';
+        button.dataset.slot = '';
         // Which one is chosen, said as well as drawn.
         button.setAttribute('aria-pressed', 'false');
         button.textContent = daily
@@ -660,7 +781,7 @@ export function wireBooking(form) {
           if (hint.textContent === words.retime) hint.textContent = '';
           sayEnds(slot);
           offerQuantity(data.quantity_max ?? 1, (slot.free ?? []).length);
-          for (const other of slots.querySelectorAll('.booking__slot')) {
+          for (const other of slots.querySelectorAll('[data-slot]')) {
             other.classList.remove('is-chosen');
             other.setAttribute('aria-pressed', 'false');
           }
@@ -705,7 +826,13 @@ export function wireBooking(form) {
   // The look — the steps, the week, the parts of the day, the drawn choice
   // — over the form, where the form asks for it.
   if (form.dataset.ui) dressBooking(form, words);
-  for (const box of boxes) box.addEventListener('change', () => { showTotal(); void load(); });
+  for (const box of boxes) {
+    box.addEventListener('change', () => {
+      if (single && box.checked) for (const other of boxes) if (other !== box) other.checked = false;
+      showTotal();
+      void load();
+    });
+  }
   resource?.addEventListener('change', () => { greyByResource(); void load(); });
   greyByResource();
   // A new first date keeps the stay's length: five nights from the 10th
@@ -729,8 +856,14 @@ export function wireBooking(form) {
     const email = String(data.get('email') ?? '').trim();
     if (picked().length === 0) { say(words.pickService); return; }
     if (!chosen) { say(words.pick); return; }
-    if (name === '') { /** @type {HTMLInputElement} */ (q('[name=name]')).focus(); return; }
-    if (phone === '' && email === '') { say(words.needContact); return; }
+    /** @type {HTMLInputElement} */ const nameInput = q('[name=name]');
+    if (name === '') { say(words.needName, [nameInput]); nameInput.focus(); return; }
+    if (phone === '' && email === '') {
+      /** @type {HTMLInputElement} */ const phoneInput = q('[name=phone]');
+      say(words.needContact, [phoneInput, q('[name=email]')]);
+      phoneInput.focus();
+      return;
+    }
 
     submit.disabled = true;
     submit.textContent = words.sending;
@@ -763,7 +896,7 @@ export function wireBooking(form) {
       }
       const answer = await fetch(api + 'book', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...SPOKEN },
         body: JSON.stringify(body),
       });
       if (answer.status === 409) { say(words.taken); await load(); return; }
@@ -783,7 +916,11 @@ export function wireBooking(form) {
    * @param {{ state: string; start: string; ends: string; amount_minor: number; currency: string; id: string; manage_path: string; telegram_url: string; resource?: string; class?: string; group?: { quantity: number; amount_minor: number; bookings: { resource: string; resource_name?: string }[] } }} made
    */
   function done(made) {
-    for (const el of /** @type {NodeListOf<HTMLElement>} */ (form.querySelectorAll('.field, .booking__times, .booking__services, [data-submit], [data-challenge]'))) el.hidden = true;
+    // Everything that asks, gone; the answer stays. By the hooks — the
+    // classes are an older kit's markup.
+    for (const el of /** @type {NodeListOf<HTMLElement>} */ (form.querySelectorAll('[data-field], [data-times], [data-services], [data-submit], [data-challenge], .field, .booking__times, .booking__services'))) {
+      if (!el.contains(form.querySelector('[data-done]'))) el.hidden = true;
+    }
     /** @type {HTMLElement} */ const box = q('[data-done]');
     box.hidden = false;
     // After the lines are written below — see the end of this function.
@@ -824,10 +961,14 @@ export function wireBooking(form) {
       link.setAttribute('aria-label', words.manage);
       link.addEventListener('focus', () => link.select());
       copy.textContent = words.copy;
+      /** @type {HTMLElement | null} */ const told = q('[data-keep-said]');
       copy.addEventListener('click', async () => {
         try { await navigator.clipboard.writeText(href); } catch { link.select(); document.execCommand('copy'); }
         copy.textContent = words.copied;
-        setTimeout(() => { copy.textContent = words.copy; }, 1600);
+        // Said as well as drawn: a button's own words changing under the
+        // focus is read by some screen readers and not by others.
+        if (told) told.textContent = words.copied;
+        setTimeout(() => { copy.textContent = words.copy; if (told) told.textContent = ''; }, 1600);
       });
       open.href = href;
       open.textContent = words.open;
@@ -851,7 +992,7 @@ export function wireBooking(form) {
         event.preventDefault();
         const answer = await fetch(api + 'pay', {
           method: 'POST',
-          headers: { 'content-type': 'application/json' },
+          headers: { 'content-type': 'application/json', ...SPOKEN },
           body: JSON.stringify({ booking: made.id, return: made.manage_path || '/' }),
         });
         if (!answer.ok) { say(await reason(answer)); return; }

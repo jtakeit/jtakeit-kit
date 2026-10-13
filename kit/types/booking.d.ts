@@ -35,5 +35,26 @@ export interface BookingFormProps {
 
 /** What the form sends to /api/book, as `data-sends` says it. */
 export const SENDS: readonly string[];
+/** What the booking form is made of, for a page that writes the markup itself (the scaffold's BookingForm.astro). */
+export interface BookingForm {
+  /** The form's words in the page's language; the platform's answer replaces the kind's. */
+  words: Record<string, string>;
+  /** The language tag prices and days are written in. */
+  lang: string;
+  /** A checklist, or one `<select>`. */
+  combine: boolean;
+  /** The checklist's runs: headings in order, the ones with none after them, add-ons last. `meta` is «45 min · CHF 95». */
+  runs: { group: string; items: (Named & { meta: string })[] }[];
+  /** For one `<select>`, as they came. */
+  services: Named[];
+  /** The choice of whom — empty for none; `does` is the slugs joined for `data-does`. */
+  resources: (Omit<Named, 'does'> & { does: string })[];
+  /** The day input's `min` and `max`. */
+  today: string;
+  last: string;
+  /** Every attribute of the `<form>` — `data-booking`, `data-api`, `data-sends`, `novalidate`… — to spread on it. */
+  attrs: Record<string, string>;
+}
+export function bookingForm(props: BookingFormProps): BookingForm;
 /** The booking form as HTML, wrapped in `<jtk-booking>`. */
 export function renderBookingForm(props: BookingFormProps): string;

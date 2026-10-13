@@ -1,21 +1,36 @@
 ---
 /**
- * The booking form — `@jtakeit/kit`'s, placed by this page.
+ * The booking form — a working base to copy and dress in the site's design.
  *
- * The markup is `renderBookingForm`'s and the behaviour is the kit's
- * `<jtk-booking>` element; this component only reads the page's props and
- * says where `/api/` is from here. It used to carry both itself (973 lines,
- * on 4 October 2026), and a site on any other generator had to reproduce
- * them by hand — so they moved to the kit, where Astro imports them like
- * anybody else (wiki/66, layer B). What this component is for a site is
- * unchanged: a reference for the flow, restyled before it goes out — the
- * look is the site's, the behaviour is the platform's protocol and is not
- * the site's to rewrite.
+ * Everything here is the site's: the markup, its order and wrappers, the
+ * classes, the styles below. What is not the site's is the behaviour —
+ * `@jtakeit/kit`'s `<jtk-booking>` element, imported at the bottom — and the
+ * hooks it finds things by: a `data-*` attribute or an input's `name`, never a
+ * class. Rename every class, put the fields in two columns, draw the times as
+ * you like; keep the hooks, and the form books. The list of them, what each is
+ * for and which may be left out is `@jtakeit/kit/booking/hooks`
+ * (docs/booking.md says the same in prose). A hook left out is said in the
+ * browser's console, and the platform's preflight fails a booking page that
+ * cannot book.
  *
- * The rules — when the business is open, how long a slot is, whether a time
- * is still free, what it costs — live in one place, and it is not here: the
- * platform serves six addresses on the site's own host and the element draws
- * what they answer. `docs/booking.md` has the whole of it.
+ * The rules — when the business is open, how long a slot is, whether a time is
+ * still free, what it costs — are the platform's and not here: it serves the
+ * addresses under `/api/` on the site's own host and the element draws what
+ * they answer, so the owner changes their hours in the panel and the page
+ * offers them the next minute, with no rebuild. Nothing about availability is
+ * computed on the page, and nothing the visitor chose is trusted by the server.
+ *
+ * ── what is the kit's, and what is the page's ───────────────────────────────
+ *
+ * `bookingForm` gives the facts this markup is written from: the words in the
+ * page's language (the platform's answer replaces the kind's while the page
+ * runs), the services in their runs with «45 min · CHF 95» beside each, the
+ * days the picker allows, and the form's attributes — `data-api`,
+ * `data-sends`, which preflight books with, and the rest — spread on the
+ * `<form>`. The element draws a few pieces itself — a button per free time,
+ * the week of days, the parts of the day, the two steps, the drawn choice of
+ * whom — and those carry `booking__*` classes, styled at the end of the
+ * `<style>` below; their state is `aria-pressed`, `aria-current`, `disabled`.
  *
  * ── what the page passes in ─────────────────────────────────────────────────
  *
@@ -23,9 +38,8 @@
  * they arrive as props from the page that reads the collections. Slugs are
  * what the platform books against; titles are what the visitor reads.
  */
-import { renderBookingForm } from '@jtakeit/kit/booking';
+import { bookingForm } from '@jtakeit/kit/booking';
 import { siteCurrency } from '../lib/site';
-import '@jtakeit/kit/booking.css';
 import { under } from '../lib/under';
 
 interface Named {
@@ -55,42 +69,592 @@ interface Props {
   /**
    * Whether a visitor may pick several services for one visit — the module's
    * `combine` setting, read from `jtk/bookings.json`. On, the services are a
-   * checklist with a running total; off, one choice. The platform holds the
-   * same rule, so a form that lies here is refused there.
+   * checklist with a running total; off, one choice. The platform's answer
+   * says the same while the page runs, and a checklist keeps to one choice
+   * when the owner has turned it off since the build.
    */
   combine?: boolean;
   /** The site's currency, for the running total. */
   currency?: string;
-  /**
-   * What the business sells by — the module's `scale`, read from
-   * `jtk/bookings.json`: `'daily'` for one that lets things by the day. The
-   * platform's own answer carries the scale too and wins while the page runs;
-   * this decides the words drawn before it has answered.
-   */
+  /** The module's `scale`: `'daily'` for a business that lets things by the day. The platform's answer wins while the page runs. */
   scale?: string;
-  /**
-   * The kind of business — the module's `kind`, read from `jtk/bookings.json`.
-   * For any kind but a salon's the kind's words are held back until the
-   * platform has said them, rather than shown in a salon's for a moment.
-   */
+  /** The module's `kind`: for any kind but a salon's the kind's words are held back until the platform has said them. */
   kind?: string;
   /** The days the business opens, by name — the week of days strikes the others out. From `jtk/bookings.json`'s hours. */
   open?: string[];
-  /**
-   * The form's look — two steps, the week of days, the times by the part of
-   * the day, the drawn choice of whom — on by default (`@jtakeit/kit`'s
-   * `booking-ui`). `false` for the plain form, or the pieces by name.
-   */
+  /** The pieces the element draws — `'steps week parts select'`, all by default; `false` for the plain form. */
   ui?: boolean | string;
 }
 
 const { services, resources = [], locale, daysAhead = 30, combine = false, currency = siteCurrency, scale = '', kind = '', open = [], ui = true } = Astro.props;
 
-const html = renderBookingForm({ services, resources, locale, daysAhead, combine, currency, scale, kind, open, ui, api: under('/api/') });
+const form = bookingForm({ services, resources, locale, daysAhead, combine, currency, scale, kind, open, ui, api: under('/api/') });
+const w = form.words;
 ---
 
-<Fragment set:html={html} />
+<jtk-booking>
+  <form class="form" {...form.attrs}>
+    <noscript><p class="note">{w.noScript}</p></noscript>
+
+    <div class="field" data-field>
+      {
+        form.combine ? (
+          <fieldset class="services" data-services>
+            <legend class="label" data-say="services">{w.services}</legend>
+            {form.runs.map((run, i) => (
+              <div class="run" role={run.group ? 'group' : undefined} aria-labelledby={run.group ? `booking-run-${i}` : undefined}>
+                {run.group && <p class="run-title" id={`booking-run-${i}`}>{run.group}</p>}
+                {run.items.map((one) => (
+                  <label class="service" data-service-row>
+                    <input type="checkbox" name="service" value={one.slug} data-takes={one.takes ?? 0} data-costs={one.costs ?? 0} data-per={one.per === 'person' ? 'person' : undefined} />
+                    <span class="service-name" data-service-name>{one.title}</span>
+                    <span class="service-meta">{one.meta}</span>
+                  </label>
+                ))}
+              </div>
+            ))}
+            <p class="total" data-total hidden />
+          </fieldset>
+        ) : (
+          <>
+            <label class="label" for="booking-service" data-say="service">{w.service}</label>
+            <select class="input" id="booking-service" name="service" required>
+              {form.services.map((one) => <option value={one.slug}>{one.title}</option>)}
+            </select>
+          </>
+        )
+      }
+    </div>
+
+    {
+      form.resources.length > 0 && (
+        <div class="field" data-field>
+          <label class="label" for="booking-resource" data-say="resource">{w.resource}</label>
+          <select class="input" id="booking-resource" name="resource" data-say-wait>
+            <option value="" data-say="any">{w.any}</option>
+            {form.resources.map((one) => <option value={one.slug} data-does={one.does || undefined}>{one.title}</option>)}
+          </select>
+        </div>
+      )
+    }
+
+    <div class="field" data-field>
+      <label class="label" for="booking-day">{w.day}</label>
+      <input class="input" id="booking-day" name="day" type="date" min={form.today} max={form.last} required />
+    </div>
+
+    <!-- Shown by the element when the platform's answer asks: a second date, how long, how many people, how many at once. -->
+    <div class="field" data-field data-back-field hidden>
+      <label class="label" for="booking-back">{w.back}</label>
+      <input class="input" id="booking-back" name="back" type="date" min={form.today} />
+      <p class="hint" data-length hidden />
+    </div>
+    <div class="field" data-field data-hours-field hidden>
+      <label class="label" for="booking-hours">{w.hours}</label>
+      <select class="input" id="booking-hours" name="hours" />
+    </div>
+    <div class="field" data-field data-party-field hidden>
+      <label class="label" for="booking-party">{w.party}</label>
+      <select class="input" id="booking-party" name="party" />
+    </div>
+    <div class="field" data-field data-quantity-field hidden>
+      <label class="label" for="booking-quantity">{w.quantity}</label>
+      <select class="input" id="booking-quantity" name="quantity" />
+    </div>
+
+    <fieldset class="field times" data-times>
+      <legend class="label">{w.time}</legend>
+      <p class="hint" data-times-hint aria-live="polite">{w.pick}</p>
+      <div class="slots" data-slots />
+      <p class="hint" data-ends hidden />
+      <p class="total" data-stay-total hidden />
+    </fieldset>
+
+    <div class="field" data-field>
+      <label class="label" for="booking-name">{w.name} <span aria-hidden="true">*</span></label>
+      <input class="input" id="booking-name" name="name" type="text" autocomplete="name" required maxlength="120" />
+    </div>
+    <div class="field" data-field>
+      <label class="label" for="booking-phone">{w.phone}</label>
+      <input class="input" id="booking-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="40" />
+    </div>
+    <div class="field" data-field>
+      <label class="label" for="booking-email">{w.email}</label>
+      <input class="input" id="booking-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="120" />
+    </div>
+    <div class="field" data-field>
+      <label class="label" for="booking-note">{w.note}</label>
+      <textarea class="input" id="booking-note" name="note" rows="3" maxlength="2000" />
+    </div>
+
+    <div data-challenge hidden />
+
+    <p class="error" id="booking-error" data-booking-error role="alert" hidden />
+
+    <button class="submit" type="submit" data-submit data-say="book">{w.book}</button>
+
+    <div class="done" data-done role="status" tabindex="-1" hidden>
+      <p class="done-line" data-done-line />
+      <p data-done-when />
+      <p data-done-what hidden />
+      <div class="keep" data-keep hidden>
+        <p class="note" data-keep-note />
+        <div class="keep-row">
+          <input class="input keep-link" type="text" readonly data-keep-link />
+          <button type="button" class="pill keep-copy" data-keep-copy />
+          <a class="pill" data-keep-open />
+        </div>
+        <span data-sr role="status" data-keep-said />
+      </div>
+      <p class="note" data-pay-note hidden />
+      <p class="links">
+        <a class="pill" data-pay hidden />
+        <a class="pill" data-manage hidden />
+        <a class="pill" data-telegram hidden target="_blank" rel="noreferrer noopener" />
+      </p>
+    </div>
+  </form>
+</jtk-booking>
 
 <script>
   import '@jtakeit/kit/elements/booking';
 </script>
+
+<style>
+  /*
+   * The look — the scaffold's, and the first thing to change. Classes are
+   * scoped to this file; the pieces the element draws are `:global(...)`
+   * under the form. The behaviour's own rules (`[hidden]`, the steps, the
+   * native control under a drawn one) are put on the page by the element and
+   * need nothing here.
+   */
+  jtk-booking {
+    display: block;
+    container-type: inline-size;
+  }
+  .form {
+    display: grid;
+    gap: 0.85rem 1.5rem;
+    padding: clamp(1.25rem, 3vw, 2rem);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--r-3, 1rem);
+    scroll-margin-top: 5rem;
+  }
+  .form > * {
+    min-width: 0;
+  }
+  .field {
+    display: grid;
+    gap: 0.35rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .label {
+    padding: 0;
+    font-size: 0.875rem;
+    color: var(--ink-quiet);
+  }
+  .input,
+  .form :global(.booking__dd-trigger) {
+    font: inherit;
+    padding: 0.65rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-2, 0.5rem);
+    background: var(--paper);
+    color: var(--ink);
+    max-width: 100%;
+  }
+  .hint,
+  .note {
+    margin: 0;
+    color: var(--ink-quiet);
+  }
+  .total {
+    margin: 0.25rem 0 0;
+    font-weight: 600;
+  }
+  /* The danger colour mixed with the ink, so it keeps its contrast on any
+     palette: #b3261e alone read 2.08:1 on a dark panel (WCAG 1.4.3). */
+  .error,
+  .form :global(.booking__need) {
+    margin: 0;
+    color: color-mix(in srgb, var(--danger, #b3261e) 55%, var(--ink));
+  }
+
+  /* the checklist */
+  .services {
+    display: grid;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .run {
+    display: grid;
+  }
+  .run-title {
+    margin: 0.5rem 0 0.15rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
+  .service {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+  }
+  .service[data-off] {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .service input {
+    appearance: none;
+    flex: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0;
+    border: 1.5px solid var(--line);
+    border-radius: 0.4rem;
+    background: var(--paper);
+    display: grid;
+    place-content: center;
+    cursor: pointer;
+  }
+  .service input::before {
+    content: '';
+    width: 0.7rem;
+    height: 0.7rem;
+    transform: scale(0);
+    background: var(--on-accent, #fff);
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+    transition: transform var(--dur, 0.2s) var(--ease, ease);
+  }
+  .service input:checked {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .service input:checked::before {
+    transform: scale(1);
+  }
+  .service-name {
+    flex: 1;
+  }
+  .service-meta {
+    margin-left: auto;
+    color: var(--ink-quiet);
+    font-size: 0.9375rem;
+    white-space: nowrap;
+  }
+  .service :global([data-service-off]) {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--ink-quiet);
+  }
+
+  /* the times */
+  .slots {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+    gap: 0.4rem;
+  }
+
+  /* the buttons */
+  .submit,
+  .form :global(.booking__next) {
+    justify-self: start;
+    font: inherit;
+    padding: 0.75rem 1.5rem;
+    border: 0;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--on-accent);
+    cursor: pointer;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    font: inherit;
+    padding: 0.6rem 1.1rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink);
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  /* booked */
+  .done {
+    display: grid;
+    gap: 0.5rem;
+    justify-items: center;
+    text-align: center;
+    padding: clamp(1rem, 3vw, 2rem) 0;
+  }
+  .done p {
+    margin: 0;
+  }
+  .done-line {
+    font-size: clamp(1.5rem, 1rem + 2vw, 2.25rem);
+    font-weight: 600;
+  }
+  .keep {
+    display: grid;
+    gap: 0.4rem;
+    max-width: 30rem;
+    text-align: left;
+  }
+  .keep-row,
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.75rem;
+  }
+  .keep-link {
+    flex: 1;
+    min-width: 12rem;
+  }
+  .keep-copy {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+
+  /* ── what the element draws ─────────────────────────────────────────────
+     A time, a day, a part of the day: chosen is `aria-pressed="true"`. */
+  .form :global(:is(.booking__slot, .booking__day, .booking__part, .booking__days-arrow, .booking__back, .booking__dd-option)) {
+    font: inherit;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2, 0.5rem);
+    cursor: pointer;
+    transition:
+      border-color var(--dur, 0.2s) var(--ease, ease),
+      background var(--dur, 0.2s) var(--ease, ease);
+  }
+  .form :global(:is(.booking__slot, .booking__day, .booking__days-arrow, .booking__back):hover:not(:disabled)) {
+    border-color: var(--ink);
+  }
+  .form :global(:is(.booking__slot, .booking__day)[aria-pressed='true']) {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+  .form :global(:is(.booking__day, .booking__days-arrow, .booking__dd-option):disabled) {
+    opacity: 0.35;
+    cursor: default;
+  }
+  .form :global(.booking__slot) {
+    padding: 0.55rem 0.4rem;
+    text-align: center;
+    border-radius: 999px;
+  }
+  /* the week of days */
+  .form :global(.booking__days-head) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin: 0 0 0.4rem;
+  }
+  .form :global(.booking__days-row) {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.3rem;
+  }
+  .form :global(.booking__day) {
+    display: grid;
+    gap: 0.1rem;
+    padding: 0.4rem 0.1rem;
+    text-align: center;
+    line-height: 1.2;
+  }
+  .form :global(.booking__day-wd) {
+    font-size: 0.7em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink-quiet);
+  }
+  /* quiet words inside a filled choice take the fill's own colour: the quiet
+     ink on the ink read 2.1:1 to 3.1:1 (WCAG 1.4.3) */
+  .form :global(.booking__day[aria-pressed='true'] .booking__day-wd),
+  .form :global(.booking__part[aria-pressed='true'] .booking__part-n) {
+    color: inherit;
+  }
+  .form :global(.booking__day-n) {
+    font-size: 1.125rem;
+  }
+  .form :global(.booking__days-arrow) {
+    padding: 0.3rem 0.6rem;
+  }
+  /* the parts of the day */
+  .form :global(.booking__parts) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem;
+    margin: 0 0 0.5rem;
+    padding: 0.2rem;
+    width: max-content;
+    max-width: 100%;
+    background: var(--paper-deep);
+    border-radius: 999px;
+  }
+  .form :global(.booking__part) {
+    padding: 0.3rem 0.7rem;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink-quiet);
+  }
+  .form :global(.booking__part[aria-pressed='true']) {
+    background: var(--panel);
+    color: var(--ink);
+  }
+  .form :global(.booking__part-n) {
+    font-size: 0.8em;
+    margin-left: 0.35rem;
+  }
+  /* the two steps */
+  .form :global(.booking__stepper) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    color: var(--ink-quiet);
+  }
+  .form :global(.booking__step) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .form :global(.booking__step[aria-current='step']) {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .form :global(.booking__step-n) {
+    display: inline-grid;
+    place-items: center;
+    width: 1.4rem;
+    height: 1.4rem;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    font-size: 0.8em;
+  }
+  .form :global(.booking__step:is([data-state='current'], [data-state='done']) .booking__step-n) {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+  .form :global(.booking__summary) {
+    display: grid;
+    gap: 0.6rem;
+    padding: 0.9rem 1rem;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2, 0.5rem);
+  }
+  .form :global(.booking__summary-label) {
+    margin: 0;
+    font-size: 0.75em;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
+  .form :global(.booking__summary-list) {
+    display: grid;
+    gap: 0.4rem;
+    margin: 0;
+  }
+  .form :global(.booking__summary-row dt) {
+    font-size: 0.8em;
+    color: var(--ink-quiet);
+  }
+  .form :global(.booking__summary-row dd) {
+    margin: 0;
+    font-size: 1.0625rem;
+  }
+  .form :global(.booking__back) {
+    justify-self: start;
+    padding: 0.3rem 0.8rem;
+    border-radius: 999px;
+  }
+  /* the drawn choice of whom */
+  .form :global(.booking__dd) {
+    position: relative;
+  }
+  .form :global(.booking__dd-trigger) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+  }
+  .form :global(.booking__dd-list) {
+    position: absolute;
+    inset-inline: 0;
+    top: calc(100% + 0.25rem);
+    z-index: 5;
+    display: grid;
+    padding: 0.25rem;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2, 0.5rem);
+    box-shadow: 0 10px 30px -12px rgb(0 0 0 / 0.3);
+  }
+  .form :global(.booking__dd-option) {
+    border: 0;
+    padding: 0.5rem 0.6rem;
+    text-align: left;
+  }
+  .form :global(.booking__dd-option:is(:hover, :focus-visible)) {
+    background: var(--paper-deep);
+  }
+  .form :global(.booking__dd-option[aria-selected='true']) {
+    font-weight: 600;
+  }
+
+  /* Wide: the services on the left, the rest on the right; on the second
+     step the summary where the services were. */
+  @container (min-width: 56rem) {
+    .form {
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.85rem 2rem;
+      align-items: start;
+    }
+    .form > * {
+      grid-column: 2 / 4;
+    }
+    .form > :global(:is(.booking__stepper, noscript, [data-done])) {
+      grid-column: 1 / 4;
+    }
+    .form > .field:has([name='service']),
+    .form[data-stage='2'] > :global(.booking__summary) {
+      grid-column: 1;
+      grid-row: 2 / span 9;
+      padding-right: clamp(0.5rem, 2vw, 2rem);
+      border-right: 1px solid var(--line);
+    }
+    .form[data-stage='2'] > :global(.booking__summary) {
+      border: 1px solid var(--line);
+      padding: 1rem 1.1rem;
+    }
+    .form > .field:has([name='name']) {
+      grid-column: 2;
+    }
+    .form > .field:has([name='phone']) {
+      grid-column: 3;
+    }
+  }
+</style>

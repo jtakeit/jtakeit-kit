@@ -54,9 +54,17 @@ Next export `dangerouslySetInnerHTML`; in a script, a template literal.
 
 The markup comes wrapped in `<jtk-booking>`, and the element wires the form
 when it reaches the document — on load, and when the panel places it later.
-A form written by hand is wired too, as long as it keeps the `data-*` hooks
-and the input `name`s of the rendered one: `wireAll()` walks the document at
-load and again on the panel's `fl:placed`.
+
+**Or write the markup yourself**, in the site's design. The element finds
+everything by a hook — a `data-*` attribute or an input's `name`, never a
+class — so a form rebuilt in any markup works as long as it keeps them. The
+list, with what each is for and which may be left out, is
+`@jtakeit/kit/booking/hooks` (`ALWAYS`, `ASKED`, `SAID`); `bookingForm(props)`
+gives the facts to write it from — the words, the services in their runs with
+«45 min · CHF 95», the days, and the `<form>`'s attributes to spread on it.
+`@jtakeit/astro`'s `BookingForm.astro` is such a form, written out, and the
+quickest start: copy it and design it. `wireAll()` walks the document at load
+and again on the panel's `fl:placed`, so a bare form is wired too.
 
 **By default the form arrives dressed** — two steps, the day as a week of
 seven that never offers yesterday, the times by the part of the day, a drawn
@@ -67,10 +75,14 @@ switched on by `renderBookingForm`'s `ui`, `false` for the plain form). Pass
 `open` (the days the business opens) and each resource's `does` for the week
 and the greying to know.
 
-**The look** is the site's to give. `@jtakeit/kit/booking.css` makes the form
-legible and nothing more; `field`, `field__input`, `booking__slot`,
-`booking__submit` are names to restyle with the site's own fields and
-buttons. Keep the `[hidden]` rule.
+**The look** is the site's to give. `@jtakeit/kit/booking.css` makes
+`renderBookingForm`'s markup legible and nothing more; restyle it with the
+site's own fields and buttons. The rules the behaviour needs — `[hidden]`,
+which step shows, the native control under a drawn one — are put on the page
+by the element, not by the stylesheet. What the element draws itself carries
+`booking__*` classes (`booking__slot`, `booking__day`, `booking__part`, the
+steps, the drawn choice) with its state in ARIA: chosen is
+`aria-pressed="true"`.
 
 Under `base` — a site served from a path, which every preview is — pass
 `api` as your generator writes a root-relative address, so the form posts to

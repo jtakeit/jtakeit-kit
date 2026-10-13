@@ -7,3 +7,4 @@ export class JtkBooking extends HTMLElement {
   connectedCallback(): void;
 }
 export function defineBooking(name?: string): void;
+export const BOOKING_PROTOCOL: number;
