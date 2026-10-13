@@ -59,3 +59,25 @@ test('meanwhile is the panel\'s steps that are not the agent\'s, open first', ()
   });
   assert.deepEqual(meanwhile(null), { open: [], done: [] });
 });
+
+// The stage covers a page the files know with not one word in it, and nothing
+// else: a listing they do not know, a page with words, or no reading at all.
+test('blankHere: a known page with no words, and only that', async () => {
+  const { blankHere } = await import('../lib/phases.mjs');
+  const progress = { pages: [{ path: '/', filled: 0 }, { path: '/preise', filled: 3 }] };
+  assert.equal(blankHere(progress, '/'), true);
+  assert.equal(blankHere(progress, '/preise/'), false, 'with words');
+  assert.equal(blankHere(progress, '/blog/'), false, 'a page the files do not know');
+  assert.equal(blankHere(null, '/'), false, 'no reading');
+});
+
+// Phase three says the work it is at, in order: the blocks, the bookings, the
+// pages — not «writing the pages» while the agent declares blocks.
+test('the writing phase says what it is at', () => {
+  const where = { current: 'writing' };
+  const base = { kit: null, catalogue: true, settings: null, pages: [{ path: '/', written: false }], missing: ['x'] };
+  assert.match(sayPhase(where, { ...base, catalogue: false }, null), /^Declaring the blocks/);
+  assert.match(sayPhase(where, { ...base, kit: { kind: 'coworking', version: '1' } }, null), /^Setting up the bookings/);
+  assert.match(sayPhase(where, base, null), /^Writing the pages — 0 of 1/);
+  assert.match(sayPhase(where, { ...base, pages: [{ path: '/', written: true }] }, null), /^Finishing/);
+});

@@ -103,9 +103,15 @@ export function sayPhase(where, progress, platform) {
     case 'laidOut':
       return 'Laying the site out';
     case 'writing': {
+      // In the order the work goes, not always «the pages»: an agent declaring
+      // the blocks and setting the diary up for five minutes read as writing
+      // a page it had not reached (13 October 2026).
+      if (progress && progress.catalogue !== true) return 'Declaring the blocks — what the site is made of';
+      if (progress && progress.kit !== null && progress.settings === null) return 'Setting up the bookings — hours, prices, what is booked';
       const pages = progress?.pages ?? [];
       const written = pages.filter((one) => one.written).length;
-      return `Writing the pages — ${written} of ${pages.length} with their text · still to do: ${progress?.missing.length ?? 0}`;
+      if (pages.length > 0 && written < pages.length) return `Writing the pages — ${written} of ${pages.length} with their text`;
+      return `Finishing — still to do: ${progress?.missing.length ?? 0}`;
     }
     case 'judged':
       if (!known || !platform.judged) return 'To be checked before the push';
@@ -136,4 +142,19 @@ export function meanwhile(platform) {
     open: theirs.filter((step) => !step.done).map(named),
     done: theirs.filter((step) => step.done).map(named),
   };
+}
+
+/**
+ * Whether the page being looked at has no words yet: a page the files know,
+ * with not one text field filled. A page they do not know — a listing, an
+ * entry, a 404 — is never blank by this; nor is any page before the files
+ * could be read.
+ * @param {any} progress
+ */
+export function blankHere(progress, path = typeof location === 'undefined' ? '/' : location.pathname) {
+  if (!progress || !Array.isArray(progress.pages)) return false;
+  const norm = (p) => (p.length > 1 && p.endsWith('/') ? p.slice(0, -1) : p);
+  const here = norm(path);
+  const page = progress.pages.find((one) => norm(one.path) === here);
+  return page !== undefined && page.filled === 0;
 }
