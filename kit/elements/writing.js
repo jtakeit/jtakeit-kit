@@ -90,6 +90,7 @@ const STAGE_CSS = `
 .big{font-size:clamp(24px,4vw,32px);line-height:1.15;font-weight:650;letter-spacing:-.01em;margin-top:6px}
 .now{display:flex;gap:10px;align-items:flex-start;margin-top:10px;color:var(--ink2)}.now i{flex:none;width:9px;height:9px;border-radius:999px;background:var(--attn);margin-top:7px;animation:pulse 2.4s ease-in-out infinite}
 .promise{color:var(--muted);font-size:14px}
+.right{margin:6px 0 0 19px;color:var(--muted);font-size:13px}
 .stage .strip{margin-top:0}
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}@media (max-width:560px){.cols{grid-template-columns:1fr}}
 .stage .todo{margin:6px 0 0;padding-left:16px;list-style:disc}
@@ -203,8 +204,11 @@ class JtkWriting extends HTMLElement {
         ? `<p class="note">The platform could not be read: ${esc(platform.error)}</p>`
         : `<p class="note">Not connected to the platform yet — in the working tree: <code>npx jtkit session &lt;session_id&gt; &lt;watch_key&gt;</code>, both from the session's answer.</p>`;
 
+    const last = this.state?.lastChange ?? null;
     const foot = [
-      this.failed ? 'the dev server did not answer' : progress?.changedAt ? `read from the files, changed ${ago(progress.changedAt)}` : 'read from the files',
+      this.failed ? 'the dev server did not answer'
+        : last ? `last change: ${last.path.split('/').slice(-2).join('/')} · ${ago(last.at)}`
+        : progress?.changedAt ? `read from the files, changed ${ago(progress.changedAt)}` : 'read from the files',
       half?.until ? `platform through the session until ${until(half.until)}` : '',
     ].filter(Boolean).join(' · ');
 
@@ -244,6 +248,7 @@ class JtkWriting extends HTMLElement {
           <p class="kicker">Phase ${where.index + 1} of 7 · ${esc(PHASE_NAMES[where.current] ?? '')}</p>
           <h1 class="big">The site is being written</h1>
           <p class="now"><i></i><span>${esc(say)}</span></p>
+          ${this.state?.lastChange ? `<p class="right">right now: <code>${esc(this.state.lastChange.path)}</code> · ${esc(ago(this.state.lastChange.at))}</p>` : ''}
         </div>
         <ol class="strip" aria-hidden="true">${where.phases.map((p) => `<li class="seg ${p.state}"></li>`).join('')}</ol>
         <div class="cols">

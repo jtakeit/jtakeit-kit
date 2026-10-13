@@ -103,9 +103,15 @@ export function sayPhase(where, progress, platform) {
     case 'laidOut':
       return 'Laying the site out';
     case 'writing': {
+      // In the order the work goes, not always «the pages»: an agent declaring
+      // the blocks and setting the diary up for five minutes read as writing
+      // a page it had not reached (13 October 2026).
+      if (progress && progress.catalogue !== true) return 'Declaring the blocks — what the site is made of';
+      if (progress && progress.kit !== null && progress.settings === null) return 'Setting up the bookings — hours, prices, what is booked';
       const pages = progress?.pages ?? [];
       const written = pages.filter((one) => one.written).length;
-      return `Writing the pages — ${written} of ${pages.length} with their text · still to do: ${progress?.missing.length ?? 0}`;
+      if (pages.length > 0 && written < pages.length) return `Writing the pages — ${written} of ${pages.length} with their text`;
+      return `Finishing — still to do: ${progress?.missing.length ?? 0}`;
     }
     case 'judged':
       if (!known || !platform.judged) return 'To be checked before the push';

@@ -94,12 +94,28 @@ export function jtakeitMeta() {
         // when `jtk/session.json` names one (jtkit session). The dev server
         // asks the platform, not the browser: one origin, no cookie, no
         // permission, and the key never reaches a page.
+        // The last file saved in the working tree, whatever it is: the files
+        // the reading above looks at are jtk/ and the brief, and an agent
+        // writing a header or the catalogue's declarations for five minutes
+        // read as «changed 5 min ago» on a card that said it was writing the
+        // pages (13 October 2026). The dev server's own watcher sees every
+        // save; the card says which, and when.
+        let lastChange = null;
+        const root = process.cwd();
+        const noted = (file) => {
+          const rel = file.startsWith(root) ? file.slice(root.length + 1) : file;
+          if (rel === '' || /(^|\/)(node_modules|dist|\.astro|\.git)(\/|$)/.test(rel) || rel === 'jtk/session.json') return;
+          lastChange = { path: rel, at: new Date().toISOString() };
+        };
+        server.watcher.on('change', noted);
+        server.watcher.on('add', noted);
+        server.watcher.on('unlink', noted);
         server.middlewares.use('/_jtk/state.json', async (req, res) => {
           res.setHeader('Cache-Control', 'no-store');
           res.setHeader('Content-Type', 'application/json');
           try {
             const [progress, platform] = await Promise.all([readProgress(process.cwd()), platformHalf(process.cwd())]);
-            res.end(JSON.stringify({ version: 1, progress, platform }));
+            res.end(JSON.stringify({ version: 1, progress, platform, lastChange }));
           } catch (why) {
             res.statusCode = 500;
             res.end(JSON.stringify({ error: why.message }));
