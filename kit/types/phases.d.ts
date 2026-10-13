@@ -39,3 +39,4 @@ export function meanwhile(platform: PlatformHalf | null | undefined): {
   open: { key: string; name: string; done: boolean }[];
   done: { key: string; name: string; done: boolean }[];
 };
+export function blankHere(progress: unknown, path?: string): boolean;

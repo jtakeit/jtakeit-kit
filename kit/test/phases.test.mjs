@@ -59,3 +59,14 @@ test('meanwhile is the panel\'s steps that are not the agent\'s, open first', ()
   });
   assert.deepEqual(meanwhile(null), { open: [], done: [] });
 });
+
+// The stage covers a page the files know with not one word in it, and nothing
+// else: a listing they do not know, a page with words, or no reading at all.
+test('blankHere: a known page with no words, and only that', async () => {
+  const { blankHere } = await import('../lib/phases.mjs');
+  const progress = { pages: [{ path: '/', filled: 0 }, { path: '/preise', filled: 3 }] };
+  assert.equal(blankHere(progress, '/'), true);
+  assert.equal(blankHere(progress, '/preise/'), false, 'with words');
+  assert.equal(blankHere(progress, '/blog/'), false, 'a page the files do not know');
+  assert.equal(blankHere(null, '/'), false, 'no reading');
+});

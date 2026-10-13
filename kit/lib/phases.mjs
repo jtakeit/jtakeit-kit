@@ -137,3 +137,18 @@ export function meanwhile(platform) {
     done: theirs.filter((step) => step.done).map(named),
   };
 }
+
+/**
+ * Whether the page being looked at has no words yet: a page the files know,
+ * with not one text field filled. A page they do not know — a listing, an
+ * entry, a 404 — is never blank by this; nor is any page before the files
+ * could be read.
+ * @param {any} progress
+ */
+export function blankHere(progress, path = typeof location === 'undefined' ? '/' : location.pathname) {
+  if (!progress || !Array.isArray(progress.pages)) return false;
+  const norm = (p) => (p.length > 1 && p.endsWith('/') ? p.slice(0, -1) : p);
+  const here = norm(path);
+  const page = progress.pages.find((one) => norm(one.path) === here);
+  return page !== undefined && page.filled === 0;
+}

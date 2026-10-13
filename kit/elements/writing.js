@@ -14,15 +14,27 @@
  *
  * Collapsed, it is a pill with the phase; a press opens it; the choice is
  * remembered in this browser.
+ *
+ * ── the stage, while the page has no words ──────────────────────────────────
+ *
+ * A scaffold just laid out is a page of empty fields and asterisks, and a
+ * developer who opens localhost to watch the agent saw that and nothing else
+ * (13 October 2026). So while the page being looked at has not one word in it
+ * yet, the element covers it with a stage: a page assembling itself, what the
+ * agent is on, what is left, the panel's steps meanwhile, and the promise that
+ * the page will appear here by itself. The moment the page has its first
+ * words, the stage goes and the page is loaded again — nobody presses
+ * anything. A page the files do not know (a listing, an entry) is never
+ * covered, nor is any page when the dev server cannot be read.
  */
-import { PHASES, PHASE_NAMES, phasesOf, sayPhase, meanwhile } from '../lib/phases.mjs';
+import { PHASES, PHASE_NAMES, phasesOf, sayPhase, meanwhile, blankHere } from '../lib/phases.mjs';
 
 const STORE = 'jtk-writing:collapsed';
 
 const CSS = `
 :host{position:fixed;right:16px;bottom:16px;z-index:2147483000;font:13px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;
-  --bg:#fbfaf7;--ink:#1d1b17;--ink2:#3f3b33;--muted:#6b665c;--faint:#9b958a;--line:#e6e1d6;--line2:#d8d2c4;--ok:#2f7d5a;--attn:#9a6b1c;--shadow:0 12px 36px rgba(30,25,15,.16),0 2px 6px rgba(30,25,15,.08)}
-@media (prefers-color-scheme:dark){:host{--bg:#1c1b18;--ink:#f1ede5;--ink2:#d9d3c7;--muted:#a8a295;--faint:#716c62;--line:#33302a;--line2:#443f36;--ok:#5bb38a;--attn:#d4a24a;--shadow:0 12px 36px rgba(0,0,0,.5)}}
+  --paper:#f4f1ea;--glow:rgba(212,162,74,.16);--bg:#fbfaf7;--ink:#1d1b17;--ink2:#3f3b33;--muted:#6b665c;--faint:#9b958a;--line:#e6e1d6;--line2:#d8d2c4;--ok:#2f7d5a;--attn:#9a6b1c;--shadow:0 12px 36px rgba(30,25,15,.16),0 2px 6px rgba(30,25,15,.08)}
+@media (prefers-color-scheme:dark){:host{--paper:#141311;--glow:rgba(212,162,74,.12);--bg:#1c1b18;--ink:#f1ede5;--ink2:#d9d3c7;--muted:#a8a295;--faint:#716c62;--line:#33302a;--line2:#443f36;--ok:#5bb38a;--attn:#d4a24a;--shadow:0 12px 36px rgba(0,0,0,.5)}}
 *{box-sizing:border-box;margin:0;padding:0}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 a{color:var(--ink);text-decoration:underline;text-decoration-color:var(--line2);text-underline-offset:3px}
@@ -41,7 +53,9 @@ a:hover{text-decoration-color:var(--ink)}
 .seg.done,.mini i.done{background:var(--ok)}.seg.current,.mini i.current{background:var(--attn)}.seg.current{animation:pulse 2.4s ease-in-out infinite}
 .seg.unseen{background:transparent;border:1px solid var(--line2)}
 @keyframes pulse{50%{opacity:.45}}@media (prefers-reduced-motion:reduce){.seg.current,.card.enter{animation:none}}
-.names{display:flex;gap:4px;margin-top:6px}.names span{flex:1;min-width:0;font-size:10px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.names .current{color:var(--ink);font-weight:600}.names .done{color:var(--muted)}
+/* One line under the strip: the phase it is in, whole, and the one after —
+   seven names in 340 px were seven ellipses (13 October 2026). */
+.names{display:flex;gap:8px;align-items:baseline;margin-top:7px;font-size:12px}.names .current{color:var(--ink);font-weight:600}.names .next{color:var(--faint)}
 .say{display:flex;gap:9px;align-items:flex-start;margin-top:12px;font-weight:600;font-size:13.5px;line-height:1.35}.say i{flex:none;width:8px;height:8px;border-radius:999px;background:var(--attn);margin-top:5px}
 .todo{list-style:none;margin:6px 0 0 17px;color:var(--muted);font-size:12.5px}.todo li+li{margin-top:2px}
 .rule{height:1px;background:var(--line);margin:12px 0 10px}
@@ -52,6 +66,34 @@ a:hover{text-decoration-color:var(--ink)}
 .note{margin-top:6px;color:var(--muted);font-size:12.5px}code{font:11.5px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--line);padding:1px 5px;border-radius:5px}
 .panel{display:inline-block;margin-top:8px;font-size:12.5px}
 .foot{margin-top:10px;color:var(--faint);font-size:11px}
+`;
+
+const STAGE_CSS = `
+.stage{position:fixed;inset:0;z-index:2147482999;display:grid;place-items:center;overflow:auto;padding:32px 20px;
+  background:radial-gradient(1200px 600px at 50% -10%,var(--glow),transparent 60%),var(--paper);color:var(--ink);
+  font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;animation:fade .4s ease both}
+.stage.leaving{animation:out .35s ease both}
+@keyframes fade{from{opacity:0}to{opacity:1}}@keyframes out{to{opacity:0}}
+.wrap{width:min(560px,100%);display:grid;gap:22px}
+.sheet{position:relative;height:210px;border-radius:18px;background:var(--bg);border:1px solid var(--line);box-shadow:var(--shadow);overflow:hidden;padding:18px}
+.bar{height:10px;width:34%;border-radius:999px}
+.row{display:flex;gap:8px;margin-top:22px}.row b{display:block;height:9px;border-radius:999px}
+.hero{height:46px;width:72%;border-radius:12px;margin-top:18px}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}.cards b{display:block;height:46px;border-radius:10px}
+.sk{background:linear-gradient(90deg,var(--line) 0%,var(--line2) 50%,var(--line) 100%);background-size:200% 100%;animation:shine 1.8s linear infinite;opacity:0;transform:translateY(6px)}
+.sk{animation:shine 1.8s linear infinite,rise .6s cubic-bezier(.22,.61,.36,1) forwards}
+.d1{animation-delay:0s,.1s}.d2{animation-delay:.1s,.35s}.d3{animation-delay:.2s,.6s}.d4{animation-delay:.3s,.85s}.d5{animation-delay:.4s,1.1s}.d6{animation-delay:.5s,1.35s}
+@keyframes shine{to{background-position:-200% 0}}@keyframes rise{to{opacity:1;transform:none}}
+.caret{position:absolute;right:18px;bottom:16px;display:flex;gap:5px}.caret i{width:6px;height:6px;border-radius:999px;background:var(--attn);animation:dot 1.2s ease-in-out infinite}
+.caret i:nth-child(2){animation-delay:.15s}.caret i:nth-child(3){animation-delay:.3s}@keyframes dot{50%{opacity:.25;transform:translateY(-3px)}}
+.kicker{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.big{font-size:clamp(24px,4vw,32px);line-height:1.15;font-weight:650;letter-spacing:-.01em;margin-top:6px}
+.now{display:flex;gap:10px;align-items:flex-start;margin-top:10px;color:var(--ink2)}.now i{flex:none;width:9px;height:9px;border-radius:999px;background:var(--attn);margin-top:7px;animation:pulse 2.4s ease-in-out infinite}
+.promise{color:var(--muted);font-size:14px}
+.stage .strip{margin-top:0}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}@media (max-width:560px){.cols{grid-template-columns:1fr}}
+.stage .todo{margin:6px 0 0;padding-left:16px;list-style:disc}
+@media (prefers-reduced-motion:reduce){.stage,.stage.leaving,.sk,.caret i,.now i{animation:none!important}.sk{opacity:1;transform:none}}
 `;
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -90,7 +132,7 @@ class JtkWriting extends HTMLElement {
   connectedCallback() {
     const root = this.attachShadow({ mode: 'open' });
     const style = document.createElement('style');
-    style.textContent = CSS;
+    style.textContent = CSS + STAGE_CSS;
     this.box = document.createElement('div');
     root.append(style, this.box);
     root.addEventListener('click', (event) => {
@@ -128,6 +170,19 @@ class JtkWriting extends HTMLElement {
     const where = phasesOf(progress, half);
     const n = where.index + 1;
 
+    // The stage, while this page has not one word in it (see the top).
+    const blank = !this.failed && blankHere(progress);
+    if (this.wasBlank && !blank && progress !== null) {
+      // Its first words: let the page be the page.
+      this.leave();
+      return;
+    }
+    this.wasBlank = blank;
+    if (blank) {
+      this.stage(where, progress, half);
+      return;
+    }
+
     if (this.collapsed) {
       this.show(`<button class="pill" data-toggle aria-expanded="false" aria-label="Where the site is: phase ${n} of 7">
         <span class="mini">${where.phases.map((p) => `<i class="${p.state}"></i>`).join('')}</span>
@@ -156,7 +211,7 @@ class JtkWriting extends HTMLElement {
     this.show(`<section class="card${this.enter ? ' enter' : ''}" aria-label="Where the site is">
       <div class="head"><span class="title">What the agent is doing</span><span class="count">phase ${n} of 7</span><button class="hide" data-toggle aria-label="Collapse">–</button></div>
       <ol class="strip" aria-label="The seven phases">${where.phases.map((p, i) => `<li class="seg ${p.state}" title="${i + 1}. ${PHASE_NAMES[p.key]}"></li>`).join('')}</ol>
-      <div class="names" aria-hidden="true">${where.phases.map((p, i) => `<span class="${p.state}">${i + 1}. ${PHASE_NAMES[p.key]}</span>`).join('')}</div>
+      <p class="names"><span class="current">${n}. ${esc(PHASE_NAMES[where.current] ?? '')}</span>${where.index < 6 ? `<span class="next">next: ${esc(PHASE_NAMES[where.phases[where.index + 1].key])}</span>` : ''}</p>
       <p class="say"><i></i><span>${esc(say)}</span></p>
       ${todo.length > 0 && where.current !== 'preview'
         ? `<ul class="todo">${todo.slice(0, 4).map((line) => `<li>${esc(line)}</li>`).join('')}${todo.length > 4 ? `<li>+ ${todo.length - 4} more — <code>jtkit progress</code></li>` : ''}</ul>`
@@ -169,6 +224,47 @@ class JtkWriting extends HTMLElement {
     </section>`);
   }
 
+  /** The stage over a page with no words yet: what is happening, and that it will appear. */
+  stage(where, progress, half) {
+    const say = sayPhase(where, progress, half);
+    const todo = (progress?.missing ?? []).slice(0, 4);
+    const steps = meanwhile(half);
+    const open = half ? steps.open : [];
+    document.documentElement.style.overflow = 'hidden';
+    this.show(`<section class="stage" role="status" aria-live="polite" aria-label="The site is being written">
+      <div class="wrap">
+        <div class="sheet" aria-hidden="true">
+          <div class="bar sk d1"></div>
+          <div class="hero sk d2"></div>
+          <div class="row"><b class="sk d3" style="width:58%"></b><b class="sk d3" style="width:24%"></b></div>
+          <div class="cards"><b class="sk d4"></b><b class="sk d5"></b><b class="sk d6"></b></div>
+          <div class="caret"><i></i><i></i><i></i></div>
+        </div>
+        <div>
+          <p class="kicker">Phase ${where.index + 1} of 7 · ${esc(PHASE_NAMES[where.current] ?? '')}</p>
+          <h1 class="big">The site is being written</h1>
+          <p class="now"><i></i><span>${esc(say)}</span></p>
+        </div>
+        <ol class="strip" aria-hidden="true">${where.phases.map((p) => `<li class="seg ${p.state}"></li>`).join('')}</ol>
+        <div class="cols">
+          ${todo.length > 0 ? `<div><p class="label">Still to do</p><ul class="todo">${todo.map((line) => `<li>${esc(line)}</li>`).join('')}</ul></div>` : ''}
+          ${open.length > 0
+            ? `<div><p class="label">Meanwhile, in the panel</p><ul class="steps">${open.map((s) => `<li><i class="o"></i><span>${esc(s.name)}</span></li>`).join('')}</ul>${half?.panel ? `<a class="panel" href="${esc(half.panel)}" target="_blank" rel="noopener">Open the panel ↗</a>` : ''}</div>`
+            : ''}
+        </div>
+        <p class="promise">This page appears here by itself the moment it has its first words — leave the tab open.</p>
+      </div>
+    </section>`);
+  }
+
+  /** The page has its words: the stage fades and the page is read again. */
+  leave() {
+    this.wasBlank = false;
+    const stage = this.box.querySelector('.stage');
+    stage?.classList.add('leaving');
+    setTimeout(() => location.reload(), stage ? 350 : 0);
+  }
+
   /** Put this on the page, unless it is what is there already. */
   show(html) {
     const key = html.replace(' enter', '');
@@ -176,6 +272,7 @@ class JtkWriting extends HTMLElement {
     this.shown = key;
     this.box.innerHTML = html;
     this.enter = false;
+    if (!html.includes('class="stage"')) document.documentElement.style.removeProperty('overflow');
   }
 }
 
