@@ -3,7 +3,8 @@
 Two packages, one repository: `@jtakeit/astro` (the scaffold, at the root)
 and `@jtakeit/kit` (the framework-free half, in `kit/`). The platform they
 talk to holds the contract: what the kit emits is judged there, and the
-reference is <https://jtakeit.com/docs/reference/contract.md>.
+reference is the platform's `jtakeit:///reference/contract.md`, read through its MCP
+server.
 
 - `npm ci && npm test` runs the smoke test of the scaffold and the kit's
   tests. `node bin/jtk.mjs create /tmp/probe --kit salon` lays a site out

@@ -84,7 +84,7 @@ switch (command) {
   case 'progress': {
     // The same reading the scaffold's dev server serves the panel as
     // /_jtk/progress.json — what the owner sees as missing is what this
-    // prints (jtakeit-core, wiki/73).
+    // prints.
     const { readProgress, sayProgress } = await import(pathToFileURL(join(HERE, '..', 'lib', 'progress.mjs')).href);
     const progress = await readProgress(resolve(flag('root', '.')));
     console.log(has('json') ? JSON.stringify(progress, null, 2) : sayProgress(progress));
@@ -93,7 +93,7 @@ switch (command) {
   case 'lint': {
     // The annotation lint the platform's build runs, on this working tree:
     // `dist/` against `jtk/` and the catalogue, every finding at once,
-    // before any push (core wiki/71 · §3.2).
+    // before any push.
     const { lintCommand } = await import(pathToFileURL(join(HERE, '..', 'lib', 'lint.mjs')).href);
     const root = resolve(flag('root', process.cwd()));
     const dist = resolve(root, flag('dist', 'dist'));
@@ -117,7 +117,8 @@ switch (command) {
   jtkit apply --kit <kind>|<file> [--locale uk] [--api <url>] [--root <dir>]
   jtkit catalogue [--declaration src/content/blocks.ts] [--emit-only] [--dist ./dist] [--judge]
 
-The contract the platform holds a repository to: https://jtakeit.com/docs/guides/connecting-a-site`);
+The contract the platform holds a repository to: jtakeit:///guides/connecting-a-site.md
+(the platform's MCP server, https://mcp.jtakeit.com/mcp, hands it to your agent)`);
     process.exit(command === undefined || command === '--help' || command === '-h' ? 0 : 1);
   }
 }

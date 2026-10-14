@@ -90,7 +90,7 @@ function esc(value) {
 /**
  * A service's price as the list says it: the price, or «from …» for one
  * priced by the hour of the week — whose price is the slot's and is printed
- * beside the time once one is chosen (wiki/68). Plain text, not escaped.
+ * beside the time once one is chosen. Plain text, not escaped.
  * @param {Named} one
  * @param {string} currency
  * @param {string} lang
@@ -153,7 +153,7 @@ export function bookingForm(props) {
   const last = new Date(now.getTime() + daysAhead * 86_400_000).toISOString().slice(0, 10);
 
   // An add-on — a price and no length: shoes, a racket — is listed under
-  // its own heading, after the services, and rides on the visit (wiki/70).
+  // its own heading, after the services, and rides on the visit.
   const addOns = runs.flatMap((run) => run.items.filter((one) => !one.takes && (one.costs || priceFrom(one))));
   const timedRuns = runs.map((run) => ({ ...run, items: run.items.filter((one) => !addOns.includes(one)) })).filter((run) => run.items.length > 0);
   /** @param {Named} one */

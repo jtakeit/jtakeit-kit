@@ -1,5 +1,5 @@
 // `jtk catalogue` on a group and on a ref: the platform's validateEntryGroup
-// and validateRefs, mirrored (wiki/78 of the platform, 12 October 2026).
+// and validateRefs, mirrored.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';

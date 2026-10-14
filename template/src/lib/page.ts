@@ -40,7 +40,7 @@ type Item = Record<string, unknown>;
 interface Document {
   path?: string;
   seo?: Record<string, unknown>;
-  /** The page's language. Absent is the site's own — see the platform's wiki/29. */
+  /** The page's language. Absent is the site's own. */
   locale?: string;
   blocks?: Block[];
 }

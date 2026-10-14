@@ -11,9 +11,8 @@ field of it, with the scaffold's look in a `<style>` beside it; the behaviour
 is [`@jtakeit/kit`](https://github.com/jtakeit/jtakeit-kit/tree/main/kit)'s
 `<jtk-booking>` element, imported at the bottom. The markup, its classes, its
 order and its look are the site's; the behaviour is the platform's protocol and
-is the kit's to keep, not the site's to rewrite. The contract in full is
-[bookings-on-the-site](https://jtakeit.com/docs/guides/bookings-on-the-site)
-in the platform's docs.
+is the kit's to keep, not the site's to rewrite. The contract in full is the platform's
+`jtakeit:///guides/bookings-on-the-site.md`, read through its MCP server.
 
 A site on another generator takes the same pieces without Astro: the markup
 from `renderBookingForm(...)` at build time — or written out like the

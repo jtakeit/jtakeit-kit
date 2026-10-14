@@ -1,5 +1,13 @@
 # @jtakeit/astro
 
+> **What this is:** the starting point for a client website on [jtakeit](https://jtakeit.com) —
+> an Astro project your AI agent writes, and the tool that checks it against the platform.
+> **For:** developers and freelancers who build sites for small businesses.
+> **Status:** early access. Building and previews are free; a site is paid for once it
+> goes live. Connect your agent to the platform's MCP server at
+> `https://mcp.jtakeit.com/mcp` (it signs you in through the browser); the steps that
+> build, preview and launch a site need it. Everything in this repository runs without it.
+
 The scaffold and the catalogue tool for a site on [jtakeit](https://jtakeit.com) —
 the platform's contract as a working Astro project, ready to build on.
 
@@ -12,8 +20,8 @@ build — and this package is that contract with a page already on it.
 
 This is the one scaffold the platform ships, and it is Astro's. The platform
 builds whatever writes a `dist/` that keeps the contract; on another generator
-the site is laid out by hand — [connecting a site](https://jtakeit.com/docs/guides/connecting-a-site),
-*On another generator* — and takes the pieces worth not writing twice from
+the site is laid out by hand — the platform's guide *connecting a site*
+(`jtakeit:///guides/connecting-a-site.md`), under *On another generator* — and takes the pieces worth not writing twice from
 [`@jtakeit/kit`](https://github.com/jtakeit/jtakeit-kit/tree/main/kit), which this scaffold uses itself: the booking
 form and the enquiry form as markup and as elements, `_meta.json` and the
 specimen rule, a kit laid out, and the catalogue tool.
@@ -80,7 +88,8 @@ The whole of it, with the reasons, is in [docs/](docs/): `kit.md` first, then
 `catalogue.md`, `pages.md`, `collections.md`, `lead-form.md`, `booking.md`,
 `photos.md`, and the rest as you need them. The platform's own reference —
 field kinds, modules, every error code — is what the MCP server hands an agent on
-`initialize`, and at `https://docs.jtakeit.com`.
+`initialize`: `jtakeit:///` resources, starting with `jtakeit:///guides/start.md`.
+It is not published on the web yet.
 
 ## Not here, on purpose
 

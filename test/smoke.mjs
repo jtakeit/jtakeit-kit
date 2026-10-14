@@ -15,7 +15,7 @@ try {
   for (const must of ['package.json', 'astro.config.mjs', 'src/content/blocks.ts', 'src/copy/de-CH.ts', 'jtk/design.json', '.gitignore', 'jtakeit-meta.mjs']) {
     if (!existsSync(join(site, must))) fail(`missing ${must}`);
   }
-  for (const never of ['functions', 'src/copy/LOCALE.ts', 'fastlane-meta.mjs', '.fastlane', 'STATUS.md']) {
+  for (const never of ['functions', 'src/copy/LOCALE.ts', 'STATUS.md']) {
     if (existsSync(join(site, never))) fail(`${never} should not be scaffolded`);
   }
   const walk = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(d, e.name)) : [join(d, e.name)]));
@@ -52,6 +52,17 @@ try {
   execFileSync('node', [bin, 'catalogue', '--emit-only'], { cwd: site, stdio: 'pipe' });
   if (!existsSync(join(site, 'jtk/catalogue.json'))) fail('jtk catalogue wrote no catalogue');
   if (existsSync(join(site, 'jtk/bookings.json'))) fail('a site without modules was given a diary');
+
+  // The whole check, the way a stranger runs it on a fresh scaffold: install,
+  // build, and every sentence on the page belongs to somebody. `--emit-only`
+  // never builds, which is how a scaffold once failed this while the tests
+  // were green.
+  execFileSync('npm', ['ci', '--no-audit', '--no-fund'], { cwd: site, stdio: 'pipe' });
+  try {
+    execFileSync('node', [bin, 'catalogue'], { cwd: site, stdio: 'pipe', env: { ...process.env, SITE_URL: 'https://example.com/' } });
+  } catch (err) {
+    fail(`a fresh scaffold fails its own catalogue check:\n${err.stdout ?? ''}${err.stderr ?? ''}`);
+  }
 
   const blocks = join(site, 'src/content/blocks.ts');
   writeFileSync(blocks, readFileSync(blocks, 'utf8').replace(

@@ -9,8 +9,7 @@
  * so it works with any template, including one an agent wrote this afternoon.
  *
  * The platform's build runs this lint on every demo build. It is here so that
- * a site can run it on its own `dist/` before any push (`jtkit lint`, core
- * wiki/71 · §3.2): the same checks, the same codes, the same sentences, and
+ * a site can run it on its own `dist/` before any push (`jtkit lint`): the same checks, the same codes, the same sentences, and
  * every finding at once rather than one build round each.
  *
  * `lint()` returns findings rather than printing and exiting, so a script, a
@@ -366,7 +365,7 @@ export async function lint(options = {}) {
 /**
  * The files under a built directory the platform never publishes: a path with
  * a segment that starts with a dot, `.well-known/` at the root aside — the
- * rule the platform's upload and edge keep (its wiki/81). A directory is said
+ * rule the platform's upload and edge keep. A directory is said
  * once, with a slash.
  * @param {string} dir
  * @returns {Promise<string[]>}

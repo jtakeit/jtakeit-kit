@@ -1,6 +1,5 @@
 /**
- * The seven phases of a site being written, from two halves (jtakeit-core,
- * wiki/73 · §4 and §7).
+ * The seven phases of a site being written, from two halves.
  *
  * The kit's half is `readProgress` — the brief, the layout, the writing,
  * read off the files. The platform's half — the judge's word, the

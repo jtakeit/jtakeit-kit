@@ -92,7 +92,8 @@
     "types",
     "booking.css",
     "lead.css",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=22.12.0"
@@ -110,5 +111,9 @@
   ],
   "scripts": {
     "test": "node --test"
-  }
+  },
+  "bugs": {
+    "url": "https://github.com/jtakeit/jtakeit-kit/issues"
+  },
+  "homepage": "https://github.com/jtakeit/jtakeit-kit/tree/main/kit#readme"
 }

@@ -1,6 +1,6 @@
 /**
  * Groups, trees and the entries that point at one — the taxonomies a site has
- * without a taxonomy feature (the platform's wiki/78, 12 October 2026).
+ * without a taxonomy feature.
  *
  * ── three patterns, no new kind ─────────────────────────────────────────────
  *

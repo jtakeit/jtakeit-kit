@@ -223,8 +223,8 @@ const businessSchema = {
       content={INDEXABLE ? 'index, follow, max-image-preview:large' : 'noindex, nofollow'}
     />
 
-    {/* TODO(prod): Search Console ownership. Independent of robots — Google
-        fetches the page directly to verify, so noindex does not block it. */}
+    {/* Search Console ownership, when the site has one. Independent of robots —
+        Google fetches the page directly to verify, so noindex does not block it. */}
     {/* <meta name="google-site-verification" content="" /> */}
 
     <meta property="og:type" content="website" />
@@ -272,7 +272,7 @@ const businessSchema = {
       were in the copy since the scaffold had a copy, and nothing drew them
       (12 October 2026).
     */}
-    <a class="skip-link" href="#content">{COPY.A11Y.skipToContent}</a>
+    <a class="skip-link" href="#content" data-jtk-fixed>{COPY.A11Y.skipToContent}</a>
     <slot />
     {/* The switcher, drawn only on a page that exists in more than one
         language. Here so a second language works the day it is declared;

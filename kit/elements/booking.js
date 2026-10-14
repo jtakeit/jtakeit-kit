@@ -132,8 +132,8 @@ export function lasting(minutes, words) {
  * @param {HTMLFormElement} form
  */
 /**
- * The booking protocol's version this element speaks, named on every request
- * (the platform's wiki/79). A page is a file in a build: when the platform
+ * The booking protocol's version this element speaks, named on every request.
+ * A page is a file in a build: when the platform
  * changes, a site keeps the kit it was built with, and the platform answers it
  * by this number for as long as a live site speaks it — so it moves only with
  * a change the platform cannot make by adding, and the platform says which
@@ -181,7 +181,7 @@ export function wireBooking(form) {
     const chosenBoxes = boxes.filter((b) => b.checked);
     if (chosenBoxes.length < 2) { total.hidden = true; return; }
     const minutes = chosenBoxes.reduce((sum, b) => sum + Number(b.dataset.takes ?? 0), 0);
-    // A price per person is times the party (wiki/70); the slot's price is
+    // A price per person is times the party; the slot's price is
     // the platform's, this is the list's own running sum.
     const people = partyField.hidden ? 1 : Number(party.value) || 1;
     const minor = chosenBoxes.reduce((sum, b) => sum + Number(b.dataset.costs ?? 0) * (b.dataset.per === 'person' ? people : 1), 0);
@@ -371,7 +371,7 @@ export function wireBooking(form) {
   }
 
   /**
-   * How many of the class one request may take (wiki/69): the settings'
+   * How many of the class one request may take: the settings'
    * most, and no more than are free at the chosen time. Hidden at one, and
    * when a resource is named — a name is one thing.
    * @param {number} most
@@ -757,7 +757,7 @@ export function wireBooking(form) {
       }
       hint.textContent = '';
       // A price beside each time only where the times differ in price — a
-      // rate by the hour (wiki/68). Where every time costs the same, the
+      // rate by the hour. Where every time costs the same, the
       // price is the services' and is said beside them: «09:00 · CHF 95» on
       // thirty pills is one number read thirty times (11 October 2026).
       const slotPrices = new Set(data.slots.map((one) => one.costs_minor ?? 0));
@@ -773,7 +773,7 @@ export function wireBooking(form) {
           ? slot.ends ? `${dayAndHour(slot.start, false)} — ${dayAndHour(slot.ends, false)}` : dayAndHour(slot.start, false)
           : clock(slot.start);
         // What the booking starting here costs — the platform's number, every
-        // hour by its own row (wiki/68) — beside the time, where it varies.
+        // hour by its own row — beside the time, where it varies.
         if (pricedByTime && slot.costs_minor > 0) button.textContent += ` · ${money(slot.costs_minor, currency, pageLang())}`;
         button.dataset.start = slot.start;
         button.addEventListener('click', () => {
@@ -934,7 +934,7 @@ export function wireBooking(form) {
     // one by name and marks, where it was chosen — «VW Combi · білий ·
     // AA1234BB». Nothing where the business has one of everything.
     let what = made.class ? words.anyOf.replace('{class}', made.class) : resourceChosen() ? made.resource ?? '' : '';
-    // A group: the resources it took, and how many together (wiki/69).
+    // A group: the resources it took, and how many together.
     if (made.group && made.group.quantity > 1) {
       what = `${made.group.bookings.map((/** @type {{resource_name?: string, resource: string}} */ b) => b.resource_name || b.resource).join(', ')} · ${words.together.replace('{n}', String(made.group.quantity))}`;
     }

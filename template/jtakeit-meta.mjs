@@ -75,12 +75,12 @@ export function jtakeitMeta() {
           },
         });
         // The page's own card, bottom right: where the site is and what the
-        // developer can do in the panel meanwhile (wiki/73 · §7). On every
+        // developer can do in the panel meanwhile. On every
         // page under `astro dev`, on none of a build.
         if (command === 'dev') injectScript('page', "import '@jtakeit/kit/writing';");
       },
       // `/_jtk/progress.json` on the dev server: where the site is, read off
-      // the files on every request (jtakeit-core, wiki/73). The panel reads it
+      // the files on every request. The panel reads it
       // through a dev session the way it reads the pages, from the same
       // machine; `jtkit progress` prints the same reading for the agent. Open
       // to any origin because the panel is on another one, and because

@@ -78,8 +78,8 @@ test('no catalogue is refused, not skipped', async () => {
   assert.deepEqual(out.findings.map((one) => one.code), [CODES.CATALOGUE_MISSING]);
 });
 
-// The files the platform never publishes, found in dist before the push
-// (the platform's wiki/81): a dot in any part of the path, .well-known aside.
+// The files the platform never publishes, found in dist before the push:
+// a dot in any part of the path, .well-known aside.
 test('withheldIn finds what the platform will not publish', async () => {
   const { mkdtemp, mkdir, writeFile } = await import('node:fs/promises');
   const { tmpdir } = await import('node:os');
