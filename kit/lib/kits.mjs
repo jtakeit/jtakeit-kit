@@ -34,7 +34,7 @@ export function readKit(file) {
 }
 
 /**
- * A kit asked of the platform by its kind (wiki/64 · §4.1): the kit whole,
+ * A kit asked of the platform by its kind: the kit whole,
  * every part written out, and its version — which the site's settings record
  * as `kit_version`, so the platform's judge can say when a fix to the kit has
  * not reached the site (JTK_W_KIT_BEHIND).

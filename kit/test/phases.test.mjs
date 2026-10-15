@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { phasesOf, sayPhase, meanwhile } from '../lib/phases.mjs';
 
-// The same rules as the panel's card (jtakeit-core, entities/site/writing.ts),
+// The same rules as the panel's card,
 // asserted here so the page and the panel cannot disagree about where a site is.
 
 const progress = (over = {}) => ({

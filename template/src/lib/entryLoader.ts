@@ -19,7 +19,7 @@ import { shownAt } from './schedule';
  * An entry used to be markdown with frontmatter, and Astro's glob loader read
  * exactly that shape with nothing of ours in between. It could hold one block,
  * because the body *was* the file — and a post that wants a gallery between two
- * paragraphs cannot be written that way at all (the platform's wiki/30).
+ * paragraphs cannot be written that way at all.
  *
  * So an entry is a document of blocks now, like every other page: a `.json`
  * file with `blocks`, the first of which is the post — its title, its date, its

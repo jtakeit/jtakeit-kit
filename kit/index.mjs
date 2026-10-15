@@ -4,8 +4,7 @@
  *
  * `@jtakeit/astro` is the scaffold: an Astro project with the platform's
  * contract already on it. Everything in it that is not Astro's lives here,
- * so a site on any other generator can take the same pieces (wiki/66,
- * layer B): the booking form, as markup to put on a page at build time and
+ * so a site on any other generator can take the same pieces: the booking form, as markup to put on a page at build time and
  * as an element that makes it work in the browser.
  *
  *   import { renderBookingForm } from '@jtakeit/kit/booking';   // build time

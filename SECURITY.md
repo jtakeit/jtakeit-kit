@@ -12,5 +12,5 @@ see it. A fix goes out as a patch release, and the advisory names the
 versions it covers.
 
 A vulnerability in the platform (the panel, the API, the edge) is reported
-the same way on [jtakeit-core](https://github.com/jtakeit/jtakeit-core) if
-you can see it, or by writing to the address on jtakeit.com.
+by email to hello@jtakeit.com, with "security" in the subject. Please do not
+post it publicly.

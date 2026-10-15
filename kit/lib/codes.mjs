@@ -23,7 +23,7 @@
  * That flag posts the emitted catalogue to the real validator and reports every
  * place the two answers differ — a code the server raised and we did not, or one
  * we raised and it did not. Every client the studio runs through it is one
- * sitting of that exam (wiki/35 §5, §7), so a code that has been renamed or a
+ * sitting of that exam, so a code that has been renamed or a
  * check that has drifted is found by the next real project rather than by a
  * reviewer noticing. A copy nobody checks rots in a month; a copy that is
  * examined weekly is a cache.

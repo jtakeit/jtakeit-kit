@@ -11,8 +11,8 @@ takes the same pieces instead of reproducing them. The scaffold itself
 imports this package; there is one implementation of each piece and two
 homes for it.
 
-What the platform holds a repository to is in
-[connecting a site](https://jtakeit.com/docs/guides/connecting-a-site), under
+What the platform holds a repository to is in its guide *connecting a site*
+(`jtakeit:///guides/connecting-a-site.md`, through the MCP server), under
 *On another generator*. This package is the pieces of that list that are
 worth not writing twice.
 
@@ -21,7 +21,7 @@ worth not writing twice.
 The platform's diary, on the page: the free times fetched, a stay of several
 nights, a class of cars, a party, the words in the business's kind, the
 payment step, Turnstile when the host has it. The contract it keeps is
-[bookings on the site](https://jtakeit.com/docs/guides/bookings-on-the-site);
+the platform's *bookings on the site* (`jtakeit:///guides/bookings-on-the-site.md`);
 `preflight` reads `data-sends` off the built page and books in exactly that
 shape, so the form says what it sends and the element sends nothing else.
 
@@ -96,7 +96,7 @@ platform answers with a page — and the element only spares a working browser
 the navigation. What the build's lint holds it to: a `name` control, one of
 `contact`, `phone` or `email`, the honeypot `website`, and nothing else that
 the collecting block does not declare in `asks`
-([the contract](https://jtakeit.com/docs/reference/contract.md)).
+(the platform's contract, `jtakeit:///reference/contract.md`).
 
 ```js
 import { renderLeadForm } from '@jtakeit/kit/lead';

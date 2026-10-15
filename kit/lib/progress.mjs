@@ -1,5 +1,5 @@
 /**
- * Progress is a function of the files (jtakeit-core, wiki/73).
+ * Progress is a function of the files.
  *
  * Between «connect an agent» and the first preview a person sees nothing for
  * an hour while the site is written. What they should see is not what the

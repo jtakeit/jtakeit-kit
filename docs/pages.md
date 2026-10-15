@@ -133,8 +133,7 @@ annotation for a field the document does not have.
 
 It has the same three stages as everything else: a draft while it is being
 typed, a saved version, and what the world sees. It is stored as a page that no
-route renders, which is why none of that had to be built twice — the platform's
-wiki/28 has the argument.
+route renders, which is why none of that had to be built twice.
 
 ## The icon
 

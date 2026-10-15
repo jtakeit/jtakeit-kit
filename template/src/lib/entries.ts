@@ -157,7 +157,7 @@ function compare(a: unknown, b: unknown): number {
 /*
  * ── groups, trees and what points at an entry ───────────────────────────────
  *
- * The rules are `groups.ts`'s (wiki/78 of the platform, 12 October 2026); what
+ * The rules are `groups.ts`'s; what
  * is here is the reading — which entries, in which language, by `listed()`, so
  * a hidden entry heads nothing, is under nothing and points at nothing.
  */

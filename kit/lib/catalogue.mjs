@@ -39,7 +39,7 @@
  * writes it, with a line number, rather than in the admin days later with none.
  *
  * Two hand-written validators of one contract disagree silently, so this one
- * sits the other's exam (wiki/35 §5): every finding carries the same `JTK_E_*`
+ * sits the other's exam: every finding carries the same `JTK_E_*`
  * code the server would give it, and `--judge` posts the emitted catalogue to
  * the real validator and reports every place the two answers differ. Every
  * client project the studio runs through it is one sitting.
@@ -108,8 +108,8 @@ const catalogue = {
    * The version of the catalogue FORMAT, and the tool that wrote this file.
    *
    * A whole number because the question the service asks is binary: can this
-   * parser read this file. Additive changes are compatible by the rule in
-   * wiki/05, so a minor could never change what the validator does — it would
+   * parser read this file. Additive changes are compatible by the platform's
+   * rule, so a minor could never change what the validator does — it would
    * be documentation living in a load-bearing field. Semver belongs to this
    * toolkit instead, and its major names the contract it speaks.
    *
@@ -591,7 +591,7 @@ for (const collection of collections) {
   /*
    * What the entries are grouped by: a select, or a ref to another
    * collection, and nothing else — the platform's validateEntryGroup, mirrored
-   * (12 October 2026, wiki/78). Free text would be a list of one-entry groups
+   * (12 October 2026). Free text would be a list of one-entry groups
    * with three spellings of "manicure". A ref into the collection itself is a
    * tree, which is a `parent` field and takes no part in grouping: an entry
    * heading its own siblings is a listing nobody can order.
@@ -662,7 +662,7 @@ for (const collection of collections) {
  * Every `ref`, wherever it is — a block's field, a row of a list, the page's
  * SEO, the business facts — names a collection this catalogue declares. The
  * platform's validateRefs, mirrored on 12 October 2026, when a ref became
- * the way a site has categories and tags (wiki/78): `tags: list of { tag:
+ * the way a site has categories and tags: `tags: list of { tag:
  * ref tags }` with no `tags` collection is a field whose every value points
  * nowhere, and the judge refused it while this said nothing.
  */
@@ -782,7 +782,7 @@ for (const file of sourceFiles(join(root, 'src'))) {
 /*
  * ── the exam ────────────────────────────────────────────────────────────────
  *
- * wiki/35 §5 settles which of the two validators is right: the Go one is the
+ * Of the two validators the platform's is right: the Go one is the
  * judge, and this one sits its exam. Everything below is that sitting — post the
  * catalogue we just built to `POST /v1/registry/validate`, and compare the two
  * verdicts.
@@ -801,8 +801,7 @@ for (const file of sourceFiles(join(root, 'src'))) {
 /**
  * The working tree's other jtk/ files, sent beside the catalogue so the
  * second judge — the settings, the entries, a price table's gaps, an add-on
- * nobody can take — answers in the same call, before any push (core
- * wiki/71 · §3.2). Everything under jtk/ but the catalogue itself, as
+ * nobody can take — answers in the same call, before any push. Everything under jtk/ but the catalogue itself, as
  * `{path, text}`; a site with no jtk/ yet sends none.
  * @param {string} root
  * @returns {{ path: string, text: string }[]}
@@ -838,7 +837,7 @@ function judgeRequest(text, files) {
         // (auth/authHandler.go): an agent's `jtk_…` token as a bearer, a
         // person's signed-in session as the `sid` cookie. This said once that
         // there were no bearer tokens in the app, which stopped being true
-        // when agents got theirs (wiki/40); a `jtk_…` token sent as a cookie
+        // when agents got theirs; a `jtk_…` token sent as a cookie
         // is not read at all.
         ...(token.startsWith('jtk_') ? { authorization: `Bearer ${token}` } : { cookie: `sid=${token}` }),
         accept: 'application/json',
@@ -970,7 +969,7 @@ catalogue, the settings, the content — before any push, every finding at once.
   }
 
   console.error(`
-The Go validator in the admin's registry package is the judge (wiki/35 §5); the
+The Go validator in the admin's registry package is the judge; the
 checks in this file are a copy that has to work offline. A divergence is this
 file's bug, not the server's — bring the check here into line, or add the one it
 is missing, and note it in the platform's 12 · debt if the contract is what
@@ -1178,8 +1177,7 @@ function hasBodyPicture(document) {
  * Whether this site has any entries at all, for the one message that mentions
  * them.
  *
- * An entry is a page now — a `.json` document of blocks (the platform's
- * wiki/30) — so what makes one an entry is the `collection` inside it, not the
+ * An entry is a page now — a `.json` document of blocks — so what makes one an entry is the `collection` inside it, not the
  * extension. Which also means this check no longer needs the site's own Astro
  * installed to read a body: it used to parse frontmatter with it, and that is
  * gone with the format.
@@ -1414,7 +1412,7 @@ const disagreements = [];
  * `tappable()` in its sitebuild/annotation-lint.mjs, copied (12 October 2026).
  *
  * This used to ask it of every field but a bool or a `no_tap_target`, which
- * is stricter than the judge in exactly the shapes wiki/78 made the way a
+ * is stricter than the judge in exactly the shapes that are the way a
  * site has categories and tags: a service's `category: ref categories`, a
  * dish's `course` select, a work's `tags: [{ tag }]` were each reported as a
  * control that edits nothing — they are edited in the panel beside the page,
@@ -1440,9 +1438,7 @@ for (const page of pages) {
     // are read by the page that lists them and by the diary.
     // Said by the entry's own collection, or by its address — with the
     // language in front of it for an entry in another one: `/de/services/x`
-    // is the `services` collection's as much as `/services/x` is (wiki/75 of
-    // the platform; a German salon's eight services were each reported as a
-    // page the build did not produce, 10 October 2026).
+    // is the `services` collection's as much as `/services/x` is.
     const bare = basePathOf(page.path, catalogue.locales ?? []);
     const listedOnly = collections.some(
       (c) => c.pages === false && (page.collection === c.name || bare.startsWith(`${c.prefix}/`)),
@@ -1963,7 +1959,7 @@ them data-jtk-fixed, which silences everything inside the element it is on.
 
 Undeclared is not a third answer. It is what "I cannot edit the header" is made
 of, and it arrives as a message and a deploy weeks later. See
-references/catalogue.md.`);
+docs/catalogue.md in @jtakeit/astro.`);
   process.exit(Math.min(loose.length, 100));
 }
 

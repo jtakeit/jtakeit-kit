@@ -1,6 +1,6 @@
 /**
  * The page's own card: where the site is, bottom right, on the dev server
- * only (jtakeit-core, wiki/73 · §7).
+ * only.
  *
  * A scaffold just made is an empty page, and a developer looking at
  * localhost while the agent writes sees nothing of what is happening. This

@@ -206,8 +206,7 @@ usually `date` and `excerpt`, which live on the listing rather than on the post.
 
 ## Categories, tags and trees — a `ref`, not a feature
 
-There is no taxonomy in the catalogue and no "category" kind, on purpose (the
-platform's wiki/78, 12 October 2026). A category is an entry of a collection,
+There is no taxonomy in the catalogue and no "category" kind, on purpose. A category is an entry of a collection,
 and what is in it points at it with a `ref`: the platform already stores,
 lists, translates and orders entries, and the owner adds a category in the
 panel the way they add a post. Four patterns, by name — use these, not a

@@ -649,7 +649,7 @@ export interface Collection {
    * their order, by their `option_labels`, and renaming one is a commit.
    *
    * A `ref` to **another** collection is a group that is an entry (since 12
-   * October 2026, the platform's wiki/78): `category: ref categories`, and
+   * October 2026): `category: ref categories`, and
    * the owner adds a category in the panel, titles it in every language and
    * orders it; the headings are those titles in that collection's order. Never
    * a ref into this collection itself — that is a tree, a `parent` field, and
@@ -939,7 +939,7 @@ export const MODULES: Modules = {};
  * And it is a warning rather than a refusal. A site without it goes live and
  * somebody is told. The only thing publishing refuses over is a form with
  * nowhere to send what people write in it, which is a broken product rather
- * than an opinion about anybody's legal position. See wiki/34.
+ * than an opinion about anybody's legal position.
  */
 export const PROCESSING_URL = 'https://jtakeit.com/processing';
 
