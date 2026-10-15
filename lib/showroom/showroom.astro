@@ -14,6 +14,7 @@ import HeroField from '../components/motion/HeroField.astro';
 import Pattern from '../components/surface/Pattern.astro';
 import Gallery from '../components/gallery/Gallery.astro';
 import Shot from '../components/Shot.astro';
+import Compositions from '../components/showroom/Compositions.astro';
 import { GALLERIES, type Arrangement } from '../components/gallery/galleries';
 import type { Field } from '../components/motion/fields';
 import type { Pattern as Ground } from '../components/surface/patterns';
@@ -89,6 +90,7 @@ const SECTIONS = [
   ['edges', 'Edges', EDGES.length],
   ['entrances', 'Entrances', REVEALS.length],
   ['galleries', 'Galleries', ARRANGEMENTS.length],
+  ['compositions', 'Compositions', 12],
 ] as const;
 ---
 
@@ -207,6 +209,12 @@ const SECTIONS = [
           <Gallery arrangement={a} items={piecesFor(a)} ratio={a === 'deck' || a === 'coverflow' ? '4 / 5' : undefined} />
         </article>
       ))}
+    </section>
+
+    <section id="compositions" class="room__section">
+      <h2><span>06</span> Compositions</h2>
+      <p class="room__note">How a section under the hero is built — one per section, never the same twice in a row. The skeletons are in <code>docs/compositions.md</code>; <code>jt-check</code> fails two neighbours built alike.</p>
+      <Compositions photos={photos} />
     </section>
 
     <footer class="room__foot">

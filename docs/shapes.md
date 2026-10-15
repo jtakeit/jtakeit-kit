@@ -22,6 +22,10 @@ Nothing chose that. It is what you get when the only worked example in the
 documentation is a split hero, and the alternative would have had to be invented
 under time pressure. So the alternatives are written down here instead.
 
+Under the hero, each section is built as one of the compositions in
+[compositions.md](compositions.md) — the third catalogue, and the one that
+decides whether the page reads as made or as a template.
+
 ## Hero anatomies
 
 | | What it is | Wants | Costs |
