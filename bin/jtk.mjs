@@ -30,6 +30,16 @@ switch (command) {
     await import('@jtakeit/kit/catalogue');
     break;
   }
+  case 'showroom': {
+    const { showroom } = await import(pathToFileURL(join(HERE, '..', 'lib', 'showroom.mjs')).href);
+    try {
+      await showroom(rest);
+    } catch (why) {
+      console.error(`jtk showroom: ${why instanceof Error ? why.message : why}`);
+      process.exit(1);
+    }
+    break;
+  }
   case 'a11y': {
     const { main } = await import(pathToFileURL(join(HERE, '..', 'lib', 'a11y.mjs')).href);
     try {
@@ -48,6 +58,10 @@ switch (command) {
   jtk catalogue [--emit-only] [--dist ./dist] [--judge]
                                   write jtk/catalogue.json from src/content/blocks.ts and
                                   check it against the built pages
+  jtk showroom [--photos <dir>] [--port 4330]
+                                  every hero field, ground, edge, entrance and gallery,
+                                  live on the dev server — in this project's colours and
+                                  photographs when run inside one
   jtk a11y [--dist ./dist] [/path …]
                                   read the built pages against WCAG 2.1 AA in Chrome
                                   (npm i -D playwright-core axe-core first)
