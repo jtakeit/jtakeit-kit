@@ -96,7 +96,16 @@ if (arrangement === 'index' && !pieces.some((p) => p.caption)) {
 }
 
 const cols = Math.max(1, columns ?? recipe.columns);
-const columnsOf = arrangement === 'ragged' || arrangement === 'wall' ? deal(pieces, cols) : [];
+
+/*
+ * `ragged` never ends on a short column. Dealt into three, eleven pieces are
+ * columns of four, four and three, and the gap at the foot of the third reads
+ * as a missing picture. So the count is cut to a whole number of rows — a
+ * multiple of the columns — and on a phone, where the last column is dropped,
+ * the two that stay are equal too.
+ */
+const shown = arrangement === 'ragged' && pieces.length > cols ? pieces.slice(0, pieces.length - (pieces.length % cols)) : pieces;
+const columnsOf = arrangement === 'ragged' || arrangement === 'wall' ? deal(shown, cols) : [];
 
 const vars = [
   `--gallery-columns:${cols}`,
@@ -244,7 +253,7 @@ const sizes =
    * thirty-seven from becoming most of the page.
    */
   .gallery--wall {
-    block-size: var(--gallery-window, min(86svh, 52rem));
+    block-size: var(--gallery-window, min(70svh, 40rem));
     overflow: clip;
   }
 

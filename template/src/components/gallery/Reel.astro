@@ -26,7 +26,7 @@ interface Props {
 }
 
 const { pieces, mode, ratio = mode === 'focus' ? '3 / 2' : '3 / 4' } = Astro.props;
-const width = mode === 'focus' ? 'min(max(64vw, 18rem), 56rem)' : 'min(18rem, 64vw)';
+const width = mode === 'focus' ? 'min(max(46vw, 16rem), 38rem)' : 'min(16rem, 60vw)';
 ---
 
 <div class:list={['reel', `reel--${mode}`]} data-reel={mode} style={`--reel-w:${width};--reel-ratio:${ratio}`} role="region" aria-roledescription="carousel" aria-label="Work" tabindex="0">
@@ -34,7 +34,7 @@ const width = mode === 'focus' ? 'min(max(64vw, 18rem), 56rem)' : 'min(18rem, 64
     {
       pieces.map((piece, i) => (
         <figure class="reel__piece" data-i={i}>
-          <Shot name={piece.name} alt={piece.alt} path={piece.path} ratio={ratio} width={mode === 'focus' ? 1400 : 700} sizes={mode === 'focus' ? '(min-width: 62rem) 56rem, 80vw' : '(min-width: 48rem) 18rem, 64vw'} eager={i < 3} />
+          <Shot name={piece.name} alt={piece.alt} path={piece.path} ratio={ratio} width={mode === 'focus' ? 1400 : 700} sizes={mode === 'focus' ? '(min-width: 62rem) 38rem, 80vw' : '(min-width: 48rem) 16rem, 60vw'} eager={i < 3} />
         </figure>
       ))
     }
@@ -298,6 +298,13 @@ const width = mode === 'focus' ? 'min(max(64vw, 18rem), 56rem)' : 'min(18rem, 64
     track.addEventListener('pointerup', release);
     track.addEventListener('pointercancel', release);
 
+    // A coverflow opens in the middle of the run — the fifth piece — so there
+    // is depth on both sides of the first thing seen. A focus row opens on
+    // the first.
+    if (mode === 'coverflow') {
+      const first = pieces[Math.min(4, n - 1)];
+      track.scrollLeft = first.offsetLeft + first.offsetWidth / 2 - track.clientWidth / 2;
+    }
     paint();
   });
 </script>

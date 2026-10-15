@@ -66,7 +66,7 @@ const REVEALS: [string, string][] = [
 ];
 
 /** Each gallery shown with as many photographs as it is for, at most what there is. */
-const ARRANGEMENTS = (Object.keys(GALLERIES) as Arrangement[]).filter((a) => a !== 'index');
+const ARRANGEMENTS = (Object.keys(GALLERIES) as Arrangement[]).filter((a) => a !== 'index' && a !== 'spread');
 const piecesFor = (a: Arrangement) => {
   const [floor, ceiling] = GALLERIES[a].works;
   const want = Math.min(ceiling, Math.max(floor, a === 'sphere' || a === 'wall' || a === 'contact' ? 40 : 10));
@@ -87,23 +87,36 @@ const SECTIONS = [
 ---
 
 <Layout title={`Showroom · ${name}`} description="Everything the kit can put on a page, live.">
-  <div class="room" style={`--room-ground:${ground};--room-a:${palette[0]};--room-b:${palette[1]};--room-c:${palette[2]};--room-d:${palette[3]}`}>
+  <div class="room" id="top" style={`--room-ground:${ground};--room-a:${palette[0]};--room-b:${palette[1]};--room-c:${palette[2]};--room-d:${palette[3]}`}>
     <header class="room__hero">
       <div class="room__field"><HeroField field="aurora" colors={palette} ground={ground} /></div>
       <div class="room__intro">
         <p class="room__kicker">jtakeit · showroom · {room.version}</p>
         <h1>Everything a page<br />can be made of.</h1>
         <p class="room__lede">
-          Live, in {room.colors.length === 4 ? `${name}’s colours` : 'a sample palette'}{photos.length ? `, on ${photos.length} of its photographs` : ''}. Pick by name — the
+          Live, in {room.colors.length === 4 ? `${name}’s colours` : 'a sample palette'}{photos.length && !room.stock ? `, on ${photos.length} of its photographs` : ''}. Pick by name — the
           name is what goes in <code>jtk/design.json</code> or on <code>&lt;Gallery arrangement&gt;</code>.
         </p>
       </div>
     </header>
 
     <nav class="room__nav" aria-label="Sections">
-      {SECTIONS.map(([id, label, n], i) => (
-        <a href={`#${id}`}><span>{String(i + 1).padStart(2, '0')}</span>{label}<em>{n}</em></a>
-      ))}
+      <a class="room__brand" href="#top" aria-label="jtakeit — back to the top">jtakeit<sup>showroom</sup></a>
+      {SECTIONS.map(([id, label, n], i) =>
+        id === 'galleries' ? (
+          <details class="room__drop" data-drop>
+            <summary><span>{String(i + 1).padStart(2, '0')}</span>{label}<em>{n}</em><i aria-hidden="true">▾</i></summary>
+            <div class="room__menu">
+              <a href="#galleries" data-close>All galleries</a>
+              {ARRANGEMENTS.map((a, k) => (
+                <a href={`#g-${a}`} data-close><span>{String(k + 1).padStart(2, '0')}</span>{a}</a>
+              ))}
+            </div>
+          </details>
+        ) : (
+          <a href={`#${id}`}><span>{String(i + 1).padStart(2, '0')}</span>{label}<em>{n}</em></a>
+        ),
+      )}
     </nav>
 
     <section id="fields" class="room__section">
@@ -136,7 +149,7 @@ const SECTIONS = [
 
     <section id="edges" class="room__section">
       <h2><span>03</span> Edges</h2>
-      <p class="room__note">How a block stops. <code>data-edge</code> on the block; hover the last one.</p>
+      <p class="room__note">How a block stops. <code>data-edge</code> on the block; hover the last one. <button type="button" class="room__replay" data-replay="#edges">↻ Replay trace</button></p>
       <div class="room__grid">
         {EDGES.map(([edge, what]) => (
           <article class="tile tile--edge" data-edge={edge} tabindex={edge === 'lift' ? 0 : undefined}>
@@ -149,7 +162,7 @@ const SECTIONS = [
 
     <section id="entrances" class="room__section">
       <h2><span>04</span> Entrances</h2>
-      <p class="room__note">How a block arrives as it is scrolled to — once, never again. <code>data-reveal</code>. Reload to see them again.</p>
+      <p class="room__note">How a block arrives as it is scrolled to — once, never again. <code>data-reveal</code>. <button type="button" class="room__replay" data-replay="#entrances">↻ Replay</button></p>
       <div class="room__grid">
         {REVEALS.map(([reveal, what]) =>
           reveal === 'stagger' ? (
@@ -192,6 +205,7 @@ const SECTIONS = [
 
     <footer class="room__foot">
       <p>Every piece here is the component a site gets — @jtakeit/astro {room.version}. The rules for each are in <code>node_modules/@jtakeit/astro/docs/</code>.</p>
+      {room.stock && <p>Photographs from <a href="https://www.pexels.com">Pexels</a>, under the Pexels License — every one credited in <code>lib/showroom/photos/CREDITS.md</code> of the package.</p>}
     </footer>
   </div>
 </Layout>
@@ -208,6 +222,50 @@ const SECTIONS = [
     display: none !important;
   }
 </style>
+
+<script>
+  // Replay: an entrance plays once and never again — the rule on a site — so
+  // here it is taken back and given again: `.is-in` off, one reflow, on.
+  document.querySelectorAll<HTMLButtonElement>('[data-replay]').forEach((button) =>
+    button.addEventListener('click', () => {
+      const section = document.querySelector(button.dataset.replay ?? '');
+      if (!section) return;
+      const played = [...section.querySelectorAll<HTMLElement>('[data-reveal], [data-edge="trace"]')];
+      // Back to the start at once — not animated backwards — then played.
+      played.forEach((el) => {
+        el.style.transition = 'none';
+        el.style.animation = 'none';
+        el.classList.remove('is-in');
+      });
+      void (section as HTMLElement).offsetHeight;
+      played.forEach((el) => {
+        el.style.transition = '';
+        el.style.animation = '';
+      });
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() =>
+          played.forEach((el, i) => {
+            if (el.dataset.reveal === 'stagger') [...el.children].forEach((child, k) => (child as HTMLElement).style.setProperty('--i', String(k)));
+            window.setTimeout(() => el.classList.add('is-in'), i * 120);
+          }),
+        ),
+      );
+    }),
+  );
+
+  // The menu closes when a gallery is picked, and when the page is clicked
+  // anywhere else — a <details> on its own stays open until it is toggled.
+  const drop = document.querySelector<HTMLDetailsElement>('[data-drop]');
+  if (drop) {
+    drop.querySelectorAll('[data-close]').forEach((a) => a.addEventListener('click', () => (drop.open = false)));
+    document.addEventListener('click', (e) => {
+      if (drop.open && e.target instanceof Node && !drop.contains(e.target)) drop.open = false;
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') drop.open = false;
+    });
+  }
+</script>
 
 <style>
   .room {
@@ -285,8 +343,9 @@ const SECTIONS = [
     inset-block-start: 0;
     z-index: 20;
     display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     gap: 0.4rem;
-    overflow-x: auto;
     padding: 0.75rem clamp(1rem, 4vw, 3rem);
     background: color-mix(in srgb, var(--room-ground) 78%, transparent);
     backdrop-filter: blur(14px);
@@ -305,6 +364,92 @@ const SECTIONS = [
     text-decoration: none;
     font-size: 0.9rem;
     transition: background 0.2s ease;
+  }
+
+  .room__brand {
+    margin-inline-end: 0.75rem;
+    border: 0 !important;
+    padding-inline: 0 !important;
+    font-weight: 700;
+    font-size: 1.15rem !important;
+    letter-spacing: -0.02em;
+  }
+
+  .room__brand sup {
+    margin-inline-start: 0.35rem;
+    font-size: 0.6rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--room-a);
+  }
+
+  .room__drop {
+    position: relative;
+  }
+
+  .room__drop summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .room__drop summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .room__drop summary i {
+    font-style: normal;
+    font-size: 0.7rem;
+    color: var(--ink-quiet);
+    transition: rotate 0.2s ease;
+  }
+
+  .room__drop[open] summary {
+    background: color-mix(in srgb, var(--ink) 10%, transparent);
+  }
+
+  .room__drop[open] summary i {
+    rotate: 180deg;
+  }
+
+  .room__menu {
+    position: absolute;
+    inset-block-start: calc(100% + 0.5rem);
+    inset-inline-start: 0;
+    display: grid;
+    min-inline-size: 14rem;
+    padding: 0.4rem;
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    background: color-mix(in srgb, var(--room-ground) 92%, var(--ink));
+    box-shadow: 0 24px 48px -20px rgb(0 0 0 / 0.7);
+    animation: room-drop 0.18s ease-out;
+  }
+
+  .room__menu a {
+    border: 0 !important;
+    border-radius: 0.6rem !important;
+    padding: 0.55rem 0.75rem !important;
+  }
+
+  .room__menu a:first-child {
+    margin-block-end: 0.25rem;
+    border-block-end: 1px solid var(--line) !important;
+    border-radius: 0.6rem 0.6rem 0 0 !important;
+  }
+
+  @keyframes room-drop {
+    from {
+      opacity: 0;
+      translate: 0 -4px;
+    }
   }
 
   .room__nav a:hover {
@@ -476,6 +621,27 @@ const SECTIONS = [
     font-size: 0.8rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+  }
+
+  .room__replay {
+    margin-inline-start: 0.5rem;
+    padding: 0.3rem 0.75rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+
+  .room__replay:hover {
+    background: color-mix(in srgb, var(--ink) 12%, transparent);
+  }
+
+  .room__foot a {
+    color: var(--ink);
   }
 
   .room__foot {
