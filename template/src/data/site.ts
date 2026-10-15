@@ -75,7 +75,7 @@ export const BUSINESS = {
  * gets one page per service later — not six phrases on this one.
  *
  * Nothing renders this. It is the target the copy is written *at*, and
- * `fl-check` reads it back to confirm that the title, the h1 and the
+ * `jt-check` reads it back to confirm that the title, the h1 and the
  * description actually serve it — a page that has to have the phrase inserted
  * to pass the check has already missed the point.
  *

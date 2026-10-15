@@ -33,14 +33,14 @@
  *
  * ── what comes out ─────────────────────────────────────────────────────────
  *
- *   <figure class="fl-figure"><img …><figcaption>…</figcaption></figure>
+ *   <figure class="jtk-figure"><img …><figcaption>…</figcaption></figure>
  *
- *   <div class="fl-row fl-row--3">
- *     <figure class="fl-figure"><img …></figure>
+ *   <div class="jtk-row jtk-row--3">
+ *     <figure class="jtk-figure"><img …></figure>
  *     …
  *   </div>
  *
- * `fl-row--2`, `--3`, `--4`; four means four or more and the stylesheet wraps.
+ * `jtk-row--2`, `--3`, `--4`; four means four or more and the stylesheet wraps.
  * Those two class names are the whole surface — a site restyles them and does
  * not invent others, which is what keeps "what a body can look like" a decision
  * the kit made once rather than one every site makes again.
@@ -109,14 +109,14 @@ function figureOf(image) {
     });
   }
 
-  return { type: 'element', tagName: 'figure', properties: { className: ['fl-figure'] }, children };
+  return { type: 'element', tagName: 'figure', properties: { className: ['jtk-figure'] }, children };
 }
 
 function rowOf(made) {
   return {
     type: 'element',
     tagName: 'div',
-    properties: { className: ['fl-row', `fl-row--${Math.min(made.length, WIDEST)}`] },
+    properties: { className: ['jtk-row', `jtk-row--${Math.min(made.length, WIDEST)}`] },
     children: made,
   };
 }

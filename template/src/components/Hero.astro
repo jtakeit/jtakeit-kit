@@ -12,7 +12,7 @@ import { copyFor } from '../copy';
 import { localeOf } from '../lib/locale';
 import Shot from './Shot.astro';
 
-const { block, flPath, picture, HOME } = copyFor(localeOf(Astro.url.pathname));
+const { block, jtkPath, picture, HOME } = copyFor(localeOf(Astro.url.pathname));
 
 /*
  * The hero's photograph, where the document has one.
@@ -32,22 +32,22 @@ const shot = picture(hero.of, hero.at, 'image');
 
 <div class="hero__inner">
   {HOME.hero.eyebrow && (
-    <p class="eyebrow" data-jtk-path={flPath('hero', 'eyebrow')}>{HOME.hero.eyebrow}</p>
+    <p class="eyebrow" data-jtk-path={jtkPath('hero', 'eyebrow')}>{HOME.hero.eyebrow}</p>
   )}
   {/* Guarded like everything else around it, and it is the one that was not.
       `title` is `required: true` in the catalogue, so a real page always has
       its h1; the only document where this is empty is the untouched scaffold,
-      where an empty <h1> is worth nothing to a reader and made `fl-catalogue`
+      where an empty <h1> is worth nothing to a reader and made `jtk catalogue`
       fail on a project nobody had edited yet. */}
   {HOME.hero.heading && (
-    <h1 data-jtk-path={flPath('hero', 'title')}>{HOME.hero.heading}</h1>
+    <h1 data-jtk-path={jtkPath('hero', 'title')}>{HOME.hero.heading}</h1>
   )}
   {HOME.hero.lead && (
-    <p class="lead" data-jtk-path={flPath('hero', 'lead')}>{HOME.hero.lead}</p>
+    <p class="lead" data-jtk-path={jtkPath('hero', 'lead')}>{HOME.hero.lead}</p>
   )}
   {HOME.hero.cta && (
     <p class="actions">
-      <a class="btn" href={HOME.hero.ctaHref} data-jtk-path={flPath('hero', 'cta_label')}>
+      <a class="btn" href={HOME.hero.ctaHref} data-jtk-path={jtkPath('hero', 'cta_label')}>
         {HOME.hero.cta}
       </a>
     </p>

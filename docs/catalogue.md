@@ -35,7 +35,7 @@ Then it checks itself against the built page, in both directions:
 | declared, not rendered | a control in the admin that edits nothing |
 | rendered, not declared | text the owner can see and cannot touch |
 
-The second is the one that hides, which is why `annotation-lint.mjs` catches it
+The second is the one that hides, which is why `jtkit lint` catches it
 again at build time. Between them a catalogue cannot drift from the page.
 
 ## The codes, and who is right about them
@@ -44,7 +44,7 @@ Everything `jtk catalogue` refuses is named:
 
 ```
 ✗ JTK_E_MEDIA_INVALID  hero.clip: accept: 'video' without multiple — …
-✗ FL_LOCAL             src/Nav.astro: "/preise/" is written from the root — …
+✗ JTK_LOCAL             src/Nav.astro: "/preise/" is written from the root — …
 ```
 
 A `JTK_E_…` code is the platform's, not this skill's. What it means and what to
@@ -52,7 +52,7 @@ do about it are one row in the admin's generated `docs/reference/errors.md`, and
 that page is the one to read — it is written from the validator itself, and
 anything restated here would be a second wording of a rule that has one. The
 same code comes back from the admin when a site is attached, so the two answers
-about one file are legibly the same answer. `FL_LOCAL` is the handful of checks
+about one file are legibly the same answer. `JTK_LOCAL` is the handful of checks
 that are ours alone: whether the build survives being served under the preview's
 `/p/<slug>/` prefix, which the catalogue format has no opinion about.
 

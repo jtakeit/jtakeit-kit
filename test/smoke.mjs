@@ -25,6 +25,13 @@ try {
     const left = body.match(/\{\{[A-Z_]+\}\}/g);
     if (left) fail(`${f} still carries ${left.join(', ')}`);
     if (/wrangler|functions\/api|fastlane:/.test(body)) fail(`${f} still names the studio's tooling`);
+    // The studio's names, from before the package was the platform's: flPath,
+    // fl-figure, FL_LOCAL, fl-init… An agent reads them in a comment and
+    // writes them back as commands that do not exist (15 October 2026).
+    // Not `_fl-<type>/`, the specimen pages' address, nor the `fl:placed`
+    // event: those are the panel's names, a protocol with the platform.
+    const studio = body.match(/\bfl[A-Z]\w*|(?<![\w-])fl-[a-z][\w-]*|\bFL_[A-Z_]+|[Ff]astlane/);
+    if (studio) fail(`${f} still names the studio's tooling: ${studio[0]}`);
   }
   const pkg = JSON.parse(readFileSync(join(site, 'package.json'), 'utf8'));
   if (pkg.name !== 'smoke-salon') fail('package name is not the slug');

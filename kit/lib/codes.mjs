@@ -9,7 +9,7 @@
  * what the troubleshooting page is tested against. Nothing here is authoritative
  * about anything.
  *
- * It is copied because `fl-catalogue` has to work before there is anything to
+ * It is copied because `jtk catalogue` has to work before there is anything to
  * ask — on a laptop, before a deploy, before a token, on a plane. A local
  * checker that needs the network to name a fault is a local checker nobody runs.
  *
@@ -19,7 +19,7 @@
  * checkout, all so that a list of twenty-one strings can be regenerated on the
  * few days a year it changes.
  *
- * **What keeps it honest is `fl-catalogue --judge`, not anybody remembering.**
+ * **What keeps it honest is `jtk catalogue --judge`, not anybody remembering.**
  * That flag posts the emitted catalogue to the real validator and reports every
  * place the two answers differ — a code the server raised and we did not, or one
  * we raised and it did not. Every client the studio runs through it is one
@@ -163,7 +163,7 @@ export const MEANS = Object.freeze({
  * comparison in `--judge`: their absence from the server's answer is the correct
  * answer rather than a gap.
  */
-export const LOCAL = 'FL_LOCAL';
+export const LOCAL = 'JTK_LOCAL';
 
 /** Whether a finding is one the server can be asked about. */
 export function isPlatformCode(code) {

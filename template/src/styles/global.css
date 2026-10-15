@@ -354,18 +354,18 @@ h1 {
  * what a body can look like was decided once by the kit rather than again by
  * every site, and the editor can only offer what exists here.
  */
-.fl-figure {
+.jtk-figure {
   margin: 2rem 0;
 }
 
-.fl-figure img {
+.jtk-figure img {
   display: block;
   inline-size: 100%;
   block-size: auto;
   border-radius: var(--radius, 0);
 }
 
-.fl-figure figcaption {
+.jtk-figure figcaption {
   margin-top: 0.6rem;
   font-size: 0.875rem;
   line-height: 1.5;
@@ -377,20 +377,20 @@ h1 {
  * phone are three photographs, not three stamps. `--3` and `--4` say how many
  * were asked for; how many actually fit is the screen's to decide.
  */
-.fl-row {
+.jtk-row {
   display: grid;
   gap: clamp(0.5rem, 1.5vw, 1rem);
   grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
   margin: 2rem 0;
 }
 
-.fl-row .fl-figure {
+.jtk-row .jtk-figure {
   margin: 0;
 }
 
 /* Two is the one count that must not wrap on a small screen: a pair is a
    comparison, and a comparison stacked is two pictures. */
-.fl-row--2 {
+.jtk-row--2 {
   grid-template-columns: repeat(2, 1fr);
 }
 

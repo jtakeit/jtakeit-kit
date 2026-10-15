@@ -13,7 +13,7 @@
  *
  * Astro's `base` fixes what *it* emits — the bundled CSS, the optimised
  * images — and it cannot fix a string somebody typed. So every internal
- * address written by hand goes through `under()`, and `fl-catalogue` fails a
+ * address written by hand goes through `under()`, and `jtk catalogue` fails a
  * repository that writes one straight.
  *
  * A build for a real host has a base of `/`, where `under()` changes nothing.

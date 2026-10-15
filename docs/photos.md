@@ -65,7 +65,7 @@ same door, so what lands afterwards falls into the same frame.
 
 `picture()` returns the slot, its words and its `data-jtk-path` together, and the
 path is the half that cannot be skipped: without it the photograph is on the
-page and nothing happens when the owner taps it. `annotation-lint` fails the
+page and nothing happens when the owner taps it. `jtkit lint` fails the
 build for exactly that, and `<Shot path={...}>` puts it on the `<img>` — never
 on the figure around it, because the admin replaces a picture by setting `src`
 and an element that is not an image gets its *text* replaced instead.
@@ -101,7 +101,7 @@ So the frame that carries the meaning keeps its alt and the rest are marked. It
 is a composition decision, so it is per use rather than per file — the same
 photograph is described in the section about it and decorative in the pile.
 
-`fl-check` tells the two apart by reading the attribute rather than the
+`jt-check` tells the two apart by reading the attribute rather than the
 property: absent is the fault that gets announced as a file name, empty is a
 decision. It still fails a page where *every* image is decorative, which is the
 attribute being used to pass the check rather than to describe anything.
@@ -238,7 +238,7 @@ the blend modes do not land what is left is the photograph.
 
 Two looks on one page is the same disagreement arrived at from the other
 direction, and it is the shape a page takes when each section was styled on the
-day it was written rather than decided once. `fl-check` fails it.
+day it was written rather than decided once. `jt-check` fails it.
 
 `recede` does not count: it is a photograph doing a job, not a look, and it sits
 alongside whichever one the page chose.

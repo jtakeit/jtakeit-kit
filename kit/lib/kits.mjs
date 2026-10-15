@@ -16,7 +16,7 @@
  * the settings no zone and no hours. What the kit says to take from the brief
  * is in `kit.ask`, for whoever runs this to do next.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
 /** Where the platform is, for a kit asked by its kind. */
@@ -74,7 +74,10 @@ export async function fetchKit(kind, api = process.env.JTK_API_URL || API) {
  * @param {string} [api]
  */
 export async function loadKit(asked, api) {
-  if (existsSync(resolve(asked)) || asked.endsWith('.json')) return readKit(asked);
+  // A file is a file: a folder that happens to share the kind's name — a
+  // project called `salon`, run beside `--kit salon` — is not a kit, and
+  // reading it failed with EISDIR.
+  if (asked.endsWith('.json') || (existsSync(resolve(asked)) && statSync(resolve(asked)).isFile())) return readKit(asked);
   if (/^[a-z][a-z_]*$/.test(asked)) return fetchKit(asked, api);
   throw new Error(`--kit ${asked} is neither a kit's kind nor a file`);
 }

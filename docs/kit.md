@@ -13,9 +13,10 @@ No UI framework by default       React only for an island that earns it
 Add a framework when a component genuinely needs state across interactions, not
 before.
 
-> Sentences below that name `fl-check` refer to Fastlane Studio's own composition
-> check, which this package does not ship. Read each one as a rule to hold the
-> page to — by measuring the built page yourself.
+> Sentences below that name `jt-check` refer to the composition check in the
+> [jtakeit-sites](https://github.com/jtakeit/skills) Claude Code plugin, which
+> this package does not ship. Without the plugin, read each one as a rule to
+> hold the page to — by measuring the built page yourself.
 
 ## The rules that are not negotiable
 
@@ -136,7 +137,7 @@ side, and one component is allowed to be louder than all of them:
   on the view and the preview will not pretend.
 
 - **Whatever moves forever declares itself.** A component that owns continuous
-  motion marks its root `data-motion="<name>"`; `fl-check` counts those regions
+  motion marks its root `data-motion="<name>"`; `jt-check` counts those regions
   rather than counting animated elements, so a wall of three drifting columns is
   one decision rather than three faults. Two regions is the ceiling — a hero that
   moves and a wall that drifts — and anything moving forever that neither
@@ -171,7 +172,7 @@ Four of the rules there are measured rather than argued about, because each was
 invisible in the window it was built in: a reveal that never fires is content
 nobody can read, a reveal above the fold delays the largest paint, more than one
 thing moving forever is a demo, and a ground turned up past 1.6:1 against its
-paper competes with the text on it. `fl-check` fails all four.
+paper competes with the text on it. `jt-check` fails all four.
 
 Scroll-driven CSS animation is the good tool here, with two traps learned the
 hard way. Time an element at the top of the page against `scroll(root block)`,
@@ -320,7 +321,7 @@ composition breathes with the window instead of holding a 1440px pose inside a
 }
 ```
 
-`fl-check` measures the hero at 2560×1440 — how much of the width its ink spans,
+`jt-check` measures the hero at 2560×1440 — how much of the width its ink spans,
 how much of a full-height hero is empty, whether the headline grew at all — and
 every band at 1920 for the two faults above.
 

@@ -47,12 +47,12 @@ of one segment nobody searches for.
 **And not a translated slug.** `/ru/blog/healing`, not `/ru/blog/zazhivlenie`,
 even for a post written in Russian. The whole address being the same is what
 pairs the two languages — nothing is declared, so nothing can be misspelt, and
-`fl-check` answers "are these the same page" by looking rather than by trusting.
+`jt-check` answers "are these the same page" by looking rather than by trusting.
 The price is one segment of one address reading in the site's own language.
 
 For an entry the admin builds the address from this pattern, so it is not a
 convention you can drift from. For a page you write the route yourself, and
-`fl-check` holds you to it.
+`jt-check` holds you to it.
 
 ## The shape
 
@@ -73,7 +73,7 @@ German. That is the whole of what pairs them: nothing is declared, so nothing
 can be misspelt.
 
 There used to be a `group` key the languages of one page shared, which let each
-language have its own words. It is gone, and `fl-check` refuses a document that
+language have its own words. It is gone, and `jt-check` refuses a document that
 still carries one. The reason is worth knowing, because it is the shape of most
 rules in this kit: `group: "work"` on one page against `group: "works"` on the
 other is two unrelated pages, no error anywhere, and a site that has quietly

@@ -134,7 +134,7 @@ export function readPage(path: string): Reading {
  *   →  data-jtk-path="page:/blog/healing:blocks[0].title"
  *
  * The admin resolves it against that page, writes it there, and the post's own
- * page updates with it. `annotation-lint` checks the claim from the other end:
+ * page updates with it. `jtkit lint` checks the claim from the other end:
  * an address no page has, or a field that page's document has not got, fails
  * the build.
  *
@@ -189,7 +189,7 @@ export function readShared(locale = ''): Reading {
  * something the addresses already say, and one nobody can check: `group:
  * "work"` on one page against `group: "works"` on the other is two unrelated
  * pages, no error anywhere, and a site that has quietly lost its hreflang. The
- * platform stopped reading it and `fl-check` refuses a document that still
+ * platform stopped reading it and `jt-check` refuses a document that still
  * carries one.
  *
  * A page in one language answers with nothing rather than with itself: a

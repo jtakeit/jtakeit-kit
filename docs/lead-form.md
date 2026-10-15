@@ -25,7 +25,7 @@ to deliver somebody to.
 
 Either give the form something to stand beside — the contact details, the
 opening line, a photograph of the room, the questions block — or let it use the
-width: labels beside fields, name and contact on one row. `fl-check` fails a form
+width: labels beside fields, name and contact on one row. `jt-check` fails a form
 band that uses less than 45% of a 1920px screen.
 
 ## Shape

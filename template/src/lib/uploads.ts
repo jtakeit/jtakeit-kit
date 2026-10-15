@@ -47,7 +47,7 @@ const pictures = import.meta.glob<{ default: ImageMetadata }>(
  *
  * `astro:assets` optimises pictures and has nothing to do to a video, so a clip
  * takes the ordinary asset path: Vite emits the file and hands back its final
- * address, hashed and cacheable. The clips are already small — `fl-clips` cuts
+ * address, hashed and cacheable. The clips are already small — `jt-clips` cuts
  * them to a tenth of a megabyte — so there is nothing to gain by doing more.
  */
 const clips = import.meta.glob<string>('/src/assets/media/**/*.{mp4,webm}', {

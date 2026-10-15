@@ -15,7 +15,7 @@ sharing a background.
 "surface": {
   "pattern": "rules",   // the ground. "" is none, and none is a choice
   "scope": "page",      // one layer behind the document, or one per section
-  "opacity": 0.06,      // the volume knob. fl-check measures this one
+  "opacity": 0.06,      // the volume knob. jt-check measures this one
   "draw": false,        // a drawn ground sets itself out once
   "edge": "corners",    // how a block is drawn
   "reveal": "settle"    // how a block arrives
@@ -58,7 +58,7 @@ drives it, and a ground can never arrive in a colour somebody else chose — whi
 is the failure a shipped background image makes inevitable.
 
 The volume is `--pattern-opacity`, and it is the property most likely to be set
-too high. A ground is read at a glance and never read *at*. `fl-check` composites
+too high. A ground is read at a glance and never read *at*. `jt-check` composites
 the ink over the paper and fails the page above 1.6:1, because "is the texture
 too strong" is a question two people answer differently on two monitors and the
 contrast between figure and paper is a number.
@@ -115,7 +115,7 @@ padding a design already settled.
 | `sweep` | A light travelling around the edge, forever. |
 | `lift` | The block answers the hand: shadow and a couple of pixels on hover and focus. |
 
-Two rules, and `fl-check` holds the page to both:
+Two rules, and `jt-check` holds the page to both:
 
 - **An animated edge belongs to something that can be pressed.** Furniture that
   performs is furniture being looked at instead of the words.
@@ -145,7 +145,7 @@ finished page rather than a column of invisible sections. The observer that adds
 Three rules:
 
 - **One entrance per page.** Two is defensible where the second is on the
-  photographs. Three is a component gallery, and `fl-check` fails it.
+  photographs. Three is a component gallery, and `jt-check` fails it.
 - **Nothing in the first screen is revealed.** It delays the largest paint and
   shows a visitor on a slow line an empty page. Reveal what is scrolled to,
   never what is landed on.

@@ -15,12 +15,12 @@
  *   · **the poster is the clip's own first frame.** Every failure above lands
  *     on that picture, so it cannot be a frame from the middle — it has to be
  *     the frame the loop starts from, or the switch from poster to video is a
- *     visible jump that reads as a fault. `fl-clips` writes exactly that frame,
+ *     visible jump that reads as a fault. `jt-clips` writes exactly that frame,
  *     and the admin takes the same one when an owner uploads a clip;
  *   · **autoplay, muted, looping, inline, and nothing to press.** These are
  *     moving photographs. A play button in a hero is an invitation to do
  *     something other than the one action the page is asking for;
- *   · **no audio track at all**, which is `fl-clips`' business rather than
+ *   · **no audio track at all**, which is `jt-clips`' business rather than
  *     this component's: a muted track is bytes nobody hears, and a browser that
  *     unmutes on a gesture plays a stranger's room out loud;
  *   · **reduced motion stops it on frame one**, which is the poster. There is
@@ -79,7 +79,7 @@ const clip = address(src);
  * frames — which is every one of the failures above, including the ones no
  * script can detect — and it needs no second element to get right.
  *
- * It is not run through `astro:assets`: `fl-clips` writes a poster at the
+ * It is not run through `astro:assets`: `jt-clips` writes a poster at the
  * clip's own size, a few tens of kilobytes, and there is nothing to gain by
  * making variants of a picture at most visitors see for a quarter of a second.
  */
