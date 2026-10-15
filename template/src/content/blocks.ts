@@ -100,10 +100,20 @@ export function words(text: Text | undefined, locale: string = LOCALE): string {
   const found = text[locale];
   if (found !== undefined && found !== '') return found;
 
+  // A regional locale reads its language's words: `en-NL` is English, and
+  // the labels are written by language. Without this step `en-NL` fell
+  // through to the first word in the map — Ukrainian — and an English site's
+  // journal said «Блог» and «Дата» (Schorem, 15 October 2026).
+  const language = locale.split('-')[0];
+  const plain = text[language];
+  if (plain !== undefined && plain !== '') return plain;
+
   for (const other of LOCALES) {
-    const next = text[other];
+    const next = text[other] ?? text[other.split('-')[0]];
     if (next !== undefined && next !== '') return next;
   }
+  // English before an arbitrary one: it is the language every label has.
+  if (text.en) return text.en;
   return Object.values(text).find((one) => one !== '') ?? '';
 }
 

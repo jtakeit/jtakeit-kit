@@ -197,6 +197,15 @@ video {
   max-inline-size: 100%;
 }
 
+/* With the width capped, the height has to follow it — an <img> carries its
+   own height attribute, and without this a photograph squeezed to the column
+   kept its full height and was drawn as a tall smear (Schorem's journal,
+   15 October 2026). */
+img,
+video {
+  block-size: auto;
+}
+
 a {
   color: var(--accent-ink);
 }
@@ -336,6 +345,39 @@ h1 {
   max-width: var(--measure);
   margin-top: 1rem;
   line-height: 1.7;
+}
+
+/* A page that is only prose — the privacy page — keeps the site's gutter and
+   sits in the middle, not against the left edge of the screen. */
+main.prose {
+  box-sizing: content-box;
+  margin-inline: auto;
+  padding: clamp(3rem, 8vw, 6rem) 1.25rem;
+}
+
+/* The listings and the entries: the same gutter as every band. */
+.listing {
+  inline-size: var(--shell);
+  max-inline-size: calc(100% - 2.5rem);
+  margin-inline: auto;
+  padding-block: clamp(3rem, 8vw, 6rem);
+}
+
+.entry {
+  inline-size: min(46rem, 100% - 2.5rem);
+  margin-inline: auto;
+  padding-block: clamp(3rem, 8vw, 6rem);
+  line-height: 1.7;
+}
+
+.entry > img,
+.entry > picture img {
+  display: block;
+  inline-size: 100%;
+  max-block-size: 70svh;
+  margin-block: 1.5rem;
+  object-fit: cover;
+  border-radius: var(--r-2, 0.5rem);
 }
 
 .prose > * + * {
@@ -485,6 +527,13 @@ h1 {
   gap: 0.5rem;
   color: inherit;
   text-decoration: none;
+}
+.post-card img {
+  display: block;
+  inline-size: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--r-2, 0.5rem);
 }
 .post-card time {
   font-size: 0.8125rem;
