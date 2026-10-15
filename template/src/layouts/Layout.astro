@@ -138,9 +138,9 @@ if (DESIGN.accent) palette['--accent'] = DESIGN.accent;
  */
 const accentLuma = DESIGN.accent ? luminance(DESIGN.accent) : null;
 if (accentLuma !== null) palette['--on-accent'] = accentLuma > 0.195 ? '#16130f' : '#ffffff';
-if (DESIGN.ground) palette['--fl-ground'] = DESIGN.ground;
+if (DESIGN.ground) palette['--jtk-ground'] = DESIGN.ground;
 (DESIGN.colors ?? []).forEach((colour: string, i: number) => {
-  if (colour) palette[`--fl-c${i + 1}`] = colour;
+  if (colour) palette[`--jtk-c${i + 1}`] = colour;
 });
 
 /*

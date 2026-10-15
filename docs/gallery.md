@@ -54,7 +54,7 @@ track, not of the screen.
 a wall somebody is watching instead of reading the page; a hundred and fifty is
 a surface that is *alive* rather than one that is *playing*.
 
-**It declares itself.** The root carries `data-motion="gallery"`, and `fl-check`
+**It declares itself.** The root carries `data-motion="gallery"`, and `jt-check`
 counts motion regions rather than animated elements — so three drifting columns
 are one decision. Two regions on a page is the ceiling: a hero that moves and a
 wall that drifts. A third is a demo.

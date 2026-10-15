@@ -30,7 +30,7 @@ import { BLOCKS, words, type Field } from '../content/blocks';
 
 const locale = localeOf(Astro.url.pathname);
 const LANG = langOf(locale);
-const { FORM, flPath } = copyFor(locale);
+const { FORM, jtkPath } = copyFor(locale);
 
 const declared: Field[] = BLOCKS.find((block) => block.type === 'cta_banner')?.asks ?? [];
 const asks = declared.map((ask) => ({
@@ -43,7 +43,7 @@ const asks = declared.map((ask) => ({
   options: (ask.options ?? []).map((value) => ({ value, label: words(ask.option_labels?.[value], LANG) })),
 }));
 
-// `flPath` is undefined on a build without annotations, and the kit then
+// `jtkPath` is undefined on a build without annotations, and the kit then
 // writes no `data-jtk-path` at all.
 //
 // The paths are the home page's of this language: its copy reads
@@ -54,7 +54,7 @@ const asks = declared.map((ask) => ({
 // its block lives; elsewhere it is the same form, editable from the index.
 const home = withLocale(locale, '/');
 const onIndex = [home, `${home}/`, `/${LANG}`, `/${LANG}/`].includes(Astro.url.pathname.replace(/^\/p\/[^/]+/, '') || '/');
-const at = (field: string) => (onIndex ? flPath('cta_banner', field) : undefined);
+const at = (field: string) => (onIndex ? jtkPath('cta_banner', field) : undefined);
 const paths = {
   title: at('title'),
   lead: at('lead'),

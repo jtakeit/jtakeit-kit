@@ -13,16 +13,16 @@
  *
  * The studio's admin edits this site by tapping the text on it. That works
  * because every element whose content comes from `jtk/content/index.json`
- * carries the path of the field it came from, and `flPath` builds those from
+ * carries the path of the field it came from, and `jtkPath` builds those from
  * the document rather than from anything written by hand.
  *
- * The build fails without them — `annotation-lint.mjs` compares the published
+ * The build fails without them — `jtkit lint` compares the published
  * content against the generated HTML and refuses a page that dropped one. It is
  * a gate rather than a convention, because an element that loses its path stops
  * opening the editor **silently**, and nobody finds out for a week.
  *
  * So: whatever a variant does to this page, every field it renders keeps its
- * `data-jtk-path={flPath(...)}`.
+ * `data-jtk-path={jtkPath(...)}`.
  *
  * ── the hero's ground ───────────────────────────────────────────────────────
  *
@@ -30,7 +30,7 @@
  * paint. It is a document rather than props written into this file for the same
  * reason the copy is: it can then be changed without an agent, and the studio
  * bar's live accent drives the same tokens. With the document empty — a fresh
- * `fl-init`, before anything has been designed — the hero is a plain section on
+ * `jtk create`, before anything has been designed — the hero is a plain section on
  * the kit's own ground, which is what a scaffold should be.
  *
  * ── the surface ─────────────────────────────────────────────────────────────
@@ -82,8 +82,8 @@ const grounded = Boolean(surface.pattern);
     {painted ? (
       <HeroField
         field={design.field as never}
-        ground="var(--fl-ground)"
-        colors={['var(--fl-c1)', 'var(--fl-c2)', 'var(--fl-c3)', 'var(--fl-c4)']}
+        ground="var(--jtk-ground)"
+        colors={['var(--jtk-c1)', 'var(--jtk-c2)', 'var(--jtk-c3)', 'var(--jtk-c4)']}
         scrim={design.scrim !== false}
         class="hero"
       >

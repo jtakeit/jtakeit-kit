@@ -13,7 +13,7 @@
  * The design pass replaces it. That is the intended path: split it, restyle it,
  * give a type its own component when it earns one. What must survive any of
  * that is the annotation — every element whose text comes from content carries
- * `data-jtk-path`, and `annotation-lint.mjs` fails the build without it, because
+ * `data-jtk-path`, and `jtkit lint` fails the build without it, because
  * an element that loses its path stops opening the editor *silently*.
  *
  * Repeats are ordinary. Two feature grids and three prose sections is a normal
@@ -40,7 +40,7 @@ const { PAGE, pathAt } = copyFor(localeOf(Astro.url.pathname));
  * The band immediately under the hero gets no entrance. On a phone, and on any
  * page whose hero is not a full screen, that band is *in* the first screen —
  * and an entrance above the fold delays the largest paint and shows an empty
- * page on a slow line. `fl-check` fails on it; this is the default that does
+ * page on a slow line. `jt-check` fails on it; this is the default that does
  * not walk into it.
  */
 const surface = design.surface ?? { edge: '', reveal: '' };
@@ -54,7 +54,7 @@ const edge = (surface.edge || undefined) as string | undefined;
  *
  * Skipping *every* hero was how a document with two of them lost one: the page
  * renders the first, this dropped both, and the second block's text reached no
- * markup at all — so it carried no `data-jtk-path`, and `annotation-lint` failed
+ * markup at all — so it carried no `data-jtk-path`, and `jtkit lint` failed
  * the build on fields nobody could see were missing. The generator will not
  * produce a second hero any more; a template that silently swallows one is still
  * the wrong template.

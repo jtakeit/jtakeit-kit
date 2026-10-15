@@ -273,7 +273,7 @@ the hooks above are what the element reads.
 
 The same rule as the lead form: give it something to stand beside — the price
 list, the opening line, the master's photograph — or let it use the width.
-`fl-check` fails a form band that uses less than 45% of a 1920px screen.
+`jt-check` fails a form band that uses less than 45% of a 1920px screen.
 
 ## In the preview
 

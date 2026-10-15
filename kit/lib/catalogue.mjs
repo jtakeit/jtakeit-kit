@@ -18,7 +18,7 @@
  * Both directions matter and they fail differently. A field declared and never
  * rendered is a control in the admin that edits nothing. A field rendered and
  * never declared is text the owner can see and cannot touch — and it is the
- * silent one, which is why `annotation-lint.mjs` exists at the other end of the
+ * silent one, which is why `jtkit lint` exists at the other end of the
  * pipeline to catch it at build time too.
  *
  *   jtk catalogue                 # emit, then check against dist/
@@ -149,7 +149,7 @@ if (Object.keys(modules).length > 0) catalogue.modules = modules;
  * A site scaffolded as `de-CH` therefore had its labels accepted and its own
  * language refused, with the message "not a language — two letters, or two and
  * a region" printed against a tag that is exactly that. Every regional locale
- * fl-init can produce hit it.
+ * jtk create can produce hit it.
  *
  * The region is *read* in either case and *written* in one. There are sites in
  * repositories spelt `de-ch` — the platform asked for that once — and a checker
@@ -1279,7 +1279,7 @@ const contentProblems = [];
 /*
  * A body with pictures in it needs the two class names that draw them.
  *
- * `figures.mjs` turns a paragraph of images into `.fl-figure` and `.fl-row`,
+ * `figures.mjs` turns a paragraph of images into `.jtk-figure` and `.jtk-row`,
  * and the kit ships styles for both in `src/styles/global.css`. A site that
  * deleted them gets pictures at their natural size in document order, which
  * looks like a broken build and is really a missing stylesheet — so it is said
@@ -1287,7 +1287,7 @@ const contentProblems = [];
  */
 if (pages.some(hasBodyPicture)) {
   const styled = readStyles(join(root, 'src'));
-  for (const name of ['fl-figure', 'fl-row']) {
+  for (const name of ['jtk-figure', 'jtk-row']) {
     if (!styled.includes(name)) {
       contentProblems.push(
         `a post has pictures in its body and nothing styles .${name}. ` +
@@ -1409,7 +1409,7 @@ const disagreements = [];
 
 /*
  * Which fields a page must carry a tap target for: the platform's own rule,
- * `tappable()` in its sitebuild/annotation-lint.mjs, copied (12 October 2026).
+ * `tappable()` in its sitebuild/`jtkit lint`, copied (12 October 2026).
  *
  * This used to ask it of every field but a bool or a `no_tap_target`, which
  * is stricter than the judge in exactly the shapes that are the way a
@@ -1745,14 +1745,14 @@ if (!flag('dist') && !existsSync(join(root, 'astro.config.mjs'))) {
   console.log('not an Astro project: the second build under a path is skipped — build with SITE_URL=https://x.invalid/p/check/ and run again with --dist <dir> to prove the addresses');
 }
 if (!flag('dist') && existsSync(join(root, 'astro.config.mjs'))) {
-  const prefix = '/p/fl-check/';
-  const out = join(root, '.fl-prefix-check');
+  const prefix = '/p/jtk-check/';
+  const out = join(root, '.jtk-prefix-check');
 
   try {
     execFileSync('npx', ['astro', 'build', '--outDir', out], {
       cwd: root,
       stdio: 'pipe',
-      env: { ...process.env, SITE_URL: `https://fl-check.invalid${prefix}`, PUBLIC_INDEXABLE: 'false' },
+      env: { ...process.env, SITE_URL: `https://jtk-check.invalid${prefix}`, PUBLIC_INDEXABLE: 'false' },
     });
 
     const leaks = [];

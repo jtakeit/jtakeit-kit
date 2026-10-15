@@ -108,7 +108,7 @@ export interface Piece {
   /**
    * `data-jtk-path` for this picture, where the gallery is fed from the content
    * document. Without it the owner can see their work on the page and cannot
-   * touch it — `fl-catalogue` fails on exactly that, and a gallery is the
+   * touch it — `jtk catalogue` fails on exactly that, and a gallery is the
    * longest list on the site to have to fix afterwards.
    *
    * It ends up on the `<img>` rather than on the frame around it, because what

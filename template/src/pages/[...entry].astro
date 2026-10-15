@@ -12,7 +12,7 @@
  *
  * **The design pass replaces what is inside `<article>`. What must survive it
  * is the annotation.** Every field the owner may edit carries its
- * `data-jtk-path`, `annotation-lint.mjs` fails the build without one, and an
+ * `data-jtk-path`, `jtkit lint` fails the build without one, and an
  * element that loses its path stops opening the editor *silently*.
  *
  * An entry's document opens with the post — its title, its date, its cover and
@@ -128,7 +128,7 @@ const cover = typeof data.cover === 'string' && data.cover !== ''
  * dropped from the page without a word.
  *
  * A field the owner edits by tapping it carries its `data-jtk-path`, by the
- * same rule `annotation-lint.mjs` checks; the rest are edited in the panel
+ * same rule `jtkit lint` checks; the rest are edited in the panel
  * beside the page and are drawn plain.
  */
 const DRAWN = new Set(['title', 'cover', 'body']);

@@ -45,7 +45,7 @@ ships with (393px viewport, 404px of page).
 
 Two rules across all seven. The one action stays inside the first screen unless
 the anatomy makes that dishonest (a masthead may legitimately put it one line
-below), and whatever the anatomy, `fl-check` still measures the fold, the wide
+below), and whatever the anatomy, `jt-check` still measures the fold, the wide
 screen and the crop.
 
 ## Scattered, then square

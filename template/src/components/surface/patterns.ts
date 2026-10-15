@@ -184,4 +184,4 @@ export const DEFAULTS: Record<Pattern, { size: string; weight: string; opacity: 
  * does not reach for randomness.
  */
 let motifs = 0;
-export const nextMotifId = (): string => `fl-motif-${(motifs += 1)}`;
+export const nextMotifId = (): string => `jtk-motif-${(motifs += 1)}`;

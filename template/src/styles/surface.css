@@ -17,7 +17,7 @@
  *   · One reveal per page. Four different entrances is a component gallery, not
  *     a design, and it is the loudest tell that nobody chose.
  *   · Nothing in the first screen is revealed. It delays the largest paint and
- *     it shows a visitor on a slow line an empty page. `fl-check` fails on it.
+ *     it shows a visitor on a slow line an empty page. `jt-check` fails on it.
  *   · An animated edge belongs to something that can be clicked. Furniture that
  *     performs is furniture being looked at instead of the words.
  *   · One continuously moving thing per page, and the hero usually already
@@ -189,7 +189,7 @@ html.js [data-edge='trace'].is-in::after {
 /*
  * A light travelling around the edge. This is the loud one: it never stops, so
  * it is the page's single continuous animation and it belongs on the one thing
- * a visitor is supposed to press. `fl-check` counts them and checks what they
+ * a visitor is supposed to press. `jt-check` counts them and checks what they
  * are attached to.
  *
  * The ring is a conic gradient with the middle masked out — `exclude` leaves

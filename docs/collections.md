@@ -331,12 +331,12 @@ entry written by hand may use whichever reads better in the diff.
 What comes out — the whole surface, and it is deliberately small:
 
 ```html
-<figure class="fl-figure"><img …><figcaption>…</figcaption></figure>
+<figure class="jtk-figure"><img …><figcaption>…</figcaption></figure>
 
-<div class="fl-row fl-row--3">…</div>
+<div class="jtk-row jtk-row--3">…</div>
 ```
 
-`fl-row--2`, `--3`, `--4`; four means four or more and the stylesheet wraps.
+`jtk-row--2`, `--3`, `--4`; four means four or more and the stylesheet wraps.
 `src/styles/global.css` ships both, and a site is expected to **restyle them and
 not invent a third**: what a body can look like is a decision the kit made once,
 so that the editor can offer exactly what exists. `figures.mjs` is the plugin
@@ -382,7 +382,7 @@ data-jtk-path="page:/blog/healing:blocks[0].title"
 ```
 
 The admin resolves it against that page, writes it there, and the post's own
-page updates with it. `fl-check` holds the claim from the other end: an address
+page updates with it. `jt-check` holds the claim from the other end: an address
 this site did not build, or a field that page does not offer, fails.
 
 **Annotate only what the owner taps.** On a tile that is the title and the

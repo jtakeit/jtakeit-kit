@@ -22,7 +22,7 @@
  *
  * `jtk/content/index.json` is committed with empty strings in it, and that
  * is deliberate: a fresh project must `npm run build` on a laptop the minute
- * `fl-init` finishes, and a static import of a file that is not there is a build
+ * `jtk create` finishes, and a static import of a file that is not there is a build
  * error rather than an empty page. The first publish from the admin replaces it
  * wholesale.
  *
@@ -71,5 +71,5 @@ export const STRINGS: Strings = {
 };
 
 export const COPY = makeCopy(page, STRINGS);
-export const { META, HOME, FORM, PRIVACY, LISTING, A11Y, PAGE, block, str, rows, picture, gallery, flPath, pathAt } = COPY;
+export const { META, HOME, FORM, PRIVACY, LISTING, A11Y, PAGE, block, str, rows, picture, gallery, jtkPath, pathAt } = COPY;
 export type { Shown } from './make';
