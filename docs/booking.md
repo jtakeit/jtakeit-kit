@@ -275,6 +275,17 @@ The same rule as the lead form: give it something to stand beside — the price
 list, the opening line, the master's photograph — or let it use the width.
 `jt-check` fails a form band that uses less than 45% of a 1920px screen.
 
+## On localhost
+
+`astro dev` answers the form itself: `jtakeit-meta.mjs` mounts
+`@jtakeit/kit/devdiary` at `/api`, which reads the hours, the zone and the slot
+length from `jtk/bookings.json` and the services and people from `jtk/content`,
+and offers times from them — so the form can be walked end to end while the
+page is being written. A booking is kept in memory until the server stops and
+reaches nothing; the terminal says so. It is not the platform's diary (no
+buffers, no rates by the hour, no people's own hours): `preflight` with
+`try_booking` is still the test of the real one.
+
 ## In the preview
 
 The form works on the studio's preview exactly as on the live site: the
