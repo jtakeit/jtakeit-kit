@@ -96,3 +96,7 @@ It is not published on the web yet.
 No deploy: the platform builds and serves. No server code: the form and the diary
 are the platform's endpoints beside the site. No design system: what the site looks
 like is the point of writing it.
+
+## Licence
+
+MIT — see [LICENSE](LICENSE). The showroom's photographs in `lib/showroom/photos/` are not: they stay under the [Pexels License](https://www.pexels.com/license/), each one credited in [lib/showroom/photos/CREDITS.md](lib/showroom/photos/CREDITS.md).

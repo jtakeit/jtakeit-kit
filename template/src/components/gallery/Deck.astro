@@ -43,7 +43,7 @@ const tilt = (i: number) => {
     {
       pieces.map((piece, i) => (
         <figure class="deck__card" data-i={i} style={`--tilt:${tilt(i)}deg;--depth:${Math.min(i, 4)};z-index:${pieces.length - i}`} aria-hidden={i === 0 ? undefined : 'true'}>
-          <Shot name={piece.name} alt={piece.alt} path={piece.path} ratio={ratio} width={900} sizes="(min-width: 48rem) 28rem, 80vw" eager={i < 2} />
+          <Shot name={piece.name} alt={piece.alt} path={piece.path} ratio={ratio} width={900} sizes="(min-width: 48rem) 22rem, 72vw" eager={i < 2} />
         </figure>
       ))
     }
@@ -80,7 +80,7 @@ const tilt = (i: number) => {
 
   .deck__pile {
     position: relative;
-    inline-size: min(28rem, 78vw);
+    inline-size: min(22rem, 72vw);
     aspect-ratio: var(--deck-ratio);
     touch-action: pan-y;
   }
@@ -143,7 +143,7 @@ const tilt = (i: number) => {
     display: flex;
     align-items: center;
     gap: clamp(0.75rem, 2.5vw, 1.5rem);
-    inline-size: min(28rem, 100%);
+    inline-size: min(22rem, 100%);
   }
 
   .deck__caption {

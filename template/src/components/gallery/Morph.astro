@@ -121,6 +121,12 @@ const { pieces, ratio = '16 / 10' } = Astro.props;
     pointer-events: none;
   }
 
+  /* Under the canvas the frames change at once: the shader already showed the
+     change, and a cross-fade after it would show the old frame again. */
+  .morph[data-gl] .morph__frame {
+    transition: none;
+  }
+
   .morph[data-gl] .morph__canvas {
     opacity: 1;
   }
@@ -354,10 +360,14 @@ gl_FragColor=mix(texture2D(a,ua),texture2D(b,ub),k);}`;
         if (t < 1) requestAnimationFrame(step);
         else {
           show(to);
-          requestAnimationFrame(() => {
-            root.removeAttribute('data-gl');
-            busy = false;
-          });
+          // Two frames: the new picture is painted under the canvas before the
+          // canvas goes, so nothing between them is ever on screen.
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() => {
+              root.removeAttribute('data-gl');
+              busy = false;
+            }),
+          );
         }
       };
       requestAnimationFrame(step);

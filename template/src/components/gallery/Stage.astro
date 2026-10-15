@@ -17,7 +17,7 @@ interface Props {
   ratio?: string;
 }
 
-const { pieces, ratio = '16 / 10' } = Astro.props;
+const { pieces, ratio = '3 / 2' } = Astro.props;
 const id = `stage-${Math.random().toString(36).slice(2, 8)}`;
 ---
 
@@ -26,7 +26,7 @@ const id = `stage-${Math.random().toString(36).slice(2, 8)}`;
     {
       pieces.map((piece, i) => (
         <figure class="stage__slide" id={`${id}-${i}`} aria-label={`${i + 1} / ${pieces.length}`}>
-          <Shot name={piece.name} alt={piece.alt} path={piece.path} ratio={ratio} width={1600} sizes="(min-width: 62rem) 62rem, 100vw" eager={i === 0} />
+          <Shot name={piece.name} alt={piece.alt} path={piece.path} ratio={ratio} width={1200} sizes="(min-width: 54rem) 52rem, 100vw" eager={i === 0} />
           {piece.caption && (
             <figcaption class="stage__caption" data-jtk-path={piece.captionPath}>
               {piece.caption}
@@ -50,6 +50,8 @@ const id = `stage-${Math.random().toString(36).slice(2, 8)}`;
 <style>
   .stage {
     position: relative;
+    inline-size: min(100%, 52rem);
+    margin-inline: auto;
     overflow: hidden;
     border-radius: var(--r-3, 1rem);
     background: var(--panel, #111);
@@ -105,6 +107,7 @@ const id = `stage-${Math.random().toString(36).slice(2, 8)}`;
     inset-inline: 0;
     inset-block-end: 0;
     display: flex;
+    justify-content: safe center;
     gap: 0.5rem;
     overflow-x: auto;
     scrollbar-width: none;
@@ -117,7 +120,7 @@ const id = `stage-${Math.random().toString(36).slice(2, 8)}`;
   }
 
   .stage__thumb {
-    flex: 0 0 clamp(3.25rem, 9vw, 4.75rem);
+    flex: 0 0 clamp(2.5rem, 6vw, 3.75rem);
     overflow: hidden;
     border: 2px solid rgb(255 255 255 / 0.4);
     border-radius: 0.5rem;
