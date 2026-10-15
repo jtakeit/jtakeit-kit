@@ -56,8 +56,10 @@ try {
   // The whole check, the way a stranger runs it on a fresh scaffold: install,
   // build, and every sentence on the page belongs to somebody. `--emit-only`
   // never builds, which is how a scaffold once failed this while the tests
-  // were green.
-  execFileSync('npm', ['ci', '--no-audit', '--no-fund'], { cwd: site, stdio: 'pipe' });
+  // were green. The kit is this tree's, packed: on a release branch the
+  // version the template names is not on npm until the release is published.
+  const packed = execFileSync('npm', ['pack', resolve('kit'), '--pack-destination', dir], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim().split('\n').pop();
+  execFileSync('npm', ['install', '--no-audit', '--no-fund', join(dir, packed)], { cwd: site, stdio: 'pipe' });
   try {
     execFileSync('node', [bin, 'catalogue'], { cwd: site, stdio: 'pipe', env: { ...process.env, SITE_URL: 'https://example.com/' } });
   } catch (err) {
