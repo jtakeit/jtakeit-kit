@@ -17,13 +17,13 @@
  *
  * ── what an arrangement may not do ─────────────────────────────────────────
  *
- * Whatever it looks like, all six clear the same floor: no photograph is
+ * Whatever it looks like, every one clears the same floor: no photograph is
  * stretched, nothing readable sits inside a moving surface, nothing scrolls the
  * page sideways, and `prefers-reduced-motion` gets the work laid out in full
  * and still — the finished thing, never a shorter one.
  */
 
-export type Arrangement = 'ragged' | 'wall' | 'contact' | 'strip' | 'spread' | 'index';
+export type Arrangement = 'ragged' | 'wall' | 'contact' | 'strip' | 'spread' | 'index' | 'deck' | 'coverflow' | 'focus' | 'stage' | 'morph' | 'sphere';
 
 export interface Recipe {
   /** One line, for the table in references/gallery.md. */
@@ -87,6 +87,56 @@ export const GALLERIES: Record<Arrangement, Recipe> = {
    * them it is a bad `ragged`.
    */
   index: { what: 'Rows: a small frame and the words beside it.', works: [4, 30], moves: false, columns: 1 },
+
+  /*
+   * Prints on a table. The pieces lie in a loose pile, the top one is thrown
+   * off — dragged and let go, or the arrow, or a key — and slides back in at
+   * the bottom. For work held in the hand: a cut, a cake, a ring. One piece is
+   * looked at at a time, which is the whole point and the whole cost: it is
+   * not how to show volume.
+   */
+  deck: { what: 'A loose pile of prints, the top one thrown off by the visitor.', works: [4, 24], moves: false, columns: 1 },
+
+  /*
+   * A row the visitor scrolls, with the pieces on either side of the middle
+   * turned away in depth. The strip's honest mechanics — native scrolling,
+   * snapping, nothing hijacked — with the one centred piece given the stage.
+   * Without JavaScript, or with reduced motion, it is a strip.
+   */
+  coverflow: { what: 'A scrolled row, the side pieces turned away in depth.', works: [5, 30], moves: false, columns: 1 },
+
+  /*
+   * The same row, racked like a lens: the centred piece sharp and full size,
+   * its neighbours softened, smaller and quieter by how far they sit from the
+   * middle, continuously as the row is scrolled. For photographs that want to
+   * be looked at one by one without losing sight of the rest.
+   */
+  focus: { what: 'A scrolled row racked like a lens: the middle sharp, the rest soft.', works: [4, 30], moves: false, columns: 1 },
+
+  /*
+   * One large frame and a row of small ones over its foot. For a portfolio
+   * somebody browses — every piece reachable in one tap, the one chosen shown
+   * large. Native scrolling under both, so a swipe on a phone is a swipe.
+   */
+  stage: { what: 'One large frame, a row of thumbnails over its foot.', works: [4, 30], moves: false, columns: 1 },
+
+  /*
+   * One frame at a time, and the next one burns through the last — a noise
+   * field dissolves the old picture, the bright parts of the new one first.
+   * WebGL, one shader, no library; a browser without it, or reduced motion,
+   * gets the same frame changed plainly. For a business whose pictures are
+   * atmosphere — a room, a light, a mood — rather than a catalogue.
+   */
+  morph: { what: 'One frame at a time, dissolving into the next through noise.', works: [3, 16], moves: false, columns: 1 },
+
+  /*
+   * Volume as a globe: the pieces spread over a sphere the visitor turns with a
+   * drag, the near side large, the far side gone; a tap opens one. It turns
+   * slowly by itself, which makes it the second arrangement that moves — so it
+   * declares itself, stops under the pointer and on focus, and reduced motion
+   * gets it still. Small circular frames: work that reads at thumbnail size.
+   */
+  sphere: { what: 'The work spread over a globe the visitor turns.', works: [20, 80], moves: true, columns: 1 },
 };
 
 export const ARRANGEMENTS = Object.keys(GALLERIES) as Arrangement[];

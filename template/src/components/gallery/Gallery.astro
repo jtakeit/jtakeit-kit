@@ -2,7 +2,7 @@
 /**
  * The work, shown.
  *
- * Six arrangements, and the choice is made by the material: how much work there
+ * Twelve arrangements, and the choice is made by the material: how much work there
  * is, and whether it has an order. What each one is for is in ./galleries.ts
  * and in the table in `docs/gallery.md` of @jtakeit/astro.
  *
@@ -28,11 +28,17 @@
  * moves too is two, and two is the number the check argues about.
  */
 import Shot from '../Shot.astro';
+import Deck from './Deck.astro';
+import Morph from './Morph.astro';
+import Reel from './Reel.astro';
+import Sphere from './Sphere.astro';
+import Stage from './Stage.astro';
 import { GALLERIES, asPieces, deal, type Arrangement, type Piece } from './galleries';
 
 interface Props {
   /**
-   * ragged · wall · contact · strip · spread · index.
+   * ragged · wall · contact · strip · spread · index — and the ones a visitor
+   * plays with: deck · coverflow · focus · stage · morph · sphere.
    * Required: there is no default arrangement, because the right one is decided
    * by how much work there is and a default would decide it by habit.
    */
@@ -48,10 +54,12 @@ interface Props {
   cycle?: string;
   /** `wall` only: how tall the window is. About two photographs. */
   window?: string;
+  /** `deck`, `coverflow`, `focus`, `stage`, `morph`: the pieces' proportions. */
+  ratio?: string;
   class?: string;
 }
 
-const { arrangement, items, columns, cycle, window: windowHeight, class: className } = Astro.props;
+const { arrangement, items, columns, cycle, window: windowHeight, ratio, class: className } = Astro.props;
 
 const recipe = GALLERIES[arrangement];
 if (!recipe) {
@@ -113,11 +121,18 @@ const sizes =
 <div
   class:list={['gallery', `gallery--${arrangement}`, className]}
   data-arrangement={arrangement}
-  data-motion={recipe.moves ? 'gallery' : undefined}
+  data-motion={recipe.moves && arrangement !== 'sphere' ? 'gallery' : undefined}
   style={vars}
 >
+  {/* The ones a visitor plays with are components of their own: each carries
+      its own script, and its own way back to a still page. */}
+  {arrangement === 'deck' && <Deck pieces={pieces} ratio={ratio} />}
+  {(arrangement === 'coverflow' || arrangement === 'focus') && <Reel pieces={pieces} mode={arrangement} ratio={ratio} />}
+  {arrangement === 'stage' && <Stage pieces={pieces} ratio={ratio} />}
+  {arrangement === 'morph' && <Morph pieces={pieces} ratio={ratio} />}
+  {arrangement === 'sphere' && <Sphere pieces={pieces} />}
   {
-    arrangement === 'wall' || arrangement === 'ragged' ? (
+    ['deck', 'coverflow', 'focus', 'stage', 'morph', 'sphere'].includes(arrangement) ? null : arrangement === 'wall' || arrangement === 'ragged' ? (
       columnsOf.map((column, n) => (
         <div class="gallery__col" data-drift={recipe.moves ? drift(n) : undefined}>
           <div class="gallery__track">
