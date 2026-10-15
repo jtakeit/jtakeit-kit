@@ -1,0 +1,584 @@
+---
+/**
+ * The compositions of docs/compositions.md, drawn live: what a section under
+ * the hero can be built as. Each one is the skeleton from the docs in the
+ * showroom's tokens, on its stock photographs — markup to read, not a
+ * component to import.
+ */
+import Shot from '../Shot.astro';
+
+interface Props {
+  photos: string[];
+}
+const { photos } = Astro.props;
+const at = (i: number) => photos[i % Math.max(photos.length, 1)] ?? 'missing';
+
+const SERVICES = [
+  ['Cut', 'Washed, cut and finished. The shape you came in for, kept in the shape it grows into.', '45 min', '€ 48'],
+  ['Shave', 'The straight razor, hot towels either side of it, done slowly.', '30 min', '€ 38'],
+  ['Beard trim', 'Shaped the way it grows, so it still looks right in three weeks.', '20 min', '€ 25'],
+  ['Cut & shave', 'The full sitting: the haircut, then the razor and the towels.', '75 min', '€ 80'],
+];
+const TEAM = [['Cris', 'Fades and flat-tops'], ['Eddie', 'Long scissor work'], ['Ramy', 'Straight razor'], ['Ivo', 'Classic cuts'], ['Luki', 'Beards']];
+---
+
+<div class="comp">
+  <article class="comp__item" id="c-split">
+    <header class="comp__name"><b>split-media</b><span>Words in one column, a photograph filling the other.</span></header>
+    <section class="split">
+      <div class="split__words">
+        <p class="kicker">The room</p>
+        <h3>A chair that has seen a hundred thousand haircuts</h3>
+        <p>Chrome, leather, a floor swept at the end of every day for forty years. Nothing in here is a set.</p>
+        <a class="btn" href="#c-split">Book a chair</a>
+      </div>
+      <figure class="split__media"><Shot name={at(1)} alt="" decorative width={1000} sizes="50vw" /></figure>
+    </section>
+  </article>
+
+  <article class="comp__item" id="c-bleed">
+    <header class="comp__name"><b>bleed</b><span>One photograph across the width, one sentence on it.</span></header>
+    <section class="bleed">
+      <div class="bleed__picture"><Shot name={at(12)} alt="" decorative width={1600} sizes="100vw" /></div>
+      <p class="bleed__line">Classics only. We are not sorry.</p>
+    </section>
+  </article>
+
+  <article class="comp__item" id="c-statement">
+    <header class="comp__name"><b>statement</b><span>One sentence, alone, a lot of air.</span></header>
+    <section class="statement">
+      <p>Half an hour where nobody needs anything from you.</p>
+    </section>
+  </article>
+
+  <article class="comp__item" id="c-numbers">
+    <header class="comp__name"><b>numbers</b><span>A few large figures that are theirs — never invented.</span></header>
+    <section class="numbers">
+      <div><b>1996</b><span>the year the first chair went in</span></div>
+      <div><b>9</b><span>barbers, each by name</span></div>
+      <div><b>6</b><span>days a week, Tuesday to Sunday</span></div>
+    </section>
+  </article>
+
+  <article class="comp__item" id="c-tiles">
+    <header class="comp__name"><b>tiles</b><span>Siblings in a row, a picture on each.</span></header>
+    <section class="tiles">
+      {SERVICES.slice(0, 3).map(([name, line], i) => (
+        <div class="tile">
+          <Shot name={at(i + 3)} alt="" decorative ratio="4 / 3" width={600} sizes="30vw" />
+          <div class="tile__words"><h4>{name}</h4><p>{line}</p></div>
+        </div>
+      ))}
+    </section>
+  </article>
+
+  <article class="comp__item" id="c-ledger">
+    <header class="comp__name"><b>ledger</b><span>A price list as rows, with padding in every one.</span></header>
+    <ol class="ledger">
+      {SERVICES.map(([name, line, takes, price]) => (
+        <li class="ledger__row">
+          <div><h4>{name}</h4><p>{line}</p></div>
+          <p class="ledger__price">{takes} · {price}</p>
+        </li>
+      ))}
+    </ol>
+  </article>
+
+  <article class="comp__item" id="c-overlap">
+    <header class="comp__name"><b>overlap</b><span>A large photograph, a card across its edge.</span></header>
+    <section class="overlap">
+      <div class="overlap__picture"><Shot name={at(0)} alt="" decorative ratio="16 / 10" width={1200} sizes="66vw" /></div>
+      <div class="overlap__card">
+        <p class="kicker">The work</p>
+        <h3>Shapes you can recognise from the far pavement</h3>
+        <p>Pompadours, flat-tops, quiffs and slick-backs — built rather than grown.</p>
+      </div>
+    </section>
+  </article>
+
+  <article class="comp__item" id="c-steps">
+    <header class="comp__name"><b>steps</b><span>What happens first, next, last.</span></header>
+    <ol class="steps">
+      <li><b>Pick the sitting</b><span>A cut, a shave, or both — the booking says how long each takes.</span></li>
+      <li><b>Pick the barber</b><span>By name, or whoever is free at the time you want.</span></li>
+      <li><b>Sit down</b><span>Coffee while you wait, the towels hot when it is your turn.</span></li>
+    </ol>
+  </article>
+
+  <article class="comp__item" id="c-people">
+    <header class="comp__name"><b>people</b><span>Portraits in a row; a monogram where there is no photograph.</span></header>
+    <ul class="people">
+      {TEAM.map(([name, line], i) => (
+        <li class="people__card">
+          {i % 2 === 0 ? <Shot name={at(i + 6)} alt="" decorative ratio="4 / 5" width={500} sizes="16rem" /> : <span class="people__mono" aria-hidden="true">{name.slice(0, 1)}</span>}
+          <h4>{name}</h4>
+          <p>{line}</p>
+        </li>
+      ))}
+    </ul>
+  </article>
+
+  <article class="comp__item" id="c-quote">
+    <header class="comp__name"><b>quote</b><span>Words worth quoting, large, with whose they are.</span></header>
+    <figure class="quote">
+      <blockquote>“A haircut is not a product. It is half an hour of somebody paying attention to you.”</blockquote>
+      <figcaption>— the owner, in a caption from 2024</figcaption>
+    </figure>
+  </article>
+
+  <article class="comp__item" id="c-sticky">
+    <header class="comp__name"><b>sticky</b><span>A heading that stays while a list scrolls past.</span></header>
+    <section class="sticky">
+      <h3 class="sticky__head">Before you book</h3>
+      <dl class="sticky__list">
+        <dt>Do I have to book?</dt><dd>Walk in if a chair is free; book if you want a time and a name.</dd>
+        <dt>Can I ask for a barber?</dt><dd>Yes — pick one when you book, or leave it to whoever is free.</dd>
+        <dt>What if I am late?</dt><dd>Ten minutes is fine. After that the next person takes your chair.</dd>
+        <dt>Do you do children?</dt><dd>From twelve, with a parent there.</dd>
+        <dt>Card or cash?</dt><dd>Both, in the shop.</dd>
+      </dl>
+    </section>
+  </article>
+
+  <article class="comp__item" id="c-closing">
+    <header class="comp__name"><b>closing</b><span>One sentence and the one action, before the footer.</span></header>
+    <section class="closing">
+      <p>Tuesday to Sunday, by the chair.</p>
+      <a class="btn" href="#c-closing">Book a chair</a>
+    </section>
+  </article>
+</div>
+
+<style>
+  .comp {
+    display: grid;
+    gap: clamp(2.5rem, 6vw, 4.5rem);
+  }
+
+  .comp__name {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-block-end: 1rem;
+  }
+
+  .comp__name b {
+    font-size: 1.35rem;
+  }
+
+  .comp__name span {
+    color: var(--ink-quiet);
+  }
+
+  .comp__item > :not(.comp__name) {
+    border-radius: 1rem;
+    overflow: hidden;
+    background: var(--panel);
+  }
+
+  .kicker {
+    margin: 0 0 0.75rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--room-a);
+  }
+
+  .btn {
+    display: inline-block;
+    margin-block-start: 1.25rem;
+    padding: 0.8rem 1.4rem;
+    border-radius: 999px;
+    background: var(--room-a);
+    color: #111;
+    font-weight: 650;
+    text-decoration: none;
+  }
+
+  h3,
+  h4 {
+    margin: 0;
+    letter-spacing: -0.02em;
+  }
+
+  h3 {
+    font-size: clamp(1.6rem, 1rem + 2vw, 2.6rem);
+    line-height: 1.05;
+  }
+
+  /* split-media */
+  .split {
+    display: grid;
+    min-block-size: 26rem;
+  }
+
+  @media (min-width: 62rem) {
+    .split {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .split__words {
+    align-self: center;
+    padding: clamp(1.5rem, 5vw, 4rem);
+  }
+
+  .split__words p {
+    color: var(--ink-quiet);
+  }
+
+  .split__media {
+    margin: 0;
+    min-block-size: 18rem;
+  }
+
+  .split__media :global(img),
+  .bleed__picture :global(img),
+  .tile :global(img),
+  .overlap__picture :global(img),
+  .people__card :global(img) {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  /* bleed */
+  .bleed {
+    position: relative;
+    display: grid;
+    align-items: end;
+    min-block-size: 28rem;
+    isolation: isolate;
+  }
+
+  .bleed__picture {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+  }
+
+  .bleed::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(to top, rgb(0 0 0 / 0.75), transparent 65%);
+  }
+
+  .bleed__line {
+    max-inline-size: 16ch;
+    margin: clamp(1.5rem, 5vw, 3.5rem);
+    font-size: clamp(2.2rem, 1rem + 4vw, 4.5rem);
+    font-weight: 750;
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    color: #fff;
+  }
+
+  /* statement */
+  .statement {
+    display: grid;
+    place-items: center;
+    min-block-size: 20rem;
+    padding: clamp(2rem, 8vw, 6rem);
+    text-align: center;
+  }
+
+  .statement p {
+    max-inline-size: 18ch;
+    margin: 0;
+    font-size: clamp(2rem, 1rem + 3.5vw, 4rem);
+    font-weight: 700;
+    line-height: 1.02;
+    letter-spacing: -0.03em;
+  }
+
+  /* numbers */
+  .numbers {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: 1.5rem;
+    padding: clamp(1.5rem, 5vw, 3.5rem);
+  }
+
+  .numbers div {
+    display: grid;
+    gap: 0.4rem;
+  }
+
+  .numbers b {
+    font-size: clamp(3rem, 2rem + 4vw, 5.5rem);
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+    color: var(--room-a);
+  }
+
+  .numbers span {
+    color: var(--ink-quiet);
+  }
+
+  /* tiles */
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+    background: transparent !important;
+  }
+
+  .tile {
+    overflow: hidden;
+    border-radius: 1rem;
+    background: var(--panel);
+  }
+
+  .tile__words {
+    padding: 1rem 1.25rem 1.4rem;
+  }
+
+  .tile__words p {
+    margin: 0.4rem 0 0;
+    color: var(--ink-quiet);
+  }
+
+  /* ledger */
+  .ledger {
+    margin: 0;
+    padding: 0.5rem clamp(0.75rem, 2vw, 1.5rem);
+    list-style: none;
+  }
+
+  .ledger__row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.5rem 2rem;
+    align-items: baseline;
+    padding: 1.2rem clamp(0.5rem, 1.5vw, 1rem);
+    border-block-end: 1px solid var(--line);
+  }
+
+  .ledger__row:last-child {
+    border-block-end: 0;
+  }
+
+  .ledger__row p {
+    margin: 0.3rem 0 0;
+    color: var(--ink-quiet);
+  }
+
+  .ledger__price {
+    margin: 0 !important;
+    color: var(--ink) !important;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  /* overlap */
+  .overlap {
+    display: grid;
+    padding: clamp(1rem, 3vw, 2rem) clamp(1rem, 3vw, 2rem) clamp(2rem, 6vw, 5rem);
+  }
+
+  .overlap__picture {
+    overflow: hidden;
+    border-radius: 0.75rem;
+  }
+
+  .overlap__card {
+    position: relative;
+    padding: clamp(1.25rem, 3vw, 2.5rem);
+    border-radius: 0.75rem;
+    background: color-mix(in srgb, var(--ink) 8%, var(--room-ground));
+    box-shadow: 0 30px 60px -30px rgb(0 0 0 / 0.7);
+  }
+
+  .overlap__card p {
+    color: var(--ink-quiet);
+  }
+
+  @media (min-width: 62rem) {
+    .overlap {
+      grid-template-columns: repeat(12, 1fr);
+      align-items: end;
+    }
+
+    .overlap__picture {
+      grid-column: 1 / 9;
+      grid-row: 1;
+    }
+
+    .overlap__card {
+      grid-column: 7 / 13;
+      grid-row: 1;
+      margin-block-end: -2.5rem;
+    }
+  }
+
+  /* steps */
+  .steps {
+    display: grid;
+    gap: 0;
+    margin: 0;
+    padding: clamp(1.25rem, 4vw, 3rem);
+    list-style: none;
+    counter-reset: step;
+  }
+
+  .steps li {
+    position: relative;
+    display: grid;
+    gap: 0.3rem;
+    padding: 0 0 2rem 4rem;
+    counter-increment: step;
+  }
+
+  .steps li::before {
+    content: counter(step, decimal-leading-zero);
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block-start: -0.2rem;
+    display: grid;
+    place-items: center;
+    inline-size: 2.6rem;
+    block-size: 2.6rem;
+    border: 1px solid var(--room-a);
+    border-radius: 50%;
+    color: var(--room-a);
+    font-size: 0.85rem;
+  }
+
+  .steps li:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    inset-inline-start: 1.3rem;
+    inset-block: 2.6rem 0.2rem;
+    border-inline-start: 1px dashed var(--line-strong);
+  }
+
+  .steps b {
+    font-size: 1.15rem;
+  }
+
+  .steps span {
+    color: var(--ink-quiet);
+  }
+
+  /* people */
+  .people {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: min(14rem, 62vw);
+    gap: 1rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    margin: 0;
+    padding: 1rem;
+    list-style: none;
+  }
+
+  .people__card {
+    scroll-snap-align: start;
+    padding: 0.6rem 0.6rem 1.1rem;
+    border-radius: 1rem;
+    background: color-mix(in srgb, var(--ink) 6%, var(--room-ground));
+  }
+
+  .people__card :global(img),
+  .people__mono {
+    border-radius: 0.6rem;
+  }
+
+  .people__mono {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 4 / 5;
+    background: color-mix(in srgb, var(--room-a) 30%, var(--room-ground));
+    font-size: 4rem;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .people__card h4 {
+    margin: 0.75rem 0.4rem 0;
+  }
+
+  .people__card p {
+    margin: 0.2rem 0.4rem 0;
+    color: var(--ink-quiet);
+  }
+
+  /* quote */
+  .quote {
+    margin: 0;
+    padding: clamp(2rem, 7vw, 5rem);
+  }
+
+  .quote blockquote {
+    max-inline-size: 26ch;
+    margin: 0;
+    font-size: clamp(1.8rem, 1rem + 3vw, 3.4rem);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+  }
+
+  .quote figcaption {
+    margin-block-start: 1.25rem;
+    color: var(--ink-quiet);
+  }
+
+  /* sticky */
+  .sticky {
+    display: grid;
+    gap: 1.5rem;
+    max-block-size: 26rem;
+    overflow-y: auto;
+    padding: clamp(1.25rem, 4vw, 3rem);
+  }
+
+  @media (min-width: 62rem) {
+    .sticky {
+      grid-template-columns: 1fr 1.6fr;
+    }
+
+    .sticky__head {
+      position: sticky;
+      inset-block-start: 0;
+      align-self: start;
+    }
+  }
+
+  .sticky__list {
+    margin: 0;
+  }
+
+  .sticky__list dt {
+    padding-block-start: 1.25rem;
+    font-weight: 650;
+  }
+
+  .sticky__list dd {
+    margin: 0.35rem 0 0;
+    padding-block-end: 1.25rem;
+    border-block-end: 1px solid var(--line);
+    color: var(--ink-quiet);
+  }
+
+  /* closing */
+  .closing {
+    display: grid;
+    justify-items: center;
+    gap: 0.5rem;
+    padding: clamp(3rem, 8vw, 6rem) 1.5rem;
+    text-align: center;
+    background: color-mix(in srgb, var(--room-a) 14%, var(--room-ground)) !important;
+  }
+
+  .closing p {
+    margin: 0;
+    font-size: clamp(1.8rem, 1rem + 3vw, 3.2rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+</style>
