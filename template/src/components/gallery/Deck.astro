@@ -1,0 +1,334 @@
+---
+/**
+ * `deck`: prints on a table.
+ *
+ * The pieces lie in a loose pile, each at its own small tilt. The top one is
+ * thrown off — dragged and let go, or the arrow, or the arrow key — flies out
+ * in the direction it was thrown and slides back in at the bottom; "previous"
+ * pulls the last one back on top. Nothing moves on its own: a pile that
+ * shuffles itself is a pile somebody watches instead of reading the page.
+ *
+ * ── every path back to a still page ─────────────────────────────────────────
+ *
+ *   · without JavaScript it is the pile with the first print on top and the
+ *     buttons hidden — every print is still in the document, and the strip
+ *     below the pile names how many there are;
+ *   · reduced motion keeps the deck and drops the flight: the next print is
+ *     simply on top;
+ *   · the pile is `touch-action: pan-y`, so a vertical swipe on a phone still
+ *     scrolls the page — only a sideways one throws.
+ */
+import Shot from '../Shot.astro';
+import type { Piece } from './galleries';
+
+interface Props {
+  pieces: Piece[];
+  /** The largest tilt of a print behind the top one, in degrees. */
+  scatter?: number;
+  /** The prints' proportions. */
+  ratio?: string;
+}
+
+const { pieces, scatter = 6, ratio = '4 / 5' } = Astro.props;
+
+/** A stable, slightly random tilt per print, in [-max, max]. */
+const tilt = (i: number) => {
+  const u = (((i + 1) * 2654435761) >>> 0) / 4294967296;
+  return ((u * 2 - 1) * scatter).toFixed(2);
+};
+---
+
+<div class="deck" data-deck style={`--deck-ratio:${ratio}`} role="region" aria-roledescription="carousel" aria-label="Work" tabindex="0">
+  <div class="deck__pile">
+    {
+      pieces.map((piece, i) => (
+        <figure class="deck__card" data-i={i} style={`--tilt:${tilt(i)}deg;--depth:${Math.min(i, 4)};z-index:${pieces.length - i}`} aria-hidden={i === 0 ? undefined : 'true'}>
+          <Shot name={piece.name} alt={piece.alt} path={piece.path} ratio={ratio} width={900} sizes="(min-width: 48rem) 28rem, 80vw" eager={i < 2} />
+        </figure>
+      ))
+    }
+  </div>
+  <div class="deck__bar">
+    <button type="button" class="deck__btn" data-prev aria-label="Previous">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M10 3 5 8l5 5" stroke="currentColor" stroke-width="1.5"></path></svg>
+    </button>
+    <p class="deck__caption" data-caption aria-live="polite">{pieces[0]?.caption ?? ''}</p>
+    <span class="deck__count"><b data-at>01</b> / {String(pieces.length).padStart(2, '0')}</span>
+    <button type="button" class="deck__btn" data-next aria-label="Next">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m6 3 5 5-5 5" stroke="currentColor" stroke-width="1.5"></path></svg>
+    </button>
+  </div>
+  <template data-captions>{JSON.stringify(pieces.map((p) => p.caption ?? ''))}</template>
+</div>
+
+<style>
+  .deck {
+    display: grid;
+    justify-items: center;
+    gap: clamp(1.5rem, 4vw, 2.5rem);
+    outline: none;
+    /* The flight leaves the pile's box; the page must not grow a scrollbar. */
+    overflow-x: clip;
+    padding-block: clamp(1rem, 3vw, 2rem);
+  }
+
+  .deck:focus-visible .deck__pile {
+    outline: 2px solid var(--ink);
+    outline-offset: 0.75rem;
+    border-radius: var(--r-3, 1rem);
+  }
+
+  .deck__pile {
+    position: relative;
+    inline-size: min(28rem, 78vw);
+    aspect-ratio: var(--deck-ratio);
+    touch-action: pan-y;
+  }
+
+  .deck__card {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    overflow: hidden;
+    border-radius: var(--r-3, 1rem);
+    background: var(--panel, #ddd);
+    box-shadow:
+      0 1px 2px rgb(0 0 0 / 0.08),
+      0 30px 60px -30px rgb(0 0 0 / 0.5);
+    /* At rest: down the pile by depth, smaller, tilted, a little darker. */
+    transform: translateY(calc(var(--depth) * -14px)) scale(calc(1 - var(--depth) * 0.05)) rotate(var(--tilt));
+    filter: brightness(calc(1 - var(--depth) * 0.07));
+    opacity: calc(var(--depth) < 4 ? 1 : 0);
+    transition:
+      transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
+      filter 0.4s ease,
+      opacity 0.4s ease;
+    will-change: transform;
+  }
+
+  .deck__card[data-top] {
+    transform: none;
+    filter: none;
+    cursor: grab;
+  }
+
+  .deck__card[data-hidden] {
+    opacity: 0;
+  }
+
+  .deck__card[data-drag] {
+    cursor: grabbing;
+    transition: none;
+  }
+
+  .deck__card[data-fly] {
+    transition:
+      transform 0.45s cubic-bezier(0.3, 0.5, 0.3, 1),
+      opacity 0.45s ease;
+  }
+
+  .deck__card[data-snap] {
+    transition: none;
+  }
+
+  .deck__card :global(img) {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .deck__bar {
+    display: flex;
+    align-items: center;
+    gap: clamp(0.75rem, 2.5vw, 1.5rem);
+    inline-size: min(28rem, 100%);
+  }
+
+  .deck__caption {
+    flex: 1;
+    min-inline-size: 0;
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--ink-quiet);
+  }
+
+  .deck__count {
+    font-variant-numeric: tabular-nums;
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+    color: var(--ink-quiet);
+  }
+
+  .deck__count b {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .deck__btn {
+    display: grid;
+    place-items: center;
+    flex: none;
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+    border: 1px solid var(--line-strong, currentColor);
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    transition:
+      background 0.2s ease,
+      color 0.2s ease;
+  }
+
+  .deck__btn:hover {
+    background: var(--ink);
+    color: var(--paper, #fff);
+  }
+
+  /* Without a script nothing throws, so nothing offers to. */
+  :global(html:not(.js)) .deck__btn {
+    visibility: hidden;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .deck__card,
+    .deck__card[data-fly] {
+      transition: opacity 0.2s ease;
+    }
+  }
+</style>
+
+<script>
+  import { onAlive } from '../../lib/alive';
+
+  onAlive('[data-deck]', (node) => {
+    const root = node as HTMLElement;
+    const cards = [...root.querySelectorAll<HTMLElement>('.deck__card')];
+    const n = cards.length;
+    if (n < 2) return;
+    const pile = root.querySelector<HTMLElement>('.deck__pile')!;
+    const at = root.querySelector<HTMLElement>('[data-at]');
+    const caption = root.querySelector<HTMLElement>('[data-caption]');
+    let captions: string[] = [];
+    try {
+      captions = JSON.parse(root.querySelector('template[data-captions]')?.innerHTML ?? '[]');
+    } catch {
+      /* words are a bonus; the deck works without them */
+    }
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let top = 0;
+    let busy = false;
+
+    const wrap = (i: number) => ((i % n) + n) % n;
+
+    /** Each card's place in the pile, from the top. */
+    const lay = () => {
+      cards.forEach((card, i) => {
+        const depth = wrap(i - top);
+        card.style.setProperty('--depth', String(Math.min(depth, 4)));
+        card.style.zIndex = String(n - depth);
+        card.toggleAttribute('data-top', depth === 0);
+        card.toggleAttribute('data-hidden', depth > 3);
+        if (depth === 0) card.removeAttribute('aria-hidden');
+        else card.setAttribute('aria-hidden', 'true');
+      });
+      if (at) at.textContent = String(top + 1).padStart(2, '0');
+      if (caption) caption.textContent = captions[top] ?? '';
+    };
+
+    const place = (card: HTMLElement, x: number, y: number, r: number, mode: 'drag' | 'fly' | 'snap' | '') => {
+      card.toggleAttribute('data-drag', mode === 'drag');
+      card.toggleAttribute('data-fly', mode === 'fly');
+      card.toggleAttribute('data-snap', mode === 'snap');
+      card.style.transform = mode === '' ? '' : `translate(${x}px, ${y}px) rotate(${r}deg)`;
+      card.style.zIndex = mode === '' ? card.style.zIndex : String(n + 1);
+    };
+
+    const throwTop = (dir: number, fromX = 0, fromY = 0) => {
+      if (busy) return;
+      busy = true;
+      const card = cards[top];
+      const w = pile.offsetWidth || 400;
+      const side = dir >= 0 ? 1 : -1;
+      if (!reduce) place(card, fromX + side * w * 1.25, fromY * 0.4 - 40, side * 16, 'fly');
+      window.setTimeout(
+        () => {
+          place(card, 0, 0, 0, '');
+          top = wrap(top + 1);
+          lay();
+          busy = false;
+        },
+        reduce ? 0 : 430,
+      );
+    };
+
+    const pullBack = () => {
+      if (busy) return;
+      busy = true;
+      const i = wrap(top - 1);
+      const card = cards[i];
+      const w = pile.offsetWidth || 400;
+      if (reduce) {
+        top = i;
+        lay();
+        busy = false;
+        return;
+      }
+      place(card, -w * 1.25, -40, -16, 'snap');
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          place(card, 0, 0, 0, 'fly');
+          window.setTimeout(() => {
+            place(card, 0, 0, 0, '');
+            top = i;
+            lay();
+            busy = false;
+          }, 450);
+        }),
+      );
+    };
+
+    root.querySelector('[data-next]')?.addEventListener('click', () => throwTop(1));
+    root.querySelector('[data-prev]')?.addEventListener('click', pullBack);
+    root.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') throwTop(1);
+      else if (e.key === 'ArrowLeft') pullBack();
+      else return;
+      e.preventDefault();
+    });
+
+    // A drag on the top card: follow the pointer, and on release either throw
+    // (far enough, or fast enough) or settle back.
+    let drag: { x: number; y: number; lx: number; lt: number; vx: number } | null = null;
+    pile.addEventListener('pointerdown', (e) => {
+      if (busy || (e.pointerType === 'mouse' && e.button !== 0)) return;
+      if (!(e.target instanceof Element) || !e.target.closest('[data-top]')) return;
+      pile.setPointerCapture(e.pointerId);
+      drag = { x: e.clientX, y: e.clientY, lx: e.clientX, lt: e.timeStamp, vx: 0 };
+    });
+    pile.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      const dt = Math.max(1, e.timeStamp - drag.lt);
+      drag.vx = 0.8 * ((e.clientX - drag.lx) / dt) + 0.2 * drag.vx;
+      drag.lx = e.clientX;
+      drag.lt = e.timeStamp;
+      const dx = e.clientX - drag.x;
+      place(cards[top], dx, e.clientY - drag.y, reduce ? 0 : dx * 0.05, 'drag');
+    });
+    const release = (e: PointerEvent) => {
+      if (!drag) return;
+      const d = drag;
+      drag = null;
+      const dx = e.clientX - d.x;
+      const w = pile.offsetWidth || 400;
+      if (Math.abs(dx) > w * 0.28 || (Math.abs(d.vx) > 0.55 && Math.abs(dx) > 24)) throwTop(dx, dx, e.clientY - d.y);
+      else place(cards[top], 0, 0, 0, '');
+    };
+    pile.addEventListener('pointerup', release);
+    pile.addEventListener('pointercancel', release);
+
+    lay();
+  });
+</script>

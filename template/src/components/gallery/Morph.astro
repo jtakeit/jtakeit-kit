@@ -1,0 +1,384 @@
+---
+/**
+ * `morph`: one frame at a time, and the next burns through the last.
+ *
+ * One shader pass over two pictures: a noise field gives every pixel a
+ * threshold, the transition sweeps past them, so the old frame tears away in
+ * drifting shreds instead of fading evenly — and the threshold is biased by
+ * how bright the *new* frame is there, so its light parts come through first.
+ * The two frames also slide against each other a little while it happens.
+ *
+ * Raw WebGL, nothing imported. Every way it fails ends at a working gallery:
+ *
+ *   · without a script it is a snapped strip of the same pictures;
+ *   · without WebGL, or a picture the GPU may not read (another origin without
+ *     CORS), the frames change by a plain cross-fade;
+ *   · reduced motion changes them at once.
+ *
+ * It never advances on its own: one frame is looked at, and the visitor says
+ * when to see the next.
+ */
+import Shot from '../Shot.astro';
+import type { Piece } from './galleries';
+
+interface Props {
+  pieces: Piece[];
+  /** The frame's proportions. */
+  ratio?: string;
+}
+
+const { pieces, ratio = '16 / 10' } = Astro.props;
+---
+
+<div class="morph" data-morph style={`--morph-ratio:${ratio}`} role="region" aria-roledescription="carousel" aria-label="Work" tabindex="0">
+  <div class="morph__frames" data-frames>
+    {
+      pieces.map((piece, i) => (
+        <figure class="morph__frame" data-i={i} data-on={i === 0 ? '' : undefined}>
+          <Shot name={piece.name} alt={piece.alt} path={piece.path} ratio={ratio} width={1800} sizes="(min-width: 62rem) 62rem, 100vw" eager={i < 2} />
+        </figure>
+      ))
+    }
+    <canvas class="morph__canvas" aria-hidden="true"></canvas>
+    <button type="button" class="morph__btn morph__btn--prev" data-prev aria-label="Previous">
+      <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M10 3 5 8l5 5" stroke="currentColor" stroke-width="1.5"></path></svg>
+    </button>
+    <button type="button" class="morph__btn morph__btn--next" data-next aria-label="Next">
+      <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m6 3 5 5-5 5" stroke="currentColor" stroke-width="1.5"></path></svg>
+    </button>
+  </div>
+  <div class="morph__dots" aria-hidden="true">
+    {pieces.map((_, i) => <button type="button" class="morph__dot" data-dot={i} tabindex="-1" data-on={i === 0 ? '' : undefined}></button>)}
+  </div>
+  <p class="morph__caption" data-caption aria-live="polite">{pieces[0]?.caption ?? ''}</p>
+  <template data-captions>{JSON.stringify(pieces.map((p) => p.caption ?? ''))}</template>
+</div>
+
+<style>
+  .morph {
+    display: grid;
+    gap: 1rem;
+    outline: none;
+  }
+
+  .morph__frames {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--r-3, 1rem);
+    background: #000;
+  }
+
+  /* Without a script: a snapped strip of the same pictures. */
+  :global(html:not(.js)) .morph__frames {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+  }
+
+  :global(html:not(.js)) .morph__frame {
+    flex: 0 0 100%;
+    scroll-snap-align: start;
+  }
+
+  :global(html:not(.js)) .morph__canvas,
+  :global(html:not(.js)) .morph__btn,
+  :global(html:not(.js)) .morph__dots {
+    display: none;
+  }
+
+  /* With one: the frames stacked, the chosen one on top. */
+  :global(html.js) .morph__frames {
+    aspect-ratio: var(--morph-ratio);
+  }
+
+  :global(html.js) .morph__frame {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.9s ease;
+  }
+
+  :global(html.js) .morph__frame[data-on] {
+    opacity: 1;
+  }
+
+  .morph__frame {
+    margin: 0;
+  }
+
+  .morph__frame :global(img) {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .morph__canvas {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .morph[data-gl] .morph__canvas {
+    opacity: 1;
+  }
+
+  .morph__btn {
+    position: absolute;
+    inset-block-start: 50%;
+    translate: 0 -50%;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+    border: 1px solid rgb(255 255 255 / 0.25);
+    border-radius: 50%;
+    background: rgb(255 255 255 / 0.12);
+    backdrop-filter: blur(10px);
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+
+  .morph__btn:hover {
+    background: rgb(255 255 255 / 0.28);
+  }
+
+  .morph__btn--prev {
+    inset-inline-start: clamp(0.75rem, 2vw, 1.25rem);
+  }
+
+  .morph__btn--next {
+    inset-inline-end: clamp(0.75rem, 2vw, 1.25rem);
+  }
+
+  .morph__dots {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .morph__dot {
+    inline-size: 0.5rem;
+    block-size: 0.5rem;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: var(--line-strong, #999);
+    cursor: pointer;
+    transition:
+      inline-size 0.3s ease,
+      background 0.3s ease;
+  }
+
+  .morph__dot[data-on] {
+    inline-size: 1.5rem;
+    background: var(--ink);
+  }
+
+  .morph__caption {
+    margin: 0;
+    text-align: center;
+    color: var(--ink-quiet);
+  }
+
+  .morph__caption:empty {
+    display: none;
+  }
+</style>
+
+<script>
+  import { onAlive } from '../../lib/alive';
+
+  const VERT = `attribute vec2 p;varying vec2 uv;void main(){uv=p*.5+.5;gl_Position=vec4(p,0.,1.);}`;
+  const FRAG = `precision highp float;
+uniform sampler2D a;uniform sampler2D b;uniform float t;uniform vec2 res;uniform float ra;uniform float rb;uniform float dir;
+varying vec2 uv;
+vec3 perm(vec3 x){return mod(((x*34.)+1.)*x,289.);}
+float sn(vec2 v){const vec4 C=vec4(.211324865405187,.366025403784439,-.577350269189626,.024390243902439);
+vec2 i=floor(v+dot(v,C.yy));vec2 x0=v-i+dot(i,C.xx);vec2 i1=(x0.x>x0.y)?vec2(1.,0.):vec2(0.,1.);
+vec4 x12=x0.xyxy+C.xxzz;x12.xy-=i1;i=mod(i,289.);vec3 q=perm(perm(i.y+vec3(0.,i1.y,1.))+i.x+vec3(0.,i1.x,1.));
+vec3 m=max(.5-vec3(dot(x0,x0),dot(x12.xy,x12.xy),dot(x12.zw,x12.zw)),0.);m=m*m;m=m*m;
+vec3 x=2.*fract(q*C.www)-1.;vec3 h=abs(x)-.5;vec3 ox=floor(x+.5);vec3 a0=x-ox;
+m*=1.79284291400159-.85373472095314*(a0*a0+h*h);vec3 g;g.x=a0.x*x0.x+h.x*x0.y;g.yz=a0.yz*x12.xz+h.yz*x12.yw;return 130.*dot(m,g);}
+float fbm(vec2 v){float s=0.,k=.5;for(int i=0;i<5;i++){s+=k*sn(v);v*=2.;k*=.5;}return s;}
+vec2 mir(vec2 u){return 1.-abs(1.-mod(u,2.));}
+vec2 cover(vec2 u,float r){float c=res.x/res.y;vec2 s=c>r?vec2(1.,r/c):vec2(c/r,1.);return mir((u-.5)*s+.5);}
+void main(){float e=.15;float at=t*(1.+2.*e)-e;
+float n=fbm(uv*3.5+vec2(0.,t*dir))*.5+.5;
+n=smoothstep(0.,2.,length(texture2D(b,cover(uv,rb)).rgb)+n);
+float k=1.-smoothstep(at-e,at+e,n);
+vec2 ua=cover(uv+vec2(0.,n*t*.5*dir),ra);vec2 ub=cover(uv+vec2(0.,n*(1.-t)*-.25*dir),rb);
+gl_FragColor=mix(texture2D(a,ua),texture2D(b,ub),k);}`;
+
+  const ease = (x: number) => (x < 0.5 ? 16 * x ** 5 : 1 - (-2 * x + 2) ** 5 / 2);
+
+  onAlive('[data-morph]', (node) => {
+    const root = node as HTMLElement;
+    const frames = [...root.querySelectorAll<HTMLElement>('.morph__frame')];
+    const n = frames.length;
+    if (n < 2) return;
+    const canvas = root.querySelector<HTMLCanvasElement>('.morph__canvas')!;
+    const dots = [...root.querySelectorAll<HTMLElement>('[data-dot]')];
+    const caption = root.querySelector<HTMLElement>('[data-caption]');
+    let captions: string[] = [];
+    try {
+      captions = JSON.parse(root.querySelector('template[data-captions]')?.innerHTML ?? '[]');
+    } catch {
+      /* fine without words */
+    }
+    const still = matchMedia('(prefers-reduced-motion: reduce)');
+    let active = 0;
+    let busy = false;
+
+    // A frame not yet downloaded cannot be dissolved into; once the gallery is
+    // near the screen, every frame is asked for, so the first click morphs.
+    new IntersectionObserver(
+      (seen, io) => {
+        if (!seen.some((e) => e.isIntersecting)) return;
+        io.disconnect();
+        for (const img of root.querySelectorAll<HTMLImageElement>('.morph__frame img')) img.loading = 'eager';
+      },
+      { rootMargin: '600px' },
+    ).observe(root);
+
+    const show = (i: number) => {
+      frames.forEach((f, k) => f.toggleAttribute('data-on', k === i));
+      dots.forEach((d, k) => d.toggleAttribute('data-on', k === i));
+      if (caption) caption.textContent = captions[i] ?? '';
+    };
+
+    // ---- the shader, when it can be had -------------------------------------
+    const gl = canvas.getContext('webgl', { alpha: false, antialias: false, preserveDrawingBuffer: false });
+    let draw: ((from: number, to: number, t: number, dir: number) => boolean) | null = null;
+    if (gl) {
+      try {
+        const sh = (type: number, src: string) => {
+          const s = gl.createShader(type)!;
+          gl.shaderSource(s, src);
+          gl.compileShader(s);
+          if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s) ?? 'shader');
+          return s;
+        };
+        const prog = gl.createProgram()!;
+        gl.attachShader(prog, sh(gl.VERTEX_SHADER, VERT));
+        gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FRAG));
+        gl.linkProgram(prog);
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error('link');
+        gl.useProgram(prog);
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+        const loc = gl.getAttribLocation(prog, 'p');
+        gl.enableVertexAttribArray(loc);
+        gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        const u = (name: string) => gl.getUniformLocation(prog, name);
+        const U = { a: u('a'), b: u('b'), t: u('t'), res: u('res'), ra: u('ra'), rb: u('rb'), dir: u('dir') };
+        const textures = new Map<number, { tex: WebGLTexture; ratio: number }>();
+
+        /** A frame's picture as a texture, or null when the GPU may not read it. */
+        const texture = (i: number) => {
+          if (textures.has(i)) return textures.get(i)!;
+          const img = frames[i].querySelector('img');
+          if (!img || !img.complete || img.naturalWidth === 0) return null;
+          try {
+            const tex = gl.createTexture()!;
+            gl.bindTexture(gl.TEXTURE_2D, tex);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            const entry = { tex, ratio: img.naturalWidth / Math.max(1, img.naturalHeight) };
+            textures.set(i, entry);
+            return entry;
+          } catch {
+            // Another origin without CORS: this pair cross-fades instead.
+            return null;
+          }
+        };
+
+        draw = (from, to, t, dir) => {
+          const A = texture(from);
+          const B = texture(to);
+          if (!A || !B) return false;
+          const dpr = Math.min(devicePixelRatio || 1, 2);
+          const w = Math.round(canvas.clientWidth * dpr);
+          const h = Math.round(canvas.clientHeight * dpr);
+          if (canvas.width !== w || canvas.height !== h) {
+            canvas.width = w;
+            canvas.height = h;
+            gl.viewport(0, 0, w, h);
+          }
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, A.tex);
+          gl.uniform1i(U.a, 0);
+          gl.activeTexture(gl.TEXTURE1);
+          gl.bindTexture(gl.TEXTURE_2D, B.tex);
+          gl.uniform1i(U.b, 1);
+          gl.uniform1f(U.t, t);
+          gl.uniform2f(U.res, w, h);
+          gl.uniform1f(U.ra, A.ratio);
+          gl.uniform1f(U.rb, B.ratio);
+          gl.uniform1f(U.dir, dir);
+          gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+          return true;
+        };
+      } catch {
+        draw = null;
+      }
+    }
+
+    const go = (next: number) => {
+      const to = ((next % n) + n) % n;
+      if (busy || to === active) return;
+      const from = active;
+      const forward = ((to - from + n) % n) * 2 <= n;
+      active = to;
+      if (still.matches || !draw || !draw(from, to, 0, forward ? 1 : -1)) {
+        show(to);
+        return;
+      }
+      // The canvas covers the frames for the length of the dissolve, then the
+      // new frame is simply on top and the canvas goes again.
+      busy = true;
+      root.setAttribute('data-gl', '');
+      const start = performance.now();
+      const span = 1400;
+      const step = (now: number) => {
+        const t = ease(Math.min((now - start) / span, 1));
+        draw!(from, to, t, forward ? 1 : -1);
+        if (t < 1) requestAnimationFrame(step);
+        else {
+          show(to);
+          requestAnimationFrame(() => {
+            root.removeAttribute('data-gl');
+            busy = false;
+          });
+        }
+      };
+      requestAnimationFrame(step);
+    };
+
+    root.querySelector('[data-next]')?.addEventListener('click', () => go(active + 1));
+    root.querySelector('[data-prev]')?.addEventListener('click', () => go(active - 1));
+    dots.forEach((d, i) => d.addEventListener('click', () => go(i)));
+    root.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') go(active + 1);
+      else if (e.key === 'ArrowLeft') go(active - 1);
+      else return;
+      e.preventDefault();
+    });
+    let x0: number | null = null;
+    root.addEventListener('pointerdown', (e) => (x0 = e.clientX));
+    root.addEventListener('pointerup', (e) => {
+      if (x0 === null) return;
+      const dx = e.clientX - x0;
+      x0 = null;
+      if (Math.abs(dx) > 48) go(active + (dx < 0 ? 1 : -1));
+    });
+  });
+</script>

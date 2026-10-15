@@ -19,6 +19,25 @@ settle it — how much work there is, and whether the work has an order.
 | `spread` | A few pieces, each given the full width. | 3–10 | Six outstanding photographs rather than sixty adequate ones, and the honest answer when the feed has been picked over and there is not much. |
 | `index` | Rows: a small frame and the words beside it. | 4–30 | Where what the work *is* — where on the body, how long, what it covered — matters as much as how it looks. It refuses to build without captions, because an index with nothing to read is a worse `ragged`. |
 
+And six a visitor plays with — each one a moment of its own on the page, not a
+way to fit more in. Every one of them works without a script (it falls back to
+a strip or a sheet of the same pictures), honours reduced motion, and never
+advances on its own except `sphere`, which is bounded like the wall.
+
+| `arrangement` | What it is | Pieces | For |
+| --- | --- | --- | --- |
+| `deck` | A loose pile of prints; the top one is thrown off by a drag, a button or a key, and slides back in at the bottom. | 4–24 | Work held in the hand — a cut, a cake, a ring — looked at one at a time. Not volume. |
+| `coverflow` | A scrolled row, snapped to the middle, the pieces either side turned away in depth. | 5–30 | A series the visitor flips through, with one piece given the stage. |
+| `focus` | The same row racked like a lens: the middle sharp and full size, the rest softer and smaller by distance. | 4–30 | Photographs worth looking at one by one, without losing sight of the rest. |
+| `stage` | One large frame, a row of thumbnails over its foot; a tap brings a piece up. | 4–30 | A portfolio somebody browses: every piece one tap away. |
+| `morph` | One frame at a time; the next burns through the last in a noise dissolve (WebGL, one shader, no library). | 3–16 | Pictures that are atmosphere — a room, a light — more than a catalogue. Cross-fades where WebGL is missing. |
+| `sphere` | The work spread over a globe the visitor turns; the near side large, a tap opens a piece. Turns slowly by itself. | 20–80 | Volume as a thing to play with. Small round frames: work that reads at thumbnail size. Declares `data-motion`, stops under the pointer, still under reduced motion. |
+
+`ratio` sets the pieces' proportions in `deck`, `coverflow`, `focus`, `stage`
+and `morph` — measure the photographs first (`shape()`, `docs/photos.md`): a
+feed of portrait phone pictures wants `4 / 5` or `3 / 4`, not the landscape
+default.
+
 The count is checked against the range and warns rather than fails: a `spread`
 of twelve may be deliberate, and a warning in front of whoever chose it, while
 they can still change it, is the whole job.

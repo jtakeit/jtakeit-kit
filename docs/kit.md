@@ -143,7 +143,14 @@ side, and one component is allowed to be louder than all of them:
   moves and a wall that drifts — and anything moving forever that neither
   declares itself nor can be pressed is the fault the check is for.
 
-**The hero is the one place a page is allowed a "wow".** A landing gets about a
+**The hero is the first "wow", not the only one.** Below it, the moments are
+the ones a visitor *does*: a gallery thrown, turned, scrolled through a lens
+(`deck`, `coverflow`, `focus`, `stage`, `morph`, `sphere` in
+[gallery.md](gallery.md)), a picture that answers the pointer. Those are not
+motion that runs forever — nothing moves until somebody moves it — so the
+ceiling above does not count them, and a page with two or three of them, each
+doing something different, is a page that feels made. What stays limited is
+what moves on its own. A landing gets about a
 second to look built rather than assembled, and a field of colour that is
 visibly alive buys that second where a still gradient does not.
 `src/components/motion/HeroField.astro` is the set — ten fields, nine shaders

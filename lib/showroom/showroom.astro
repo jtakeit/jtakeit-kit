@@ -1,0 +1,487 @@
+---
+/**
+ * The showroom: everything the kit can put on a page, live, on one page.
+ *
+ * Not a site's page — `jtk showroom` lays out a scratch copy of the scaffold,
+ * drops this in as /showroom/, and runs the dev server. It renders the real
+ * components of this version: the hero fields, the grounds, the edges, the
+ * entrances and every gallery arrangement — in the project's own colours
+ * (its jtk/design.json, copied in) and on its own photographs, where the
+ * command was run inside one.
+ */
+import Layout from '../layouts/Layout.astro';
+import HeroField from '../components/motion/HeroField.astro';
+import Pattern from '../components/surface/Pattern.astro';
+import Gallery from '../components/gallery/Gallery.astro';
+import Shot from '../components/Shot.astro';
+import { GALLERIES, type Arrangement } from '../components/gallery/galleries';
+import type { Field } from '../components/motion/fields';
+import type { Pattern as Ground } from '../components/surface/patterns';
+import room from '../data/showroom.json';
+
+const photos: string[] = room.photos;
+const palette: string[] = room.colors.length === 4 ? room.colors : ['#ff7a45', '#7c2d12', '#2b1d1a', '#f6c177'];
+const ground: string = room.ground || '#0d0b0a';
+const name: string = room.name || 'Your site';
+
+const FIELDS: [Field, string][] = [
+  ['drift', 'Four lamps of colour on slow orbits. Calm, wide, quiet.'],
+  ['aurora', 'Noise riding noise, a glow at the centre. Dramatic.'],
+  ['plasma', 'Bands, rings and interference. The one with structure.'],
+  ['glow', 'One filament of light in a dark room.'],
+  ['flow', 'Ink pulled through water. Marbled and busy.'],
+  ['silk', 'The plane folded into creases. Survives text over it.'],
+  ['smoke', 'Large plumes folding over each other.'],
+  ['riso', 'Flat bands with a ragged, printed edge.'],
+  ['veil', 'A curtain thinning as it rises.'],
+  ['ribbons', 'Stacked lines, not colour. Canvas 2D.'],
+];
+
+const GROUNDS: [Ground, string][] = [
+  ['grain', 'Paper with a tooth to it.'],
+  ['rules', 'Ruled lines: a notebook, a ledger.'],
+  ['hatch', 'The engraver’s hatching.'],
+  ['contour', 'Lines of a map.'],
+  ['construction', 'The drawing under the drawing.'],
+  ['motif', 'One small mark of theirs, repeated.'],
+];
+
+const EDGES: [string, string][] = [
+  ['hairline', 'One line.'],
+  ['stitch', 'Dashed: sewn, ruled, provisional.'],
+  ['corners', 'Crop marks — registered, not boxed.'],
+  ['notch', 'A cut corner: a ticket, a tag.'],
+  ['offset', 'Two frames, a poster’s register.'],
+  ['trace', 'Draws itself once as it arrives.'],
+  ['sweep', 'A light travelling round, forever.'],
+  ['lift', 'Answers the hand.'],
+];
+
+const REVEALS: [string, string][] = [
+  ['rise', 'Up and in.'],
+  ['settle', 'Fades and settles closer.'],
+  ['wipe', 'Uncovered from one edge.'],
+  ['develop', 'Out of focus, then not.'],
+  ['stagger', 'The children in order.'],
+];
+
+/** Each gallery shown with as many photographs as it is for, at most what there is. */
+const ARRANGEMENTS = (Object.keys(GALLERIES) as Arrangement[]).filter((a) => a !== 'index');
+const piecesFor = (a: Arrangement) => {
+  const [floor, ceiling] = GALLERIES[a].works;
+  const want = Math.min(ceiling, Math.max(floor, a === 'sphere' || a === 'wall' || a === 'contact' ? 40 : 10));
+  return Array.from({ length: Math.min(want, Math.max(photos.length, 1)) }, (_, i) => ({
+    name: photos.length ? photos[i % photos.length] : 'missing',
+    alt: '',
+    caption: a === 'deck' || a === 'stage' ? `${String(i + 1).padStart(2, '0')}` : '',
+  }));
+};
+
+const SECTIONS = [
+  ['fields', 'Hero fields', FIELDS.length],
+  ['grounds', 'Grounds', GROUNDS.length],
+  ['edges', 'Edges', EDGES.length],
+  ['entrances', 'Entrances', REVEALS.length],
+  ['galleries', 'Galleries', ARRANGEMENTS.length],
+] as const;
+---
+
+<Layout title={`Showroom · ${name}`} description="Everything the kit can put on a page, live.">
+  <div class="room" style={`--room-ground:${ground};--room-a:${palette[0]};--room-b:${palette[1]};--room-c:${palette[2]};--room-d:${palette[3]}`}>
+    <header class="room__hero">
+      <div class="room__field"><HeroField field="aurora" colors={palette} ground={ground} /></div>
+      <div class="room__intro">
+        <p class="room__kicker">jtakeit · showroom · {room.version}</p>
+        <h1>Everything a page<br />can be made of.</h1>
+        <p class="room__lede">
+          Live, in {room.colors.length === 4 ? `${name}’s colours` : 'a sample palette'}{photos.length ? `, on ${photos.length} of its photographs` : ''}. Pick by name — the
+          name is what goes in <code>jtk/design.json</code> or on <code>&lt;Gallery arrangement&gt;</code>.
+        </p>
+      </div>
+    </header>
+
+    <nav class="room__nav" aria-label="Sections">
+      {SECTIONS.map(([id, label, n], i) => (
+        <a href={`#${id}`}><span>{String(i + 1).padStart(2, '0')}</span>{label}<em>{n}</em></a>
+      ))}
+    </nav>
+
+    <section id="fields" class="room__section">
+      <h2><span>01</span> Hero fields</h2>
+      <p class="room__note">The first second of the page. <code>field</code> in <code>jtk/design.json</code>, painted in four colours and a ground.</p>
+      <div class="room__grid room__grid--fields">
+        {FIELDS.map(([field, what]) => (
+          <figure class="tile tile--field">
+            <div class="tile__stage"><HeroField field={field} colors={palette} ground={ground} /></div>
+            <figcaption><b>{field}</b><span>{what}</span></figcaption>
+          </figure>
+        ))}
+      </div>
+    </section>
+
+    <section id="grounds" class="room__section">
+      <h2><span>02</span> Grounds</h2>
+      <p class="room__note">What the page is printed on, under everything. <code>surface.pattern</code>.</p>
+      <div class="room__grid">
+        {GROUNDS.map(([pattern, what]) => (
+          <figure class="tile tile--ground has-pattern">
+            <Pattern pattern={pattern} scope="block" opacity={0.5} ink="var(--ink)">
+              {pattern === 'motif' && <circle cx="8" cy="8" r="3" fill="currentColor" />}
+            </Pattern>
+            <figcaption><b>{pattern}</b><span>{what}</span></figcaption>
+          </figure>
+        ))}
+      </div>
+    </section>
+
+    <section id="edges" class="room__section">
+      <h2><span>03</span> Edges</h2>
+      <p class="room__note">How a block stops. <code>data-edge</code> on the block; hover the last one.</p>
+      <div class="room__grid">
+        {EDGES.map(([edge, what]) => (
+          <article class="tile tile--edge" data-edge={edge} tabindex={edge === 'lift' ? 0 : undefined}>
+            <b>{edge}</b>
+            <span>{what}</span>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section id="entrances" class="room__section">
+      <h2><span>04</span> Entrances</h2>
+      <p class="room__note">How a block arrives as it is scrolled to — once, never again. <code>data-reveal</code>. Reload to see them again.</p>
+      <div class="room__grid">
+        {REVEALS.map(([reveal, what]) =>
+          reveal === 'stagger' ? (
+            <article class="tile tile--reveal">
+              <ul class="room__stagger" data-reveal="stagger">
+                {[1, 2, 3, 4].map(() => <li></li>)}
+              </ul>
+              <b>{reveal}</b>
+              <span>{what}</span>
+            </article>
+          ) : (
+            <article class="tile tile--reveal" data-reveal={reveal}>
+              {reveal === 'develop' && photos[0] ? <div class="tile__photo"><Shot name={photos[0]} alt="" decorative ratio="16 / 6" width={600} sizes="20rem" /></div> : <div class="tile__block"></div>}
+              <b>{reveal}</b>
+              <span>{what}</span>
+            </article>
+          ),
+        )}
+      </div>
+    </section>
+
+    <section id="galleries" class="room__section">
+      <h2><span>05</span> Galleries</h2>
+      <p class="room__note">
+        How the work is shown. <code>&lt;Gallery arrangement="…"&gt;</code>, chosen by how much work there is and whether it has an order.
+        {photos.length === 0 && <strong> No photographs were found — run it with <code>--photos &lt;dir&gt;</code> to see them on real work.</strong>}
+      </p>
+      {ARRANGEMENTS.map((a, i) => (
+        <article class="gallery-row" id={`g-${a}`}>
+          <header>
+            <span class="gallery-row__n">{String(i + 1).padStart(2, '0')}</span>
+            <h3>{a}</h3>
+            <p>{GALLERIES[a].what}</p>
+            <p class="gallery-row__meta">{GALLERIES[a].works[0]}–{GALLERIES[a].works[1]} pieces{GALLERIES[a].moves ? ' · moves on its own' : ''}</p>
+          </header>
+          <Gallery arrangement={a} items={piecesFor(a)} ratio={a === 'deck' || a === 'coverflow' ? '4 / 5' : undefined} />
+        </article>
+      ))}
+    </section>
+
+    <footer class="room__foot">
+      <p>Every piece here is the component a site gets — @jtakeit/astro {room.version}. The rules for each are in <code>node_modules/@jtakeit/astro/docs/</code>.</p>
+    </footer>
+  </div>
+</Layout>
+
+<style is:global>
+  body:has(.room) {
+    background: var(--room-ground);
+  }
+
+  /* The dev server's own furniture: the agent's progress card and Astro's
+     toolbar belong to a site being written, not to a catalogue. */
+  body:has(.room) jtk-writing,
+  body:has(.room) astro-dev-toolbar {
+    display: none !important;
+  }
+</style>
+
+<style>
+  .room {
+    --ink: #f3eee9;
+    --ink-quiet: color-mix(in srgb, #f3eee9 62%, transparent);
+    --line: color-mix(in srgb, #f3eee9 14%, transparent);
+    --line-strong: color-mix(in srgb, #f3eee9 30%, transparent);
+    --panel: color-mix(in srgb, #f3eee9 5%, var(--room-ground));
+    --paper: var(--room-ground);
+    --accent: var(--room-a);
+    color: var(--ink);
+    background: var(--room-ground);
+  }
+
+  code {
+    padding: 0.1em 0.35em;
+    border-radius: 0.3em;
+    background: color-mix(in srgb, var(--ink) 10%, transparent);
+    font-size: 0.9em;
+  }
+
+  .room__hero {
+    position: relative;
+    display: grid;
+    align-items: end;
+    min-block-size: min(92svh, 56rem);
+    padding: clamp(1.5rem, 5vw, 4rem);
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .room__field {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+  }
+
+  .room__field :global(> *) {
+    position: absolute;
+    inset: 0;
+  }
+
+  /* The field is the picture; the words sit on a shade of the ground. */
+  .room__field::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, var(--room-ground) 8%, transparent 60%);
+  }
+
+  .room__kicker {
+    margin: 0 0 1rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
+
+  .room__intro h1 {
+    margin: 0;
+    font-size: clamp(2.8rem, 1.5rem + 6vw, 7.5rem);
+    line-height: 0.92;
+    letter-spacing: -0.04em;
+  }
+
+  .room__lede {
+    max-inline-size: 40rem;
+    margin: 1.5rem 0 0;
+    font-size: clamp(1rem, 0.9rem + 0.4vw, 1.25rem);
+    color: var(--ink-quiet);
+  }
+
+  .room__nav {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 20;
+    display: flex;
+    gap: 0.4rem;
+    overflow-x: auto;
+    padding: 0.75rem clamp(1rem, 4vw, 3rem);
+    background: color-mix(in srgb, var(--room-ground) 78%, transparent);
+    backdrop-filter: blur(14px);
+    border-block-end: 1px solid var(--line);
+  }
+
+  .room__nav a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: none;
+    padding: 0.5rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: background 0.2s ease;
+  }
+
+  .room__nav a:hover {
+    background: color-mix(in srgb, var(--ink) 10%, transparent);
+  }
+
+  .room__nav span,
+  .room__nav em {
+    font-style: normal;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-quiet);
+    font-size: 0.75rem;
+  }
+
+  .room__section {
+    padding: clamp(4rem, 9vw, 8rem) clamp(1rem, 4vw, 3rem) 0;
+    scroll-margin-block-start: 4rem;
+  }
+
+  .room__section h2 {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin: 0;
+    font-size: clamp(2rem, 1.2rem + 3vw, 4rem);
+    letter-spacing: -0.03em;
+  }
+
+  .room__section h2 span {
+    font-size: 0.35em;
+    letter-spacing: 0.1em;
+    color: var(--room-a);
+  }
+
+  .room__note {
+    max-inline-size: 44rem;
+    margin: 1rem 0 clamp(2rem, 4vw, 3rem);
+    color: var(--ink-quiet);
+  }
+
+  .room__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(17rem, 100%), 1fr));
+    gap: clamp(0.75rem, 2vw, 1.25rem);
+  }
+
+  .room__grid--fields {
+    grid-template-columns: repeat(auto-fill, minmax(min(26rem, 100%), 1fr));
+  }
+
+  .tile {
+    position: relative;
+    margin: 0;
+    border-radius: 1.1rem;
+    background: var(--panel);
+    overflow: hidden;
+  }
+
+  .tile figcaption,
+  .tile--edge,
+  .tile--reveal {
+    display: grid;
+    gap: 0.25rem;
+  }
+
+  .tile figcaption {
+    position: relative;
+    padding: 1rem 1.1rem 1.1rem;
+  }
+
+  .tile b {
+    font-size: 1.05rem;
+    font-weight: 650;
+  }
+
+  .tile span {
+    font-size: 0.9rem;
+    color: var(--ink-quiet);
+  }
+
+  .tile__stage {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+  }
+
+  .tile__stage :global(> *) {
+    position: absolute;
+    inset: 0;
+  }
+
+  .tile--ground {
+    display: grid;
+    align-items: end;
+    min-block-size: 15rem;
+    color: var(--ink);
+  }
+
+  .tile--edge,
+  .tile--reveal {
+    align-content: end;
+    min-block-size: 9rem;
+    padding: 1.25rem;
+    border-radius: 0.6rem;
+    overflow: visible;
+  }
+
+  .tile__block,
+  .tile__photo {
+    block-size: 5rem;
+    margin-block-end: 0.75rem;
+    border-radius: 0.6rem;
+    background: linear-gradient(135deg, var(--room-a), var(--room-b));
+  }
+
+  .tile__photo {
+    overflow: hidden;
+    block-size: auto;
+  }
+
+  .room__stagger {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.4rem;
+    margin: 0 0 0.75rem;
+    padding: 0;
+    list-style: none;
+  }
+
+  .room__stagger li {
+    block-size: 5rem;
+    border-radius: 0.5rem;
+    background: linear-gradient(160deg, var(--room-a), var(--room-b));
+  }
+
+  .gallery-row {
+    padding-block: clamp(3rem, 6vw, 5rem);
+    border-block-start: 1px solid var(--line);
+  }
+
+  .gallery-row header {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 1rem;
+    align-items: baseline;
+    margin-block-end: clamp(1.5rem, 3vw, 2.5rem);
+  }
+
+  .gallery-row h3 {
+    margin: 0;
+    font-size: clamp(1.6rem, 1rem + 2vw, 2.6rem);
+    letter-spacing: -0.02em;
+  }
+
+  .gallery-row header p {
+    grid-column: 2;
+    margin: 0.35rem 0 0;
+    color: var(--ink-quiet);
+  }
+
+  .gallery-row__n {
+    color: var(--room-a);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.1em;
+    font-size: 0.85rem;
+  }
+
+  .gallery-row__meta {
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .room__foot {
+    padding: clamp(4rem, 8vw, 6rem) clamp(1rem, 4vw, 3rem);
+    color: var(--ink-quiet);
+    border-block-start: 1px solid var(--line);
+    margin-block-start: 4rem;
+  }
+</style>
