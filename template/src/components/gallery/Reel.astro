@@ -298,13 +298,11 @@ const width = mode === 'focus' ? 'min(max(46vw, 16rem), 38rem)' : 'min(16rem, 60
     track.addEventListener('pointerup', release);
     track.addEventListener('pointercancel', release);
 
-    // A coverflow opens in the middle of the run — the fifth piece — so there
-    // is depth on both sides of the first thing seen. A focus row opens on
-    // the first.
-    if (mode === 'coverflow') {
-      const first = pieces[Math.min(4, n - 1)];
-      track.scrollLeft = first.offsetLeft + first.offsetWidth / 2 - track.clientWidth / 2;
-    }
+    // Both open inside the run rather than at its edge, so there is something
+    // on either side of the first thing seen: a coverflow on the fifth piece,
+    // a focus row — whose neighbours are wider — on the third.
+    const first = pieces[Math.min(mode === 'coverflow' ? 4 : 2, n - 1)];
+    track.scrollLeft = first.offsetLeft + first.offsetWidth / 2 - track.clientWidth / 2;
     paint();
   });
 </script>

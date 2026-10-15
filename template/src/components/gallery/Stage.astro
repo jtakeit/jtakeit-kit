@@ -58,7 +58,11 @@ const id = `stage-${Math.random().toString(36).slice(2, 8)}`;
   }
 
   .stage__main {
+    position: relative;
     display: flex;
+    /* A seam between the pictures: without it two frames pass under a swipe
+       as one long picture. */
+    gap: 0.75rem;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     overscroll-behavior-inline: contain;
@@ -170,9 +174,18 @@ const id = `stage-${Math.random().toString(36).slice(2, 8)}`;
       strip.scrollTo({ left: t.offsetLeft - strip.clientWidth / 2 + t.offsetWidth / 2, behavior: still.matches ? 'auto' : 'smooth' });
     };
 
+    const slides = [...main.querySelectorAll<HTMLElement>('.stage__slide')];
     const go = (i: number) => {
       const k = ((i % n) + n) % n;
-      main.scrollTo({ left: k * main.clientWidth, behavior: still.matches ? 'auto' : 'smooth' });
+      main.scrollTo({ left: slides[k].offsetLeft, behavior: still.matches ? 'auto' : 'smooth' });
+    };
+    /** The slide whose left edge is nearest the scroll position — gaps included. */
+    const nearest = () => {
+      let best = 0;
+      slides.forEach((s, k) => {
+        if (Math.abs(s.offsetLeft - main.scrollLeft) < Math.abs(slides[best].offsetLeft - main.scrollLeft)) best = k;
+      });
+      return best;
     };
 
     // The thumbnails are links for a page without a script; with one, they
@@ -191,7 +204,7 @@ const id = `stage-${Math.random().toString(36).slice(2, 8)}`;
         if (raf) return;
         raf = requestAnimationFrame(() => {
           raf = 0;
-          mark(Math.round(main.scrollLeft / Math.max(1, main.clientWidth)));
+          mark(nearest());
         });
       },
       { passive: true },
