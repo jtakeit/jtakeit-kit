@@ -25,6 +25,10 @@ and nothing jumps between them; nothing else was changed. Read 15 October 2026.
 | `pexels-4627333.jpg` | [Hands Holding Straight Razor](https://www.pexels.com/photo/hands-holding-straight-razor-4627333/) | ArtHouse Studio |
 | `pexels-32351044.jpg` | [Professional Haircut at a Modern Barbershop](https://www.pexels.com/photo/professional-haircut-at-a-modern-barbershop-32351044/) | Sephina Cornwall |
 | `pexels-33461079.jpg` | [Barber Trimming Hair with Clipper and Comb](https://www.pexels.com/photo/barber-trimming-hair-with-clipper-and-comb-33461079/) | Alexander Mass |
+| `pexels-4422102.jpg` | [A Man Having a Haircut](https://www.pexels.com/photo/a-man-having-a-haircut-4422102/) | Maksim Goncharenok |
+| `pexels-2061820.jpg` | [Smiling Man Cutting Another Man's Hair Inside Shop](https://www.pexels.com/photo/smiling-man-cutting-another-mans-hair-inside-shop-2061820/) | Th2city Santana |
+| `pexels-7781848.jpg` | [Profile of a Man at a Barber](https://www.pexels.com/photo/profile-of-a-man-at-a-barber-7781848/) | Leonardo Hidalgo |
+| `pexels-13058812.jpg` | [Brown Interior of a Barber Shop](https://www.pexels.com/photo/brown-interior-of-a-barber-shop-13058812/) | Murat Gökçe |
 
 These photographs are not covered by the MIT licence of this package, which
 covers the code and the words; they stay under the Pexels License.

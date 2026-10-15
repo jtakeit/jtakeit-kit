@@ -65,11 +65,17 @@ const REVEALS: [string, string][] = [
   ['stagger', 'The children in order.'],
 ];
 
-/** Each gallery shown with as many photographs as it is for, at most what there is. */
-const ARRANGEMENTS = (Object.keys(GALLERIES) as Arrangement[]).filter((a) => a !== 'index' && a !== 'spread');
+/**
+ * The galleries, the loudest first: what a visitor plays with and remembers
+ * at the top, the quiet, still arrangements below. Not a ranking of worth —
+ * a quiet one is often the right one — but the order a showroom wants.
+ */
+const ARRANGEMENTS: Arrangement[] = ['sphere', 'morph', 'coverflow', 'deck', 'focus', 'wall', 'stage', 'strip', 'contact', 'ragged'];
 const piecesFor = (a: Arrangement) => {
   const [floor, ceiling] = GALLERIES[a].works;
-  const want = Math.min(ceiling, Math.max(floor, a === 'sphere' || a === 'wall' || a === 'contact' ? 40 : 10));
+  // A contact sheet is every photograph once — a repeat on a dense grid is the
+  // first thing an eye finds. The sphere and the wall want volume and may loop.
+  const want = a === 'contact' ? photos.length : Math.min(ceiling, Math.max(floor, a === 'sphere' || a === 'wall' ? 40 : 10));
   return Array.from({ length: Math.min(want, Math.max(photos.length, 1)) }, (_, i) => ({
     name: photos.length ? photos[i % photos.length] : 'missing',
     alt: '',
@@ -191,7 +197,7 @@ const SECTIONS = [
         {photos.length === 0 && <strong> No photographs were found — run it with <code>--photos &lt;dir&gt;</code> to see them on real work.</strong>}
       </p>
       {ARRANGEMENTS.map((a, i) => (
-        <article class="gallery-row" id={`g-${a}`}>
+        <article class:list={['gallery-row', `gallery-row--${a}`]} id={`g-${a}`}>
           <header>
             <span class="gallery-row__n">{String(i + 1).padStart(2, '0')}</span>
             <h3>{a}</h3>
@@ -642,6 +648,12 @@ const SECTIONS = [
 
   .room__foot a {
     color: var(--ink);
+  }
+
+  /* The dissolve reads best smaller: half the height, the width with it. */
+  .gallery-row--morph :global(.gallery) {
+    inline-size: min(100%, 34rem);
+    margin-inline: auto;
   }
 
   .room__foot {
