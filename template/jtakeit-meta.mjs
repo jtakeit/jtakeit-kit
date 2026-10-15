@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { writeMeta } from '@jtakeit/kit/meta';
 import { readProgress } from '@jtakeit/kit/progress';
+import { devDiary } from '@jtakeit/kit/devdiary';
 import { BLOCKS, COLLECTIONS, LOCALES } from './src/content/blocks.ts';
 
 /**
@@ -110,6 +111,10 @@ export function jtakeitMeta() {
         server.watcher.on('change', noted);
         server.watcher.on('add', noted);
         server.watcher.on('unlink', noted);
+        // The diary, answered from the site's own files, so a booking form can
+        // be walked on localhost (@jtakeit/kit/devdiary). Nothing reaches the
+        // platform; a booking lasts until the server stops.
+        server.middlewares.use('/api', devDiary(process.cwd()));
         server.middlewares.use('/_jtk/state.json', async (req, res) => {
           res.setHeader('Cache-Control', 'no-store');
           res.setHeader('Content-Type', 'application/json');
