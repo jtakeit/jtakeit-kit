@@ -30,6 +30,9 @@ interface Props {
 }
 
 const { pieces, scatter = 6, ratio = '4 / 5' } = Astro.props;
+// The ratio as a number, for the height the pile may not pass (below).
+const [across, down] = ratio.split('/').map((n) => Number(n.trim()));
+const aspect = across > 0 && down > 0 ? across / down : 0.8;
 
 /** A stable, slightly random tilt per print, in [-max, max]. */
 const tilt = (i: number) => {
@@ -38,7 +41,7 @@ const tilt = (i: number) => {
 };
 ---
 
-<div class="deck" data-deck style={`--deck-ratio:${ratio}`} role="region" aria-roledescription="carousel" aria-label="Work" tabindex="0">
+<div class="deck" data-deck style={`--deck-ratio:${ratio};--deck-aspect:${aspect.toFixed(4)}`} role="region" aria-roledescription="carousel" aria-label="Work" tabindex="0">
   <div class="deck__pile">
     {
       pieces.map((piece, i) => (
@@ -78,9 +81,16 @@ const tilt = (i: number) => {
     border-radius: var(--r-3, 1rem);
   }
 
+  /*
+   * Never taller than the window minus its controls: a pile and its arrows are
+   * seen together. As a max, so a site that widens the pile (inline-size on
+   * .deck__pile) is still held to it — lewiscoiff's 34rem pile was 828 px in
+   * a 780 window, the arrows under the fold (17 October 2026).
+   */
   .deck__pile {
     position: relative;
     inline-size: min(22rem, 72vw);
+    max-inline-size: calc((100svh - 9rem) * var(--deck-aspect, 0.8));
     aspect-ratio: var(--deck-ratio);
     touch-action: pan-y;
   }
@@ -144,6 +154,7 @@ const tilt = (i: number) => {
     align-items: center;
     gap: clamp(0.75rem, 2.5vw, 1.5rem);
     inline-size: min(22rem, 100%);
+    max-inline-size: calc((100svh - 9rem) * var(--deck-aspect, 0.8));
   }
 
   .deck__caption {

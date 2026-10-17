@@ -49,6 +49,40 @@ export function entries(collection: Collection): Loader {
   return {
     name: 'jtakeit-entries',
     async load(ctx: LoaderContext) {
+      await fill(ctx);
+      /*
+       * Under `astro dev`, read again when a file under the collection's
+       * directories comes, goes or changes. Read once, a collection written
+       * after the dev server started stayed empty on localhost until a
+       * restart — an agent writing a price list mid-session showed the
+       * developer a /services with no prices and no form, while the build had
+       * both (lewiscoiff, 17 October 2026). The whole collection, not the one
+       * file: a collection is a handful of documents, and its specimens are
+       * drawn from all of them.
+       */
+      if (!ctx.watcher) return;
+      const prefix = collection.prefix.replace(/^\//, '');
+      const bases = ['', ...LOCALES].map((locale) => join(process.cwd(), 'jtk', 'content', locale, prefix));
+      for (const base of bases) ctx.watcher.add(base);
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const changed = (file: string) => {
+        if (!file.endsWith('.json') || !bases.some((base) => file.startsWith(base + sep))) return;
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          fill(ctx).then(
+            () => ctx.logger.info(`${collection.name}: read again`),
+            (why: Error) => ctx.logger.error(`${collection.name}: could not be read again — ${why.message}`),
+          );
+        }, 150);
+      };
+      ctx.watcher.on('add', changed);
+      ctx.watcher.on('change', changed);
+      ctx.watcher.on('unlink', changed);
+    },
+  };
+
+  /** Every entry of the collection, read off the files into the store. */
+  async function fill(ctx: LoaderContext): Promise<void> {
       const prefix = collection.prefix.replace(/^\//, '');
       // No `image:` here on purpose. The processor's image option is
       // `{ domains, remotePatterns }` — which remote pictures may be fetched —
@@ -142,8 +176,7 @@ export function entries(collection: Collection): Loader {
       }
 
       await specimens(ctx, renderer, collection, seen);
-    },
-  };
+  }
 }
 
 /**
