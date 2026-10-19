@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { writeMeta } from '@jtakeit/kit/meta';
+import { keepByName } from '@jtakeit/kit/kept';
 import { readProgress } from '@jtakeit/kit/progress';
 import { devDiary } from '@jtakeit/kit/devdiary';
 import { BLOCKS, COLLECTIONS, LOCALES } from './src/content/blocks.ts';
@@ -27,6 +28,26 @@ import { BLOCKS, COLLECTIONS, LOCALES } from './src/content/blocks.ts';
 // The platform's half, asked at most every three seconds and remembered
 // between: a page polling every three seconds is one request to the
 // platform, not one per tab.
+/*
+ * Files a script picks by name live in `public/`, which the edge serves for a
+ * minute — every returning visitor downloads the hero film again. Two ways
+ * out, and the first is the one that costs nothing later:
+ *
+ *   KEPT_BY_NAME  directories of `public/` whose files are copied under
+ *                 `/_astro/kept/` with a hash of their bytes in the name, and
+ *                 every whole address of them in the build pointed at the
+ *                 copy. Kept for a year; a new photograph is a new name.
+ *                 Write the addresses out whole: one a script assembles
+ *                 (`'/scenes/scene-' + i`) is not found, and the build says so.
+ *   CACHE         a lifetime for a directory whose files keep their names.
+ *                 The platform then holds each name to its contents for that
+ *                 long once the site has an address — new bytes take a new
+ *                 name, or the build is refused (JTK_E_CACHED_FILE_CHANGED).
+ *                 A day for names that may be reused.
+ */
+const KEPT_BY_NAME = []; // e.g. ['clips']
+const CACHE = []; // e.g. [{ prefix: '/clips/', maxAge: 86400 }]
+
 let platformCache = { at: 0, value: null };
 async function platformHalf(root) {
   let session;
@@ -146,11 +167,22 @@ export function jtakeitMeta() {
         });
       },
       'astro:build:done': async ({ dir, logger }) => {
+        const kept = keepByName(fileURLToPath(dir), { dirs: KEPT_BY_NAME });
+        if (kept.kept.length > 0) {
+          logger.info(`${kept.kept.length} file(s) under a hashed name, ${kept.rewritten} reference(s) pointed at them`);
+        }
+        if (kept.unreferenced.length > 0) {
+          logger.warn(
+            `${kept.unreferenced.slice(0, 5).join(', ')}${kept.unreferenced.length > 5 ? ` +${kept.unreferenced.length - 5} more` : ''} ` +
+              'named whole nowhere in the build — still served by name, for a minute. Write the address out in full where it is used.',
+          );
+        }
         const meta = await writeMeta(fileURLToPath(dir), {
           collections: COLLECTIONS,
           blocks: BLOCKS,
           locales: LOCALES,
           immutable: ['/_astro/'],
+          cache: CACHE,
         });
         const drafts = meta.drafts.length;
         if (drafts > 0) {
