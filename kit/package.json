@@ -40,6 +40,10 @@
       "types": "./types/meta.d.ts",
       "default": "./lib/meta.mjs"
     },
+    "./kept": {
+      "types": "./types/kept.d.ts",
+      "default": "./lib/kept.mjs"
+    },
     "./kits": {
       "types": "./types/kits.d.ts",
       "default": "./lib/kits.mjs"

@@ -133,13 +133,54 @@ export async function hiddenEntries(root = join(process.cwd(), 'jtk', 'content')
  * @param {string[]} [what.locales]
  * @param {string[]} [what.immutable]          e.g. `['/_astro/']`
  * @param {{ from: string; to: string; status?: number }[]} [what.redirects]
- * @returns {Promise<{ redirects: object[]; drafts: string[]; immutable?: string[] }>}
+ * @returns {Promise<{ redirects: object[]; drafts: string[]; immutable?: string[]; cache?: { prefix: string; maxAge: number }[] }>}
  */
-export async function buildMeta({ root, collections = [], blocks = [], locales = [], immutable, redirects = [] } = {}) {
+export async function buildMeta({ root, collections = [], blocks = [], locales = [], immutable, cache, redirects = [] } = {}) {
   const drafts = [...(await hiddenEntries(root)), ...specimenAddresses(collections, blocks, locales)].sort();
   const meta = { redirects, drafts };
   if (Array.isArray(immutable) && immutable.length > 0) meta.immutable = immutable;
+  const lifetimes = cacheRules(cache);
+  if (lifetimes.length > 0) meta.cache = lifetimes;
   return meta;
+}
+
+/** A year: the most the edge keeps anything for. */
+const YEAR = 31_536_000;
+
+/**
+ * The lifetimes a build declares for directories of files that keep their own
+ * names — `public/clips/`, a film or a photograph a script addresses — read
+ * the way the edge reads them (jtakeit-core edge/src/meta.ts): each prefix as
+ * `/dir/`, never `/`, a whole number of seconds, at most a year.
+ *
+ * Thrown on rather than dropped, unlike the edge: the edge reads somebody
+ * else's file and must not fall over, the build is ours and should be told.
+ *
+ * Every name under such a directory is then held by the platform to its
+ * contents, once the site has an address, until the last visitor's copy may
+ * have run out: other bytes under it are refused (JTK_E_CACHED_FILE_CHANGED),
+ * and lowering `maxAge` frees nothing sooner. A day for names that may be
+ * reused; a year only for names that carry their version — or put the files
+ * under a hashed name with `keepByName` (`@jtakeit/kit/kept`) and declare
+ * nothing.
+ *
+ * @param {{ prefix: string; maxAge: number }[] | undefined} cache
+ * @returns {{ prefix: string; maxAge: number }[]}
+ */
+export function cacheRules(cache) {
+  if (cache === undefined || cache === null) return [];
+  if (!Array.isArray(cache)) throw new TypeError('cache is a list of { prefix, maxAge }');
+  return cache.map((one, i) => {
+    if (one === null || typeof one !== 'object' || typeof one.prefix !== 'string') {
+      throw new TypeError(`cache[${i}] needs a prefix, like "/clips/"`);
+    }
+    const trimmed = one.prefix.replace(/^\/+|\/+$/g, '');
+    if (trimmed === '') throw new TypeError(`cache[${i}]: a prefix of "/" would cover the whole site, pages included`);
+    if (typeof one.maxAge !== 'number' || !Number.isFinite(one.maxAge) || one.maxAge < 0) {
+      throw new TypeError(`cache[${i}]: maxAge is a number of seconds, like 86400 for a day`);
+    }
+    return { prefix: `/${trimmed}/`, maxAge: Math.min(Math.floor(one.maxAge), YEAR) };
+  });
 }
 
 /**
@@ -149,7 +190,7 @@ export async function buildMeta({ root, collections = [], blocks = [], locales =
  *
  * @param {string} dir   the build directory, `dist/`
  * @param {Parameters<typeof buildMeta>[0]} what
- * @returns {Promise<{ redirects: object[]; drafts: string[]; immutable?: string[] }>}
+ * @returns {Promise<{ redirects: object[]; drafts: string[]; immutable?: string[]; cache?: { prefix: string; maxAge: number }[] }>}
  */
 export async function writeMeta(dir, what = {}) {
   const meta = await buildMeta(what);

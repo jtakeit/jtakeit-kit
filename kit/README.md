@@ -131,9 +131,35 @@ import { writeMeta } from '@jtakeit/kit/meta';
 await writeMeta('dist', {
   collections, blocks, locales,      // the declaration: the specimens are derived from it
   immutable: ['/_next/static/'],     // where this generator keeps its hashed files; absent, the edge assumes Astro's
+  cache: [{ prefix: '/clips/', maxAge: 86400 }], // files that keep their names, kept a day; see below
   redirects: [{ from: '/old', to: '/new', status: 301 }],
 });
 ```
+
+### A file a script picks by name
+
+A film or a photograph a script addresses has no attribute pointing at it, so
+the generator does not hash it and it lives in `public/`, which the edge
+serves for a minute. `keepByName` gives it a name that carries its bytes,
+after the build and before `writeMeta`:
+
+```js
+import { keepByName } from '@jtakeit/kit/kept';
+
+const { kept, unreferenced } = keepByName('dist', { dirs: ['clips', 'scenes'] });
+// /clips/einsatz.mp4 → /_astro/kept/clips/einsatz.3f9a1c2b.mp4, kept for a year
+```
+
+Every address the build wrote whole — in a script, `src`, `data-src`,
+`url(…)` — is pointed at the copy; the originals stay, and `unreferenced`
+names the ones a script assembles and that therefore still go by name.
+
+Or keep the names and declare how long: `cache: [{ prefix: '/clips/', maxAge:
+86400 }]` beside `immutable`. The platform then holds every such name to its
+contents for that long once the site has an address — other bytes under it are
+refused, `JTK_E_CACHED_FILE_CHANGED`, and lowering `maxAge` frees nothing
+sooner. A day for names that may be reused; a year only for names that carry
+their version.
 
 The **specimen pages** are the one thing in that list a site has to build as
 well as declare: one page per block a post may hold, at
