@@ -261,8 +261,11 @@ h1 {
   text-wrap: balance;
 }
 
+/* An <a class="btn"> is a button, not a link in a sentence: no underline. */
 .btn {
+  display: inline-block;
   padding: 0.75rem 1.5rem;
+  text-decoration: none;
   color: var(--on-accent);
   background: var(--accent);
   border: none;
