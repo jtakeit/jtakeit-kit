@@ -158,6 +158,23 @@ and leave the hrefs out of the catalogue, or declare them `client_editable:
 false`. A nav list in `src/data/nav.ts` is fine as the shape; the words in it
 come from the shared document.
 
+**Where a link leads can be the owner's, where you say so.** A button that
+must always point at the newest thing — tickets for the next night — is a
+`url` field the owner updates, and the panel edits it beside the words when
+the anchor names it:
+
+```astro
+<a href={s('cta_href')} data-jtk-href={path('cta_href')}>
+  <span data-jtk-path={path('cta_label')}>{s('cta_label')}</span>
+</a>
+```
+
+Declare `cta_href` as `kind: 'url'` with `no_tap_target: true` — it has no
+element of its own — and put `data-jtk-href` on the anchor. Tapping the words
+opens both: the words and where they lead, and the page follows as the owner
+types. Nothing without the attribute: a route the owner could retype is a route
+they could break, so which buttons get this is the developer's decision.
+
 ### Say which, in the repository, for every sentence
 
 The rule above is a judgement, and a judgement that is not written down is not a

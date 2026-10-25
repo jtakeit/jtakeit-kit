@@ -1533,6 +1533,11 @@ for (const page of pages) {
           // for either way rather than reported as text nobody can touch.
           for (const key of ['src', 'alt', 'poster']) onThePage.delete(`${itemPath}.${key}`);
         });
+        // The wall itself may be annotated too — the belt the logos run on,
+        // the frame a gallery sits in — and a tap on it opens the same
+        // gallery with nothing selected. Allowed, not asked for: a wall whose
+        // every picture is tappable is complete without it (25 October 2026).
+        onThePage.delete(path);
         continue;
       }
 
