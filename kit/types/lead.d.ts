@@ -1,6 +1,13 @@
 export interface Ask {
   key: string;
   label: string;
+  /**
+   * Where the words over the field come from, when the site keeps them in
+   * its content (a `<key>_label` field of the collecting block, say) and
+   * the owner may tap them. Without it the label is drawn fixed, as the
+   * catalogue declared it.
+   */
+  path?: string;
   kind: string;
   required?: boolean;
   max?: number;

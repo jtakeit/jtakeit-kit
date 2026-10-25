@@ -145,7 +145,7 @@ export function renderLeadForm(props) {
   </div>
 
   ${asks.map((ask) => `<div class="field">
-    <label class="field__label" for="lead-${esc(ask.key)}" data-jtk-fixed>${esc(ask.label)}${ask.required ? ' <span aria-hidden="true">*</span>' : ''}</label>
+    <label class="field__label" for="lead-${esc(ask.key)}"${ask.path ? at(ask.path) : ' data-jtk-fixed'}>${esc(ask.label)}${ask.required ? ' <span aria-hidden="true">*</span>' : ''}</label>
     ${askControl(ask)}
   </div>`).join('\n  ')}
 
