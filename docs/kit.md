@@ -288,6 +288,12 @@ more centred.** Space is not a layout. Four patterns do nearly all of it:
 h1   { font-size: clamp(2.25rem, 1.2rem + 3.4vw, 5rem); }
 .lead { font-size: clamp(1rem, 0.9rem + 0.5vw, 1.5rem); }
 
+/* 2a. A screen-tall section has a ceiling too. The panel draws the page in a
+       frame as tall as the document, where 100svh is all of it — a first
+       screen of min-height: 100svh filled the whole thumbnail. `jtk catalogue`
+       refuses one with no ceiling. */
+.hero { min-block-size: min(100svh, 56rem); }
+
 /* 3. Media is a fraction of its column, never a fixed card. A 240px photograph
       on a 2560px screen is a stamp. */
 .hero__media :global(.shot) { inline-size: min(100%, 32rem); }

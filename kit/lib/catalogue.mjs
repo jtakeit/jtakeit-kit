@@ -1331,6 +1331,29 @@ if (pages.some(hasBodyPicture)) {
 }
 
 /*
+ * A height that is the viewport's, with no ceiling.
+ *
+ * The panel draws a page in a frame as tall as the whole document — its
+ * thumbnails and its comparison of two versions — because a browser does not
+ * render what lies below a frame. In that frame `100svh` is the document's
+ * height, so a first screen of `min-height: 100svh` grew to fill all of it and
+ * the rest of the site was nowhere (Kaif, 30 October 2026). A viewport height
+ * with a ceiling — `min(100svh, 56rem)` — is the same screen on a phone and a
+ * bounded one in a frame.
+ */
+{
+  const unbounded = /(?:^|[;{\s])((?:min-|max-)?(?:height|block-size))\s*:\s*100(?:s|d|l)?vh\s*(?:!important)?\s*[;}]/g;
+  const found = new Set();
+  for (const [, property] of readStyles(join(root, 'src')).matchAll(unbounded)) found.add(property);
+  if (found.size > 0) {
+    contentProblems.push(
+      `${[...found].join(', ')}: 100vh with no ceiling. The panel draws the page in a frame as tall as the document, ` +
+        'where a viewport height is all of it — give it one: min(100svh, 56rem).',
+    );
+  }
+}
+
+/*
  * A view that says where it can be seen points at a page that exists.
  *
  * The admin frames that page at the block and shows it in the menu, so an
