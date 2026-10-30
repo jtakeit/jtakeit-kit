@@ -1522,9 +1522,15 @@ for (const page of pages) {
       const value = block[field.key];
       const empty = value === undefined || value === null || value === '' ||
         (Array.isArray(value) && value.length === 0);
-      if (empty || field.no_tap_target || field.kind === 'bool') continue;
-
       const path = `blocks[${at}].${field.key}`;
+      // Not asked for — and accepted where the page annotates it anyway: an
+      // empty line the owner can tap to write again, a hidden value the page
+      // names. Declared is declared; "not in the catalogue" was a false
+      // sentence about both (30 October 2026).
+      if (empty || field.no_tap_target || field.kind === 'bool') {
+        if (field.kind !== 'list') onThePage.delete(path);
+        continue;
+      }
       // Outside the platform's rule and not a list (whose rows are asked one
       // by one below): accepted where it is annotated, asked for nowhere.
       if (field.kind !== 'list' && !tappable(field)) {
@@ -1570,8 +1576,11 @@ for (const page of pages) {
         const rows = Array.isArray(value) ? value : [];
         rows.forEach((row, i) => {
           for (const sub of field.of ?? []) {
-            if (sub.no_tap_target || !row[sub.key]) continue;
             const rowPath = `blocks[${at}].${field.key}[${i}].${sub.key}`;
+            if (sub.no_tap_target || !row[sub.key]) {
+              onThePage.delete(rowPath);
+              continue;
+            }
             if (!tappable(sub)) {
               onThePage.delete(rowPath);
               continue;
