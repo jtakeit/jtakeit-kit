@@ -100,8 +100,20 @@ site.
   theirs; a button's destination points at a section they did not build.
 - **`no_tap_target`** is for a value that never appears as its own element — a
   message a script writes later, a string that lands in an attribute, a label
-  only a screen reader hears. It is edited in the panel beside the preview, and
-  the checks must not look for something to tap.
+  only a screen reader hears, the hour a countdown counts to. The checks do not
+  look for something to tap.
+- **`beside`** says where such a field is edited: the key of the field the
+  owner taps that it belongs to, in the same block or row — `beside: 'date'` on
+  the hour, `beside: 'image'` on the description. The panel opens it under that
+  field. A hidden field with nothing to go beside is listed in the block's
+  settings, reached from any field of the block; give it a `hint` that says
+  what it does, because the owner cannot see where it shows.
+
+  What changes on the business's calendar — the next event's date, the hour
+  doors open, a price — is the owner's even when the page does not print it.
+  A constant in a script is a message to the studio every time it changes; the
+  platform advises a date, an hour or a price kept from the owner
+  (`JTK_W_OWNER_LOCKED`).
 - **`seo_sensitive`** shows a warning that changing it moves the page in search
   results.
 
