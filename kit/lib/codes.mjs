@@ -64,6 +64,7 @@ export const E = Object.freeze({
   LIST: 'JTK_E_LIST_INVALID',
   MEDIA: 'JTK_E_MEDIA_INVALID',
   BESIDE: 'JTK_E_BESIDE_INVALID',
+  TITLED_BY: 'JTK_E_TITLED_BY_INVALID',
 
   // Arrangements.
   VIEW: 'JTK_E_VIEW_INVALID',

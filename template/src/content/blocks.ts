@@ -293,6 +293,11 @@ export interface Field {
    * should say what it does.
    */
   beside?: string;
+  /**
+   * The text field whose words stand over this value on the page — `age_label`
+   * over the age — so the panel names the value as the page does.
+   */
+  titled_by?: string;
   /** Shown with a warning that changing it moves the page in search results. */
   seo_sensitive?: boolean;
 }

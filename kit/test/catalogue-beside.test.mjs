@@ -39,3 +39,12 @@ test('beside that opens nowhere is refused', () => {
   assert.match(judged([date, starts({ no_tap_target: undefined })]), /JTK_E_BESIDE_INVALID .*only a field the page does not show/);
   assert.match(judged([{ ...date, no_tap_target: true }, starts()]), /JTK_E_BESIDE_INVALID .*not on the page either/);
 });
+
+test('titled_by names a line of text of the same set', () => {
+  const label = { key: 'age_label', label: 'Label', kind: 'text', client_editable: true };
+  const age = (more = {}) => ({ key: 'age', label: 'Age', kind: 'text', client_editable: true, titled_by: 'age_label', ...more });
+  assert.equal(judged([label, age()]), '');
+  assert.match(judged([age({ titled_by: 'age' })]), /JTK_E_TITLED_BY_INVALID .*titled by itself/);
+  assert.match(judged([label, age({ titled_by: 'nope' })]), /JTK_E_TITLED_BY_INVALID .*not a field/);
+  assert.match(judged([{ ...label, kind: 'date' }, age()]), /JTK_E_TITLED_BY_INVALID .*a line of text/);
+});

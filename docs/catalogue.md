@@ -114,6 +114,9 @@ site.
   A constant in a script is a message to the studio every time it changes; the
   platform advises a date, an hour or a price kept from the owner
   (`JTK_W_OWNER_LOCKED`).
+- **`titled_by`** names the text field whose words stand over a value on the
+  page — `titled_by: 'age_label'` on the age — and the panel calls the value
+  what that field holds, so «Цена» over «30 CHF» is not edited as «Возраст».
 - **`data-jtk-bind`** is for such a value that a script reads off an
   attribute: `data-jtk-bind="data-starts:blocks[0].night_starts"`, pairs
   separated by spaces. The editor writes the value there as the owner types

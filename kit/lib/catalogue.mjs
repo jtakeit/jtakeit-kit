@@ -364,6 +364,13 @@ function checkField(owner, field, nested) {
 function checkBeside(owner, fields) {
   const byKey = new Map(fields.map((field) => [field.key, field]));
   for (const field of fields) {
+    if (field.titled_by !== undefined) {
+      const at = `${owner}.${field.key}.titled_by`;
+      const title = byKey.get(field.titled_by);
+      if (field.titled_by === field.key) fault(E.TITLED_BY, at, 'titled by itself');
+      else if (title === undefined) fault(E.TITLED_BY, at, `names "${field.titled_by}", which is not a field of the same block or row`);
+      else if (title.kind !== 'text') fault(E.TITLED_BY, at, `"${field.titled_by}" is ${title.kind} — a title is a line of text`);
+    }
     if (field.beside === undefined) continue;
     const where = `${owner}.${field.key}.beside`;
     const target = byKey.get(field.beside);
