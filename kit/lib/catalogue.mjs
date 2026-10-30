@@ -352,6 +352,30 @@ function checkField(owner, field, nested) {
       fault(E.LIST, where, 'a list with no fields in a row');
     }
     for (const sub of field.of ?? []) checkField(where, sub, true);
+    checkBeside(where, field.of ?? []);
+  }
+}
+
+/*
+ * Which field a hidden one is edited with (wiki/84 in the admin). A mirror of
+ * validateBeside in registry/catalogue.go: beside names a field of the same
+ * set that the owner taps, and only a field the page does not show carries it.
+ */
+function checkBeside(owner, fields) {
+  const byKey = new Map(fields.map((field) => [field.key, field]));
+  for (const field of fields) {
+    if (field.beside === undefined) continue;
+    const where = `${owner}.${field.key}.beside`;
+    const target = byKey.get(field.beside);
+    if (field.beside === field.key) {
+      fault(E.BESIDE, where, 'beside itself');
+    } else if (target === undefined) {
+      fault(E.BESIDE, where, `names "${field.beside}", which is not a field of the same block or row`);
+    } else if (field.no_tap_target !== true) {
+      fault(E.BESIDE, where, 'only a field the page does not show (no_tap_target) goes beside another');
+    } else if (target.no_tap_target === true || target.beside !== undefined) {
+      fault(E.BESIDE, where, `"${field.beside}" is not on the page either — name the field the owner taps`);
+    }
   }
 }
 
@@ -374,6 +398,7 @@ for (const block of catalogue.blocks) {
     seenKeys.add(field.key);
     checkField(block.type, field, false);
   }
+  checkBeside(block.type, block.fields ?? []);
 
   checkAsks(block);
   checkViews(block);

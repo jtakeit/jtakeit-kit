@@ -285,6 +285,14 @@ export interface Field {
    * annotation check must not look for a tap target.
    */
   no_tap_target?: boolean;
+  /**
+   * Where a field the page does not show is edited: the key of the field the
+   * owner taps that it belongs to, in the same block or row — the hour beside
+   * the date, the description beside the photograph. The panel opens it under
+   * that field; without one it is listed in the block's settings, and a `hint`
+   * should say what it does.
+   */
+  beside?: string;
   /** Shown with a warning that changing it moves the page in search results. */
   seo_sensitive?: boolean;
 }
@@ -485,6 +493,7 @@ export const BLOCKS: Block[] = [
         client_editable: true,
         seo_sensitive: true,
         no_tap_target: true,
+        beside: 'image',
       },
     ],
   },
