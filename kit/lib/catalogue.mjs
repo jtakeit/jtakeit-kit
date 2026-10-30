@@ -352,6 +352,37 @@ function checkField(owner, field, nested) {
       fault(E.LIST, where, 'a list with no fields in a row');
     }
     for (const sub of field.of ?? []) checkField(where, sub, true);
+    checkBeside(where, field.of ?? []);
+  }
+}
+
+/*
+ * Which field a hidden one is edited with (wiki/84 in the admin). A mirror of
+ * validateBeside in registry/catalogue.go: beside names a field of the same
+ * set that the owner taps, and only a field the page does not show carries it.
+ */
+function checkBeside(owner, fields) {
+  const byKey = new Map(fields.map((field) => [field.key, field]));
+  for (const field of fields) {
+    if (field.titled_by !== undefined) {
+      const at = `${owner}.${field.key}.titled_by`;
+      const title = byKey.get(field.titled_by);
+      if (field.titled_by === field.key) fault(E.TITLED_BY, at, 'titled by itself');
+      else if (title === undefined) fault(E.TITLED_BY, at, `names "${field.titled_by}", which is not a field of the same block or row`);
+      else if (title.kind !== 'text') fault(E.TITLED_BY, at, `"${field.titled_by}" is ${title.kind} — a title is a line of text`);
+    }
+    if (field.beside === undefined) continue;
+    const where = `${owner}.${field.key}.beside`;
+    const target = byKey.get(field.beside);
+    if (field.beside === field.key) {
+      fault(E.BESIDE, where, 'beside itself');
+    } else if (target === undefined) {
+      fault(E.BESIDE, where, `names "${field.beside}", which is not a field of the same block or row`);
+    } else if (field.no_tap_target !== true) {
+      fault(E.BESIDE, where, 'only a field the page does not show (no_tap_target) goes beside another');
+    } else if (target.no_tap_target === true || target.beside !== undefined) {
+      fault(E.BESIDE, where, `"${field.beside}" is not on the page either — name the field the owner taps`);
+    }
   }
 }
 
@@ -374,6 +405,7 @@ for (const block of catalogue.blocks) {
     seenKeys.add(field.key);
     checkField(block.type, field, false);
   }
+  checkBeside(block.type, block.fields ?? []);
 
   checkAsks(block);
   checkViews(block);
@@ -1299,6 +1331,29 @@ if (pages.some(hasBodyPicture)) {
 }
 
 /*
+ * A height that is the viewport's, with no ceiling.
+ *
+ * The panel draws a page in a frame as tall as the whole document — its
+ * thumbnails and its comparison of two versions — because a browser does not
+ * render what lies below a frame. In that frame `100svh` is the document's
+ * height, so a first screen of `min-height: 100svh` grew to fill all of it and
+ * the rest of the site was nowhere (Kaif, 30 October 2026). A viewport height
+ * with a ceiling — `min(100svh, 56rem)` — is the same screen on a phone and a
+ * bounded one in a frame.
+ */
+{
+  const unbounded = /(?:^|[;{\s])((?:min-|max-)?(?:height|block-size))\s*:\s*100(?:s|d|l)?vh\s*(?:!important)?\s*[;}]/g;
+  const found = new Set();
+  for (const [, property] of readStyles(join(root, 'src')).matchAll(unbounded)) found.add(property);
+  if (found.size > 0) {
+    contentProblems.push(
+      `${[...found].join(', ')}: 100vh with no ceiling. The panel draws the page in a frame as tall as the document, ` +
+        'where a viewport height is all of it — give it one: min(100svh, 56rem).',
+    );
+  }
+}
+
+/*
  * A view that says where it can be seen points at a page that exists.
  *
  * The admin frames that page at the block and shows it in the menu, so an
@@ -1497,9 +1552,15 @@ for (const page of pages) {
       const value = block[field.key];
       const empty = value === undefined || value === null || value === '' ||
         (Array.isArray(value) && value.length === 0);
-      if (empty || field.no_tap_target || field.kind === 'bool') continue;
-
       const path = `blocks[${at}].${field.key}`;
+      // Not asked for — and accepted where the page annotates it anyway: an
+      // empty line the owner can tap to write again, a hidden value the page
+      // names. Declared is declared; "not in the catalogue" was a false
+      // sentence about both (30 October 2026).
+      if (empty || field.no_tap_target || field.kind === 'bool') {
+        if (field.kind !== 'list') onThePage.delete(path);
+        continue;
+      }
       // Outside the platform's rule and not a list (whose rows are asked one
       // by one below): accepted where it is annotated, asked for nowhere.
       if (field.kind !== 'list' && !tappable(field)) {
@@ -1545,8 +1606,11 @@ for (const page of pages) {
         const rows = Array.isArray(value) ? value : [];
         rows.forEach((row, i) => {
           for (const sub of field.of ?? []) {
-            if (sub.no_tap_target || !row[sub.key]) continue;
             const rowPath = `blocks[${at}].${field.key}[${i}].${sub.key}`;
+            if (sub.no_tap_target || !row[sub.key]) {
+              onThePage.delete(rowPath);
+              continue;
+            }
             if (!tappable(sub)) {
               onThePage.delete(rowPath);
               continue;
