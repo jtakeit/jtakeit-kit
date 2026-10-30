@@ -61,6 +61,22 @@ test('without a form fault, the unannotated fields are all said', async () => {
   assert.ok(out.findings.some((one) => one.says.startsWith('/prices/lane: blocks[0].title is on no page')));
 });
 
+test('a bind names a field the document has, into a data- attribute', async () => {
+  const root = site(true);
+  const page = (bind) =>
+    `<html><body><h1 data-jtk-path="blocks[0].title" data-url="" data-jtk-bind="${bind}">Bowling</h1><form action="/api/lead"><input name="name"><input name="phone"><input name="website"><input name="lanes"><h2 data-jtk-path="blocks[1].title">Write</h2></form></body></html>`;
+
+  writeFileSync(join(root, 'dist', 'index.html'), page('data-url:blocks[0].url'));
+  assert.deepEqual((await lint({ root })).findings, []);
+
+  writeFileSync(join(root, 'dist', 'index.html'), page('data-url:blocks[0].link href:blocks[0].url'));
+  const says = (await lint({ root })).findings.map((one) => `${one.code} ${one.says}`);
+  assert.deepEqual(says, [
+    `${CODES.ANNOTATION_UNKNOWN} /: binds data-url to blocks[0].link, which this page's document has no field for`,
+    `${CODES.ANNOTATION_UNKNOWN} /: binds "href:blocks[0].url" — a bind is data-<name>:<path>, and the editor writes only data- attributes`,
+  ]);
+});
+
 test('the content is collected the way the build collects it, site.json or not', async () => {
   const root = site(true);
   const content = await collectContent(root);

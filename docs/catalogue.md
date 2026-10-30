@@ -114,6 +114,12 @@ site.
   A constant in a script is a message to the studio every time it changes; the
   platform advises a date, an hour or a price kept from the owner
   (`JTK_W_OWNER_LOCKED`).
+- **`data-jtk-bind`** is for such a value that a script reads off an
+  attribute: `data-jtk-bind="data-starts:blocks[0].night_starts"`, pairs
+  separated by spaces. The editor writes the value there as the owner types
+  and dispatches `jtk:bind`, so the preview moves at once; read the attribute
+  when you use it. Only `data-` attributes, and only fields the document has —
+  `jtkit lint` says otherwise.
 - **`seo_sensitive`** shows a warning that changing it moves the page in search
   results.
 

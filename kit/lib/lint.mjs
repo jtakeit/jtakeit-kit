@@ -349,6 +349,36 @@ export async function lint(options = {}) {
     }
   }
 
+  // A value held in an attribute the editor writes as it is typed
+  // (data-jtk-bind="data-starts:blocks[0].night_starts") — a mirror of the
+  // platform's annotation lint: the field exists, and the attribute is data-.
+  const BOUND = /data-jtk-bind="([^"]*)"/g;
+  const BOUND_PATH = /^(shared:)?blocks\[(\d+)\]\.([a-z][a-z0-9_]*)(?:\[\d+\]\.([a-z][a-z0-9_]*))?$/;
+  const declares = (blocks, path) => {
+    const found = BOUND_PATH.exec(path);
+    if (found === null) return false;
+    const block = blocks[Number(found[2])];
+    const field = block === undefined ? undefined : typeOf(block.type)?.fields.find((one) => one.key === found[3]);
+    if (field === undefined) return false;
+    if (found[4] === undefined) return true;
+    return field.kind === 'list' && (field.of ?? []).some((one) => one.key === found[4]);
+  };
+  for (const [where, html] of htmlByPath) {
+    const own = pageByPath.get(where)?.blocks ?? [];
+    for (const [, pairs] of html.matchAll(BOUND)) {
+      for (const pair of pairs.split(/\s+/).filter(Boolean)) {
+        const cut = pair.indexOf(':');
+        const name = cut < 1 ? '' : pair.slice(0, cut);
+        const path = pair.slice(cut + 1);
+        if (!/^data-[a-z0-9-]+$/.test(name)) {
+          fault(CODES.ANNOTATION_UNKNOWN, `${where}: binds "${pair}" — a bind is data-<name>:<path>, and the editor writes only data- attributes`);
+        } else if (!declares(path.startsWith('shared:') ? sharedBlocks : own, path)) {
+          fault(CODES.ANNOTATION_UNKNOWN, `${where}: binds ${name} to ${path}, which this page's document has no field for`);
+        }
+      }
+    }
+  }
+
   const withShared = content.shared === undefined ? '' : ' and the shared text';
   const out = verdict(findings.length > 0
     ? `${findings.length} unannotated field(s) — the visual editor would silently stop working on them`
