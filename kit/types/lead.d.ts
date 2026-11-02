@@ -28,6 +28,14 @@ export interface LeadCopy {
   error?: string;
   invalidName?: string;
   invalidContact?: string;
+  /** The photo control's words; the kit's own in the page's language when absent. `{n}` is the number declared. */
+  photosLabel?: string;
+  photosNote?: string;
+  photosRemove?: string;
+  photosTooMany?: string;
+  photosTooLarge?: string;
+  photosNotPicture?: string;
+  photosFailed?: string;
   [other: string]: string | undefined;
 }
 
@@ -49,8 +57,27 @@ export interface LeadFormProps {
   paths?: LeadPaths;
   /** The element around the form, `jtk-lead`; `''` for none. */
   tag?: string;
+  /** How many photographs the form takes, 1 to 7 — the collecting block's `photos`. Absent is none. */
+  photos?: number;
+  /** The page's language, for the photo control's words. */
+  lang?: string;
 }
 
 export function inputType(kind: string): 'number' | 'tel' | 'email' | 'url' | 'date' | 'time' | 'text';
 /** The enquiry form as HTML, wrapped in `<jtk-lead>`. */
 export function renderLeadForm(props: LeadFormProps): string;
+
+export interface PhotoWords {
+  label: string;
+  note: string;
+  remove: string;
+  tooMany: string;
+  tooLarge: string;
+  notPicture: string;
+  failed: string;
+  /** The sentence a site's privacy page says about the photographs. */
+  privacy: string;
+}
+/** The photo control's words for a language (`de-CH` reads `de`); English otherwise. */
+export function photoWords(lang?: string): PhotoWords;
+export const PHOTOS_MAX: number;

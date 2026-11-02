@@ -73,3 +73,22 @@ test('the module loads where there is no document, and exports the element for o
   assert.equal(typeof JtkLead, 'function');
   assert.doesNotThrow(() => defineLead());
 });
+
+test('a form that takes photos draws a picker with no name, its words in the page\'s language, and nothing for a form that takes none', async () => {
+  const { photoWords, PHOTOS_MAX } = await import('../lib/lead/render.mjs');
+  const html = renderLeadForm({ action: '/api/lead', copy, photos: 7, lang: 'de-CH' });
+  assert.ok(html.includes('<div class="field field--photos" data-photos="7" data-jtk-fixed'));
+  assert.ok(html.includes('type="file" accept="image/jpeg,image/png,image/webp" multiple data-photos-input'));
+  assert.ok(!/type="file"[^>]*\sname=/.test(html), 'a named file control would post the bytes to /api/lead without JavaScript');
+  assert.ok(html.includes('Fotos (bis zu 7)'));
+  assert.ok(html.includes('data-too-many="Höchstens 7 Fotos."'));
+
+  const own = renderLeadForm({ action: '/api/lead', copy: { ...copy, photosLabel: 'Your salon, in up to {n} pictures' }, photos: 3 });
+  assert.ok(own.includes('Your salon, in up to 3 pictures'), "the site's own words win");
+
+  assert.ok(!renderLeadForm({ action: '/api/lead', copy }).includes('data-photos'));
+  assert.throws(() => renderLeadForm({ action: '/api/lead', copy, photos: 8 }), TypeError);
+  assert.equal(PHOTOS_MAX, 7);
+  assert.equal(photoWords('pt-PT').remove, 'Remover');
+  assert.equal(photoWords('xx').label, 'Photos (up to {n})');
+});

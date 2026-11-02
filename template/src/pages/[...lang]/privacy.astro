@@ -37,7 +37,13 @@ const locale = Astro.params.lang ?? '';
 const { PRIVACY } = copyFor(locale);
 // A page written in code exists in every language the site has.
 const alternates = EVERY_LOCALE.map((one) => ({ locale: one, path: withLocale(one, '/privacy') }));
-import { PROCESSING_URL } from '../../content/blocks';
+import { BLOCKS, PROCESSING_URL } from '../../content/blocks';
+import { photoWords } from '@jtakeit/kit/lead';
+import { langOf } from '../../lib/locale';
+// A form that takes photographs says what becomes of them — the law asks the
+// business to, and the platform's part is the kit's sentence (wiki/87).
+const takesPhotos = BLOCKS.some((block) => block.collects === 'enquiry' && (block.photos ?? 0) > 0);
+const photosSentence = photoWords(langOf(locale)).privacy;
 ---
 
 <Layout title={PRIVACY.title} description={PRIVACY.intro} alternates={alternates}>
@@ -47,6 +53,7 @@ import { PROCESSING_URL } from '../../content/blocks';
 
     <h2>{PRIVACY.formTitle}</h2>
     <p>{PRIVACY.formBody}</p>
+    {takesPhotos && <p>{photosSentence}</p>}
 
     <h2>{PRIVACY.whoTitle}</h2>
     <p>

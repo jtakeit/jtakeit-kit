@@ -363,6 +363,15 @@ export interface Block {
    * tel, email, url, date, time_of_day. The structure's own keys are refused.
    */
   asks?: Field[];
+  /**
+   * How many photographs a visitor may attach to an enquiry sent through this
+   * block's form, 1 to 7 — an order form for a website, a quote from
+   * pictures of the job. Absent is none, and the platform then takes none:
+   * it accepts uploads only for a site whose form declared them. The form
+   * (`LeadForm`) draws the picker and the privacy page says what happens to
+   * them. Only a block that collects may take photos.
+   */
+  photos?: number;
 }
 
 /** One arrangement, with the limits that belong to it. */

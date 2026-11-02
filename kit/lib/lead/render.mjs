@@ -64,7 +64,13 @@
  * @property {Ask[]} [asks]
  * @property {LeadPaths} [paths]
  * @property {string} [tag]        the element's name around the form, `jtk-lead`; `''` for none
+ * @property {number} [photos]     how many photographs the form takes, 1 to 7 — what the collecting block declares as `photos`; absent is none
+ * @property {string} [lang]       the page's language, for the photo control's words when `copy` does not carry them
  */
+
+import { PHOTOS_MAX, PHOTO_TYPES, photoWords } from './photos.mjs';
+
+export { photoWords, PHOTOS_MAX } from './photos.mjs';
 
 const ESCAPE = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 /** @param {unknown} value */
@@ -117,9 +123,12 @@ function askControl(ask) {
  * @returns {string}
  */
 export function renderLeadForm(props) {
-  const { action, copy, asks = [], paths = {}, tag = 'jtk-lead' } = props;
+  const { action, copy, asks = [], paths = {}, tag = 'jtk-lead', photos = 0, lang = 'en' } = props;
   if (typeof action !== 'string' || action === '') throw new TypeError('renderLeadForm: action is where /api/lead is from this page');
   if (!copy || typeof copy !== 'object') throw new TypeError('renderLeadForm: copy is the form\'s words');
+  if (!Number.isInteger(photos) || photos < 0 || photos > PHOTOS_MAX) {
+    throw new TypeError(`renderLeadForm: photos is how many the form takes, 0 to ${PHOTOS_MAX}`);
+  }
 
   const form = `<form class="lead" method="post" action="${esc(action)}" novalidate data-lead-form${attr('data-success', copy.success)}${attr('data-error', copy.error)}${attr('data-sending', copy.sending)}>
   <div class="lead__head">
@@ -149,6 +158,8 @@ export function renderLeadForm(props) {
     ${askControl(ask)}
   </div>`).join('\n  ')}
 
+${photos > 0 ? photoControl(photos, copy, lang) : ''}
+
   <div class="trap" aria-hidden="true" data-jtk-fixed>
     <label for="lead-website">Website</label>
     <input id="lead-website" name="website" type="text" tabindex="-1" autocomplete="off">
@@ -163,4 +174,25 @@ export function renderLeadForm(props) {
 </form>`;
 
   return tag ? `<${tag}>${form}</${tag}>` : form;
+}
+
+/**
+ * The photo control (wiki/87 on the platform): a file picker with no `name`,
+ * so a form posted without JavaScript sends what it always did, and the
+ * element uploads each picture to `/api/upload` and puts the tokens in the
+ * enquiry. Its words are fixed — the kit's, in the page's language, unless
+ * the site's copy carries its own.
+ *
+ * @param {number} n @param {LeadCopy & Record<string, string | undefined>} copy @param {string} lang
+ */
+function photoControl(n, copy, lang) {
+  const w = photoWords(lang);
+  const say = (/** @type {string} */ own, /** @type {string} */ fallback) => (copy[own] ?? fallback).replaceAll('{n}', String(n));
+  return `<div class="field field--photos" data-photos="${n}" data-jtk-fixed${attr('data-too-many', say('photosTooMany', w.tooMany))}${attr('data-too-large', say('photosTooLarge', w.tooLarge))}${attr('data-not-picture', say('photosNotPicture', w.notPicture))}${attr('data-failed', say('photosFailed', w.failed))}${attr('data-remove', say('photosRemove', w.remove))}>
+    <label class="field__label" for="lead-photos">${esc(say('photosLabel', w.label))}</label>
+    <input class="field__input field__input--file" id="lead-photos" type="file" accept="${PHOTO_TYPES.join(',')}" multiple data-photos-input aria-describedby="lead-photos-note">
+    <p class="field__hint" id="lead-photos-note">${esc(say('photosNote', w.note))}</p>
+    <ul class="lead__photos" data-photos-list></ul>
+    <p class="field__error" data-error-for="photos" hidden></p>
+  </div>`;
 }

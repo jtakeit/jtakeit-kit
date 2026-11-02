@@ -92,6 +92,35 @@ accessibility tree — `aria-hidden`, `tabindex="-1"`, not `display: none`, whic
 some bots detect. A filled honeypot is answered with the same success a human
 gets. Telling a bot it was caught only teaches it to try again differently.
 
+## Photographs with the enquiry
+
+A form may let the visitor attach up to seven pictures — an order form for a
+website, a quote from photographs of the job. Say so on the block that
+collects, in `blocks.ts`:
+
+```ts
+{ type: 'cta_banner', collects: 'enquiry', photos: 7, /* … */ }
+```
+
+That is the whole of it on the site's side. `LeadForm` passes `photos` to
+`renderLeadForm`, which draws a file picker with its words in the page's
+language (`photoWords`, eight languages, or the site's own as
+`copy.photosLabel` and the rest), and `<jtk-lead>` checks each picture for
+type and size, shows small previews with a way to take one out, uploads them
+one by one to `/api/upload` when the form is sent, and puts the tokens in the
+enquiry. The privacy page adds its sentence about them by itself.
+
+The platform holds the rest, and none of it is the site's to change: it takes
+uploads only for a site whose catalogue declares `photos`, never more than
+declared on one enquiry; it decodes and writes every picture again, so the
+location a phone wrote into it is gone; keeps it privately in the EU; shows it
+only to the people who may read the enquiry; and deletes it with the enquiry.
+The picker has no `name`: without JavaScript the form posts what it always did,
+without the pictures.
+
+Ask for photographs only when the business needs them, and never for health
+or other sensitive pictures — the platform's terms forbid it.
+
 ## Autofill repaints the fields
 
 Chrome and Safari draw a filled field with their own background and their own

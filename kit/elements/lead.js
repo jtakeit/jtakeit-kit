@@ -13,6 +13,19 @@
  * walk of the document at load.
  */
 
+/** The picture types and size the platform takes (`@jtakeit/kit/lead`'s photos.mjs). */
+const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const PHOTO_BYTES_MAX = 10 * 1024 * 1024;
+
+/** An upload the platform refused, by the code it named. */
+class PhotoRefused extends Error {
+  /** @param {string | undefined} code */
+  constructor(code) {
+    super(code ?? 'failed');
+    this.code = code;
+  }
+}
+
 /**
  * Wires one form. Idempotent: a form already wired is left alone.
  * @param {HTMLFormElement} form
@@ -63,6 +76,76 @@ export function wireLead(form) {
     }
   };
 
+  /*
+   * The photographs (wiki/87 on the platform), when the form declared any.
+   * Chosen here, checked here for what is cheap to check — the platform checks
+   * everything again — drawn as small previews with a way to take one out,
+   * and uploaded one by one to `/api/upload` when the form is sent; the tokens
+   * go into the enquiry as `attachments`.
+   */
+  /** @type {HTMLElement | null} */ const photosField = form.querySelector('[data-photos]');
+  /** @type {HTMLInputElement | null} */ const photoInput = photosField?.querySelector('[data-photos-input]') ?? null;
+  /** @type {HTMLElement | null} */ const photoList = photosField?.querySelector('[data-photos-list]') ?? null;
+  const photosMax = Number(photosField?.dataset.photos ?? 0);
+  /** @type {{ file: File; url: string }[]} */ let chosen = [];
+
+  const drawPhotos = () => {
+    if (!photoList) return;
+    photoList.replaceChildren(...chosen.map((one, index) => {
+      const item = document.createElement('li');
+      item.className = 'lead__photo';
+      const img = document.createElement('img');
+      img.src = one.url;
+      img.alt = one.file.name;
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'lead__photo-remove';
+      remove.textContent = photosField?.dataset.remove ?? '×';
+      remove.setAttribute('aria-label', `${photosField?.dataset.remove ?? ''} ${one.file.name}`.trim());
+      remove.addEventListener('click', () => {
+        URL.revokeObjectURL(one.url);
+        chosen = chosen.filter((_, i) => i !== index);
+        drawPhotos();
+      });
+      item.append(img, remove);
+      return item;
+    }));
+  };
+
+  photoInput?.addEventListener('change', () => {
+    showError('photos', '');
+    for (const file of Array.from(photoInput.files ?? [])) {
+      if (!PHOTO_TYPES.includes(file.type)) { showError('photos', photosField?.dataset.notPicture ?? ''); continue; }
+      if (file.size > PHOTO_BYTES_MAX) { showError('photos', photosField?.dataset.tooLarge ?? ''); continue; }
+      if (chosen.length >= photosMax) { showError('photos', photosField?.dataset.tooMany ?? ''); break; }
+      chosen.push({ file, url: URL.createObjectURL(file) });
+    }
+    // Cleared, so the same picture can be chosen again after it was taken out.
+    photoInput.value = '';
+    drawPhotos();
+  });
+
+  /** @param {string | undefined} code */
+  const photoFailure = (code) =>
+    code === 'too_large' ? photosField?.dataset.tooLarge
+      : code === 'not_a_picture' ? photosField?.dataset.notPicture
+        : code === 'too_many' ? photosField?.dataset.tooMany
+          : photosField?.dataset.failed;
+
+  /** Each chosen picture to `/api/upload`, in order; its token, or a refusal. */
+  const uploadPhotos = async () => {
+    const at = form.action.replace(/\/api\/lead(?=$|\?)/, '/api/upload');
+    /** @type {string[]} */ const tokens = [];
+    for (const one of chosen) {
+      const response = await fetch(at, { method: 'POST', headers: { 'content-type': one.file.type }, body: one.file });
+      /** @type {{ token?: string; error?: string }} */ let body = {};
+      try { body = await response.json(); } catch { /* said as «failed» */ }
+      if (!response.ok || !body.token) throw new PhotoRefused(body.error);
+      tokens.push(body.token);
+    }
+    return tokens;
+  };
+
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     clearErrors();
@@ -85,6 +168,9 @@ export function wireLead(form) {
     if (label) label.textContent = form.dataset.sending ?? original;
 
     try {
+      if (chosen.length > 0) {
+        for (const token of await uploadPhotos()) data.append('attachments', token);
+      }
       const response = await fetch(form.action, {
         method: 'POST',
         headers: { accept: 'application/json' },
@@ -94,6 +180,9 @@ export function wireLead(form) {
 
       if (response.ok && body.ok) {
         form.reset();
+        for (const one of chosen) URL.revokeObjectURL(one.url);
+        chosen = [];
+        drawPhotos();
         status.textContent = form.dataset.success ?? '';
         // Preview only: the destination is not connected, so nothing was
         // delivered. Visible to the studio, meaningless to a visitor. It
@@ -106,11 +195,20 @@ export function wireLead(form) {
         const input = /** @type {HTMLInputElement | null} */ (form.elements.namedItem(field));
         showError(field, input?.dataset.message ?? '');
         input?.focus();
+      } else if (body.error === 'photos') {
+        // A photo's token was not taken — late, or used: send them again.
+        form.setAttribute('data-state', 'error');
+        showError('photos', photosField?.dataset.failed ?? '');
       } else {
         form.setAttribute('data-state', 'error');
         status.textContent = body.message ?? form.dataset.error ?? '';
       }
-    } catch {
+    } catch (error) {
+      if (error instanceof PhotoRefused) {
+        form.setAttribute('data-state', 'error');
+        showError('photos', photoFailure(error.code) ?? '');
+        return;
+      }
       form.setAttribute('data-state', 'error');
       status.textContent = form.dataset.error ?? '';
     } finally {
