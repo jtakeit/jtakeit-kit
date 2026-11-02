@@ -408,7 +408,26 @@ for (const block of catalogue.blocks) {
   checkBeside(block.type, block.fields ?? []);
 
   checkAsks(block);
+  checkPhotos(block);
   checkViews(block);
+}
+
+/*
+ * How many photographs a form takes with an enquiry (wiki/87 on the
+ * platform). A mirror of the check in registry/catalogue.go: only a block that
+ * collects may take any, and from one to seven — the platform takes uploads
+ * only for a site whose form declared them.
+ */
+function checkPhotos(block) {
+  if (block.photos === undefined || block.photos === 0) return;
+  const where = `${block.type}.photos`;
+  if (block.collects !== 'enquiry') {
+    fault(E.COLLECTS, where, 'takes photos and collects nothing — say collects: "enquiry"');
+    return;
+  }
+  if (!Number.isInteger(block.photos) || block.photos < 1 || block.photos > 7) {
+    fault(E.COLLECTS, where, `takes ${JSON.stringify(block.photos)} photos; a form takes 1 to 7`);
+  }
 }
 
 /*

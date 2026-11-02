@@ -32,7 +32,11 @@ const locale = localeOf(Astro.url.pathname);
 const LANG = langOf(locale);
 const { FORM, jtkPath } = copyFor(locale);
 
-const declared: Field[] = BLOCKS.find((block) => block.type === 'cta_banner')?.asks ?? [];
+const block = BLOCKS.find((one) => one.type === 'cta_banner');
+const declared: Field[] = block?.asks ?? [];
+// The photographs the form takes, as the block declares them (blocks.ts);
+// the kit draws the picker in the page's language.
+const photos = block?.photos ?? 0;
 const asks = declared.map((ask) => ({
   key: ask.key,
   label: words(ask.label, LANG),
@@ -65,7 +69,7 @@ const paths = {
   cta_label: at('cta_label'),
 };
 
-const html = renderLeadForm({ action: under('/api/lead'), copy: FORM, asks, paths });
+const html = renderLeadForm({ action: under('/api/lead'), copy: FORM, asks, paths, photos, lang: LANG });
 ---
 
 <Fragment set:html={html} />
