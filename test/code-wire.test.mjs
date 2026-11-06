@@ -227,6 +227,19 @@ test('first push: the manifest, every file in parts, done, and the position reco
   assertTokenKept(api, output);
 });
 
+test('.env.example is pushed like any other file, and pulled back', async (t) => {
+  const api = await fakeApi();
+  t.after(api.close);
+  const dir = siteCopy();
+  put(dir, '.env.example', 'STRIPE_KEY=\nPUBLIC_SITE_ID=\n');
+  const { status, output } = await jtk('push', api.mint('push'), dir);
+  assert.equal(status, 0, output);
+  assert.equal(api.files()['.env.example'], 'STRIPE_KEY=\nPUBLIC_SITE_ID=\n');
+  const clone = join(temp(), 'clone');
+  assert.equal((await jtk('pull', api.mint('pull'), clone)).status, 0);
+  assert.equal(read(clone, '.env.example'), 'STRIPE_KEY=\nPUBLIC_SITE_ID=\n');
+});
+
 test('a push with nothing needed sends no parts and says nothing changed', async (t) => {
   const api = await fakeApi();
   t.after(api.close);
@@ -330,6 +343,12 @@ test('the command line: .env or a symlink refused with its path before any reque
   assertTokenKept(api, failed.stdout, failed.stderr);
 
   rmSync(join(dir, '.env'));
+  put(dir, '.env.local', 'STRIPE_KEY=x\n');
+  const local = await run(process.execPath, [JTK, 'push', url], { cwd: dir }).then(() => null, (why) => why);
+  assert.equal(local?.code, 1);
+  assert.match(local.stderr, /\.env\.local — is an environment file/);
+  assert.equal(api.requests.length, 0);
+  rmSync(join(dir, '.env.local'));
   const { symlinkSync } = await import('node:fs');
   symlinkSync('../package.json', join(dir, 'src/pages/link.json'));
   const linked = await run(process.execPath, [JTK, 'push', url], { cwd: dir }).then(() => null, (why) => why);

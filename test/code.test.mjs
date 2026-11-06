@@ -102,11 +102,27 @@ test('refused before anything is sent, every path at once: .env, a symlink, cred
   assert.deepEqual(refusedPaths(() => manifestOf(root)), [
     '.env', '.gitmodules', '.npmrc', 'config/.env.local', 'hosts', 'keys/pkcs8.pem', 'keys/site.pem', 'src/token.ts', 'vendor/.GIT/config',
   ]);
-  // An .npmrc without a credential, and a public key, are ordinary files.
+  // An .npmrc without a credential, a public key and the env templates are ordinary files.
   const fine = temp();
   put(fine, '.npmrc', 'engine-strict=true\n');
   put(fine, 'id.pub', '-----BEGIN PUBLIC KEY-----\n');
-  assert.equal(manifestOf(fine).files.length, 2);
+  put(fine, '.env.example', 'STRIPE_KEY=\n');
+  put(fine, 'a/.env.sample', 'X=\n');
+  put(fine, 'b/.ENV.Template', 'X=\n');
+  assert.deepEqual(manifestOf(fine).files.map((f) => f.path), ['.env.example', '.npmrc', 'a/.env.sample', 'b/.ENV.Template', 'id.pub']);
+});
+
+test("the server's secret shapes, character for character: Stripe live and test keys, AWS keys, keys, .npmrc credentials", () => {
+  const root = temp();
+  put(root, 'a.ts', `const k = 'sk_test_${'a1'.repeat(12)}';\n`);
+  put(root, 'b.ts', `const k = 'rk_live_${'Z9'.repeat(12)}';\n`);
+  put(root, 'c.ini', 'aws_access_key_id = AKIAIOSFODNN7EXAMPLE\n');
+  put(root, 'd.pem', '-----BEGIN EC PRIVATE KEY-----\n');
+  put(root, 'e/.npmrc', 'always-auth=true\n//npm.pkg.github.com/:_auth = abc\n');
+  put(root, '.ENV.local', 'X=1\n');
+  put(root, 'f.ts', `const k = 'pk_live_${'a'.repeat(24)}'; // a publishable key is public\n`);
+  put(root, 'g/.npmrc', '# _authToken is set in CI\n');
+  assert.deepEqual(refusedPaths(() => manifestOf(root)), ['.ENV.local', 'a.ts', 'b.ts', 'c.ini', 'd.pem', 'e/.npmrc']);
 });
 
 test('the limits of §3: a path over 4096 bytes, a file over 50 MB, a copy over 200 MB — refused without reading them', () => {
@@ -133,7 +149,11 @@ test('a pull compares only regular files, sends no hash of an .env, and refuses 
   put(root, 'a.txt', 'a');
   put(root, '.env', 'x');
   symlinkSync('/etc/hosts', join(root, 'hosts'));
-  assert.deepEqual(holdingsOf(root), [{ path: 'a.txt', hash: blobHash(Buffer.from('a')) }], 'not even the hash of .env leaves');
+  put(root, '.env.example', 'X=\n');
+  assert.deepEqual(holdingsOf(root), [
+    { path: '.env.example', hash: blobHash(Buffer.from('X=\n')) },
+    { path: 'a.txt', hash: blobHash(Buffer.from('a')) },
+  ], 'not even the hash of .env leaves; its template is an ordinary file');
 });
 
 const LONG = `src/content/${'a-rather-long-directory-name/'.repeat(5)}page.md`;
