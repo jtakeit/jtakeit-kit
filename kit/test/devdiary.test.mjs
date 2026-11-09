@@ -68,3 +68,26 @@ test('a diary with no zone says so, the way the platform does', async () => {
   assert.equal(answer.status, 412);
   assert.match(answer.body.message, /timezone/);
 });
+
+// What a person does is the rows the kit and the panel write — `[{ service }]`
+// — read as the booking form reads them. It used to be taken for a list of
+// slugs here, so with the rows nobody could do anything (wiki/98 §13).
+test('a person who does other things is not offered; the rows are read as rows', async () => {
+  const root = site();
+  const entry = (collection, path, block, extra = {}) => JSON.stringify({ collection, path, ...extra, blocks: [block] });
+  writeFileSync(join(root, 'jtk', 'content', 'services', 'dye.json'), entry('services', '/services/dye', { type: 'service', title: 'Dye', takes: 60, costs: 9000 }));
+  writeFileSync(join(root, 'jtk', 'content', 'masters', 'anna.json'), entry('masters', '/masters/anna', { type: 'master', title: 'Anna', does: [{ service: 'cut' }] }));
+  writeFileSync(join(root, 'jtk', 'content', 'masters', 'ben.json'), entry('masters', '/masters/ben', { type: 'master', title: 'Ben', does: [{ service: 'dye' }] }));
+  // Hidden, and a German copy of a service: neither is a choice of its own.
+  writeFileSync(join(root, 'jtk', 'content', 'masters', 'cleo.json'), entry('masters', '/masters/cleo', { type: 'master', title: 'Cleo' }, { visible: false }));
+  mkdirSync(join(root, 'jtk', 'content', 'de', 'services'), { recursive: true });
+  writeFileSync(join(root, 'jtk', 'content', 'de', 'services', 'cut.json'), entry('services', '/de/services/cut', { type: 'service', title: 'Schnitt', takes: 45 }, { locale: 'de' }));
+  const handler = devDiary(root);
+  const from = new Date(Date.now() + 2 * 86400000);
+  from.setUTCHours(0, 0, 0, 0);
+  const to = new Date(from.getTime() + 86400000);
+  const asked = (service) => ask(handler, 'GET', `/availability?service=${service}&from=${from.toISOString()}&to=${to.toISOString()}`);
+  assert.deepEqual((await asked('cut')).body.slots[0].free, ['anna']);
+  assert.deepEqual((await asked('dye')).body.slots[0].free, ['ben']);
+  assert.deepEqual((await asked('cut')).body.services.map((one) => one.slug), ['cut', 'dye']);
+});
