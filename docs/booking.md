@@ -117,25 +117,30 @@ document, which the owner edits under the diary; publish writes it to
 ```astro
 ---
 import BookingForm from '../components/BookingForm.astro';
-import { listed, groupsOf, collectionNamed } from '../lib/entries';    // src/lib/entries.ts: the visible entries, in the collection's order
-import bookings from '../../jtk/bookings.json';
-const all = await listed('services');
+import { site } from '../lib/site';    // the kit's door: the entries that are out, in the collection's order
+const all = site.entries('services');
 // Under the collection's `group` where it has one: the runs in the headings' order,
 // each heading the words (a select's label, a category's title), never the stored value.
-const runs = (await groupsOf(collectionNamed('services'), all)) ?? [{ entries: all }];
+const runs = site.groupsOf('services', all) ?? [{ entries: all }];
 const services = runs.flatMap((run) => run.entries.map((e) => ({
-  slug: e.id, title: String(e.data.title),
-  takes: e.data.takes, costs: e.data.costs, rates: e.data.rates, group: run.heading?.text, // for the checklist's total and headings; `rates` says «from …»
+  slug: e.slug, title: String(e.fields.value('title') ?? e.slug),
+  takes: e.fields.value('takes'), costs: e.fields.value('costs'), rates: e.fields.value('rates'), group: run.heading?.text, // for the checklist's total and headings; `rates` says «from …»
 })));
-const masters  = (await listed('masters')).map((e) => ({ slug: e.id, title: String(e.data.title) }));
-const combine  = bookings.blocks[0].combine === true;                  // jtk/bookings.json, the owner's setting
-const scale    = bookings.blocks[0].scale ?? '';                      // 'daily' for a business that lets things by the day
-const kind     = bookings.blocks[0].kind ?? '';                       // 'car_rental', 'clinic'… — whose words the form speaks
+const masters  = site.entries('masters').map((e) => ({
+  slug: e.slug, title: String(e.fields.value('title') ?? e.slug),
+  does: e.fields.rows('does').map((row) => row.value('service') as string),   // rows of { service }; none is everything
+}));
+const settings = site.module('bookings');                             // jtk/bookings.json's bookings_config block, the owner's settings
+const combine  = settings.combine === true;
+const scale    = typeof settings.scale === 'string' ? settings.scale : '';   // 'daily' for a business that lets things by the day
+const kind     = typeof settings.kind === 'string' ? settings.kind : '';     // 'car_rental', 'clinic'… — whose words the form speaks
 ```
 
-An entry is `{ id, data }` — the slug and the block's fields — which is what
-`src/lib/entries.ts` exports (`listed`, `everyEntry`, `href`); there is no
-`entries()` and never was one, which this page used to claim.
+An entry is the door's (`@jtakeit/kit/content`): its `slug`, its `locale`, and
+its values read through `fields` — `value`, `text`, `rows` — each with its
+annotation (`fields.at('title')`) for a page that draws it. The settings are
+the block whose type is `bookings_config`, found by its type rather than by
+being first.
 
 And `jtk/bookings.json` says **where the form is** — `"page": "/angebote"` in its
 block — because the form is placed by a page template rather than by a block, so
@@ -150,12 +155,13 @@ booking*. Empty means the front page.
 **The currency is the site's, never the page's.** It is set once, in
 `jtk/site.json` (`"business": {"currency": "chf"}`) or on the Business facts in
 the panel, and the form, the price list and the total read it from there —
-`siteCurrency` in `src/lib/site.ts`, `money()` in `src/lib/money.ts`. Do not
+`site.currency`, and `site.money(value, locale)` for a price, both the door's
+(`src/lib/site.ts`). Do not
 pass `currency="CHF"` or write a sign into a page: when the business changes its
 currency the diary and the payment follow, and a page with its own would go on
 saying francs. The platform's preflight reads the built prices and fails one in
 another currency. A price is whole minor units of the currency — 18000 is
-CHF 180, 1000 is ¥1000 — and `money()` counts the digits each currency has.
+CHF 180, 1000 is ¥1000 — and `site.money()` counts the digits each currency has.
 
 The words that depend on the kind of business — «Записатися» or «Орендувати»,
 «Майстер» or «Авто», «Ви записані» or «Оренду підтверджено» — are the

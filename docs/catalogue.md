@@ -23,6 +23,13 @@ belongs:
 npx @jtakeit/astro catalogue
 ```
 
+The site renders from the emitted file too: the kit's door
+(`@jtakeit/kit/content`, `site` in `src/lib/site.ts`) reads the schema the
+platform reads — the collections, their order and groups, the languages, which
+fields take a tap — never `blocks.ts` itself. `jtk create` writes it; after a
+change to `blocks.ts`, write it again (`--emit-only` writes it and stops), and
+the dev server picks it up.
+
 **A field declared there can be edited by the owner. A field left out is part of
 the design.** Both are right answers — a headline is content, the way a section
 is laid out is not — and the choice is per field rather than something a

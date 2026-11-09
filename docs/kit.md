@@ -69,6 +69,7 @@ src/
   copy/<locale>.ts every user-facing sentence
   data/site.ts     the business's facts + INDEXABLE
   layouts/         <head>, SEO, the inline pre-paint script
+  lib/site.ts      the content, read through the kit's door (@jtakeit/kit/content)
   lib/photos.ts    slot → file, via import.meta.glob
   pages/           routes; robots.txt.ts and sitemap.xml.ts are routes too
   styles/          tokens and globals

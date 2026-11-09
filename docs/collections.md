@@ -92,15 +92,27 @@ the collection and the scaffold draws it (below), or a page of your own —
 
 ```astro
 ---
-import { listed, href, collectionNamed } from '../../lib/entries';
-const works = collectionNamed('works');
-const all = await listed('works');
+import { site } from '../../lib/site';
+import { href } from '../../lib/entries';
+import { localeOf } from '../../lib/locale';
+const locale = localeOf(Astro.url.pathname);
+const works = site.collection('works')!;
+const all = site.entries('works', { locale });
 ---
+<ul>
+  {all.map((work) => (
+    <li><a href={href(work)} {...work.fields.at('title')}>{work.fields.text('title')}</a></li>
+  ))}
+</ul>
 ```
 
-`listed()` is the only thing that enumerates entries, and it does two things you
-must not do by hand: it drops the ones nobody has finished, and it sorts by the
-collection's own order.
+`site.entries()` — the kit's door, `@jtakeit/kit/content` — is the only thing
+that enumerates entries, and it does two things you must not do by hand: it
+drops the ones nobody has finished, and it sorts by the collection's own order
+(`{ all: true }` for every one, which only the route that renders an entry
+asks for). An entry drawn on another page annotates as that entry's —
+`page:/works/oak:blocks[0].title` — so a tap opens the entry; on its own page
+`entry.here` annotates as the page's own.
 
 ## The listing
 
@@ -137,7 +149,7 @@ is an entry's address, and the platform takes a bare number for a slug: an
 owner who numbers her works would have entry `2` and the listing's second page
 at one address. A slug the platform makes has no `/`, so `/works/page/2` is
 nobody's, and an entry called `page` lives beside it at `/works/page`. The one
-way to collide is a file nested by hand — `jtk/content/works/page/2.json` —
+way to collide is an entry written by hand with the path `/works/page/2`,
 and the build refuses it by name rather than drawing one of the two.
 
 **Your own listing wins.** Where `src/pages/<prefix>.astro`,
@@ -280,13 +292,15 @@ writes it:
   not pages of their own:
   `/tags/red/page/2` would be an address under the tags' prefix no entry
   owns. A ref's value on an entry links to the entry it names.
-- `src/lib/entries.ts` has the reading for your own pages: `groupsOf(collection,
-  entries, locale)` (the runs, each with its `heading`), `referrersOf(collection,
-  entry)`, `treeOf(collection, entry)`, `titlePath(collection, entry)` (the
-  annotation for an entry's title drawn on another page), and
-  `listingPages(collection, locale)` / `listingHref(collection, locale, n)` for
-  a listing's order, its page size and its addresses. The rules themselves
-  are `src/lib/groups.ts`, which imports nothing and is tested on its own.
+- The door has the reading for your own pages: `site.groupsOf(name, entries,
+  locale)` (the runs, each with its `heading` — `text`, `at` and `fixed`),
+  `site.referrersOf(entry)`, `site.treeOf(entry)`, and
+  `site.listingPages(name, locale)` / `site.listingOf(name, locale, n)` for a
+  listing's order, its page size and its addresses. `src/lib/entries.ts` adds
+  what is this site's: `href(entry)` and `listingHref(name, locale, n)` under
+  the build's base, and `titleOf(entry)` — an entry's title as drawn on
+  another page, with its annotation where the owner taps it. The rules are
+  the kit's (`lib/content/groups.mjs`), tested there.
 
 **Annotation.** A heading that is a category's title is that category's words:
 it carries `page:/categories/<slug>:blocks[0].title`, as a listing's row does,
@@ -364,22 +378,26 @@ way they would name a field the listing page has not got — so for a long time
 they carried no annotation at all, and the words an owner most wants to fix
 were the one place on the site they could not tap.
 
-`readOther` reads another page's document and writes the address into every
-path it hands back:
+An entry the door hands out annotates as drawn on another page: the address
+of its document is in every path it writes.
 
 ```astro
 ---
-import { readOther } from '../../lib/page';
+import { site } from '../../lib/site';
+import { href } from '../../lib/entries';
 
-const post = readOther('/blog/healing');
-const { at, of } = post.block('post');
+const post = site.entry('blog', 'healing')!;
 ---
-<a href="/blog/healing" data-jtk-path={post.pathAt(at, 'title')}>{post.str(of, 'title')}</a>
+<a href={href(post)} {...post.fields.at('title')}>{post.fields.text('title')}</a>
 ```
 
 ```html
 data-jtk-path="page:/blog/healing:blocks[0].title"
 ```
+
+A page's words drawn on another page are the same: `site.page('/prices').elsewhere`
+annotates `page:/prices:…`. And the other way round, `entry.here` is the entry
+annotated as the page it is on — what its own route draws.
 
 The admin resolves it against that page, writes it there, and the post's own
 page updates with it. `jt-check` holds the claim from the other end: an address
@@ -399,28 +417,33 @@ this.
 ## Writing an entry by hand
 
 Legitimate, and sometimes the fastest way to write one. The file is
-`jtk/content/<prefix>/<slug>.md`, its address is where it sits, and the
-next publish imports it back as the draft:
+`jtk/content/<prefix>/<slug>.json` — `jtk/content/de/<prefix>/<slug>.json` for
+one in German — the shape the platform writes, and the next import takes it
+as the draft:
 
-```markdown
----
-collection: blog
-visible: false
-type: post
-v: 1
-title: Догляд після сеансу
-date: "2026-08-26"
-excerpt: Що робити перші два тижні.
----
-
-## Перший тиждень
-
-Не мочити, не терти рушником.
+```json
+{
+  "path": "/blog/aftercare",
+  "collection": "blog",
+  "visible": false,
+  "seo": {},
+  "blocks": [
+    { "_key": "post-1", "type": "post", "v": 1,
+      "title": "Догляд після сеансу", "date": "2026-08-26",
+      "excerpt": "Що робити перші два тижні.",
+      "body": "## Перший тиждень\n\nНе мочити, не терти рушником." }
+  ]
+}
 ```
 
-`visible: false` means the site builds it and lists it nowhere; the studio's
-edge serves it only to a session that is editing the site. Quote the date —
-unquoted, YAML makes it a timestamp.
+**The entry is its `path`**, not the file's name or place: the platform imports
+it by the path, and the door reads it the same way — its slug is the path
+without the language and the collection's prefix, its language the `locale`
+key or the language the path starts with. Its own values are the first block;
+what follows is its body. `visible: false` means the site builds it and lists
+it nowhere; the studio's edge serves it only to a session that is editing the
+site. A file under `jtk/content` with no `path` is refused by the build, as
+the platform refuses it.
 
 ## Scheduled entries
 
@@ -436,17 +459,16 @@ from the repository**: it rewrites such an entry to `visible: false` in its
 checkout before Astro runs, so the listing, the feed and the sitemap leave it
 out like any unfinished entry, and its page is built for the editor as always.
 
-**`astro dev` reads the files as they are**, so the entry loader
-(`src/lib/entryLoader.ts`, the rule in `src/lib/schedule.ts`) applies the same
-rule with the clock at the moment the collections load: a `show_at` still ahead
-or a `hide_at` already behind is not visible, and `visible: false` hides an
-entry whatever its dates say. Loaded once — a post whose hour comes while the
-dev server runs appears on the next start. A value that is not a time is no
-schedule; the platform refuses one where it is written.
+**`astro dev` reads the files as they are**, so the door applies the same
+rule with the clock at the moment it reads them: a `show_at` still ahead or a
+`hide_at` already behind is not offered, and `visible: false` hides an entry
+whatever its dates say. Read when the dev server loads `src/lib/site.ts`, and
+again when a file under `jtk/` changes — a post whose hour comes while nothing
+changes appears on the next read. A value that is not a time is no schedule;
+the platform refuses one where it is written.
 
 **A local `astro build` reads them the same way**, by the build's clock: the
-kit (`@jtakeit/kit`'s `lib/schedule.mjs`, which the template's copy is held to
-by a test) lists a scheduled entry among the drafts in `dist/_meta.json`, and
-`jtk catalogue --dist` treats it as hidden — an entry without a page that is
-not out yet is owed no annotation on its listing, exactly as one with
-`visible: false` is not.
+kit (`@jtakeit/kit`'s `lib/schedule.mjs`, which the door asks) lists a
+scheduled entry among the drafts in `dist/_meta.json`, and `jtk catalogue
+--dist` treats it as hidden — an entry without a page that is not out yet is
+owed no annotation on its listing, exactly as one with `visible: false` is not.

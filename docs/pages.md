@@ -29,9 +29,9 @@ on more than one page.
 
 **A content document** — `jtk/content/prices.json`, committed with the
 fields in it and a `path` of `/prices`. Empty strings are fine and are what the
-scaffold ships for the home page; what is not fine is the file not existing,
-because the build reads it and a missing one is a build error rather than an
-empty page.
+scaffold ships for the home page. A page whose document does not exist builds
+empty — every value blank, nothing annotated — which looks finished and is
+not, so commit the document with the page.
 
 **A line in `PAGES`** — `src/data/site.ts`. It feeds the sitemap and `llms.txt`,
 and it is written by hand so that adding a page and forgetting to list it is a
@@ -42,37 +42,60 @@ design, and it is the part worth thinking about longest.
 
 ## Reading its content
 
-The home page has `src/copy/<locale>.ts`, which is that page's own vocabulary —
-`HOME.hero.title`, shaped by hand to the blocks it happens to have. Every other
-page uses the generic reader instead, so that reshaping the home page's copy
-cannot break how the rest of the site is read:
+A page reads its document through the kit's door, `@jtakeit/kit/content` —
+`site` in `src/lib/site.ts`, the one place this repository reads `jtk/`:
 
 ```astro
 ---
 import Layout from '../layouts/Layout.astro';
-import { readPage } from '../lib/page';
+import { site } from '../lib/site';
+import { localeOf } from '../lib/locale';
 
-const prices = readPage('/prices');
-const { at, of } = prices.block('rates');
+const locale = localeOf(Astro.url.pathname);
+const prices = site.page('/prices', locale);
+const rates = prices.block('rates');
 ---
 
-<Layout title={prices.seo.title} description={prices.seo.description}>
+<Layout title={String(prices.seo.title ?? '')} description={String(prices.seo.description ?? '')} alternates={site.alternatesOf(prices)}>
   <main id="content">
-    <h1 data-jtk-path={prices.pathAt(at, 'title')}>{prices.str(of, 'title')}</h1>
-    <p data-jtk-path={prices.pathAt(at, 'lead')}>{prices.str(of, 'lead')}</p>
+    <h1 {...rates.at('title')}>{rates.text('title')}</h1>
+    <p {...rates.at('lead')}>{rates.text('lead')}</p>
+    <ul>
+      {rates.rows('items').map((row) => (
+        <li><span {...row.at('title')}>{row.text('title')}</span>
+            <span {...row.at('price')}>{site.money(row.value('price'), locale)}</span></li>
+      ))}
+    </ul>
   </main>
 </Layout>
 ```
 
-`readPage` gives the same set the copy module does: `PAGE` (every block in
-order), `block(type)`, `str`, `rows`, `picture`, `gallery`, and `pathAt`. It
-finds the document by the `path` written inside it, not by the file's name,
-because that is what publish writes and what the admin reads back.
+`site.page(path, locale)` finds the document by the `path` written inside it,
+not by the file's name, because that is what publish writes and what the admin
+reads back — and the home page is found the same way, `site.page('/')`. A page
+hands out `blocks` (every block in order) and `block(type)` (the first of a
+type); a block hands out each value with its annotation:
 
-**Every field rendered carries its `data-jtk-path`.** The annotation lint fails
-the build without one, per page — and it is per page for a reason worth knowing:
+- `text(field)` — the value as words, `''` for none;
+- `value(field)` — the value as stored, `undefined` for none;
+- `rows(field)` — a list's rows, each read the same way;
+- `picture(field)` — `{ src, alt, data-jtk-path }`: the alt is `<field>_alt`
+  beside it;
+- `gallery(field)` — the pictures of a gallery, each annotated by its place in
+  that field;
+- `at(field)` — `{ 'data-jtk-path': … }`, spread onto the element that draws
+  the value: `at('items', 3, 'title')` for a cell of a list. It is `{}` on a
+  build with `PUBLIC_JTK_ANNOTATE=false`.
+
+The home page's copy, `src/copy/<locale>.ts`, is the same reading shaped into
+that page's own vocabulary — `HOME.hero.title` — and hands the page itself on as
+`PAGE` for whatever draws the rest.
+
+**Every field rendered carries its annotation.** The annotation lint fails the
+build without one, per page — and it is per page for a reason worth knowing:
 two pages both rendering `blocks[0].title` are two different fields of two
-different documents, and the check knows which is which.
+different documents, and the check knows which is which. `at()` writes the
+path; nothing in a template writes one by hand.
 
 ## What the admin does with it
 
@@ -107,20 +130,21 @@ It goes in `jtk/shared.json`, once:
 ```
 
 Its blocks are ordinary types from `blocks.ts` — nothing new to declare. What
-makes them shared is where they live.
+makes them shared is where they live. A second language's is beside it:
+`jtk/shared.de.json`, `jtk/shared.de-CH.json`.
 
-Read it with `readShared()`, and **annotate it on every page that renders it**:
+Read it with `site.shared(locale)`, and **annotate it on every page that renders it**:
 
 ```astro
 ---
-import { readShared } from '../lib/page';
-const chrome = readShared();
-const { at, of } = chrome.block('chrome');
+import { site } from '../lib/site';
+import { localeOf } from '../lib/locale';
+const chrome = site.shared(localeOf(Astro.url.pathname)).block('chrome');
 ---
-<p data-jtk-path={chrome.pathAt(at, 'note')}>{chrome.str(of, 'note')}</p>
+<p {...chrome.at('note')}>{chrome.text('note')}</p>
 ```
 
-`pathAt` writes `shared:blocks[0].note` — the prefix says which document the
+`at` writes `shared:blocks[0].note` — the prefix says which document the
 field is in. Unlike a page's own field, **the same annotation on five pages is
 correct**, and it is what makes the sentence editable wherever the owner happens
 to be looking. The admin resolves it against the site's shared document rather
