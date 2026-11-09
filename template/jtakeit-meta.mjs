@@ -1,4 +1,6 @@
+import { execFile } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { content } from '@jtakeit/kit/content';
@@ -78,6 +80,74 @@ async function platformHalf(root) {
   return value;
 }
 
+/**
+ * Under `astro dev`, `jtk/catalogue.json` written again whenever the
+ * declaration changes — as `jtk catalogue --emit-only` writes it.
+ *
+ * ── why the dev server does this ─────────────────────────────────────────────
+ *
+ * The pages render from `jtk/catalogue.json`, the schema the platform reads,
+ * through the kit's door (src/lib/site.ts) — not from `src/content/blocks.ts`.
+ * So an edit to the declaration changed nothing on the page until somebody
+ * remembered to run the tool, and nothing said why: a new collection that
+ * stayed empty, a label that stayed the old one (9 November 2026). Written
+ * here, the new file reaches the pages the way any change under `jtk/` does —
+ * Vite reloads the glob, and the entry loader reads `jtk/` again.
+ *
+ * ── the generator's own run, not a copy of it ────────────────────────────────
+ *
+ * The emit is `@jtakeit/kit/catalogue` itself, the code `jtk catalogue` runs,
+ * in a process of its own: it reads the declaration fresh, checks it, and
+ * writes the file only when every check passes. When one fails, its findings
+ * go to the dev server's log and the old `jtk/catalogue.json` stays — the
+ * page goes on showing the last declaration that checked rather than going
+ * blank. The file keeps the `generator` it was written with, so a dev session
+ * is no diff on that line.
+ *
+ * A build reads the committed file and writes nothing: outside the dev
+ * server, `npx @jtakeit/astro catalogue` before a commit is still the way.
+ */
+const DECLARATION = join('src', 'content', 'blocks.ts');
+
+function catalogueWriter(root, logger) {
+  let tool;
+  try {
+    tool = createRequire(join(root, 'package.json')).resolve('@jtakeit/kit/catalogue');
+  } catch {
+    return () => logger.warn('@jtakeit/kit/catalogue was not found, so jtk/catalogue.json is not written again — run npx @jtakeit/astro catalogue --emit-only');
+  }
+  let running = false;
+  let again = false;
+  const write = async () => {
+    if (running) {
+      again = true;
+      return;
+    }
+    running = true;
+    let generator;
+    try {
+      generator = JSON.parse(await readFile(join(root, 'jtk', 'catalogue.json'), 'utf8')).generator;
+    } catch {
+      // No catalogue yet, or one that is not JSON: the tool signs it itself.
+    }
+    const args = [tool, '--emit-only', '--root', root, ...(typeof generator === 'string' && generator !== '' ? ['--generator', generator] : [])];
+    execFile(process.execPath, args, { cwd: root }, (error, stdout, stderr) => {
+      running = false;
+      if (error) {
+        const said = String(stderr || stdout || error.message).trim();
+        logger.error(`${DECLARATION} does not check, so jtk/catalogue.json is left as it was and the pages show the declaration before this change:\n${said}`);
+      } else {
+        logger.info(`jtk/catalogue.json written again from ${DECLARATION}`);
+      }
+      if (again) {
+        again = false;
+        write();
+      }
+    });
+  };
+  return write;
+}
+
 export function jtakeitMeta() {
   return {
     name: 'jtakeit-meta',
@@ -112,7 +182,22 @@ export function jtakeitMeta() {
       // the person once before a public page may reach localhost (Local
       // Network Access, Chrome 142+) and may preflight; the private-network
       // header is the answer that preflight wants.
-      'astro:server:setup': ({ server }) => {
+      'astro:server:setup': ({ server, logger }) => {
+        // The declaration, emitted into jtk/catalogue.json whenever it is
+        // saved (`catalogueWriter` above says why). After a pause, like every
+        // watcher here: an editor's save is often two events.
+        {
+          const declaration = join(process.cwd(), DECLARATION);
+          const write = catalogueWriter(process.cwd(), logger);
+          let timer;
+          const declared = (file) => {
+            if (file !== declaration) return;
+            clearTimeout(timer);
+            timer = setTimeout(write, 150);
+          };
+          server.watcher.on('change', declared);
+          server.watcher.on('add', declared);
+        }
         // `/_jtk/state.json`: both halves for the page's own card — the
         // reading above, and the platform's answer through the dev session
         // when `jtk/session.json` names one (jtkit session). The dev server

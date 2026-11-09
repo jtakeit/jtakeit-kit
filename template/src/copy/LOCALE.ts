@@ -33,8 +33,9 @@
  * than nothing at all. The first publish from the admin replaces it.
  *
  * `jtk/catalogue.json` — which blocks a site has, and what the door reads the
- * content by — is written from `src/content/blocks.ts` by `jtk create` and by
- * `npx @jtakeit/astro catalogue` after every change to that file.
+ * content by — is written from `src/content/blocks.ts` by `jtk create`, by the
+ * dev server whenever that file is saved, and by `npx @jtakeit/astro
+ * catalogue`, which is what to run before a commit.
  */
 import { LOCALE } from '../content/blocks';
 import { site } from '../lib/site';

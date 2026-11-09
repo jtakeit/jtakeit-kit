@@ -98,8 +98,10 @@ language off the address. Adding German is four things, and none of them is a
 route:
 
 1. **Declare it.** `export const LOCALES: string[] = ['de'];` in
-   `src/content/blocks.ts`, then `npx @jtakeit/astro catalogue --emit-only`:
-   the pages read the languages from `jtk/catalogue.json`, as the platform does.
+   `src/content/blocks.ts`. The pages read the languages from
+   `jtk/catalogue.json`, as the platform does: the dev server writes it again
+   when `blocks.ts` is saved, and `npx @jtakeit/astro catalogue` writes it
+   before a commit.
 2. **The words that are not content.** Copy `src/copy/<your locale>.ts` to
    `src/copy/de.ts`, point it at the German home page —
    `makeCopy(site.page('/', 'de'), STRINGS)` — set `lang: 'de'` and translate

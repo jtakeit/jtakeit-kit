@@ -31,7 +31,9 @@
  *
  * The schema is `jtk/catalogue.json`, the file `npx @jtakeit/astro catalogue`
  * writes from `src/content/blocks.ts`: what the platform reads is what the
- * site renders from. After a change to `blocks.ts`, write it again.
+ * site renders from. The dev server writes it again whenever `blocks.ts` is
+ * saved (jtakeit-meta.mjs); before a commit, run the tool — a build reads the
+ * committed file.
  *
  * ── the currency is the site's, and only here ───────────────────────────────
  *
