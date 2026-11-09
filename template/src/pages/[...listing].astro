@@ -6,7 +6,7 @@
  * ── a collection with pages ─────────────────────────────────────────────────
  *
  * Listed at its prefix too when it asks — `listing: true`, never by default
- * (lib/listing says why) — as tiles linked to the entries' pages and
+ * (`drawsPagedListing` in the kit's door says why) — as tiles linked to the entries' pages and
  * `per_page` of them to a page: `EntryListing.astro` draws it, here for page
  * one and in `[...listing]/page/[page].astro` for the rest, and lib/entries
  * says why page two is `<prefix>/page/2`. Not where the repository wrote its
@@ -22,8 +22,12 @@
  * at the collection's prefix. The platform frames that page to show the owner
  * an entry, and its build refuses a collection with entries and no page there
  * (JTK_E_PAGE_NOT_BUILT), or an entry whose fields are annotated nowhere —
- * here they carry `page:<the entry's path>:blocks[0].<field>`, which is how a
- * row of a listing opens its own entry in the editor.
+ * here every field the owner taps carries the entry's own annotation as the
+ * kit's door writes it for a row (`page:<the entry's path>:blocks[0].<field>`
+ * in contract 2), which is how a row of a listing opens its own entry in the
+ * editor. Which fields those are is the platform's one rule (`tappable`):
+ * this listing used to leave out `richtext_lite`, `markdown` and a gallery,
+ * which the platform's build then refused as annotated nowhere.
  *
  * ── the booking page ────────────────────────────────────────────────────────
  *
@@ -34,13 +38,12 @@
  *
  * ── a grouped collection ────────────────────────────────────────────────────
  *
- * A collection with `group` is listed under its headings (`groupsOf` in
- * lib/entries, the rules in lib/groups): a select's option labels in the
- * options' order, or the titles of the referenced collection's entries in that
- * collection's order — a salon's categories the owner adds in the panel. A
- * category's title is that entry's words, so the heading carries its
- * `page:<address>:blocks[0].title`; a select's label is the repository's and
- * is fixed. What has no group comes last, under no heading. The booking form
+ * A collection with `group` is listed under its headings (`site.groupsOf`,
+ * the door's): a select's option labels in the options' order, or the titles
+ * of the referenced collection's entries in that collection's order — a
+ * salon's categories the owner adds in the panel. A category's title is that
+ * entry's words, so the heading carries its annotation; a select's label is
+ * the repository's and is fixed. What has no group comes last, under no heading. The booking form
  * is handed the same headings, words and not the stored value (12 October
  * 2026: it was handed `entry.data.group`, a field no catalogue was obliged to
  * have, and the option's raw value where it had).
@@ -50,22 +53,20 @@
  * the design pass is every `data-jtk-path`.
  */
 import Layout from '../layouts/Layout.astro';
-import { siteCurrency } from '../lib/site';
 import BookingForm from '../components/BookingForm.astro';
 import EntryListing from '../components/EntryListing.astro';
 import { Image } from 'astro:assets';
-import { BLOCKS, COLLECTIONS, MODULES, words, type Collection, type Field } from '../content/blocks';
-import { groupsOf, listed, listingPages, listingRoute, listsPaged, slugOf, type Entry } from '../lib/entries';
-import { EVERY_LOCALE, langOf, withLocale } from '../lib/locale';
+import { listsPaged, rowId, type Collection, type Entry } from '../lib/entries';
+import { EVERY_LOCALE, langOf } from '../lib/locale';
+import { site } from '../lib/site';
 import { isUpload, uploaded } from '../lib/uploads';
 import { photo } from '../lib/photos';
-import { money as priced } from '../lib/money';
 
 export async function getStaticPaths() {
   // A listing per language: `/services`, and `/de/services` beside it.
-  return COLLECTIONS.filter((one) => one.pages === false || listsPaged(one)).flatMap((collection) =>
+  return site.collections.filter((one) => !one.pages || listsPaged(one)).flatMap((collection) =>
     EVERY_LOCALE.map((locale) => ({
-      params: { listing: listingRoute(collection, locale) },
+      params: { listing: site.listingOf(collection.name, locale).slice(1) },
       props: { collection, locale },
     })),
   );
@@ -73,33 +74,28 @@ export async function getStaticPaths() {
 
 const { collection, locale } = Astro.props as { collection: Collection; locale: string };
 // A listing exists in every language the site has.
-const alternates = EVERY_LOCALE.map((one) => ({ locale: one, path: withLocale(one, collection.prefix) }));
+const alternates = EVERY_LOCALE.map((one) => ({ locale: one, address: site.listingOf(collection.name, one) }));
 
 // A collection with pages: its first page, and nothing below applies.
-const paged = collection.pages !== false ? await listingPages(collection, locale) : undefined;
+const paged = collection.pages ? site.listingPages(collection.name, locale) : undefined;
 
-const entries: Entry[] = paged ? [] : await listed(collection.name, locale);
-const type = BLOCKS.find((one) => one.type === collection.type);
+const entries: Entry[] = paged ? [] : site.entries(collection.name, { locale });
 // Under their headings where the collection is grouped; one run with none
 // where it is not, which draws exactly the flat list it always was.
-const groups = (await groupsOf(collection, entries, locale)) ?? [{ entries }];
+const groups = site.groupsOf(collection.name, entries, locale) ?? [{ entries }];
 const isGrouped = groups.some((one) => one.heading !== undefined);
 // A row's title is a heading under the group's, and the page's second level
 // where there are no groups.
 const RowTitle = isGrouped ? 'h3' : 'h2';
 
-// The fields a row shows: those the owner edits by tapping them. The rest —
-// a select, a number, a list of hours — are edited in the panel beside it.
-const TAPPABLE = new Set(['text', 'textarea', 'money', 'duration', 'media']);
-const shown: Field[] = (type?.fields ?? []).filter(
-  (field) => TAPPABLE.has(field.kind) && field.client_editable !== false && field.no_tap_target !== true && field.multiple !== true,
-);
+// The fields a row shows: those the owner edits by tapping them, by the
+// platform's one rule. The rest — a select, a number, a list of hours — are
+// edited in the panel beside it.
+const shown = collection.fields.filter((field) => site.tappable(field));
 
 const lang = langOf(locale).slice(0, 2);
-const settingsFiles = import.meta.glob<{ blocks?: Record<string, unknown>[] }>('/jtk/bookings.json', { eager: true, import: 'default' });
-const settings = Object.values(settingsFiles)[0]?.blocks?.[0] ?? {};
-// The site's, as the platform wrote it (lib/site): never a page's own.
-const currency = siteCurrency;
+// The diary's settings: its `bookings_config` block, through the door.
+const settings = site.module('bookings');
 
 /** A length as the trade says it: whole days, whole hours, or minutes. */
 function length(minutes: number): string {
@@ -107,9 +103,10 @@ function length(minutes: number): string {
   return new Intl.NumberFormat(langOf(locale), { style: 'unit', unit, unitDisplay: 'long' }).format(n);
 }
 
-const money = (minor: number): string => priced(minor, currency, langOf(locale));
+/** A picture's file: a key in the studio's bucket the build downloaded, or a photograph this repository ships. */
+const fileOf = (src: string): ImageMetadata | undefined => (isUpload(src) ? uploaded(src) : photo(src));
 
-const bookings = MODULES.bookings;
+const bookings = site.rolesOf('bookings');
 const sells = bookings?.services === collection.name;
 const form = sells
   ? {
@@ -118,31 +115,32 @@ const form = sells
       // the runs come, and the run with none last.
       services: groups.flatMap((run) =>
         run.entries
-          .filter((entry) => typeof entry.data.takes === 'number')
+          .filter((entry) => typeof entry.fields.value('takes') === 'number')
           .map((entry) => ({
-            slug: slugOf(entry),
-            title: String(entry.data.title ?? entry.id),
-            takes: entry.data.takes as number,
-            costs: typeof entry.data.costs === 'number' ? entry.data.costs : undefined,
+            slug: entry.slug,
+            title: String(entry.fields.value('title') ?? entry.slug),
+            takes: entry.fields.value('takes') as number,
+            costs: typeof entry.fields.value('costs') === 'number' ? (entry.fields.value('costs') as number) : undefined,
             group: run.heading?.text,
           })),
       ),
       resources: bookings?.resources
-        ? (await listed(bookings.resources, locale)).map((entry) => ({
-            slug: slugOf(entry),
-            title: String(entry.data.title ?? entry.id),
+        ? site.entries(bookings.resources, { locale }).map((entry) => ({
+            slug: entry.slug,
+            title: String(entry.fields.value('title') ?? entry.slug),
             // What each does, for the form to grey the other services out once
-            // they are chosen; empty is everything.
-            does: (Array.isArray(entry.data.does) ? (entry.data.does as { service: string }[]) : []).map((row) => row.service),
+            // they are chosen; empty is everything. Rows of `{ service }`, as
+            // the kit and the panel write them.
+            does: entry.fields.rows('does').map((row) => row.value('service') as string),
           }))
         : [],
       // The days the business opens, for the week of days: a closed day is
       // not a choice.
-      open: [...new Set(((settings.hours as { day: string }[] | undefined) ?? []).map((row) => row.day))],
+      open: [...new Set((Array.isArray(settings.hours) ? (settings.hours as { day: string }[]) : []).map((row) => row.day))],
     }
   : undefined;
 
-const heading = words(collection.label, langOf(locale));
+const heading = site.words(collection.label, langOf(locale));
 ---
 
 {paged && (
@@ -161,28 +159,34 @@ const heading = words(collection.label, langOf(locale));
             {/* A category's title is that entry's, and taps open it; a
                 select's label is the repository's, fixed. */}
             {run.heading && (
-              <h2 class="listing-group" data-jtk-path={run.heading.path} data-jtk-fixed={run.heading.path ? undefined : true}>{run.heading.text}</h2>
+              <h2 class="listing-group" {...run.heading.at} data-jtk-fixed={run.heading.fixed ? true : undefined}>{run.heading.text}</h2>
             )}
             <ul class="listing-rows">
               {
                 run.entries.map((entry) => {
-                  const at = withLocale(locale, `${collection.prefix}/${slugOf(entry)}`);
+                  const { fields } = entry;
                   return (
-                    <li class="listing-row" id={`${collection.name}-${slugOf(entry)}`}>
+                    <li class="listing-row" id={rowId(entry)}>
                       {shown.map((field) => {
-                        const value = entry.data[field.key];
-                        if (value === undefined || value === null || value === '') return null;
-                        const path = `page:${at}:blocks[0].${field.key}`;
-                        if (field.kind === 'media') {
-                          const src = String(value);
-                          const file = isUpload(src) ? uploaded(src) : photo(src);
-                          if (!file) return null;
-                          return <Image src={file} alt={String(entry.data.title ?? '')} data-jtk-path={path} widths={[480, 960]} sizes="(min-width: 900px) 20rem, 92vw" layout="none" />;
+                        const value = fields.value(field.key);
+                        if (value === undefined) return null;
+                        if (field.kind === 'media' && field.multiple === true) {
+                          return fields.gallery(field.key).map((picture) => {
+                            const file = fileOf(picture.src);
+                            if (!file) return null;
+                            return <Image src={file} alt={picture.alt} data-jtk-path={picture['data-jtk-path']} widths={[480, 960]} sizes="(min-width: 900px) 20rem, 92vw" layout="none" />;
+                          });
                         }
-                        if (field.kind === 'duration') return <span data-jtk-path={path}>{length(Number(value))}</span>;
-                        if (field.kind === 'money') return <span data-jtk-path={path}>{money(Number(value))}</span>;
-                        if (field.key === 'title') return <RowTitle data-jtk-path={path}>{String(value)}</RowTitle>;
-                        return <p data-jtk-path={path}>{String(value)}</p>;
+                        if (field.kind === 'media') {
+                          const picture = fields.picture(field.key);
+                          const file = fileOf(picture.src);
+                          if (!file) return null;
+                          return <Image src={file} alt={picture.alt} data-jtk-path={picture['data-jtk-path']} widths={[480, 960]} sizes="(min-width: 900px) 20rem, 92vw" layout="none" />;
+                        }
+                        if (field.kind === 'duration') return <span {...fields.at(field.key)}>{length(Number(value))}</span>;
+                        if (field.kind === 'money') return <span {...fields.at(field.key)}>{site.money(value, locale)}</span>;
+                        if (field.key === 'title') return <RowTitle {...fields.at(field.key)}>{String(value)}</RowTitle>;
+                        return <p {...fields.at(field.key)}>{String(value)}</p>;
                       })}
                     </li>
                   );
@@ -205,7 +209,7 @@ const heading = words(collection.label, langOf(locale));
             combine={settings.combine === true}
             scale={typeof settings.scale === 'string' ? settings.scale : ''}
             kind={typeof settings.kind === 'string' ? settings.kind : ''}
-            currency={currency || undefined}
+            currency={site.currency || undefined}
           />
         </section>
       )

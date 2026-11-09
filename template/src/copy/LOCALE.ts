@@ -1,13 +1,20 @@
 /**
- * Every sentence a visitor reads — read from `jtk/content/index.json`
- * rather than written here.
+ * Every sentence a visitor reads — read from the home page's document rather
+ * than written here.
  *
- * The strings live in the repository's content document so that the studio's
- * admin can edit them: a commit under `jtk/` **is** the published state,
- * and publishing writes that file. This module is the adapter between that
- * document and the shape the components already import, which is why the
- * exports below look ordinary — nothing in a component has to know where its
- * text came from.
+ * The strings live in the repository's content so that the studio's admin
+ * can edit them: a commit under `jtk/` **is** the published state, and
+ * publishing writes it. This module is the adapter between that document and
+ * the shape the components already import, which is why the exports below
+ * look ordinary — nothing in a component has to know where its text came
+ * from.
+ *
+ * The document is the page whose path is `/`, found by the kit's door
+ * (src/lib/site.ts) the way the platform finds it: by the `path` inside the
+ * file, never by the file's name. It used to be imported by name —
+ * `jtk/content/index.json` — while every other page was found by its path,
+ * so a home the platform had written under another name was a page the
+ * template could not see (9 November 2026).
  *
  * Three things did not move, because they are not content:
  *   META     — the `<html lang>` value and the title suffix
@@ -22,16 +29,15 @@
  *
  * `jtk/content/index.json` is committed with empty strings in it, and that
  * is deliberate: a fresh project must `npm run build` on a laptop the minute
- * `jtk create` finishes, and a static import of a file that is not there is a build
- * error rather than an empty page. The first publish from the admin replaces it
- * wholesale.
+ * `jtk create` finishes, and a page with nothing written draws nothing rather
+ * than nothing at all. The first publish from the admin replaces it.
  *
- * `jtk/catalogue.json` is **not** shipped. It describes what blocks a site
- * has, the admin seeds it from the registry on the first publish, and a copy
- * here would be a second one to keep in step by hand.
+ * `jtk/catalogue.json` — which blocks a site has, and what the door reads the
+ * content by — is written from `src/content/blocks.ts` by `jtk create` and by
+ * `npx @jtakeit/astro catalogue` after every change to that file.
  */
-import page from '../../jtk/content/index.json';
 import { LOCALE } from '../content/blocks';
+import { site } from '../lib/site';
 import { makeCopy, type Strings } from './make';
 
 /** What is not content, in the site's own language. A second language copies this file (docs/languages.md). */
@@ -70,6 +76,5 @@ export const STRINGS: Strings = {
   a11y: { skipToContent: '{{UI_SKIP_TO_CONTENT}}' },
 };
 
-export const COPY = makeCopy(page, STRINGS);
-export const { META, HOME, FORM, PRIVACY, LISTING, A11Y, PAGE, block, str, rows, picture, gallery, jtkPath, pathAt } = COPY;
-export type { Shown } from './make';
+export const COPY = makeCopy(site.page('/'), STRINGS);
+export const { META, HOME, FORM, PRIVACY, LISTING, A11Y, PAGE } = COPY;

@@ -1,21 +1,23 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { content } from '@jtakeit/kit/content';
+import { readJtk } from '@jtakeit/kit/content/node';
 import { writeMeta } from '@jtakeit/kit/meta';
 import { keepByName } from '@jtakeit/kit/kept';
 import { readProgress } from '@jtakeit/kit/progress';
 import { devDiary } from '@jtakeit/kit/devdiary';
-import { BLOCKS, COLLECTIONS, LOCALES } from './src/content/blocks.ts';
 
 /**
  * `_meta.json` — what the edge needs to know that the HTML cannot say.
  *
- * The file is `@jtakeit/kit`'s (`writeMeta`): the unfinished entries read
- * off `jtk/content`, the specimen pages derived from the declaration, and
- * the directory this generator keeps its hashed files in — `/_astro/`, which
- * the edge caches for a year. This hook only says when to write it and
- * what Astro's answers to those are; a site on another generator calls the
- * same function from its own build step.
+ * The file is `@jtakeit/kit`'s (`writeMeta`): the unfinished entries and the
+ * specimen pages, both as the kit's door reads them — the same reading the
+ * pages were built from, so the list the edge is handed names exactly the
+ * drafts the build made — and the directory this generator keeps its hashed
+ * files in — `/_astro/`, which the edge caches for a year. This hook only
+ * says when to write it and what Astro's answers to those are; a site on
+ * another generator calls the same function from its own build step.
  *
  * ── the disclosure is not here any more ────────────────────────────────────
  *
@@ -178,9 +180,7 @@ export function jtakeitMeta() {
           );
         }
         const meta = await writeMeta(fileURLToPath(dir), {
-          collections: COLLECTIONS,
-          blocks: BLOCKS,
-          locales: LOCALES,
+          site: content(await readJtk(process.cwd())),
           immutable: ['/_astro/'],
           cache: CACHE,
         });

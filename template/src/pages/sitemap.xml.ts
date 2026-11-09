@@ -1,7 +1,8 @@
 import type { APIRoute } from 'astro';
 import { INDEXABLE, PAGES, canonicalFor } from '../data/site';
-import { allListed, href } from '../lib/entries';
+import { href } from '../lib/entries';
 import { EVERY_LOCALE } from '../lib/locale';
+import { site } from '../lib/site';
 
 /**
  * The pages are written by hand in `PAGES` rather than generated, so that
@@ -10,8 +11,9 @@ import { EVERY_LOCALE } from '../lib/locale';
  *
  * The entries are not, and cannot be: nobody writes them here — the owner makes
  * them in the admin — so they are read from the collections, which is the only
- * list of them that exists. A hidden entry is absent, because `allListed` is
- * how anything here enumerates them.
+ * list of them that exists. A hidden entry is absent, because `site.entries`
+ * is how anything here enumerates them, and an entry of a collection without
+ * pages has no address of its own to list.
  *
  * With INDEXABLE off the file is still served, but empty — an empty sitemap
  * says «nothing to crawl», where a 404 says «try again later».
@@ -23,11 +25,13 @@ export const GET: APIRoute = async () => {
     for (const page of PAGES) {
       urls.push({ loc: canonicalFor(page.path), priority: page.priority });
     }
-    for (const { collection, entries } of (await Promise.all(EVERY_LOCALE.map((locale) => allListed(locale)))).flat()) {
-      for (const entry of entries) {
-        // Below every page of the site and above nothing: an entry is worth
-        // crawling and is not what the site is for.
-        urls.push({ loc: canonicalFor(href(collection, entry)), priority: 0.5 });
+    for (const locale of EVERY_LOCALE) {
+      for (const collection of site.collections.filter((one) => one.pages)) {
+        for (const entry of site.entries(collection.name, { locale })) {
+          // Below every page of the site and above nothing: an entry is worth
+          // crawling and is not what the site is for.
+          urls.push({ loc: canonicalFor(href(entry)), priority: 0.5 });
+        }
       }
     }
   }

@@ -29,20 +29,21 @@
  */
 import Layout from '../../layouts/Layout.astro';
 import { copyFor } from '../../copy';
-import { localeParams, withLocale, EVERY_LOCALE } from '../../lib/locale';
+import { localeOf, localeParams, withLocale, EVERY_LOCALE } from '../../lib/locale';
 
 export const getStaticPaths = localeParams;
 
-const locale = Astro.params.lang ?? '';
+const locale = localeOf(Astro.url.pathname);
 const { PRIVACY } = copyFor(locale);
 // A page written in code exists in every language the site has.
-const alternates = EVERY_LOCALE.map((one) => ({ locale: one, path: withLocale(one, '/privacy') }));
-import { BLOCKS, PROCESSING_URL } from '../../content/blocks';
+const alternates = EVERY_LOCALE.map((one) => ({ locale: one, address: withLocale(one, '/privacy') }));
+import { PROCESSING_URL } from '../../content/blocks';
 import { photoWords } from '@jtakeit/kit/lead';
 import { langOf } from '../../lib/locale';
+import { site } from '../../lib/site';
 // A form that takes photographs says what becomes of them — the law asks the
 // business to, and the platform's part is the kit's sentence (wiki/87).
-const takesPhotos = BLOCKS.some((block) => block.collects === 'enquiry' && (block.photos ?? 0) > 0);
+const takesPhotos = site.types.some((block) => block.collects === 'enquiry' && (block.photos ?? 0) > 0);
 const photosSentence = photoWords(langOf(locale)).privacy;
 ---
 

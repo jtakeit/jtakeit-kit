@@ -25,7 +25,10 @@ import { localeOf } from '../lib/locale';
 import LeadForm from './LeadForm.astro';
 import design from '../../jtk/design.json';
 
-const { PAGE, pathAt } = copyFor(localeOf(Astro.url.pathname));
+// The home page of this language, through the door: every block in its
+// order, each value with its annotation (`block.at`), so nothing here writes
+// a path by hand.
+const { PAGE } = copyFor(localeOf(Astro.url.pathname));
 
 /*
  * The edge and the entrance, out of the design document rather than typed here.
@@ -59,89 +62,85 @@ const edge = (surface.edge || undefined) as string | undefined;
  * produce a second hero any more; a template that silently swallows one is still
  * the wrong template.
  */
-const rendered = PAGE.findIndex((of) => of.type === 'hero');
+const rendered = PAGE.blocks.findIndex((block) => block.type === 'hero');
 
 /** The band under the hero: the one that is in the first screen on a phone. */
-const first = PAGE.findIndex((_, at) => at !== rendered);
+const first = PAGE.blocks.findIndex((_, at) => at !== rendered);
 const arrives = (at: number) => (at === first ? undefined : reveal);
-
-const str = (of: Record<string, unknown>, key: string): string => (of[key] as string) ?? '';
-const rows = (of: Record<string, unknown>, key: string): Record<string, unknown>[] =>
-  (of[key] as Record<string, unknown>[]) ?? [];
 ---
 
 {
-  PAGE.map((of, at) => {
-    const type = of.type;
+  PAGE.blocks.map((block, at) => {
+    const type = block.type;
 
     if (at === rendered) return null; // the first screen is the page's own
 
     // A block that carries the form does not also render its own heading and
     // button: `LeadForm` renders both, from this same block, and annotating a
     // field twice means two elements claiming one path.
-    const carriesForm = of.form === true;
+    const carriesForm = block.value('form') === true;
 
     return (
       <section
         class={`band band--${type}`}
-        id={carriesForm || at === PAGE.length - 1 ? 'contact' : undefined}
+        id={carriesForm || at === PAGE.blocks.length - 1 ? 'contact' : undefined}
         data-reveal={arrives(at)}
       >
         <div class="band__inner">
-          {str(of, 'eyebrow') && (
-            <p class="eyebrow" data-jtk-path={pathAt(at, 'eyebrow')}>{str(of, 'eyebrow')}</p>
+          {block.text('eyebrow') && (
+            <p class="eyebrow" {...block.at('eyebrow')}>{block.text('eyebrow')}</p>
           )}
-          {!carriesForm && str(of, 'title') && (
-            <h2 data-jtk-path={pathAt(at, 'title')}>{str(of, 'title')}</h2>
+          {!carriesForm && block.text('title') && (
+            <h2 {...block.at('title')}>{block.text('title')}</h2>
           )}
-          {str(of, 'name') && (
-            <h2 data-jtk-path={pathAt(at, 'name')}>{str(of, 'name')}</h2>
+          {block.text('name') && (
+            <h2 {...block.at('name')}>{block.text('name')}</h2>
           )}
-          {str(of, 'role') && (
-            <p class="quiet" data-jtk-path={pathAt(at, 'role')}>{str(of, 'role')}</p>
+          {block.text('role') && (
+            <p class="quiet" {...block.at('role')}>{block.text('role')}</p>
           )}
-          {!carriesForm && str(of, 'lead') && (
-            <p class="lead" data-jtk-path={pathAt(at, 'lead')}>{str(of, 'lead')}</p>
+          {!carriesForm && block.text('lead') && (
+            <p class="lead" {...block.at('lead')}>{block.text('lead')}</p>
           )}
-          {str(of, 'body') && (
-            <div class="prose" data-jtk-path={pathAt(at, 'body')} set:html={str(of, 'body')} />
+          {block.text('body') && (
+            <div class="prose" {...block.at('body')} set:html={block.text('body')} />
           )}
-          {str(of, 'bio') && (
-            <p class="prose" data-jtk-path={pathAt(at, 'bio')}>{str(of, 'bio')}</p>
+          {block.text('bio') && (
+            <p class="prose" {...block.at('bio')}>{block.text('bio')}</p>
           )}
 
-          {rows(of, 'items').length > 0 && (
+          {block.rows('items').length > 0 && (
             <ul class="items" data-reveal={staggered && at !== first ? 'stagger' : undefined}>
-              {rows(of, 'items').map((item, i) => (
+              {block.rows('items').map((row) => (
                 <li class="item" data-edge={edge}>
-                  {str(item, 'title') && (
-                    <h3 data-jtk-path={pathAt(at, 'items', i, 'title')}>{str(item, 'title')}</h3>
+                  {row.text('title') && (
+                    <h3 {...row.at('title')}>{row.text('title')}</h3>
                   )}
-                  {str(item, 'question') && (
-                    <h3 data-jtk-path={pathAt(at, 'items', i, 'question')}>{str(item, 'question')}</h3>
+                  {row.text('question') && (
+                    <h3 {...row.at('question')}>{row.text('question')}</h3>
                   )}
-                  {str(item, 'text') && (
-                    <p data-jtk-path={pathAt(at, 'items', i, 'text')}>{str(item, 'text')}</p>
+                  {row.text('text') && (
+                    <p {...row.at('text')}>{row.text('text')}</p>
                   )}
-                  {str(item, 'answer') && (
-                    <p data-jtk-path={pathAt(at, 'items', i, 'answer')}>{str(item, 'answer')}</p>
+                  {row.text('answer') && (
+                    <p {...row.at('answer')}>{row.text('answer')}</p>
                   )}
-                  {str(item, 'label') && (
-                    <p data-jtk-path={pathAt(at, 'items', i, 'label')}>{str(item, 'label')}</p>
+                  {row.text('label') && (
+                    <p {...row.at('label')}>{row.text('label')}</p>
                   )}
                 </li>
               ))}
             </ul>
           )}
 
-          {!carriesForm && str(of, 'cta_label') && (
+          {!carriesForm && block.text('cta_label') && (
             <p class="actions">
               <a
                 class="btn"
-                href={str(of, 'cta_href') || '#contact'}
-                data-jtk-path={pathAt(at, 'cta_label')}
+                href={block.text('cta_href') || '#contact'}
+                {...block.at('cta_label')}
               >
-                {str(of, 'cta_label')}
+                {block.text('cta_label')}
               </a>
             </p>
           )}

@@ -6,24 +6,24 @@
  *
  * Drawn by `[...listing].astro` for page one and `[...listing]/page/[page].astro`
  * for the rest, so both are one page. Only for a collection that says
- * `listing: true` (lib/listing); one whose repository wrote its own listing —
+ * `listing: true` (`drawsPagedListing`, the door's); one whose repository wrote its own listing —
  * the blog's — is not drawn here at all.
  *
  * Grouped where the collection has a `group`, as a listing without pages is:
  * the page's entries under their headings, a category's title annotated as
  * that category's, a select's label fixed. The entries arrive already in the
- * grouped order and cut to this page (`listingPages`), so a heading's run
+ * grouped order and cut to this page (`site.listingPages`), so a heading's run
  * that crosses the cut opens page two under the same heading.
  *
- * Annotated as every listing is: an entry's words with its page-qualified path
+ * Annotated as every listing is: an entry's words with its own annotation
  * (`EntryCard.astro`), the collection's label and the way between pages fixed —
  * the repository's words, in the page's language (`LISTING` in src/copy).
  */
 import Layout from '../layouts/Layout.astro';
 import EntryCard from './EntryCard.astro';
-import { words, type Collection } from '../content/blocks';
-import { groupsOf, listingHref, type Entry } from '../lib/entries';
+import { listingHref, type Collection, type Entry } from '../lib/entries';
 import { langOf } from '../lib/locale';
+import { site } from '../lib/site';
 import { copyFor } from '../copy';
 
 interface Props {
@@ -33,13 +33,13 @@ interface Props {
   entries: Entry[];
   current: number;
   last: number;
-  alternates: { locale: string; path: string }[];
+  alternates: { locale: string; address: string }[];
 }
 
 const { collection, locale, entries, current, last, alternates } = Astro.props;
 const { LISTING } = copyFor(locale);
-const heading = words(collection.label, langOf(locale));
-const groups = (await groupsOf(collection, entries, locale)) ?? [{ entries }];
+const heading = site.words(collection.label, langOf(locale));
+const groups = site.groupsOf(collection.name, entries, locale) ?? [{ entries }];
 const isGrouped = groups.some((one) => one.heading !== undefined);
 const title = current > 1 ? `${heading} — ${LISTING.pageOf(current, last)}` : heading;
 ---
@@ -53,10 +53,10 @@ const title = current > 1 ? `${heading} — ${LISTING.pageOf(current, last)}` : 
         groups.map((run) => (
           <Fragment>
             {run.heading && (
-              <h2 class="listing-group" data-jtk-path={run.heading.path} data-jtk-fixed={run.heading.path ? undefined : true}>{run.heading.text}</h2>
+              <h2 class="listing-group" {...run.heading.at} data-jtk-fixed={run.heading.fixed ? true : undefined}>{run.heading.text}</h2>
             )}
             <ul class="posts">
-              {run.entries.map((entry) => <EntryCard collection={collection} entry={entry} locale={locale} level={isGrouped ? 'h3' : 'h2'} />)}
+              {run.entries.map((entry) => <EntryCard entry={entry} locale={locale} level={isGrouped ? 'h3' : 'h2'} />)}
             </ul>
           </Fragment>
         ))
@@ -64,9 +64,9 @@ const title = current > 1 ? `${heading} — ${LISTING.pageOf(current, last)}` : 
       {
         last > 1 && (
           <nav class="listing-pager">
-            {current > 1 ? <a href={listingHref(collection, locale, current - 1)} rel="prev" data-jtk-fixed>{LISTING.previous}</a> : <span />}
+            {current > 1 ? <a href={listingHref(collection.name, locale, current - 1)} rel="prev" data-jtk-fixed>{LISTING.previous}</a> : <span />}
             <span data-jtk-fixed>{LISTING.pageOf(current, last)}</span>
-            {current < last ? <a href={listingHref(collection, locale, current + 1)} rel="next" data-jtk-fixed>{LISTING.next}</a> : <span />}
+            {current < last ? <a href={listingHref(collection.name, locale, current + 1)} rel="next" data-jtk-fixed>{LISTING.next}</a> : <span />}
           </nav>
         )
       }

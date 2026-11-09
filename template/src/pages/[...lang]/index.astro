@@ -12,9 +12,9 @@
  * ── data-jtk-path, and why it is here from the first commit ──────────────────
  *
  * The studio's admin edits this site by tapping the text on it. That works
- * because every element whose content comes from `jtk/content/index.json`
- * carries the path of the field it came from, and `jtkPath` builds those from
- * the document rather than from anything written by hand.
+ * because every element whose content comes from the home page's document
+ * carries the path of the field it came from, and the kit's door writes those
+ * (`block.at('title')`) rather than anything written by hand.
  *
  * The build fails without them — `jtkit lint` compares the published
  * content against the generated HTML and refuses a page that dropped one. It is
@@ -22,7 +22,7 @@
  * opening the editor **silently**, and nobody finds out for a week.
  *
  * So: whatever a variant does to this page, every field it renders keeps its
- * `data-jtk-path={jtkPath(...)}`.
+ * `{...block.at(...)}`.
  *
  * ── the hero's ground ───────────────────────────────────────────────────────
  *
@@ -47,14 +47,16 @@ import Blocks from '../../components/Blocks.astro';
 import HeroField from '../../components/motion/HeroField.astro';
 import Pattern from '../../components/surface/Pattern.astro';
 import { copyFor } from '../../copy';
-import { readPage } from '../../lib/page';
-import { localeParams, withLocale } from '../../lib/locale';
+import { site } from '../../lib/site';
+import { localeOf, localeParams } from '../../lib/locale';
 
 export const getStaticPaths = localeParams;
 
-const locale = Astro.params.lang ?? '';
+const locale = localeOf(Astro.url.pathname);
 const { HOME } = copyFor(locale);
-const own = readPage(withLocale(locale, '/'));
+// The home page of this language, by its address, as the door finds every
+// page — and the languages it exists in, for hreflang.
+const alternates = site.alternatesOf(site.page('/', locale));
 import design from '../../../jtk/design.json';
 
 const painted =
@@ -64,7 +66,7 @@ const surface = design.surface ?? {};
 const grounded = Boolean(surface.pattern);
 ---
 
-<Layout title={HOME.title} description={HOME.description} suffix={false} alternates={own.alternates}>
+<Layout title={HOME.title} description={HOME.description} suffix={false} alternates={alternates}>
   {
     grounded && (
       <Pattern

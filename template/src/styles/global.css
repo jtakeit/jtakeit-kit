@@ -560,7 +560,7 @@ main.prose {
 
 /*
  * Groups, archives and trails (pages/[...listing].astro, [...entry].astro;
- * lib/groups.ts): a grouped listing's headings, what points at an entry
+ * the kit's door): a grouped listing's headings, what points at an entry
  * under its page, the parents above a category's title. Plain, like the rest:
  * the design pass restyles them, the classes and the annotations stay.
  */

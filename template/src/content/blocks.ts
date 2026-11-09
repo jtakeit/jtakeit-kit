@@ -17,6 +17,11 @@
  *   whole commit. The platform's reference/contract.md has every rule in one
  *   line each, with the code that refuses it.
  *
+ *   The pages render from jtk/catalogue.json too, not from this file: the kit's
+ *   door (src/lib/site.ts) reads the schema the platform reads. After a change
+ *   here, write the catalogue again — `npx @jtakeit/astro catalogue --emit-only`
+ *   — and the dev server picks it up.
+ *
  * ── the one file that decides whether a bespoke site is editable ────────────
  *
  * The studio's admin edits a site by tapping the text on it. It can do that for

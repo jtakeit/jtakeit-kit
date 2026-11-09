@@ -25,40 +25,42 @@ import { renderLeadForm } from '@jtakeit/kit/lead';
 import '@jtakeit/kit/lead.css';
 import { copyFor } from '../copy';
 import { localeOf, langOf, withLocale } from '../lib/locale';
+import { site } from '../lib/site';
 import { under } from '../lib/under';
-import { BLOCKS, words, type Field } from '../content/blocks';
 
 const locale = localeOf(Astro.url.pathname);
 const LANG = langOf(locale);
-const { FORM, jtkPath } = copyFor(locale);
+const { FORM, PAGE } = copyFor(locale);
 
-const block = BLOCKS.find((one) => one.type === 'cta_banner');
-const declared: Field[] = block?.asks ?? [];
+// The block's declaration, as the schema the platform reads has it
+// (jtk/catalogue.json, through the door).
+const block = site.type('cta_banner');
+const declared = block?.asks ?? [];
 // The photographs the form takes, as the block declares them (blocks.ts);
 // the kit draws the picker in the page's language.
 const photos = block?.photos ?? 0;
 const asks = declared.map((ask) => ({
   key: ask.key,
-  label: words(ask.label, LANG),
+  label: site.words(ask.label, LANG),
   kind: ask.kind,
   required: ask.required,
   max: ask.max,
   min: ask.min,
-  options: (ask.options ?? []).map((value) => ({ value, label: words(ask.option_labels?.[value], LANG) })),
+  options: (ask.options ?? []).map((value) => ({ value, label: site.words(ask.option_labels?.[value], LANG) })),
 }));
 
-// `jtkPath` is undefined on a build without annotations, and the kit then
+// A path is undefined on a build without annotations, and the kit then
 // writes no `data-jtk-path` at all.
 //
-// The paths are the home page's of this language: its copy reads
-// `jtk/content/index.json` (or `jtk/content/<locale>.json`), and `blocks[5].title` is that document's fifth
+// The paths are the home page's of this language: its copy reads the page
+// at `/` (or `/de`), and `blocks[5].title` is that document's fifth
 // block. On any other page the same path names a block that page does not
 // have, and the annotation lint says so seventy times on a site of eleven
 // pages (a bowling club, 8 October 2026). So the form annotates only where
 // its block lives; elsewhere it is the same form, editable from the index.
 const home = withLocale(locale, '/');
 const onIndex = [home, `${home}/`, `/${LANG}`, `/${LANG}/`].includes(Astro.url.pathname.replace(/^\/p\/[^/]+/, '') || '/');
-const at = (field: string) => (onIndex ? jtkPath('cta_banner', field) : undefined);
+const at = (field: string) => (onIndex ? PAGE.block('cta_banner').at(field)['data-jtk-path'] : undefined);
 const paths = {
   title: at('title'),
   lead: at('lead'),
