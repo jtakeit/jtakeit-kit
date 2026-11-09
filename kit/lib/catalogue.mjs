@@ -45,6 +45,7 @@
  * client project the studio runs through it is one sitting.
  */
 
+import { filesBeside } from './judgeFiles.mjs';
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
@@ -850,32 +851,6 @@ for (const file of sourceFiles(join(root, 'src'))) {
  */
 
 /** The credential, presented the way the admin API reads it. */
-/**
- * The working tree's other jtk/ files, sent beside the catalogue so the
- * second judge — the settings, the entries, a price table's gaps, an add-on
- * nobody can take — answers in the same call, before any push. Everything under jtk/ but the catalogue itself, as
- * `{path, text}`; a site with no jtk/ yet sends none.
- * @param {string} root
- * @returns {{ path: string, text: string }[]}
- */
-export function filesBeside(root) {
-  const dir = join(root, 'jtk');
-  if (!existsSync(dir)) return [];
-  /** @type {{ path: string, text: string }[]} */
-  const out = [];
-  const walk = (/** @type {string} */ at) => {
-    for (const entry of readdirSync(at, { withFileTypes: true })) {
-      const full = join(at, entry.name);
-      if (entry.isDirectory()) { walk(full); continue; }
-      if (!entry.name.endsWith('.json')) continue;
-      const rel = relative(root, full).split(sep).join('/');
-      if (rel === 'jtk/catalogue.json') continue;
-      out.push({ path: rel, text: readFileSync(full, 'utf8') });
-    }
-  };
-  walk(dir);
-  return out.sort((a, b) => a.path.localeCompare(b.path));
-}
 
 function judgeRequest(text, files) {
   const api = (process.env.JTK_API ?? '').trim().replace(/\/+$/, '');
