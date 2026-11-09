@@ -39,7 +39,7 @@
  * what the platform books against; titles are what the visitor reads.
  */
 import { bookingForm } from '@jtakeit/kit/booking';
-import { siteCurrency } from '../lib/site';
+import { site } from '../lib/site';
 import { under } from '../lib/under';
 
 interface Named {
@@ -52,7 +52,7 @@ interface Named {
   rates?: { day: string; from: number; until: number; costs: number }[];
   /** `'person'` for a price times the party — a class per place, shoes. */
   per?: 'booking' | 'person';
-  /** A heading the services are listed under, where the catalogue groups them: the words (an option's label, a category's title), not the stored value — `groupsOf` in lib/entries resolves them. */
+  /** A heading the services are listed under, where the catalogue groups them: the words (an option's label, a category's title), not the stored value — `site.groupsOf` resolves them. */
   group?: string;
   /** For a resource: the services they perform, by slug — the form greys the others out once they are chosen. */
   does?: string[];
@@ -86,7 +86,7 @@ interface Props {
   ui?: boolean | string;
 }
 
-const { services, resources = [], locale, daysAhead = 30, combine = false, currency = siteCurrency, scale = '', kind = '', open = [], ui = true } = Astro.props;
+const { services, resources = [], locale, daysAhead = 30, combine = false, currency = site.currency, scale = '', kind = '', open = [], ui = true } = Astro.props;
 
 const form = bookingForm({ services, resources, locale, daysAhead, combine, currency, scale, kind, open, ui, api: under('/api/') });
 const w = form.words;

@@ -35,11 +35,10 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join, relative, sep } from 'node:path';
 import { shownAt } from './schedule.mjs';
+import { specimenId } from './content/index.mjs';
 
-/** The id of one specimen, which is also its address under the collection. */
-export function specimenId(type, view) {
-  return view === undefined || view === '' ? `_fl-${type}` : `_fl-${type}-${view}`;
-}
+/** The id of one specimen, which is also its address under the collection — the door's (`@jtakeit/kit/content`). */
+export { specimenId };
 
 /**
  * Every specimen this site builds, as addresses.
@@ -123,10 +122,42 @@ export async function hiddenEntries(root = join(process.cwd(), 'jtk', 'content')
 }
 
 /**
+ * Every draft of a site as the door reads it: an entry not shown — by
+ * `visible: false` or by a schedule — at the address its file says, a
+ * document anything says `visible: false` of, and every specimen page the
+ * door builds, in every language it builds them.
+ *
+ * The same answer `hiddenEntries` and `specimenAddresses` give, asked of the
+ * one reader the scaffold renders from — so the list the edge is handed and
+ * the pages the build made cannot disagree: the specimens were listed in
+ * every language and built in one (wiki/98 §13), and an entry was listed at
+ * its file's place while the page was built at its path.
+ *
+ * @param {import('../types/content').Site} site
+ * @returns {string[]}
+ */
+export function draftsOf(site) {
+  const out = [];
+  for (const doc of site.documents()) {
+    if (doc.visible === false || (doc.collection !== undefined && !doc.shown)) out.push(`${doc.path}/`);
+  }
+  for (const collection of site.collections) {
+    for (const one of site.specimens(collection.name)) out.push(`${one.address}/`);
+  }
+  return out.sort();
+}
+
+/**
  * The whole file, assembled: the drafts from the content, the specimens from
  * the declaration, the hashed directory from the generator.
  *
+ * Given `site` — the door's reading, `content(await readJtk())` — the drafts
+ * are the door's (`draftsOf`), which is what the scaffold passes. Without it,
+ * a site on another generator says where its content is and what its
+ * declaration holds, and the drafts are read off the files as before.
+ *
  * @param {object} what
+ * @param {import('../types/content').Site} [what.site] the door's reading of the site
  * @param {string} [what.root]                 the content root, `jtk/content` by default
  * @param {{ prefix: string; body?: string[] }[]} [what.collections]
  * @param {{ type: string; views?: { key: string }[] }[]} [what.blocks]
@@ -135,8 +166,8 @@ export async function hiddenEntries(root = join(process.cwd(), 'jtk', 'content')
  * @param {{ from: string; to: string; status?: number }[]} [what.redirects]
  * @returns {Promise<{ redirects: object[]; drafts: string[]; immutable?: string[]; cache?: { prefix: string; maxAge: number }[] }>}
  */
-export async function buildMeta({ root, collections = [], blocks = [], locales = [], immutable, cache, redirects = [] } = {}) {
-  const drafts = [...(await hiddenEntries(root)), ...specimenAddresses(collections, blocks, locales)].sort();
+export async function buildMeta({ site, root, collections = [], blocks = [], locales = [], immutable, cache, redirects = [] } = {}) {
+  const drafts = site !== undefined ? draftsOf(site) : [...(await hiddenEntries(root)), ...specimenAddresses(collections, blocks, locales)].sort();
   const meta = { redirects, drafts };
   if (Array.isArray(immutable) && immutable.length > 0) meta.immutable = immutable;
   const lifetimes = cacheRules(cache);

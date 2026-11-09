@@ -23,7 +23,8 @@
  */
 import { readFile, readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { collectContent } from './content.mjs';
+import { content } from './content/index.mjs';
+import { readJtk } from './content/node.mjs';
 
 /** Under the weaker rule, a key named like one of these is not words. */
 const NOT_WORDS = /(^|_)(image|picture|photo|media|video|url|href|link|icon|src)(_|$)|_href$|_url$/;
@@ -50,12 +51,17 @@ export async function readProgress(root, options = {}) {
   await note(join(root, dir, 'bookings.json'));
   const facts = await readFacts(join(root, 'src', 'data', 'site.ts'));
   await note(join(root, 'src', 'data', 'site.ts'));
-  let content = { pages: [] };
+  // Read through the door, as the scaffold renders it: a page is the path
+  // in its file, and the diary's settings are its `bookings_config` block
+  // wherever it sits (wiki/98 §13).
+  let site = null;
   try {
-    content = await collectContent(root, { dir });
+    site = content(await readJtk(root, { dir }));
   } catch {
-    // No jtk/ yet, or a document that is not a page: nothing is written.
+    // No jtk/ yet, a file that is not JSON, or a document that is not a
+    // page: nothing is written.
   }
+  const documents = site?.documents() ?? [];
   for (const file of await contentFiles(join(root, dir, 'content'))) await note(file);
 
   const fields = fieldsOf(catalogue);
@@ -63,7 +69,7 @@ export async function readProgress(root, options = {}) {
   const pages = [];
   const entries = {};
   let media = 0;
-  for (const page of content.pages) {
+  for (const page of documents) {
     const counted = countFields(page, fields, rule);
     media += counted.media;
     if (page.collection !== undefined) {
@@ -90,7 +96,8 @@ export async function readProgress(root, options = {}) {
     if (collections[name] === undefined) collections[name] = { entries: count, expected: 0 };
   }
 
-  const block = settings?.blocks?.[0] ?? null;
+  // The block whose type says it is the settings — not whichever came first.
+  const block = settings === null ? null : (site ?? content({ '/jtk/bookings.json': settings })).module('bookings');
   const settingsRead =
     block === null
       ? null

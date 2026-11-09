@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { shownAt } from '../lib/schedule.mjs';
 import { hiddenEntries } from '../lib/meta.mjs';
-import { collectContent } from '../lib/content.mjs';
+import { collectContent } from '../lib/content/node.mjs';
 
 const now = Date.parse('2026-10-12T12:00:00Z');
 

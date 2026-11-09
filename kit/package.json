@@ -86,7 +86,11 @@
     },
     "./content": {
       "types": "./types/content.d.ts",
-      "default": "./lib/content.mjs"
+      "default": "./lib/content/index.mjs"
+    },
+    "./content/node": {
+      "types": "./types/content-node.d.ts",
+      "default": "./lib/content/node.mjs"
     }
   },
   "files": [

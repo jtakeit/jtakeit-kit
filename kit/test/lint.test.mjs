@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { lint, CODES, expectedPaths, TAPPABLE } from '../lib/lint.mjs';
-import { collectContent } from '../lib/content.mjs';
+import { collectContent } from '../lib/content/node.mjs';
 
 // A site of two pages and a pageless price list, laid out in a temporary
 // directory: the catalogue, the content, and a dist/ that annotates some of
@@ -31,7 +31,12 @@ function site(annotate) {
     ? '<html><body><h1 data-jtk-path="blocks[0].title">Bowling</h1><form action="/api/lead"><input name="name"><input name="phone"><input name="website"><input name="lanes"><h2 data-jtk-path="blocks[1].title">Write</h2></form></body></html>'
     : '<html><body><h1>Bowling</h1><form action="/api/lead"><input name="name"><input name="phone"><input name="website"><input name="shoes"></form></body></html>';
   write('dist/index.html', index);
-  write('dist/prices/index.html', annotate ? '<ul><li data-jtk-path="page:/prices/lane:blocks[0].title">Lane</li></ul>' : '<ul><li>Lane</li></ul>');
+  // The price is a tap target too — `money` is one of the platform's
+  // tappable kinds, which this lint did not ask until the door gave the kit
+  // one set (wiki/98 §13).
+  write('dist/prices/index.html', annotate
+    ? '<ul><li data-jtk-path="page:/prices/lane:blocks[0].title">Lane</li><li data-jtk-path="page:/prices/lane:blocks[0].costs">25</li></ul>'
+    : '<ul><li>Lane</li><li>25</li></ul>');
   return root;
 }
 
@@ -56,9 +61,10 @@ test('without a form fault, the unannotated fields are all said', async () => {
   writeFileSync(join(root, 'dist', 'index.html'), '<html><body><h1>Bowling</h1></body></html>');
   const out = await lint({ root });
   const codes = out.findings.map((one) => one.code).sort();
-  assert.deepEqual(codes, [CODES.UNANNOTATED_FIELD, CODES.UNANNOTATED_FIELD, CODES.UNANNOTATED_FIELD]);
+  assert.deepEqual(codes, [CODES.UNANNOTATED_FIELD, CODES.UNANNOTATED_FIELD, CODES.UNANNOTATED_FIELD, CODES.UNANNOTATED_FIELD]);
   assert.ok(out.findings.some((one) => one.says === '/: blocks[0].title is not annotated'));
   assert.ok(out.findings.some((one) => one.says.startsWith('/prices/lane: blocks[0].title is on no page')));
+  assert.ok(out.findings.some((one) => one.says.startsWith('/prices/lane: blocks[0].costs is on no page')), 'a price is a tap target, as the platform asks');
 });
 
 test('a bind names a field the document has, into a data- attribute', async () => {
@@ -86,6 +92,7 @@ test('the content is collected the way the build collects it, site.json or not',
   const typeOf = (name) => ({ hero: { fields: [{ key: 'title', kind: 'text' }, { key: 'url', kind: 'url' }] } })[name];
   assert.deepEqual(expectedPaths(content.pages[0].blocks, typeOf), ['blocks[0].title'], 'a url is edited in the panel, not tapped');
   assert.ok(TAPPABLE.has('text') && !TAPPABLE.has('url'));
+  assert.ok(TAPPABLE.has('money') && TAPPABLE.has('duration'), "the platform's set, the door's");
 });
 
 test('no catalogue is refused, not skipped', async () => {

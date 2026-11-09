@@ -14,30 +14,30 @@
  * `listing: true`, and no page of the repository's at the prefix): a
  * collection without pages is one page, one that did not ask has no listing,
  * and one whose repository wrote its own listing pages it itself, if it wants
- * to.
+ * to. The entries, their order and the cut are the door's (`site.listingPages`).
  */
 import type { GetStaticPaths } from 'astro';
 import EntryListing from '../../../components/EntryListing.astro';
-import { COLLECTIONS, type Collection } from '../../../content/blocks';
-import { listingPages, listingRoute, listsPaged, type Entry } from '../../../lib/entries';
-import { EVERY_LOCALE, withLocale } from '../../../lib/locale';
+import { listsPaged, type Collection, type Entry } from '../../../lib/entries';
+import { EVERY_LOCALE } from '../../../lib/locale';
+import { site } from '../../../lib/site';
 
 export const getStaticPaths = (async ({ paginate }) => {
   const paths = [];
-  for (const collection of COLLECTIONS.filter(listsPaged)) {
+  for (const collection of site.collections.filter(listsPaged)) {
     const lasts = new Map<string, number>();
     const cut = [];
     for (const locale of EVERY_LOCALE) {
-      const { entries, size, last } = await listingPages(collection, locale);
+      const { entries, size, last } = site.listingPages(collection.name, locale);
       lasts.set(locale, last);
-      cut.push(...paginate(entries, { pageSize: size, params: { listing: listingRoute(collection, locale) }, props: { collection, locale } }).slice(1));
+      cut.push(...paginate(entries, { pageSize: size, params: { listing: site.listingOf(collection.name, locale).slice(1) }, props: { collection, locale } }).slice(1));
     }
     for (const one of cut) {
       const n = one.props.page.currentPage;
       // The same page in another language, where that language has as many.
       const alternates = EVERY_LOCALE.filter((other) => (lasts.get(other) ?? 1) >= n).map((other) => ({
         locale: other,
-        path: `${withLocale(other, collection.prefix)}/page/${n}`,
+        address: site.listingOf(collection.name, other, n),
       }));
       paths.push({ ...one, props: { ...one.props, alternates: alternates.length > 1 ? alternates : [] } });
     }
@@ -49,7 +49,7 @@ const { collection, locale, page, alternates } = Astro.props as {
   collection: Collection;
   locale: string;
   page: { data: Entry[]; currentPage: number; lastPage: number };
-  alternates: { locale: string; path: string }[];
+  alternates: { locale: string; address: string }[];
 };
 ---
 

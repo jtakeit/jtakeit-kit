@@ -24,14 +24,15 @@ interface Props {
   schema?: unknown;
   bodyClass?: string;
   /**
-   * Every language this page exists in — `readPage('/prices').alternates`.
+   * Every language this page exists in — `site.alternatesOf(page)`, the
+   * door's, for a page or an entry.
    *
    * Without it two language versions of one page compete with each other in
    * search, which is the only part of being multilingual that costs money. A
    * page in one language passes nothing and nothing is emitted; a `hreflang`
    * set of one is noise.
    */
-  alternates?: { locale: string; path: string }[];
+  alternates?: { locale: string; address: string }[];
 }
 
 const { title, description, suffix = true, schema, bodyClass, alternates = [] } = Astro.props;
@@ -210,11 +211,11 @@ const businessSchema = {
       <link
         rel="alternate"
         hreflang={other.locale === '' ? META.lang : other.locale}
-        href={canonicalFor(other.path)}
+        href={canonicalFor(other.address)}
       />
     ))}
     {alternates.length > 0 && (
-      <link rel="alternate" hreflang="x-default" href={canonicalFor(alternates.find((one) => one.locale === '')?.path ?? '/')} />
+      <link rel="alternate" hreflang="x-default" href={canonicalFor(alternates.find((one) => one.locale === '')?.address ?? '/')} />
     )}
 
     {/* One flag drives this, robots.txt, the sitemap and llms.txt together. */}

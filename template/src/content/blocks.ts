@@ -17,6 +17,13 @@
  *   whole commit. The platform's reference/contract.md has every rule in one
  *   line each, with the code that refuses it.
  *
+ *   The pages render from jtk/catalogue.json too, not from this file: the kit's
+ *   door (src/lib/site.ts) reads the schema the platform reads. Under
+ *   `astro dev` the catalogue is written again on every save of this file
+ *   (jtakeit-meta.mjs), and a change that does not check is said in the dev
+ *   server's log while the page keeps the last one that did. Before a commit,
+ *   run the tool: a build reads the committed file and writes nothing.
+ *
  * ── the one file that decides whether a bespoke site is editable ────────────
  *
  * The studio's admin edits a site by tapping the text on it. It can do that for

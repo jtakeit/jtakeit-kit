@@ -29,8 +29,10 @@ test fails on one.
 ## The `jtk/` contract
 
 ```
-jtk/catalogue.json    what the owner may edit — derived from src/content/blocks.ts by `jtk catalogue`
-jtk/content/*.json    the values, one document per page — the panel's, written by a publish
+jtk/catalogue.json    what the owner may edit — derived from src/content/blocks.ts by `jtk catalogue`;
+                      the schema the pages render from, through the kit's door
+jtk/content/*.json    the values, one document per page — the panel's, written by a publish,
+                      each known by the `path` inside it
 jtk/bookings.json     the diary's settings, when the catalogue turns bookings on — seed it here
 jtk/design.json       the design document the panel reads for the editor's chrome
 ```

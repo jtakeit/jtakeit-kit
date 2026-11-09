@@ -3,7 +3,7 @@
  * The languages this page exists in, as links — the switcher.
  *
  * Built from `alternates`, which is the list of languages that **exist** for
- * this page (`readPage(path).alternates`, `alternatesOf(collection, entry)`),
+ * this page (`site.alternatesOf(page)`, `site.alternatesOf(entry)`),
  * and never by swapping a prefix into the current address: that is the shape
  * that gives somebody a 404 the first time a page has no translation — on a
  * blog, where most posts are written once, that is most of them.
@@ -15,11 +15,11 @@
  * `Layout.astro` places it; move it into the site's header when the design
  * has one, and restyle `.languages` like anything else.
  */
-import { LOCALE } from '../content/blocks';
+import { langOf } from '../lib/locale';
 import { under } from '../lib/under';
 
 interface Props {
-  alternates: { locale: string; path: string }[];
+  alternates: { locale: string; address: string }[];
   /** The language of the page it is on: `''` for the site's own. */
   current: string;
   class?: string;
@@ -36,14 +36,14 @@ const nameOf = (tag: string): string => {
     return tag;
   }
 };
-const tagOf = (locale: string) => (locale === '' ? LOCALE : locale);
+const tagOf = langOf;
 ---
 
 {ordered.length > 1 && (
   <nav class:list={['languages', className]} aria-label="Language" data-jtk-fixed>
     {ordered.map((other) => (
       <a
-        href={under(other.path)}
+        href={under(other.address)}
         hreflang={tagOf(other.locale)}
         lang={tagOf(other.locale)}
         aria-current={other.locale === current ? 'true' : undefined}

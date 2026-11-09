@@ -1,19 +1,16 @@
 import { defineCollection } from 'astro:content';
-import { COLLECTIONS } from './content/blocks';
 import { entries } from './lib/entryLoader';
 
 /**
- * The collections this site has, read from the one place that declares them.
+ * One collection of Astro's, for every collection of the site's.
  *
- * `src/content/blocks.ts` says which collections exist — that file is the
- * catalogue, and the admin draws its screens from the same declaration. This
- * derives the Astro side of it rather than repeating it, so adding a collection
- * is one entry in one array and never two lists that drift.
- *
- * The reading itself is `entryLoader.ts`, and its header is where the argument
- * lives: an entry is a document of blocks now, so the prose is a string that
- * has to go through the markdown pipeline rather than a file Astro can glob.
+ * Which collections a site has, and which entries are in them, is
+ * `jtk/catalogue.json`'s and the content's, read through the kit's door
+ * (src/lib/site.ts) — not a list kept here, which would be a second answer.
+ * What Astro holds is only what the door cannot make: each entry's body,
+ * rendered by this site's markdown pipeline with its pictures optimised.
+ * `entryLoader.ts` has the argument; `bodyOf` in src/lib/entries.ts reads it.
  */
-export const collections = Object.fromEntries(
-  COLLECTIONS.map((collection) => [collection.name, defineCollection({ loader: entries(collection) })]),
-);
+export const collections = {
+  jtk: defineCollection({ loader: entries() }),
+};

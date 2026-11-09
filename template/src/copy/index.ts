@@ -5,8 +5,8 @@
  *
  * The site's own language is `''`. A second language — `de`, say, declared in
  * `LOCALES` in `src/content/blocks.ts` — is `src/copy/de.ts` beside this file,
- * made the way the site's own is (its home document is `jtk/content/de.json`),
- * and one line here:
+ * made the way the site's own is (its home page is `site.page('/', 'de')`,
+ * the document whose path is `/de`), and one line here:
  *
  *   import { COPY as de } from './de';
  *   const BY_LOCALE: Record<string, Copy> = { '': own, de };
@@ -23,4 +23,4 @@ export function copyFor(locale: string): Copy {
   return BY_LOCALE[locale] ?? own;
 }
 
-export type { Copy, Shown } from './make';
+export type { Copy } from './make';

@@ -20,24 +20,22 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { CODES, said } from './build-codes.mjs';
-import { collectContent } from './content.mjs';
+import { TAPPABLE, tappable } from './content/index.mjs';
+import { collectContent } from './content/node.mjs';
 
 export { CODES, said };
 
 /**
- * The kinds a person edits by tapping the thing itself. A URL, a boolean or
- * an alt text is edited in the panel beside it, so requiring an annotated
- * element for those would fail every honest template.
+ * The kinds a person edits by tapping the thing itself — the door's, which
+ * are the platform's (`registry/kinds.go`). A URL, a boolean or an alt text
+ * is edited in the panel beside it, so requiring an annotated element for
+ * those would fail every honest template.
+ *
+ * This copy used to stop at `media`, while the platform's build lint has
+ * always asked for `money` and `duration` too: a price drawn without its
+ * path passed here and failed the platform's build (wiki/98 §0, 4).
  */
-export const TAPPABLE = new Set(['text', 'textarea', 'richtext_lite', 'markdown', 'media']);
-
-/** @param {any} field */
-function tappable(field) {
-  if (!TAPPABLE.has(field.kind)) return false;
-  if (field.client_editable === false) return false;
-  if (field.no_tap_target === true) return false;
-  return true;
-}
+export { TAPPABLE };
 
 /** @param {string} url */
 function hostOf(url) {

@@ -19,41 +19,10 @@
  *   import { devDiary } from '@jtakeit/kit/devdiary';
  *   server.middlewares.use('/api', devDiary(process.cwd()));
  */
-import { readFile, readdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { content } from './content/index.mjs';
+import { readJtk } from './content/node.mjs';
 
 const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-
-async function json(path) {
-  try {
-    return JSON.parse(await readFile(path, 'utf8'));
-  } catch {
-    return null;
-  }
-}
-
-/** Every content file under jtk/content, with its slug. */
-async function entries(root) {
-  const out = [];
-  const walk = async (dir) => {
-    let names = [];
-    try {
-      names = await readdir(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const one of names) {
-      const full = join(dir, one.name);
-      if (one.isDirectory()) await walk(full);
-      else if (one.name.endsWith('.json')) {
-        const doc = await json(full);
-        if (doc?.collection) out.push({ ...doc, slug: String(doc.path ?? one.name).split('/').filter(Boolean).pop()?.replace(/\.json$/, '') });
-      }
-    }
-  };
-  await walk(join(root, 'jtk', 'content'));
-  return out;
-}
 
 /** Minutes a zone is ahead of UTC on a given day, from the platform's own Intl. */
 function offsetOf(zone, at) {
@@ -67,20 +36,36 @@ function offsetOf(zone, at) {
   }
 }
 
-/** What the site's files say, read fresh on every request so an edit shows at once. */
+/**
+ * What the site's files say, read fresh on every request so an edit shows at
+ * once — through the door, as the booking form on the page reads them.
+ *
+ * The services and the people are the entries the site lists in its own
+ * language, as the platform's diary takes them: a German copy of a service
+ * is the same service, and one nobody shows is no choice. What a person does
+ * is the rows `[{ service }]` the kit and the panel write, read as the
+ * scaffold's form reads them — it used to be taken for a list of slugs here,
+ * so with the rows the kit lays out nobody could do anything (wiki/98 §13);
+ * and none, as on the form, is everything.
+ */
 async function read(root) {
-  const catalogue = (await json(join(root, 'jtk', 'catalogue.json'))) ?? {};
-  const roles = catalogue.modules?.bookings ?? {};
-  const settings = (await json(join(root, 'jtk', 'bookings.json')))?.blocks?.[0] ?? {};
-  const all = await entries(root);
-  const servicesOf = all.filter((e) => e.collection === (roles.services ?? 'services'));
-  const peopleOf = all.filter((e) => e.collection === (roles.resources ?? 'masters'));
-  const services = servicesOf.map((e) => {
-    const b = e.blocks?.[0] ?? {};
-    return { slug: e.slug, takes: Number(b.takes) || 0, costs: Number(b.costs) || 0, title: b.title ?? e.slug };
+  const site = content(await readJtk(root));
+  const roles = site.rolesOf('bookings') ?? {};
+  const settings = site.module('bookings');
+  const services = site.entries(roles.services ?? 'services').map((e) => ({
+    slug: e.slug,
+    takes: Number(e.fields.value('takes')) || 0,
+    costs: Number(e.fields.value('costs')) || 0,
+    title: e.fields.value('title') ?? e.slug,
+  }));
+  const people = site.entries(roles.resources ?? 'masters').map((e) => {
+    const does = e.fields
+      .rows('does')
+      .map((row) => row.value('service'))
+      .filter((slug) => typeof slug === 'string');
+    return { slug: e.slug, does: does.length > 0 ? does : null };
   });
-  const people = peopleOf.map((e) => ({ slug: e.slug, does: e.blocks?.[0]?.does ?? null }));
-  return { settings, services, people };
+  return { settings, services, people, currency: site.currency };
 }
 
 const send = (res, status, body) => {
@@ -123,7 +108,7 @@ export function devDiary(root) {
     }
 
     if (path === '/availability') {
-      const { settings, services, people } = await read(root);
+      const { settings, services, people, currency } = await read(root);
       if (!settings.zone || !Array.isArray(settings.hours) || settings.hours.length === 0) {
         return send(res, 412, {
           code: 'failed_precondition',
@@ -167,7 +152,7 @@ export function devDiary(root) {
         party_max: 0,
         quantity_max: 1,
         scale: settings.scale ?? 'hourly',
-        currency: settings.currency ?? '',
+        currency,
         services: services.map((s) => ({ slug: s.slug, scale: settings.scale ?? 'hourly', takes: s.takes, fewest: 1, most: 1 })),
         dev: true,
       });
@@ -175,7 +160,7 @@ export function devDiary(root) {
 
     if (path === '/book' && req.method === 'POST') {
       const body = await bodyOf(req);
-      const { people, services, settings } = await read(root);
+      const { people, services, settings, currency } = await read(root);
       const start = body.start ? new Date(body.start).toISOString() : '';
       if (!start) return send(res, 400, { code: 'invalid_argument', message: 'a booking needs a start' });
       const busy = taken.get(start) ?? [];
@@ -189,7 +174,7 @@ export function devDiary(root) {
       const names = [body.service, ...(Array.isArray(body.services) ? body.services : [])].filter(Boolean);
       const takes = services.filter((s) => names.includes(s.slug)).reduce((sum, s) => sum + s.takes, 0) || Number(settings.slot_every) || 30;
       const ends = new Date(new Date(start).getTime() + takes * 60000).toISOString();
-      return send(res, 200, { id: `dev-${made}`, state: 'confirmed', start, ends, amount_minor: 0, currency: settings.currency ?? '', token: `dev-${made}`, manage_path: '', telegram_url: '', resource: who, dev: true });
+      return send(res, 200, { id: `dev-${made}`, state: 'confirmed', start, ends, amount_minor: 0, currency, token: `dev-${made}`, manage_path: '', telegram_url: '', resource: who, dev: true });
     }
 
     if (path === '/booking/cancel' && req.method === 'POST') return send(res, 200, { ok: true, dev: true });

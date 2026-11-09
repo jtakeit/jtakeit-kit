@@ -7,10 +7,13 @@
  * take its hours from — a block that types them again as text is a second
  * copy, and the platform's judge advises against it (JTK_W_MODULE_TWIN).
  *
- * A repository nobody has published yet has no `jtk/bookings.json`, so the
- * file is read through a glob rather than imported: absent, the component
+ * Read through the kit's door (`site.module('bookings')`): the settings are
+ * the document's `bookings_config` block, found by its type rather than by
+ * being first. A repository nobody has published yet has no
+ * `jtk/bookings.json`, and the door answers with no settings: the component
  * draws nothing and the build goes on.
  */
+import { site } from '../lib/site';
 /**
  * One stretch of a working day, as `jtk/bookings.json` stores it: whole
  * minutes from local midnight, which is what the `time_of_day` kind is
@@ -35,12 +38,8 @@ interface Props {
 }
 const { locale, title = '' } = Astro.props;
 
-const files = import.meta.glob<{ blocks?: { hours?: Row[] }[] }>('/jtk/bookings.json', {
-  eager: true,
-  import: 'default',
-});
-const settings = Object.values(files)[0];
-const rows: Row[] = settings?.blocks?.[0]?.hours ?? [];
+const hours = site.module('bookings').hours;
+const rows: Row[] = Array.isArray(hours) ? (hours as Row[]) : [];
 
 const ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const DAYS: Record<Props['locale'], Record<string, string>> = {

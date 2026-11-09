@@ -12,27 +12,27 @@ import { copyFor } from '../copy';
 import { localeOf } from '../lib/locale';
 import Shot from './Shot.astro';
 
-const { block, jtkPath, picture, HOME } = copyFor(localeOf(Astro.url.pathname));
+const { PAGE, HOME } = copyFor(localeOf(Astro.url.pathname));
 
 /*
  * The hero's photograph, where the document has one.
  *
  * It is a field rather than a file written into this component for the same
  * reason the heading is: the owner can change it. `picture()` gives the slot,
- * its words and its annotation together — and the annotation is what makes the
+ * its words (`image_alt`, beside it) and its annotation together — and the annotation is what makes the
  * picture tappable, which is the whole of "every photograph on the page is
  * either a gallery item or a field of its own".
  *
  * Rendered after the words and in its own element, so a design pass can put it
  * anywhere — beside them, behind them, or nowhere — without touching what it is.
  */
-const hero = block('hero');
-const shot = picture(hero.of, hero.at, 'image');
+const hero = PAGE.block('hero');
+const shot = hero.picture('image');
 ---
 
 <div class="hero__inner">
   {HOME.hero.eyebrow && (
-    <p class="eyebrow" data-jtk-path={jtkPath('hero', 'eyebrow')}>{HOME.hero.eyebrow}</p>
+    <p class="eyebrow" {...hero.at('eyebrow')}>{HOME.hero.eyebrow}</p>
   )}
   {/* Guarded like everything else around it, and it is the one that was not.
       `title` is `required: true` in the catalogue, so a real page always has
@@ -40,14 +40,14 @@ const shot = picture(hero.of, hero.at, 'image');
       where an empty <h1> is worth nothing to a reader and made `jtk catalogue`
       fail on a project nobody had edited yet. */}
   {HOME.hero.heading && (
-    <h1 data-jtk-path={jtkPath('hero', 'title')}>{HOME.hero.heading}</h1>
+    <h1 {...hero.at('title')}>{HOME.hero.heading}</h1>
   )}
   {HOME.hero.lead && (
-    <p class="lead" data-jtk-path={jtkPath('hero', 'lead')}>{HOME.hero.lead}</p>
+    <p class="lead" {...hero.at('lead')}>{HOME.hero.lead}</p>
   )}
   {HOME.hero.cta && (
     <p class="actions">
-      <a class="btn" href={HOME.hero.ctaHref} data-jtk-path={jtkPath('hero', 'cta_label')}>
+      <a class="btn" href={HOME.hero.ctaHref} {...hero.at('cta_label')}>
         {HOME.hero.cta}
       </a>
     </p>
@@ -55,11 +55,11 @@ const shot = picture(hero.of, hero.at, 'image');
 
   {/* The page's largest picture, so it is the one loaded eagerly — one per
       page, never two. */}
-  {shot.name && (
+  {shot.src && (
     <Shot
-      name={shot.name}
+      name={shot.src}
       alt={shot.alt}
-      path={shot.path}
+      path={shot['data-jtk-path']}
       class="hero__shot"
       eager
       width={1200}

@@ -1,3 +1,5 @@
+import type { Site } from './content';
+
 export interface Meta {
   redirects: { from: string; to: string; status?: number }[];
   drafts: string[];
@@ -14,6 +16,12 @@ export interface CacheRule {
 }
 
 export interface MetaInput {
+  /**
+   * The door's reading of the site — `content(await readJtk())` — whose
+   * drafts and specimens are then the ones listed (`draftsOf`). The scaffold
+   * passes it; without it the drafts are read off `root` and the declaration.
+   */
+  site?: Site;
   /** The content root, `jtk/content` under the working directory by default. */
   root?: string;
   collections?: { prefix: string; body?: string[] }[];
@@ -37,6 +45,8 @@ export function specimenAddresses(
   locales?: string[],
 ): string[];
 export function hiddenEntries(root?: string, now?: number): Promise<string[]>;
+/** Every draft the door reads: the entries not shown, and the specimen pages in every language. */
+export function draftsOf(site: Site): string[];
 export function cacheRules(cache?: CacheRule[]): CacheRule[];
 export function buildMeta(what?: MetaInput): Promise<Meta>;
 export function writeMeta(dir: string, what?: MetaInput): Promise<Meta>;

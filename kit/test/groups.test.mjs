@@ -1,13 +1,14 @@
-// The rules of groups, trees, tags and back-references (template/src/lib/groups.ts),
-// run by Node on their own: the file imports nothing, and Node strips its types.
+// The rules of groups, trees, tags and back-references, and of which
+// collections are listed at their prefix — the door's since 9 November 2026
+// (lib/content/groups.mjs), the scaffold's src/lib/groups.ts and listing.ts
+// before. The cases are the ones the scaffold's tests held them to.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ancestors, capped, DEEPEST, descendants, grouped, groupField, pointersInto, pointsAt, pointsAtAny, refHeadings, selectHeadings, treeFields,
-} from '../template/src/lib/groups.ts';
+  ancestors, capped, DEEPEST, descendants, drawsPagedListing, grouped, groupField, linksToListing, pointersInto, pointsAt, pointsAtAny, refHeadings, selectHeadings, treeFields,
+} from '../lib/content/groups.mjs';
 
-const e = (id, data) => ({ id, data });
-const slugOf = (entry) => entry.id;
+const e = (slug, data) => ({ slug, fields: { value: (key) => data[key] } });
 
 const service = [
   { key: 'title', kind: 'text' },
@@ -36,9 +37,9 @@ test("a select's headings are its options, in order, by their label in the page'
 });
 
 test("a ref's headings are the referenced entries in their order, titled, the site's language standing in", () => {
-  const de = [e('de/new', { title: 'Neu' }), e('de/nails', { title: 'Nägel' }), e('de/hair', { title: '' })];
+  const de = [e('new', { title: 'Neu' }), e('nails', { title: 'Nägel' }), e('hair', { title: '' })];
   const own = [e('hair', { title: 'Hair' }), e('brows', { title: 'Brows' }), e('nails', { title: 'Nails' }), e('none', {})];
-  const headings = refHeadings(de, own, (one) => one.id.replace(/^de\//, ''), (one) => `page:/${one.id}:blocks[0].title`);
+  const headings = refHeadings(de, own);
   assert.deepEqual(headings.map((one) => [one.key, one.text]), [
     ['hair', 'Hair'], // translated with no title: the site's own words
     ['brows', 'Brows'], // not translated: the site's own entry
@@ -46,10 +47,9 @@ test("a ref's headings are the referenced entries in their order, titled, the si
     ['none', 'none'], // titled nowhere: its slug
     ['new', 'Neu'], // only in the page's language: after the site's own order
   ]);
-  assert.equal(headings[2].path, 'page:/de/nails:blocks[0].title', "a category's title is annotated as that entry's");
-  assert.equal(headings[1].path, 'page:/brows:blocks[0].title', 'and a borrowed one as the entry whose words it shows');
-  assert.deepEqual(refHeadings(own, [], slugOf, () => undefined).map((one) => one.key), ['hair', 'brows', 'nails', 'none']);
-  assert.equal(refHeadings([e('x', { title: 'X' })], [], slugOf, () => undefined)[0].path, undefined);
+  assert.equal(headings[2].entry, de[1], "a category's heading is that entry's, in the page's language");
+  assert.equal(headings[1].entry, own[1], 'and a borrowed one is the entry whose words it shows');
+  assert.deepEqual(refHeadings(own, []).map((one) => one.key), ['hair', 'brows', 'nails', 'none']);
 });
 
 test('entries under their headings in the headings order, the ungrouped last, empty headings dropped', () => {
@@ -61,7 +61,7 @@ test('entries under their headings in the headings order, the ungrouped last, em
     e('dye', { section: 'hair' }),
   ];
   const runs = grouped(entries, 'section', [{ key: 'brows', text: 'Brows' }, { key: 'nails', text: 'Nails' }, { key: 'hair', text: 'Hair' }]);
-  assert.deepEqual(runs.map((run) => [run.heading?.text, run.entries.map((one) => one.id)]), [
+  assert.deepEqual(runs.map((run) => [run.heading?.text, run.entries.map((one) => one.slug)]), [
     ['Nails', ['gel']],
     ['Hair', ['cut', 'dye']],
     [undefined, ['tea', 'old']],
@@ -118,18 +118,34 @@ test("a category's descendants: every level down, each once, loops and hidden br
 });
 
 test('an entry pointing at a category or one under it is found once, through either shape', () => {
-  const service = [{ key: 'category', kind: 'ref', ref: 'categories' }, { key: 'also', kind: 'list', of: [{ key: 'category', kind: 'ref', ref: 'categories' }] }];
-  const pointers = pointersInto('categories', service);
+  const fields = [{ key: 'category', kind: 'ref', ref: 'categories' }, { key: 'also', kind: 'list', of: [{ key: 'category', kind: 'ref', ref: 'categories' }] }];
+  const pointers = pointersInto('categories', fields);
   const slugs = new Set(['beauty', 'nails', 'gel']);
   assert.ok(pointsAtAny(e('a', { category: 'gel' }), pointers, slugs));
   assert.ok(pointsAtAny(e('b', { also: [{ category: 'hair' }, { category: 'nails' }] }), pointers, slugs));
   assert.ok(!pointsAtAny(e('c', { category: 'hair' }), pointers, slugs));
   const all = [e('a', { category: 'gel', also: [{ category: 'beauty' }] }), e('c', { category: 'hair' }), e('d', { category: 'beauty' })];
-  assert.deepEqual(all.filter((one) => pointsAtAny(one, pointers, slugs)).map((one) => one.id), ['a', 'd'], 'once each, in the order they came');
+  assert.deepEqual(all.filter((one) => pointsAtAny(one, pointers, slugs)).map((one) => one.slug), ['a', 'd'], 'once each, in the order they came');
 });
 
 test("back-references are capped at the referencing collection's per_page, and say how many more", () => {
   assert.deepEqual(capped([1, 2, 3], undefined), { shown: [1, 2, 3], more: 0 });
   assert.deepEqual(capped([1, 2, 3], 2), { shown: [1, 2], more: 1 });
   assert.deepEqual(capped([1, 2], 2), { shown: [1, 2], more: 0 });
+});
+
+test('a collection with pages is listed by the scaffold only when it says listing: true', () => {
+  assert.equal(drawsPagedListing({}, false), false, 'nothing said: no new address on the site');
+  assert.equal(drawsPagedListing({ pages: true }, false), false);
+  assert.equal(drawsPagedListing({ listing: false }, false), false);
+  assert.equal(drawsPagedListing({ listing: true }, false), true);
+  assert.equal(drawsPagedListing({ listing: true }, true), false, "the repository's own page at the prefix wins");
+  assert.equal(drawsPagedListing({ pages: false, listing: true }, false), false, 'a collection without pages has its own listing route');
+});
+
+test('«And 3 more» links only where a listing is there by the rule', () => {
+  assert.equal(linksToListing({}), false);
+  assert.equal(linksToListing({ listing: false }), false);
+  assert.equal(linksToListing({ listing: true }), true);
+  assert.equal(linksToListing({ pages: false }), true, 'its prefix is its listing, which the platform demands');
 });

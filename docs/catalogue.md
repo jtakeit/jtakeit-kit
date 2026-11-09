@@ -23,6 +23,18 @@ belongs:
 npx @jtakeit/astro catalogue
 ```
 
+The site renders from the emitted file too: the kit's door
+(`@jtakeit/kit/content`, `site` in `src/lib/site.ts`) reads the schema the
+platform reads — the collections, their order and groups, the languages, which
+fields take a tap — never `blocks.ts` itself. `jtk create` writes it, and under
+`astro dev` the scaffold writes it again every time `blocks.ts` is saved — the
+same tool, `--emit-only` — so the page follows the declaration with nothing to
+run. A change that does not check is said in the dev server's log, with the
+tool's findings, and the last catalogue that checked stays, so the page does
+not go blank. Outside the dev server nothing writes it: run
+`npx @jtakeit/astro catalogue` before a commit, because the build — yours and
+the platform's — reads the committed file.
+
 **A field declared there can be edited by the owner. A field left out is part of
 the design.** Both are right answers — a headline is content, the way a section
 is laid out is not — and the choice is per field rather than something a

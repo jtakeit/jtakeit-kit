@@ -22,24 +22,26 @@
  * lib/entries) — and with it the paging: this page lists every post, whatever
  * `per_page` says. Draw `EntryListing.astro` here instead, or delete the file
  * and say `listing: true`, for the scaffold's pages at `/blog/page/2`.
+ *
+ * The posts are the door's: `site.entries('blog', { locale })`, the ones that
+ * are out, newest first by the collection's `order`.
  */
 import Layout from '../../../layouts/Layout.astro';
 import EntryCard from '../../../components/EntryCard.astro';
-import { COLLECTIONS, words } from '../../../content/blocks';
-import { listed } from '../../../lib/entries';
-import { EVERY_LOCALE, localeParams, langOf, withLocale } from '../../../lib/locale';
+import { EVERY_LOCALE, localeOf, localeParams, langOf } from '../../../lib/locale';
+import { site } from '../../../lib/site';
 
 export function getStaticPaths() {
-  return COLLECTIONS.some((one) => one.name === 'blog' && one.pages !== false) ? localeParams() : [];
+  return site.collection('blog')?.pages ? localeParams() : [];
 }
 
-const locale = Astro.params.lang ?? '';
+const locale = localeOf(Astro.url.pathname);
 const LANG = langOf(locale);
-const blog = COLLECTIONS.find((one) => one.name === 'blog')!;
-const posts = await listed('blog', locale);
-const heading = words(blog.label, LANG);
+const blog = site.collection('blog')!;
+const posts = site.entries('blog', { locale });
+const heading = site.words(blog.label, LANG);
 // A listing exists in every language the site has.
-const alternates = EVERY_LOCALE.map((one) => ({ locale: one, path: withLocale(one, blog.prefix) }));
+const alternates = EVERY_LOCALE.map((one) => ({ locale: one, address: site.listingOf('blog', one) }));
 ---
 
 <Layout title={heading} description="" alternates={alternates}>
@@ -47,7 +49,7 @@ const alternates = EVERY_LOCALE.map((one) => ({ locale: one, path: withLocale(on
     <section class="listing listing--posts">
       <h1 data-jtk-fixed>{heading}</h1>
       <ul class="posts">
-        {posts.map((post) => <EntryCard collection={blog} entry={post} locale={locale} />)}
+        {posts.map((post) => <EntryCard entry={post} locale={locale} />)}
       </ul>
     </section>
   </main>

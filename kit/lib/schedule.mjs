@@ -16,10 +16,9 @@
  * file edited by hand that says `"next week"` is shown rather than hidden for
  * a reason nobody can see.
  *
- * The scaffold's entry loader asks the same question in
- * `template/src/lib/schedule.ts` — a copy, not an import: a scaffold is built
- * against the published kit, which may not have this file yet. The two are
- * held to one answer by `test/schedule.test.mjs` at the repository's root.
+ * The scaffold asks it through the kit's door (`@jtakeit/kit/content`), which
+ * decides what a listing offers; until the door it kept a copy of its own in
+ * `src/lib/schedule.ts`, held to this one by a test. One rule, one copy.
  */
 
 /**

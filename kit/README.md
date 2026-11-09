@@ -118,6 +118,36 @@ which is what `paths` annotates — and `asks` are the catalogue's, drawn fixed.
 `@jtakeit/kit/lead.css` is the legible minimum; keep `.trap` off-screen
 whatever you restyle.
 
+## The content, read through one door
+
+`@jtakeit/kit/content` is the one place a site reads its `jtk/` files: which
+page is which, which entries a collection offers and in what order, which
+language a document is in, its groups, its tree and what points at it, the
+money in the site's currency — and the annotation of every value, so a
+template never writes a path. It reads contract 2 as the platform does: a
+page or an entry is the `path` inside its file, a module's settings are its
+`<module>_config` block, and the schema is `jtk/catalogue.json`.
+
+```js
+import { content } from '@jtakeit/kit/content';
+
+// In a template, the files as Vite's glob hands them — the same line under a later contract:
+const site = content(import.meta.glob('/jtk/**/*.json', { eager: true, import: 'default' }));
+// In Node, the same map off a disk:
+//   import { readJtk } from '@jtakeit/kit/content/node';
+//   const site = content(await readJtk());
+
+const hero = site.page('/', 'de').block('hero');
+hero.text('title');                    // the words
+hero.at('title');                      // { 'data-jtk-path': 'blocks[0].title' } — spread it onto the element
+site.entries('works', { locale: 'de' }); // offered and ordered; { all: true } for every one
+```
+
+`TAPPABLE` and `tappable(field)` are the platform's kinds that must carry a
+tap target, one set for the lint, the catalogue check and the scaffold. The
+kit's own readers — `jtkit lint`, `progress`, the dev diary, `_meta.json` —
+read through the same door.
+
 ## `_meta.json`, and the specimen pages
 
 What the edge needs to know that the HTML cannot say: the redirects, the
@@ -130,6 +160,7 @@ import { writeMeta } from '@jtakeit/kit/meta';
 
 await writeMeta('dist', {
   collections, blocks, locales,      // the declaration: the specimens are derived from it
+  // or `site: content(await readJtk())`, the door's reading, as the scaffold passes
   immutable: ['/_next/static/'],     // where this generator keeps its hashed files; absent, the edge assumes Astro's
   cache: [{ prefix: '/clips/', maxAge: 86400 }], // files that keep their names, kept a day; see below
   redirects: [{ from: '/old', to: '/new', status: 301 }],

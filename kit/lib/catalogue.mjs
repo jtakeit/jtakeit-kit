@@ -51,6 +51,7 @@ import { dirname, join, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { E, isAdvice, isPlatformCode, LOCAL } from './codes.mjs';
+import { tappable } from './content/index.mjs';
 import { shownAt } from './schedule.mjs';
 
 // What this tool calls itself in a catalogue it writes. Bumped when the shape
@@ -1483,7 +1484,9 @@ const disagreements = [];
 
 /*
  * Which fields a page must carry a tap target for: the platform's own rule,
- * `tappable()` in its sitebuild/`jtkit lint`, copied (12 October 2026).
+ * `tappable()` in its sitebuild/`jtkit lint` — the door's (`@jtakeit/kit/content`)
+ * since 9 November 2026, which every reader in the kit and the scaffold asks,
+ * rather than the copy that sat here (12 October 2026).
  *
  * This used to ask it of every field but a bool or a `no_tap_target`, which
  * is stricter than the judge in exactly the shapes that are the way a
@@ -1493,8 +1496,6 @@ const disagreements = [];
  * and the platform's build asks no element of them. A field outside the rule
  * may still be annotated; it is accepted, never required.
  */
-const TAPPABLE = new Set(['text', 'textarea', 'richtext_lite', 'markdown', 'media', 'money', 'duration']);
-const tappable = (field) => TAPPABLE.has(field.kind) && field.client_editable !== false && field.no_tap_target !== true;
 
 /** `/de/services/x` without its language: `/services/x`. The site's own language has no prefix. */
 function basePathOf(path, locales) {
@@ -1794,8 +1795,9 @@ for (const [at, found] of annotationsByPage) {
   /*
    * A specimen is annotated on purpose and has no document by design.
    *
-   * `entryLoader.ts` builds one page per arrangement so the admin can lift this
-   * site's own markup for a block that has just been added — annotations and
+   * The door (`site.specimens`, `@jtakeit/kit/content`) makes one page per
+   * arrangement, in every language, and the scaffold builds each so the admin
+   * can lift this site's own markup for a block that has just been added — annotations and
    * all, because the paths are half of what is lifted. Nothing is behind it and
    * nothing is meant to be: it is generated from the declaration at build time.
    * Named by `specimenId`, which is the one format the two sides agree on.

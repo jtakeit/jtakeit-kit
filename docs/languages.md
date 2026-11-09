@@ -64,8 +64,16 @@ content document, and it says one thing about itself:
 { "path": "/de/prices", "locale": "de" }
 ```
 
-`locale` is absent for the site's own language, which `jtk/site.json`
-already says.
+`locale` is absent for the site's own language, which the schema already says
+(`LOCALE` in `src/content/blocks.ts`, written into `jtk/catalogue.json`). A
+document without it whose path starts with a language — `/de/prices` — is read
+as that language's all the same; the kit's door (`@jtakeit/kit/content`) takes
+the `locale` key, or the language the path starts with.
+
+A regional language is spelt `de-CH` everywhere a tag is written — `LOCALES`,
+`locale`, `jtk/shared.de-CH.json` — and its addresses carry the lowercase,
+`/de-ch/prices`, because an address on the platform is lowercase. The door is
+the one place the two spellings meet; it reads either.
 
 **The address is the same in every language, with the language in front of it.**
 `/de/prices`, never `/de/preise` — and `/de/blog/healing` for a post written in
@@ -90,10 +98,14 @@ language off the address. Adding German is four things, and none of them is a
 route:
 
 1. **Declare it.** `export const LOCALES: string[] = ['de'];` in
-   `src/content/blocks.ts`.
+   `src/content/blocks.ts`. The pages read the languages from
+   `jtk/catalogue.json`, as the platform does: the dev server writes it again
+   when `blocks.ts` is saved, and `npx @jtakeit/astro catalogue` writes it
+   before a commit.
 2. **The words that are not content.** Copy `src/copy/<your locale>.ts` to
-   `src/copy/de.ts`, point its import at `jtk/content/de.json`, set `lang: 'de'`
-   and translate the strings. Register it in `src/copy/index.ts`:
+   `src/copy/de.ts`, point it at the German home page —
+   `makeCopy(site.page('/', 'de'), STRINGS)` — set `lang: 'de'` and translate
+   the strings. Register it in `src/copy/index.ts`:
    `import { COPY as de } from './de';` and `{ '': own, de }`. A language
    declared and not registered renders with the site's own words — untranslated,
    not broken.
@@ -102,8 +114,11 @@ route:
    platform keeps the page at `/de` in the file named for it, as it keeps
    `/prices` in `prices.json`. Every other German page is
    `jtk/content/de/<page>.json` (`"path": "/de/prices"`), and every German entry
-   `jtk/content/de/<collection>/<slug>.json` with `"collection"` and
-   `"locale": "de"` beside the path.
+   `jtk/content/de/<prefix>/<slug>.json` with `"collection"` and
+   `"locale": "de"` beside the path. The page or the entry is the path inside
+   the file — the door finds it by that, as the platform does, wherever the
+   file sits — but keep the file where the platform writes it, so the diff of
+   its next save is the content and not a move.
 4. **`PAGES`** in `src/data/site.ts`: the German addresses, so they are in the
    sitemap.
 
@@ -113,15 +128,15 @@ you add for every language goes beside them:
 
 ```astro
 ---
-import { localeParams, withLocale } from '../../lib/locale';
-import { readPage } from '../../lib/page';
+import { localeOf, localeParams } from '../../lib/locale';
+import { site } from '../../lib/site';
 import { copyFor } from '../../copy';
 export const getStaticPaths = localeParams;
-const locale = Astro.params.lang ?? '';          // '' for the site's own
-const page = readPage(withLocale(locale, '/prices'));
+const locale = localeOf(Astro.url.pathname);    // '' for the site's own
+const page = site.page('/prices', locale);
 const C = copyFor(locale);
 ---
-<Layout title={page.seo.title} description={page.seo.description} alternates={page.alternates}>
+<Layout title={String(page.seo.title ?? '')} description={String(page.seo.description ?? '')} alternates={site.alternatesOf(page)}>
 ```
 
 A page that exists in one language only stays an ordinary route
@@ -138,30 +153,35 @@ It comes out of the data — never a list somebody maintains:
 
 ```astro
 ---
-import { readPage } from '../lib/page';
-const prices = readPage('/prices');
+import { site } from '../lib/site';
+const prices = site.page('/prices');
+const alternates = site.alternatesOf(prices);
 ---
-<Layout title={prices.seo.title} description={prices.seo.description} alternates={prices.alternates}>
+<Layout title={String(prices.seo.title ?? '')} description={String(prices.seo.description ?? '')} alternates={alternates}>
 ```
 
-`alternates` is every language of this page, found by taking the language off
-the front of the address and looking for the same address under every other one.
-A page that exists in one language answers with nothing and `Layout` emits
-nothing — a `hreflang` set of one is noise.
+`site.alternatesOf(page)` is every language of this page, found by taking the
+language off the front of the address and looking for the same address under
+every other one; `site.alternatesOf(entry)` is every language an entry is out
+in. Each is `{ locale, address }`, `''` for the site's own. A page that exists
+in one language answers with nothing and `Layout` emits nothing — a `hreflang`
+set of one is noise.
 
 The switcher on the page is the same list, rendered:
 
 ```astro
-{prices.alternates.map((other) => <a href={other.path}>{other.locale || META.lang}</a>)}
+{alternates.map((other) => <a href={under(other.address)}>{other.locale || META.lang}</a>)}
 ```
 
 ## The text that is on every page
 
 Per language, because it is text: `jtk/shared.json` for the site's own and
-`jtk/shared.de.json` beside it. Read the one the page is in:
+`jtk/shared.de.json` beside it — `jtk/shared.de-CH.json` for a regional one,
+which the door finds whatever the case of its region. Read the one the page is
+in:
 
 ```astro
-const chrome = readShared('de');
+const chrome = site.shared(localeOf(Astro.url.pathname));
 ```
 
 The annotation is unchanged — `shared:blocks[0].note` — because a shared
@@ -181,8 +201,8 @@ So a post written in German lives at `/de/blog/healing` and not at
 the ones it does not; writing the missing one is a button on that row, and it
 does not ask for an address, because there is nothing to decide.
 
-The listing for each language shows its own — `listed('blog')` filtered by the
-locale of the page rendering it.
+The listing for each language shows its own — `site.entries('blog', { locale })`
+for the language of the page rendering it.
 
 A **page** in a language it does not have is not the admin's to make: a page is
 a file you wrote, so it reports the gap and you fill it.
