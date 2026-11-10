@@ -125,6 +125,8 @@ export interface Block extends Values {
 /** A page: its blocks, as the file holds them. */
 export interface Page {
   kind: 'page';
+  /** The page's own id, kept when its file moves; `''` before the platform's first save. */
+  id: string;
   /** Its address: `/prices`, `/de/prices`. */
   address: string;
   /** `''` for the base language, the tag of any other. */
@@ -153,6 +155,8 @@ export interface Shared {
 /** An entry of a collection. */
 export interface Entry {
   kind: 'entry';
+  /** The entry's own id, kept when its file moves; `''` before the platform's first save. */
+  id: string;
   collection: string;
   /** Its path without the language and the collection's prefix. */
   slug: string;
