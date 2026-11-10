@@ -42,10 +42,18 @@
  * Anything it does not know it ignores: `jtk/session.json`, `jtk/design.json`
  * (the template's own), a picture's directory, a module file nothing names.
  *
- * ── contract 2, read as the platform reads it ───────────────────────────────
+ * ── two contracts, one interface ────────────────────────────────────────────
  *
- * This version reads contract 2 (wiki/98 §0–5 has contract 3, which a later
- * version reads behind the same interface):
+ * A site whose `jtk/schema.json` says `contract: 3` is read by
+ * `contract3.mjs` (wiki/98 §2–5): pages and entries in a directory of their
+ * own kind, translations beside their originals and merged over them, an
+ * entry's own values under `fields`, addresses from a collection's `route`,
+ * and annotations by `_key` and id. Every other site is read here, as
+ * contract 2. A template calls the same functions on either and gets the
+ * same shapes back; only what `at()` writes, and where the values came from,
+ * differ.
+ *
+ * ── contract 2, read as the platform reads it ───────────────────────────────
  *
  *   - the schema is `jtk/catalogue.json`, the emitted JSON — never the
  *     developer's `blocks.ts`, which is a declaration the platform never sees;
@@ -58,9 +66,10 @@
  *     matched in either case;
  *   - a module's settings are the block whose type is `<module>_config`, not
  *     whatever block comes first;
- *   - a manual order is the order of the files' names, which is what a build
- *     of the scaffold has always listed by; contract 2 keeps the order the
- *     owner arranges in the platform's database and in no file.
+ *   - a manual order is each entry's `rank`, which the platform writes into
+ *     the file since jtakeit-core wiki/94 · M4, and the order of the files'
+ *     names for an entry without one, which is what a build of the scaffold
+ *     has always listed by.
  *
  * A language is `''` for the base on everything the door hands out — what
  * the files say, where a base document carries no `locale` — and the
@@ -84,47 +93,14 @@ import {
   treeFields,
 } from './groups.mjs';
 import { baseAddressOf, canonicalLocale, inLocale, languagesOf, localeArg, localeOfAddress, segmentOf, sharedLocaleOf } from './locale.mjs';
+import { byRank, labelWords, specimenId, TAPPABLE, tappable } from './rules.mjs';
+import { contract3 } from './contract3.mjs';
 
 export { shownAt, drawsPagedListing, linksToListing, canonicalLocale, sharedLocaleOf };
 export { DEEPEST, ancestors, capped, descendants, grouped, groupField, pointersInto, pointsAt, pointsAtAny, refHeadings, selectHeadings, treeFields } from './groups.mjs';
-
-/**
- * The kinds whose value, filled and the owner's to edit, is drawn as an
- * element a person taps: the platform's set, one for every reader.
- *
- * The platform decides it once (`registry/kinds.go`, `Tappable`) and its
- * build's lint and the panel read that. The kit had four copies of its own and
- * they disagreed — the lint without `money` and `duration`, a listing without
- * `richtext_lite` and `markdown` — so a price the platform's build refused
- * passed every check on the laptop (wiki/98 §0, 4). This is the one copy, and
- * the lint, the catalogue check and the scaffold all ask it.
- */
-export const TAPPABLE = new Set(['text', 'textarea', 'richtext_lite', 'markdown', 'media', 'money', 'duration']);
-
-/**
- * Whether a declared field, filled, must carry a tap target: a tappable kind,
- * not kept from the owner (`client_editable: false`), and drawn as an element
- * at all (`no_tap_target` is a value that lives in an attribute, or nowhere).
- * @param {any} field
- */
-export function tappable(field) {
-  if (field === undefined || field === null) return false;
-  if (!TAPPABLE.has(field.kind)) return false;
-  if (field.client_editable === false) return false;
-  if (field.no_tap_target === true) return false;
-  return true;
-}
-
-/**
- * Where a specimen lives under its collection: `_fl-<type>[-<view>]`. The
- * panel asks for exactly this address, in the entry's language, to lift the
- * site's own markup for a block an owner has just added.
- * @param {string} type
- * @param {string} [view]
- */
-export function specimenId(type, view) {
-  return view === undefined || view === '' ? `_fl-${type}` : `_fl-${type}-${view}`;
-}
+// The platform's tappable kinds and where a specimen lives: rules.mjs, which
+// both contracts' readers ask.
+export { TAPPABLE, tappable, specimenId };
 
 /** Empty is absent: what a value that says nothing is spelt as, folded. */
 function isEmpty(value) {
@@ -158,6 +134,18 @@ export function content(files, options = {}) {
     byPath.set(`/${String(key).replaceAll('\\', '/').replace(/^\/+/, '')}`, value);
   }
   const names = [...byPath.keys()].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+
+  // ── contract 3 ───────────────────────────────────────────────────────────
+  //
+  // A site whose schema is `jtk/schema.json` saying `contract: 3` is read by
+  // its own reader (contract3.mjs), behind this same interface: a template
+  // calls the same `page`, `entries`, `at` and `picture` on either. Anything
+  // else — `jtk/catalogue.json`, or no schema at all — is contract 2, read
+  // below exactly as before. A `schema.json` that says another contract is
+  // not taken for a catalogue: the platform reads contract 2 from
+  // `catalogue.json` and only from there.
+  const schema = byPath.get('/jtk/schema.json');
+  if (isObject(schema) && schema.contract === 3) return contract3(byPath, names, { annotate, now });
 
   const catalogue = isObject(byPath.get('/jtk/catalogue.json')) ? byPath.get('/jtk/catalogue.json') : {};
   const siteFile = isObject(byPath.get('/jtk/site.json')) ? byPath.get('/jtk/site.json') : {};
@@ -251,30 +239,8 @@ export function content(files, options = {}) {
     });
   }
 
-  /**
-   * The words of a label in a language, looked for in the order the
-   * scaffold's `words()` (src/content/blocks.ts) has always looked: the
-   * language, its language without the region, the site's other languages,
-   * English, and then whatever the label holds.
-   */
-  function words(text, locale) {
-    if (text === undefined || text === null) return '';
-    if (typeof text === 'string') return text;
-    if (!isObject(text)) return '';
-    const tag = locale === undefined ? base : langOf(want(locale)) || base;
-    const found = text[tag];
-    if (typeof found === 'string' && found !== '') return found;
-    // A regional language reads its language's words: `en-NL` is English,
-    // and labels are written by language (Schorem, 15 October 2026).
-    const plain = text[tag.split('-')[0]];
-    if (typeof plain === 'string' && plain !== '') return plain;
-    for (const other of others) {
-      const next = text[other] ?? text[other.split('-')[0]];
-      if (typeof next === 'string' && next !== '') return next;
-    }
-    if (typeof text.en === 'string' && text.en !== '') return text.en;
-    return Object.values(text).find((one) => typeof one === 'string' && one !== '') ?? '';
-  }
+  /** The words of a label in a language (rules.mjs, the one copy). */
+  const words = labelWords(base, others, want);
 
   // ── reading a value, and writing where it is ─────────────────────────────
 
@@ -331,6 +297,10 @@ export function content(files, options = {}) {
       value,
       field,
       tappable: (key) => tappable(field(key)),
+      // Contract 2 keeps a whole copy of every document per language, so no
+      // value on a page in one language is another's (contract3.mjs has the
+      // merge where one is).
+      fromBase: () => false,
       rows(key) {
         const list = values[key];
         if (!Array.isArray(list)) return [];
@@ -511,7 +481,10 @@ export function content(files, options = {}) {
     return both[form];
   }
 
-  /** The order a collection lists in: the declared field, or the files' own. */
+  /**
+   * The order a collection lists in: the declared field, or the owner's by
+   * rank (`byRank`, rules.mjs, which contract 3 lists by too).
+   */
   function ordered(list, collection) {
     const order = collection?.order;
     if (order === undefined || order === 'manual') return byRank(list);
@@ -707,6 +680,15 @@ export function content(files, options = {}) {
       if (found === undefined) return {};
       const { type: _type, v: _v, _key, ...settings } = found;
       return settings;
+    },
+    /**
+     * A module's settings read like any values — `rows('hours')`, `text`,
+     * `value` — for a template that draws them. Contract 2 has no annotation
+     * for them: the settings are edited in the module's screens, and
+     * `blocks[0].hours[2]` on a page would name the page's own first block.
+     */
+    settings(name) {
+      return reader(site.module(name), { at: () => ({}), fields: [] });
     },
 
     entries,

@@ -1,0 +1,563 @@
+// The door (lib/content) reading contract 3 (wiki/98 of the platform), on a
+// tree laid out the way contract 3 lays it: a page per file under jtk/pages,
+// an entry per file under jtk/entries/<collection>, translations beside their
+// originals holding only their words, shared text and its translation, a
+// module's settings as `{ v, settings }`, the currency at the top of
+// site.json. Then the same calls a template makes on contract 2, and what
+// each hands back: ids, merged words and which of them are the original's,
+// addresses from routes, the owner's order, typed values, references by id,
+// and every form of the annotation grammar by key and id.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { content } from '../lib/content/index.mjs';
+import { readJtk } from '../lib/content/node.mjs';
+
+const now = Date.parse('2026-11-10T12:00:00Z');
+
+const HOME = '0193a5c2-7f4e-7c1a-9b2e-5d1f0c3a8e21';
+const PRICES = '0193a5c2-7f4e-7c1a-9b2e-5d1f0c3a8e22';
+const CONTACT = '0193a5c2-7f4e-7c1a-9b2e-5d1f0c3a8e23';
+const OAK = '0193a5c3-1b2a-7e44-8a10-6c2f9d3e4b55';
+const GRANITE = '0193a5c3-1b2a-7e44-8a10-6c2f9d3e4b56';
+const PANE = '0193a5c3-1b2a-7e44-8a10-6c2f9d3e4b57';
+const GLASS = '0193a5c3-1b2a-7e44-8a10-6c2f9d3e4b58';
+const BEAUTY = '0193a5c3-0a11-7d02-9f3c-1e2d3c4b5a61';
+const NAILS = '0193a5c3-0a11-7d02-9f3c-1e2d3c4b5a62';
+const GEL = '0193a5c3-0a11-7d02-9f3c-1e2d3c4b5a63';
+const CUT = '0193a5c3-0a11-7d02-9f3c-1e2d3c4b5a71';
+const FILE = '0193a5c3-0a11-7d02-9f3c-1e2d3c4b5a72';
+const LOOSE = '0193a5c3-0a11-7d02-9f3c-1e2d3c4b5a73';
+const RED = '0193a5c3-0a11-7d02-9f3c-1e2d3c4b5a81';
+
+const ce = { client_editable: true };
+
+const schema = {
+  contract: 3,
+  generator: 'test',
+  locale: 'de',
+  locales: ['en', 'fr-CH'],
+  blocks: [
+    { type: 'hero', v: 1, label: 'Hero', fields: [
+      { key: 'title', label: 'Title', kind: 'text', ...ce },
+      { key: 'lead', label: 'Lead', kind: 'textarea', ...ce },
+      { key: 'image', label: 'Photo', kind: 'media', ...ce },
+      { key: 'link', label: 'Link', kind: 'url' },
+    ] },
+    { type: 'prices', v: 1, label: 'Prices', fields: [
+      { key: 'title', label: 'Title', kind: 'text', ...ce },
+      { key: 'items', label: 'Rows', kind: 'list', of: [
+        { key: 'title', label: 'Name', kind: 'text', ...ce },
+        { key: 'price', label: 'Price', kind: 'money', qualifiers: ['from', 'on_request'], ...ce },
+        { key: 'photo', label: 'Photo', kind: 'media', ...ce },
+        { key: 'options', label: 'Options', kind: 'list', of: [{ key: 'label', label: 'Label', kind: 'text', ...ce }] },
+      ] },
+    ] },
+    { type: 'text', v: 1, label: 'Text', fields: [{ key: 'body', label: 'Text', kind: 'markdown', ...ce }] },
+    { type: 'gallery', v: 1, label: 'Gallery', views: [{ key: 'grid', label: 'Grid', min: 1 }], fields: [
+      { key: 'items', label: 'Pictures', kind: 'media', multiple: true, ...ce },
+    ] },
+    { type: 'contacts', v: 1, label: 'Contacts', fields: [
+      { key: 'name', label: 'Name', kind: 'text', role: 'name', ...ce },
+      { key: 'phone', label: 'Phone', kind: 'tel', role: 'phone', ...ce },
+    ] },
+    { type: 'work', v: 1, label: 'Work', fields: [
+      { key: 'title', label: 'Title', kind: 'text', required: true, ...ce },
+      { key: 'date', label: 'Date', kind: 'date', required: true },
+      { key: 'cover', label: 'Cover', kind: 'media', ...ce },
+      { key: 'pictures', label: 'Pictures', kind: 'media', multiple: true, ...ce },
+      { key: 'price', label: 'Price', kind: 'money', ...ce },
+      { key: 'section', label: 'Section', kind: 'select', options: [{ value: 'wood', label: { de: 'Holz', en: 'Wood' } }, { value: 'stone' }] },
+      { key: 'category', label: 'Category', kind: 'ref', ref: { to: ['categories'] } },
+      { key: 'tags', label: 'Tags', kind: 'ref', ref: { to: ['tags'], many: true } },
+      { key: 'body', label: 'Text', kind: 'markdown', ...ce },
+    ] },
+    { type: 'category', v: 1, label: 'Category', fields: [
+      { key: 'title', label: 'Name', kind: 'text', required: true, ...ce },
+      { key: 'parent', label: 'Parent', kind: 'ref', ref: { to: ['categories'] } },
+    ] },
+    { type: 'rate', v: 1, label: 'Rate', fields: [
+      { key: 'title', label: 'Name', kind: 'text', required: true, ...ce },
+      { key: 'costs', label: 'Price', kind: 'money', ...ce },
+      { key: 'category', label: 'Category', kind: 'ref', ref: { to: ['categories'] } },
+    ] },
+    { type: 'tag', v: 1, label: 'Tag', fields: [{ key: 'title', label: 'Name', kind: 'text', required: true, ...ce }] },
+  ],
+  page_seo: [{ key: 'title', label: 'Title', kind: 'text' }, { key: 'description', label: 'Description', kind: 'textarea' }],
+  shared: ['contacts'],
+  collections: [
+    // A pattern per language: German and English as written, the Swiss
+    // French the German one with its language put before it.
+    { name: 'works', label: { de: 'Werke', en: 'Works' }, type: 'work', route: { detail: { de: '/werke/{slug}', en: '/en/works/{slug}' }, listing: { de: '/werke', en: '/en/works' }, per_page: 2 }, order: { by: 'date', desc: true }, group: 'section', blocks: ['text', 'gallery'] },
+    { name: 'categories', label: 'Categories', type: 'category', route: { detail: '/kategorien/{slug}' }, untranslated: 'hide' },
+    { name: 'rates', label: 'Rates', type: 'rate', route: 'none', shown_on: ['/preise#{slug}'], order: 'manual', group: 'category' },
+    { name: 'tags', label: 'Tags', type: 'tag', route: { detail: '/tags/{slug}' } },
+  ],
+  modules: { bookings: { services: 'rates', resources: 'works' } },
+};
+
+const work = (id, slug, fields, extra = {}, blocks) => ({
+  id, collection: 'works', slug, visible: true, ...extra, fields: { title: slug, ...fields }, ...(blocks ? { blocks } : {}),
+});
+
+/** The files as Vite's glob hands them, out of order on purpose: the door sorts. */
+function files() {
+  return {
+    '/jtk/site.json': { id: 'site-1', slug: 'test', currency: 'chf', media_base: '' },
+    '/jtk/pages/preise.en.json': {
+      // No `of`: a translation found by the file it sits beside. And a
+      // price in it, which is no translation's to change.
+      locale: 'en',
+      name: 'Prices',
+      seo: { title: 'Prices' },
+      blocks: [
+        { _key: 'list', title: 'Cuts', items: [{ _key: 'r7k2', title: 'Haircut', price: { minor: 1 }, options: [{ _key: 'o1', label: 'Short' }] }] },
+        { _key: 'lost', type: 'hero', title: 'A block only the translation has' },
+      ],
+    },
+    '/jtk/pages/index.json': {
+      id: HOME,
+      path: '/',
+      name: 'Start',
+      seo: { title: 'Start', description: 'Willkommen' },
+      blocks: [{ _key: 'hero', type: 'hero', v: 1, title: 'Hallo', lead: 'Willkommen', image: { src: 'media/2f/a1b2.jpg', alt: 'Die Tür', focus: '50% 30%' }, link: 'https://example.com' }],
+    },
+    '/jtk/pages/index.en.json': { of: HOME, locale: 'en', name: 'Home', seo: { title: 'Home' }, blocks: [{ _key: 'hero', title: 'Hello', image: { alt: 'The door' } }] },
+    '/jtk/pages/preise.json': {
+      id: PRICES,
+      path: '/preise',
+      blocks: [
+        { _key: 'hero', type: 'hero', v: 1, title: 'Preise', image: { src: 'media/2f/c3d4.jpg' } },
+        { _key: 'list', type: 'prices', v: 1, title: 'Schnitte', items: [
+          { _key: 'r7k2', title: 'Haarschnitt', price: { minor: 4500, from: true }, photo: { src: 'media/2f/e5f6.jpg', alt: 'Schere' }, options: [{ _key: 'o1', label: 'Kurz' }, { _key: 'o2', label: 'Lang' }] },
+          { _key: 'q1w2', title: 'Färben', price: { on_request: true } },
+          { title: 'Ohne Schlüssel' },
+        ] },
+      ],
+    },
+    // A page without `path`: its place says it.
+    '/jtk/pages/kontakt.json': { id: CONTACT, blocks: [{ _key: 'hero', type: 'hero', v: 1, title: 'Kontakt', lead: null, link: '' }] },
+    '/jtk/shared.json': { blocks: [{ _key: 'contacts', type: 'contacts', v: 1, name: 'Salon', phone: '+41 1' }] },
+    // A phone number is the same in every language: a translation's is no one's.
+    '/jtk/shared.en.json': { blocks: [{ _key: 'contacts', name: 'The Salon', phone: '+41 9' }] },
+    '/jtk/entries/works/eiche.json': work(OAK, 'eiche', {
+      title: 'Eiche', date: '2026-03-01', section: 'wood', category: BEAUTY, tags: [RED], price: { minor: 12000 },
+      cover: { src: 'one', alt: 'Eichentür' },
+      pictures: [{ _key: 'g1', src: 'two', alt: 'Zwei' }, { _key: 'g2', src: '' }, { _key: 'g3', src: 'three' }],
+      body: 'Eiche.',
+    }, { rank: 'a1', seo: { title: 'Eiche' } }, [
+      { _key: 'b1', type: 'text', v: 1, body: 'Mehr.' },
+      { _key: 'gal', type: 'gallery', v: 1, view: 'grid', items: [{ _key: 'p1', src: 'four', alt: 'Vier' }] },
+    ]),
+    '/jtk/entries/works/eiche.en.json': {
+      of: OAK, locale: 'en', slug: 'oak', seo: { title: 'Oak' },
+      fields: { title: 'Oak', cover: { alt: 'Oak door' }, pictures: [{ _key: 'g1', alt: 'Two' }], price: { minor: 1 }, body: 'Oak.' },
+      // An entry's body is whole per language.
+      blocks: [{ _key: 'b1', type: 'text', v: 1, body: 'More.' }],
+    },
+    '/jtk/entries/works/granit.json': work(GRANITE, 'granit', { title: 'Granit', date: '2026-05-01', section: 'stone', category: NAILS }),
+    '/jtk/entries/works/fenster.json': work(PANE, 'fenster', { title: 'Fenster', date: '2026-04-01' }),
+    // Held back in English: out in German, not in English.
+    '/jtk/entries/works/fenster.en.json': { of: PANE, locale: 'en', slug: 'pane', visible: false, fields: { title: 'Pane' } },
+    '/jtk/entries/works/glas.json': work(GLASS, 'glas', { title: 'Glas', date: '2026-06-01', section: 'wood' }, { visible: false }),
+    // Ordered by hand: nails, beauty, gel — not by slug.
+    '/jtk/entries/categories/beauty.json': { id: BEAUTY, collection: 'categories', slug: 'beauty', rank: 'a1', visible: true, fields: { title: 'Schönheit' } },
+    '/jtk/entries/categories/beauty.en.json': { of: BEAUTY, locale: 'en', fields: { title: 'Beauty' } },
+    '/jtk/entries/categories/nails.json': { id: NAILS, collection: 'categories', slug: 'nails', rank: 'a0V', visible: true, fields: { title: 'Nägel', parent: BEAUTY } },
+    '/jtk/entries/categories/nails.en.json': { of: NAILS, locale: 'en', fields: { title: 'Nails' } },
+    '/jtk/entries/categories/gel.json': { id: GEL, collection: 'categories', slug: 'gel', rank: 'a2', visible: true, fields: { title: 'Gel', parent: NAILS } },
+    '/jtk/entries/rates/schnitt.json': { id: CUT, collection: 'rates', slug: 'schnitt', rank: 'b', visible: true, fields: { title: 'Schnitt', costs: { minor: 4500 }, category: BEAUTY } },
+    '/jtk/entries/rates/feile.json': { id: FILE, collection: 'rates', slug: 'feile', rank: 'a', visible: true, fields: { title: 'Feile', costs: { minor: 2000, from: true }, category: GEL } },
+    '/jtk/entries/rates/lose.json': { id: LOOSE, collection: 'rates', slug: 'lose', visible: true, fields: { title: 'Lose', costs: { on_request: true } } },
+    '/jtk/entries/tags/rot.json': { id: RED, collection: 'tags', slug: 'rot', visible: true, fields: { title: 'Rot' } },
+    '/jtk/modules/bookings.json': { v: 1, settings: { zone: 'Europe/Zurich', hours: [{ _key: 'h1', day: 'monday', opens: 540, closes: 1080 }, { _key: 'h2', day: 'tuesday', opens: 600, closes: 1080 }] } },
+    '/jtk/schema.json': schema,
+    '/jtk/session.json': { session: 's', key: 'k' },
+    '/jtk/design.json': { v: 2, field: '' },
+  };
+}
+
+const site = content(files(), { now });
+const path = (at) => at['data-jtk-path'];
+
+test('a schema.json saying contract 3 is read as contract 3; its languages are the schema\'s, the currency at the top of site.json', () => {
+  assert.equal(site.contract, 3);
+  assert.equal(site.locale, 'de');
+  assert.deepEqual(site.locales, ['de', 'en', 'fr-CH']);
+  assert.equal(site.currency, 'CHF');
+  assert.deepEqual(site.rolesOf('bookings'), { services: 'rates', resources: 'works' });
+  // A schema.json that is not contract 3 is no catalogue: contract 2 reads catalogue.json.
+  const two = content({ '/jtk/schema.json': { ...schema, contract: 2 }, '/jtk/catalogue.json': { locale: 'uk' } });
+  assert.equal(two.contract, 2);
+  assert.equal(two.locale, 'uk');
+});
+
+test('pages: a file per page under jtk/pages, index.json the home, each with its id; a page without path is where its file is', () => {
+  const home = site.page('/');
+  assert.equal(home.id, HOME);
+  assert.equal(home.file, '/jtk/pages/index.json');
+  assert.equal(home.address, '/');
+  assert.equal(home.block('hero').text('title'), 'Hallo');
+  assert.equal(site.page('/preise').id, PRICES);
+  assert.equal(site.page('/kontakt').id, CONTACT);
+  assert.deepEqual(site.pages().map((one) => one.address), ['/', '/kontakt', '/preise']);
+  assert.deepEqual(site.pages('en').map((one) => one.address), ['/en', '/en/kontakt', '/en/preise'], 'a page is in every language the site has');
+  assert.equal(site.page('/en/preise').locale, 'en', 'asked by its address in a language');
+  const nobody = site.page('/nowhere');
+  assert.equal(nobody.id, '');
+  assert.deepEqual(nobody.block('hero').at('title'), {});
+});
+
+test('entries: a file per entry under jtk/entries/<collection>, its id, its slug, its own values in fields and its body in blocks', () => {
+  const oak = site.entry('works', 'eiche');
+  assert.equal(oak.id, OAK);
+  assert.equal(oak.collection, 'works');
+  assert.equal(oak.slug, 'eiche');
+  assert.equal(oak.file, '/jtk/entries/works/eiche.json');
+  assert.equal(oak.fields.text('title'), 'Eiche');
+  assert.deepEqual(oak.body.map((one) => [one.type, one.key]), [['text', 'b1'], ['gallery', 'gal']]);
+  assert.equal(site.entry('works', OAK), oak, 'found by its id as well');
+  assert.equal(site.entry('works', 'oak', 'en').id, OAK, 'and by its slug in a language');
+  assert.equal(site.entry('works', 'eiche', 'en').slug, 'oak', 'or by the original\'s');
+});
+
+test('a translation beside its original is laid over it by key: its words, the original\'s for the rest, and which is which', () => {
+  const home = site.page('/', 'en');
+  assert.equal(home.file, '/jtk/pages/index.en.json');
+  assert.equal(home.address, '/en');
+  assert.deepEqual(home.seo, { title: 'Home', description: 'Willkommen' });
+  const hero = home.block('hero');
+  assert.equal(hero.text('title'), 'Hello');
+  assert.equal(hero.fromBase('title'), false);
+  assert.equal(hero.text('lead'), 'Willkommen', 'a value nobody translated is the original\'s…');
+  assert.equal(hero.fromBase('lead'), true, '…and says so, for the original\'s lang');
+  assert.deepEqual(hero.picture('image'), { src: 'media/2f/a1b2.jpg', alt: 'The door', focus: '50% 30%', 'data-jtk-path': 'blocks[hero].image.src' }, 'the file the original\'s, the words the translation\'s');
+  assert.equal(site.page('/').block('hero').fromBase('title'), false, 'nothing in the original\'s own language is "from the base"');
+
+  // Found by the file it sits beside; a shared value in it is the original's.
+  const list = site.page('/preise', 'en').block('prices');
+  assert.equal(list.text('title'), 'Cuts');
+  const [cut, colour] = list.rows('items');
+  assert.equal(cut.text('title'), 'Haircut');
+  assert.deepEqual(cut.value('price'), { minor: 4500, from: true }, 'a price is no translation\'s to change');
+  assert.equal(cut.fromBase('price'), true);
+  assert.equal(cut.fromBase('title'), false);
+  assert.deepEqual(cut.rows('options').map((one) => [one.text('label'), one.fromBase('label')]), [['Short', false], ['Lang', true]]);
+  assert.equal(colour.text('title'), 'Färben');
+  assert.equal(colour.fromBase('title'), true, 'a row the translation does not name is all the original\'s');
+  assert.equal(site.page('/preise', 'en').blocks.length, 2, 'a block only the translation has is not on the page');
+
+  // A language with no translation: the original, every word marked.
+  const swiss = site.page('/', 'fr-CH');
+  assert.equal(swiss.address, '/fr-ch');
+  assert.equal(swiss.block('hero').text('title'), 'Hallo');
+  assert.equal(swiss.block('hero').fromBase('title'), true);
+  assert.deepEqual(site.alternatesOf(site.page('/')), [
+    { locale: '', address: '/' },
+    { locale: 'en', address: '/en' },
+    { locale: 'fr-CH', address: '/fr-ch' },
+  ]);
+});
+
+test('shared text: shared.<locale>.json laid over shared.json by key, the phone the same in every language', () => {
+  assert.equal(site.shared().block('contacts').text('name'), 'Salon');
+  const en = site.shared('en').block('contacts');
+  assert.equal(en.text('name'), 'The Salon');
+  assert.equal(en.text('phone'), '+41 1');
+  assert.equal(en.fromBase('phone'), true);
+  assert.equal(site.shared('fr-CH').block('contacts').fromBase('name'), true);
+  assert.deepEqual(site.sharedDocuments().map((one) => [one.locale, one.blocks[0].name]), [['', 'Salon'], ['en', 'The Salon']]);
+});
+
+test('an entry in a language: its translation\'s fields laid over, its body the translation\'s whole, its address in that language', () => {
+  const oak = site.entry('works', 'eiche', 'en');
+  assert.equal(oak.file, '/jtk/entries/works/eiche.en.json');
+  assert.equal(oak.address, '/en/works/oak', 'the English pattern, as written, with the English slug');
+  assert.equal(oak.fields.text('title'), 'Oak');
+  assert.equal(oak.fields.fromBase('title'), false);
+  assert.equal(oak.fields.value('date'), '2026-03-01');
+  assert.equal(oak.fields.fromBase('date'), true);
+  assert.deepEqual(oak.fields.value('price'), { minor: 12000 });
+  assert.deepEqual(oak.fields.picture('cover'), { src: 'one', alt: 'Oak door', 'data-jtk-path': `entry:${OAK}:cover.src` });
+  assert.deepEqual(oak.fields.gallery('pictures').map((one) => one.alt), ['Two', '']);
+  assert.deepEqual(oak.body.map((one) => one.text('body')), ['More.'], 'the translation\'s body, whole: no gallery the German one has');
+  assert.equal(oak.body[0].fromBase('body'), false);
+  assert.deepEqual(oak.seo, { title: 'Oak' });
+
+  // No translation: shown in the original's words, at the language's address.
+  const granite = site.entry('works', 'granit', 'fr-CH');
+  assert.equal(granite.address, '/fr-ch/werke/granit', 'the base pattern with the language put before it');
+  assert.equal(granite.fields.text('title'), 'Granit');
+  assert.equal(granite.fields.fromBase('title'), true);
+  assert.equal(site.entry('works', 'granit', 'en').body.length, 0);
+
+  assert.deepEqual(site.alternatesOf(site.entry('works', 'eiche')), [
+    { locale: '', address: '/werke/eiche' },
+    { locale: 'en', address: '/en/works/oak' },
+    { locale: 'fr-CH', address: '/fr-ch/werke/eiche' },
+  ]);
+  assert.deepEqual(site.alternatesOf(site.entry('works', 'fenster')).map((one) => one.locale), ['', 'fr-CH'], 'not where it is held back');
+});
+
+test('untranslated and visible: a hidden collection\'s entry is not in a language without its translation; a translation holds its language back', () => {
+  assert.deepEqual(site.entries('categories', { locale: 'en' }).map((one) => one.slug), ['nails', 'beauty'], 'gel has no English and its collection hides it');
+  assert.equal(site.entry('categories', 'gel', 'en'), undefined);
+  assert.deepEqual(site.entries('works').map((one) => one.slug), ['granit', 'fenster', 'eiche']);
+  assert.deepEqual(site.entries('works', { locale: 'en' }).map((one) => one.slug), ['granit', 'oak'], 'the pane is held back in English');
+  assert.deepEqual(site.entries('works', { all: true }).map((one) => [one.slug, one.visible]), [['glas', false], ['granit', true], ['fenster', true], ['eiche', true]]);
+  assert.equal(site.entry('works', 'fenster', 'en').visible, false);
+  assert.deepEqual(site.entries('works', { locale: 'it' }), [], 'a language the site does not have');
+});
+
+test('the order: by hand, by the rank in each original, in every language alike; by a field, on the language\'s values', () => {
+  assert.deepEqual(site.entries('categories').map((one) => one.slug), ['nails', 'beauty', 'gel'], 'a0V < a1 < a2, as bytes');
+  assert.deepEqual(site.entries('rates').map((one) => one.slug), ['feile', 'schnitt', 'lose'], 'unranked after the ranked');
+  assert.deepEqual(site.entries('rates', { locale: 'en' }).map((one) => one.slug), ['feile', 'schnitt', 'lose']);
+  const { entries, size, last } = site.listingPages('works');
+  assert.deepEqual(entries.map((one) => one.slug), ['eiche', 'granit', 'fenster'], 'grouped: wood, stone, then none');
+  assert.equal(size, 2);
+  assert.equal(last, 2);
+});
+
+test('routes: a pattern per language, a listing, its pages; a collection shown only on another page has an anchor there', () => {
+  const works = site.collection('works');
+  assert.equal(works.pages, true);
+  assert.equal(works.listing, true);
+  assert.equal(works.per_page, 2);
+  assert.equal(works.prefix, '/werke');
+  assert.deepEqual(works.blocks, ['text', 'gallery']);
+  assert.equal(works.untranslated, 'base');
+  assert.equal(site.addressOf(site.entry('works', 'eiche')), '/werke/eiche');
+  assert.equal(site.listingOf('works'), '/werke');
+  assert.equal(site.listingOf('works', 'en', 2), '/en/works/page/2');
+  assert.equal(site.listingOf('works', 'fr-CH'), '/fr-ch/werke');
+  assert.equal(site.listingOf('categories', 'en'), '/en/kategorien', 'no listing declared: where the detail pattern puts its entries');
+
+  const rates = site.collection('rates');
+  assert.equal(rates.pages, false);
+  assert.deepEqual(rates.route, 'none');
+  assert.deepEqual(rates.shown_on, ['/preise#{slug}']);
+  const cut = site.entry('rates', 'schnitt');
+  assert.equal(cut.address, undefined);
+  assert.equal(site.anchorOf(cut), '/preise#schnitt');
+  assert.equal(site.anchorOf(site.entry('rates', 'schnitt', 'en')), '/en/preise#schnitt');
+  assert.equal(site.listingOf('rates', 'en'), '/en/preise', 'its listing is the page it is shown on');
+  assert.deepEqual(site.alternatesOf(cut), [], 'no page of its own, no alternates');
+});
+
+test('values: money as { minor }, a picture as { src, alt, focus }, a gallery by key, empty as absent', () => {
+  const list = site.page('/preise').block('prices');
+  const [cut, colour, keyless] = list.rows('items');
+  assert.deepEqual(cut.value('price'), { minor: 4500, from: true });
+  assert.match(site.money(cut.value('price'), 'de'), /45/);
+  assert.equal(site.money(cut.value('price'), 'de'), site.money(4500, 'de'), 'the same words as whole minor units');
+  assert.equal(site.money(colour.value('price')), '', 'on request: no amount to say');
+  assert.equal(site.money(undefined), '');
+  assert.deepEqual(cut.picture('photo'), { src: 'media/2f/e5f6.jpg', alt: 'Schere', 'data-jtk-path': 'blocks[list].items[r7k2].photo.src' });
+  assert.deepEqual(site.page('/preise').block('hero').picture('image'), { src: 'media/2f/c3d4.jpg', alt: '', 'data-jtk-path': 'blocks[hero].image.src' }, 'no alt is no alt: no title stands in');
+  assert.equal(keyless.key, undefined);
+  assert.equal(keyless.text('title'), 'Ohne Schlüssel');
+
+  const oak = site.entry('works', 'eiche').here;
+  assert.deepEqual(oak.fields.gallery('pictures'), [
+    { src: 'two', alt: 'Zwei', 'data-jtk-path': 'pictures[g1].src' },
+    { src: 'three', alt: '', 'data-jtk-path': 'pictures[g3].src' },
+  ], 'the empty picture left out, each named by its key');
+
+  const contact = site.page('/kontakt').block('hero');
+  assert.deepEqual(['lead', 'link', 'title'].map((key) => contact.value(key)), [undefined, undefined, 'Kontakt']);
+});
+
+test('the schema as a template reads it: a select\'s options and their labels, a reference\'s collections', () => {
+  const fields = site.collection('works').fields;
+  const section = fields.find((one) => one.key === 'section');
+  assert.deepEqual(section.options, ['wood', 'stone']);
+  assert.deepEqual(section.option_labels, { wood: { de: 'Holz', en: 'Wood' } });
+  const category = fields.find((one) => one.key === 'category');
+  assert.equal(category.ref, 'categories');
+  assert.deepEqual(category.to, ['categories']);
+  assert.equal(category.many, false);
+  const tags = fields.find((one) => one.key === 'tags');
+  assert.equal(tags.many, true);
+  assert.equal(site.type('prices').fields[1].of[3].of[0].key, 'label', 'a nested list keeps its rows\' declaration');
+});
+
+test('references by id: a group\'s headings, what points at an entry, a tree', () => {
+  // A select: its options in order, by their labels in the page's language.
+  const runs = site.groupsOf('works', site.entries('works', { locale: 'en' }), 'en');
+  assert.deepEqual(runs.map((run) => [run.heading?.key, run.heading?.text, run.entries.map((one) => one.slug)]), [
+    ['wood', 'Wood', ['oak']],
+    ['stone', 'stone', ['granit']],
+  ]);
+
+  // A reference: the other collection's entries, keyed by id, titled in the language.
+  const rates = site.groupsOf('rates', site.entries('rates'));
+  assert.deepEqual(rates.map((run) => [run.heading?.key, run.heading?.text, run.entries.map((one) => one.slug)]), [
+    [BEAUTY, 'Schönheit', ['schnitt']],
+    [GEL, 'Gel', ['feile']],
+    [undefined, undefined, ['lose']],
+  ], 'in the categories\' own order (nails, which nothing names, dropped)');
+  assert.deepEqual(rates[0].heading.at, { 'data-jtk-path': `entry:${BEAUTY}:title` });
+  // In English gel is hidden, so the file pointing at it heads nothing.
+  assert.deepEqual(site.groupsOf('rates', site.entries('rates', { locale: 'en' }), 'en').map((run) => [run.heading?.text, run.entries.map((one) => one.slug)]), [
+    ['Beauty', ['schnitt']],
+    [undefined, ['feile', 'lose']],
+  ]);
+
+  // What points at a category or anything under it, by id; a `many` reference too.
+  const beauty = site.referrersOf(site.entry('categories', 'beauty'));
+  assert.deepEqual(beauty.map((one) => [one.collection.name, one.entries.map((e) => e.slug), one.more]), [
+    ['works', ['granit', 'eiche'], 0],
+    ['rates', ['feile', 'schnitt'], 0],
+  ]);
+  assert.deepEqual(site.referrersOf(site.entry('tags', 'rot')).map((one) => one.entries.map((e) => e.slug)), [['eiche']]);
+
+  const gel = site.treeOf(site.entry('categories', 'gel'));
+  assert.deepEqual(gel.trail.map((one) => one.slug), ['beauty', 'nails']);
+  assert.deepEqual(site.treeOf(site.entry('categories', 'beauty')).children.map((one) => one.slug), ['nails']);
+});
+
+test("a module's settings are `settings` of jtk/modules/<module>.json", () => {
+  const settings = site.module('bookings');
+  assert.equal(settings.zone, 'Europe/Zurich');
+  assert.equal(settings.hours.length, 2);
+  assert.deepEqual(site.module('orders'), {});
+});
+
+test('annotations by key and id, every form of the grammar', () => {
+  const prices = site.page('/preise');
+  const list = prices.block('prices');
+  // A block's value, by the block's key.
+  assert.deepEqual(list.at('title'), { 'data-jtk-path': 'blocks[list].title' });
+  // A row's value, by the row's key — asked by its key or its index.
+  assert.deepEqual(list.at('items', 'r7k2', 'title'), { 'data-jtk-path': 'blocks[list].items[r7k2].title' });
+  assert.deepEqual(list.at('items', 1, 'price'), { 'data-jtk-path': 'blocks[list].items[q1w2].price' });
+  assert.deepEqual(list.rows('items').map((row) => path(row.at('price'))), ['blocks[list].items[r7k2].price', 'blocks[list].items[q1w2].price', undefined], 'a row without a key is named by nothing');
+  assert.deepEqual(list.at('items', 2, 'title'), {});
+  assert.deepEqual(list.at('items', 'r7k2'), {}, 'a row alone is no place');
+  // A row inside a row: two steps, the grammar's deepest.
+  assert.deepEqual(list.rows('items')[0].rows('options').map((row) => path(row.at('label'))), ['blocks[list].items[r7k2].options[o1].label', 'blocks[list].items[r7k2].options[o2].label']);
+  assert.deepEqual(list.rows('items')[0].at('options', 'o2', 'label'), { 'data-jtk-path': 'blocks[list].items[r7k2].options[o2].label' });
+  // A picture's parts.
+  const hero = prices.block('hero');
+  assert.deepEqual(hero.at('image'), { 'data-jtk-path': 'blocks[hero].image.src' });
+  assert.deepEqual(hero.at('image', undefined, 'alt'), { 'data-jtk-path': 'blocks[hero].image.alt' });
+  assert.deepEqual(hero.at('image', undefined, 'focus'), { 'data-jtk-path': 'blocks[hero].image.focus' });
+  assert.deepEqual(hero.at('title', undefined, 'alt'), {}, 'a part of what is no picture');
+  assert.deepEqual(hero.at('image', undefined, 'size'), {}, 'a part the grammar does not have');
+  // Another page's, by its id.
+  assert.deepEqual(prices.elsewhere.block('prices').at('title'), { 'data-jtk-path': `page:${PRICES}:blocks[list].title` });
+  assert.equal(prices.here.elsewhere, prices.elsewhere);
+
+  // An entry's own value on its own page, and drawn elsewhere by its id.
+  const oak = site.entry('works', 'eiche');
+  assert.deepEqual(oak.here.fields.at('title'), { 'data-jtk-path': 'title' });
+  assert.deepEqual(oak.fields.at('title'), { 'data-jtk-path': `entry:${OAK}:title` });
+  assert.equal(oak.here.elsewhere, oak);
+  assert.deepEqual(oak.here.fields.at('cover'), { 'data-jtk-path': 'cover.src' });
+  assert.deepEqual(oak.here.fields.at('cover', undefined, 'alt'), { 'data-jtk-path': 'cover.alt' });
+  assert.deepEqual(oak.here.fields.at('pictures', 'g3'), { 'data-jtk-path': 'pictures[g3].src' });
+  assert.deepEqual(oak.here.fields.at('pictures', 'g1', 'alt'), { 'data-jtk-path': 'pictures[g1].alt' });
+  // Its body, by the block's key, on its page and elsewhere.
+  const [text, gallery] = oak.here.body;
+  assert.deepEqual(text.at('body'), { 'data-jtk-path': 'blocks[b1].body' });
+  assert.deepEqual(oak.body[0].at('body'), { 'data-jtk-path': `entry:${OAK}:blocks[b1].body` });
+  assert.deepEqual(gallery.gallery('items'), [{ src: 'four', alt: 'Vier', 'data-jtk-path': 'blocks[gal].items[p1].src' }], 'by its own field');
+  // The same names in every language: a document's identity spans them.
+  assert.deepEqual(site.entry('works', 'eiche', 'en').fields.at('title'), { 'data-jtk-path': `entry:${OAK}:title` });
+  assert.deepEqual(site.page('/preise', 'en').block('prices').at('items', 'r7k2', 'title'), { 'data-jtk-path': 'blocks[list].items[r7k2].title' });
+
+  // Shared text and a module's settings.
+  assert.deepEqual(site.shared('en').block('contacts').at('phone'), { 'data-jtk-path': 'shared:blocks[contacts].phone' });
+  const settings = site.settings('bookings');
+  assert.deepEqual(settings.rows('hours').map((row) => path(row.at('opens'))), ['module:bookings:hours[h1].opens', 'module:bookings:hours[h2].opens']);
+  assert.deepEqual(settings.at('zone'), { 'data-jtk-path': 'module:bookings:zone' });
+  assert.equal(settings.text('zone'), 'Europe/Zurich');
+
+  // A heading for a group by a reference: the entry's title, by its id.
+  assert.deepEqual(site.groupsOf('rates', site.entries('rates'))[0].heading.at, { 'data-jtk-path': `entry:${BEAUTY}:title` });
+});
+
+test('nothing is named by what the grammar cannot parse: no id, no key, a key out of its alphabet, a step too deep', () => {
+  const tree = files();
+  tree['/jtk/pages/preise.json'] = { ...tree['/jtk/pages/preise.json'], id: undefined };
+  tree['/jtk/pages/index.json'] = { ...tree['/jtk/pages/index.json'], blocks: [{ ...tree['/jtk/pages/index.json'].blocks[0], _key: 'Hero_1' }, { type: 'hero', v: 1, title: 'Unkeyed' }] };
+  const read = content(tree, { now });
+  assert.deepEqual(read.page('/preise').elsewhere.block('prices').at('title'), {}, 'a page without an id cannot be named from elsewhere');
+  assert.deepEqual(read.page('/preise').block('prices').at('title'), { 'data-jtk-path': 'blocks[list].title' }, 'and is still its own page\'s');
+  assert.deepEqual(read.page('/').blocks.map((one) => path(one.at('title'))), [undefined, undefined]);
+  // Three steps deep is past the grammar: a gallery inside a row's row.
+  const deep = content({
+    '/jtk/schema.json': { contract: 3, locale: 'de', blocks: [{ type: 'x', v: 1, fields: [{ key: 'a', kind: 'list', of: [{ key: 'b', kind: 'list', of: [{ key: 'c', kind: 'media', multiple: true }] }] }] }] },
+    '/jtk/pages/index.json': { id: HOME, path: '/', blocks: [{ _key: 'x', type: 'x', v: 1, a: [{ _key: 'k1', b: [{ _key: 'k2', c: [{ _key: 'k3', src: 'one' }] }] }] }] },
+  });
+  const row = deep.page('/').block('x').rows('a')[0].rows('b')[0];
+  assert.deepEqual(row.at('c'), { 'data-jtk-path': 'blocks[x].a[k1].b[k2].c' });
+  assert.deepEqual(row.gallery('c'), [{ src: 'one', alt: '' }]);
+  assert.deepEqual(row.rows('c').map((one) => path(one.at('src'))), [undefined]);
+});
+
+test('annotate off: the same values, and no annotation anywhere', () => {
+  const quiet = content(files(), { now, annotate: false });
+  assert.deepEqual(quiet.page('/preise').block('prices').at('items', 'r7k2', 'title'), {});
+  assert.deepEqual(quiet.entry('works', 'eiche').fields.at('title'), {});
+  assert.deepEqual(quiet.page('/').block('hero').picture('image'), { src: 'media/2f/a1b2.jpg', alt: 'Die Tür', focus: '50% 30%' });
+  assert.deepEqual(quiet.settings('bookings').rows('hours')[0].at('opens'), {});
+  assert.equal(quiet.page('/', 'en').block('hero').text('title'), 'Hello');
+});
+
+test('specimens: one per arrangement in every language, each block and picture keyed, at the detail pattern', () => {
+  const made = site.specimens('works').map((one) => one.address);
+  assert.deepEqual(made, ['/werke/_fl-text', '/werke/_fl-gallery-grid', '/en/works/_fl-text', '/en/works/_fl-gallery-grid', '/fr-ch/werke/_fl-text', '/fr-ch/werke/_fl-gallery-grid']);
+  const grid = site.specimens('works', { locale: 'en' })[1];
+  assert.equal(grid.specimen, true);
+  assert.equal(grid.visible, false);
+  assert.deepEqual(grid.here.body[0].gallery('items'), [{ src: 'two', alt: '', 'data-jtk-path': 'blocks[gallery].items[p1].src' }]);
+  assert.deepEqual(site.alternatesOf(grid), []);
+  assert.deepEqual(site.specimens('rates'), []);
+});
+
+test('documents(): every page and entry in each language it is in, with its id and the address it is reached at', () => {
+  const docs = site.documents();
+  assert.ok(docs.some((one) => one.path === '/en/works/oak' && one.id === OAK && one.fields.title === 'Oak'));
+  assert.ok(docs.some((one) => one.path === '/fr-ch/preise' && one.id === PRICES));
+  assert.ok(!docs.some((one) => one.locale === 'en' && one.slug === 'gel'));
+  assert.equal(docs.find((one) => one.slug === 'schnitt' && one.locale === '').path, undefined, 'shown only on another page: no address of its own');
+});
+
+// The interface is one: what contract 3 added a template may call on a
+// contract-2 site too, and it answers there without changing a thing.
+test('on a contract-2 site the same calls answer: nothing is from the base, the settings are read and annotated nowhere', () => {
+  const two = content({
+    '/jtk/catalogue.json': { contract: 2, locale: 'en', locales: ['de'], blocks: [{ type: 'hero', v: 1, fields: [{ key: 'title', kind: 'text' }] }] },
+    '/jtk/content/index.json': { path: '/', blocks: [{ _key: 'hero', type: 'hero', v: 1, title: 'Hello' }] },
+    '/jtk/content/de/index.json': { path: '/de', blocks: [{ _key: 'hero', type: 'hero', v: 1, title: 'Hallo' }] },
+    '/jtk/bookings.json': { blocks: [{ type: 'bookings_config', v: 1, zone: 'Europe/Zurich', hours: [{ _key: 'h1', day: 'monday', opens: 540 }] }] },
+  });
+  assert.equal(two.contract, 2);
+  assert.equal(two.page('/', 'de').block('hero').fromBase('title'), false);
+  assert.deepEqual(two.page('/', 'de').block('hero').at('title'), { 'data-jtk-path': 'blocks[0].title' });
+  const settings = two.settings('bookings');
+  assert.equal(settings.text('zone'), 'Europe/Zurich');
+  assert.deepEqual(settings.rows('hours').map((row) => [row.value('opens'), row.at('opens')]), [[540, {}]]);
+});
+
+test('readJtk: the contract-3 tree off a disk reads as the glob hands it', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'jtk-door-3-'));
+  try {
+    for (const [key, value] of Object.entries(files())) {
+      mkdirSync(join(root, key, '..'), { recursive: true });
+      writeFileSync(join(root, key), JSON.stringify(value));
+    }
+    mkdirSync(join(root, 'jtk', 'entries', 'works', 'media'), { recursive: true });
+    writeFileSync(join(root, 'jtk', 'entries', 'works', 'media', 'x.json'), '{}');
+    const read = content(await readJtk(root), { now });
+    assert.equal(read.contract, 3);
+    assert.deepEqual(read.entries('works', { locale: 'en' }).map((one) => one.slug), site.entries('works', { locale: 'en' }).map((one) => one.slug));
+    assert.equal(read.page('/', 'en').block('hero').text('title'), 'Hello');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
