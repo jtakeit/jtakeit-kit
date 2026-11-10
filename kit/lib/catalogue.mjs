@@ -26,6 +26,10 @@
  *   jtk catalogue --dist ./dist   # check against a build made elsewhere
  *   jtk catalogue --judge         # and ask the real validator whether we agree
  *
+ * On a contract-3 tree (`jtk/schema.json` saying `contract: 3`) it first mints
+ * the `id` of every page and entry and the `_key` of every block, row and
+ * picture that has none, in every mode (below, "a contract-3 tree").
+ *
  * Exit code is the number of disagreements. Zero means the admin can be handed
  * this repository.
  *
@@ -71,6 +75,45 @@ const root = resolve(flag('root', process.cwd()));
 function die(message) {
   console.error(`jtk catalogue: ${message}`);
   process.exit(1);
+}
+
+// --- a contract-3 tree: its names, before anything else ---------------------
+//
+// Contract 3 names a page or an entry by its `id`, and a block, a row and a
+// gallery's picture by its `_key`, and every file carries both from its first
+// write (jtakeit-core wiki/98 §15 · 12): the platform mints them in its saves,
+// and this is where a file an agent wrote by hand gets them — the step it runs
+// before every push, and the one `jtkit lint` names when a file has none. Only
+// a missing name is minted; one already given is never changed, since the
+// platform's rows and the translations hold it. What cannot be minted — a
+// translation's key, which must be the original's — is said here and refused
+// by the lint.
+//
+// Read only where `jtk/schema.json` says contract 3: a contract-2 tree keeps
+// no names in its files, and this command reads it exactly as before.
+{
+  let schema;
+  try {
+    schema = JSON.parse(readFileSync(join(root, 'jtk', 'schema.json'), 'utf8'));
+  } catch {
+    // No schema.json, or none that parses: not a contract-3 tree to name.
+  }
+  if (schema?.contract === 3) {
+    const { mintJtk, readJtk } = await import('./content/node.mjs');
+    const { unnamed } = await import('./content/identity.mjs');
+    const minted = await mintJtk(root);
+    const byFile = new Map();
+    for (const one of minted) {
+      const count = byFile.get(one.file) ?? { id: 0, key: 0 };
+      count[one.what] += 1;
+      byFile.set(one.file, count);
+    }
+    for (const [file, count] of byFile) {
+      const said = [count.id > 0 ? 'an id' : '', count.key > 0 ? `${count.key} _key(s)` : ''].filter(Boolean).join(' and ');
+      console.log(`${file.slice(1)} — ${said} minted`);
+    }
+    for (const one of unnamed(await readJtk(root))) console.error(`  ${one.says}`);
+  }
 }
 
 // --- the declaration --------------------------------------------------------

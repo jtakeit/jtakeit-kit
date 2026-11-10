@@ -21,7 +21,8 @@ import { readFile, readdir } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { CODES, said } from './build-codes.mjs';
 import { TAPPABLE, tappable } from './content/index.mjs';
-import { collectContent } from './content/node.mjs';
+import { unnamed } from './content/identity.mjs';
+import { collectContent, readJtk } from './content/node.mjs';
 
 export { CODES, said };
 
@@ -190,6 +191,29 @@ export async function lint(options = {}) {
   const findings = [];
   const fault = (code, says) => findings.push({ code, says });
   const verdict = (line = '') => ({ findings, ok: findings.length === 0, pages: 0, shared: false, line });
+
+  // A contract-3 tree: every document named, before any annotation is
+  // looked for (jtakeit-core wiki/98 §15 · 12). The door writes contract 3's
+  // annotations with a page's or an entry's `id` and a block's, a row's or a
+  // picture's `_key`, and annotates nowhere what has none — so a file
+  // without them is a site the owner taps and nothing opens, which no look at
+  // the built pages would catch. Every such place is said at once, with its
+  // file and its fix, and it stops the lint as a broken form does.
+  {
+    let schema;
+    try {
+      schema = JSON.parse(await readFile(join(root, 'jtk', 'schema.json'), 'utf8'));
+    } catch (error) {
+      if (error.code !== 'ENOENT' && !(error instanceof SyntaxError)) throw new Error(`could not read ${join(root, 'jtk', 'schema.json')}: ${error.message}`);
+    }
+    if (schema?.contract === 3) {
+      const nameless = unnamed(await readJtk(root));
+      for (const one of nameless) fault(CODES.CONTENT_FILE_INVALID, one.says);
+      if (nameless.length > 0) {
+        return verdict(`${nameless.length} place(s) in jtk/ without the id or the _key the panel names them by — nothing there can be tapped`);
+      }
+    }
+  }
 
   // The catalogue: refused rather than skipped when missing. A lint that
   // quietly passes when it cannot find its catalogue is worse than no lint.

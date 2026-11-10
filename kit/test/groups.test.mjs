@@ -148,4 +148,5 @@ test('«And 3 more» links only where a listing is there by the rule', () => {
   assert.equal(linksToListing({ listing: false }), false);
   assert.equal(linksToListing({ listing: true }), true);
   assert.equal(linksToListing({ pages: false }), true, 'its prefix is its listing, which the platform demands');
+  assert.equal(linksToListing({ pages: false, prefix: '' }), false, 'a contract-3 collection shown only on other pages has no listing (wiki/98 §15 · 6)');
 });

@@ -21,6 +21,13 @@ export const CODES = Object.freeze({
   FORM_INCOMPLETE: 'JTK_E_FORM_INCOMPLETE',
   FORM_FIELD_UNDECLARED: 'JTK_E_FORM_FIELD_UNDECLARED',
   FORM_UNDECLARED: 'JTK_E_FORM_UNDECLARED',
+  // Not the build's: the platform's code for a content file it cannot read as
+  // a document (sites/judgeFiles.go, `From: platform`), which its import says
+  // of a file. The lint says it of a contract-3 file without the names its
+  // annotations are written with — an `id`, a `_key` (jtakeit-core wiki/98
+  // §15 · 12) — because the fix is in the file, and the platform's judge is
+  // the one that refuses such a file there.
+  CONTENT_FILE_INVALID: 'JTK_E_CONTENT_FILE_INVALID',
 });
 
 /** One line of the lint's output, with its code in front of it. */

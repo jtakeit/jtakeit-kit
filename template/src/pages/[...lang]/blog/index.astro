@@ -41,7 +41,10 @@ const blog = site.collection('blog')!;
 const posts = site.entries('blog', { locale });
 const heading = site.words(blog.label, LANG);
 // A listing exists in every language the site has.
-const alternates = EVERY_LOCALE.map((one) => ({ locale: one, address: site.listingOf('blog', one) }));
+const alternates = EVERY_LOCALE.flatMap((one) => {
+  const address = site.listingOf('blog', one);
+  return address === undefined ? [] : [{ locale: one, address }];
+});
 ---
 
 <Layout title={heading} description="" alternates={alternates}>

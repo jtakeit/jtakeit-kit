@@ -57,9 +57,14 @@ export function rowId(entry: Entry): string {
   return (entry.anchor ?? '').split('#')[1] ?? '';
 }
 
-/** A collection's listing in a language, page `n`: `/works/`, `/de/works/page/2/`. */
-export function listingHref(name: string, locale: string, n = 1): string {
-  return `${under(site.listingOf(name, locale, n))}/`;
+/**
+ * A collection's listing in a language, page `n`: `/works/`, `/de/works/page/2/`.
+ * `undefined` where it has none — a contract-3 collection that declares no
+ * listing (the door's `listingOf`).
+ */
+export function listingHref(name: string, locale: string, n = 1): string | undefined {
+  const listing = site.listingOf(name, locale, n);
+  return listing === undefined ? undefined : `${under(listing)}/`;
 }
 
 /**
@@ -111,7 +116,9 @@ export function titleOf(entry: Entry): { text: string; at: { 'data-jtk-path'?: s
  * taking a listing over.
  */
 export function ownListing(collection: Collection): boolean {
-  const at = site.listingOf(collection.name, '').replace(/^\//, '');
+  const listing = site.listingOf(collection.name, '');
+  if (listing === undefined) return false;
+  const at = listing.replace(/^\//, '');
   const pages = join(process.cwd(), 'src', 'pages');
   return [
     join(pages, '[...lang]', at, 'index.astro'),

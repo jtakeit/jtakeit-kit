@@ -63,18 +63,23 @@ import { isUpload, uploaded } from '../lib/uploads';
 import { photo } from '../lib/photos';
 
 export async function getStaticPaths() {
-  // A listing per language: `/services`, and `/de/services` beside it.
+  // A listing per language: `/services`, and `/de/services` beside it — where
+  // the collection has one: a contract-3 collection shown only on other
+  // pages has none unless it declares it.
   return site.collections.filter((one) => !one.pages || listsPaged(one)).flatMap((collection) =>
-    EVERY_LOCALE.map((locale) => ({
-      params: { listing: site.listingOf(collection.name, locale).slice(1) },
-      props: { collection, locale },
-    })),
+    EVERY_LOCALE.flatMap((locale) => {
+      const listing = site.listingOf(collection.name, locale);
+      return listing === undefined ? [] : [{ params: { listing: listing.slice(1) }, props: { collection, locale } }];
+    }),
   );
 }
 
 const { collection, locale } = Astro.props as { collection: Collection; locale: string };
 // A listing exists in every language the site has.
-const alternates = EVERY_LOCALE.map((one) => ({ locale: one, address: site.listingOf(collection.name, one) }));
+const alternates = EVERY_LOCALE.flatMap((one) => {
+  const address = site.listingOf(collection.name, one);
+  return address === undefined ? [] : [{ locale: one, address }];
+});
 
 // A collection with pages: its first page, and nothing below applies.
 const paged = collection.pages ? site.listingPages(collection.name, locale) : undefined;

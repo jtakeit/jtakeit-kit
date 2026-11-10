@@ -12,9 +12,10 @@
  *   import { readJtk } from '@jtakeit/kit/content/node';
  *   const site = content(await readJtk());
  */
-import { readFile, readdir } from 'node:fs/promises';
+import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { content } from './index.mjs';
+import { mint } from './identity.mjs';
 
 /**
  * Every `.json` under a site's `jtk/`, parsed, keyed by its path from the
@@ -62,6 +63,27 @@ export async function readJtk(root = process.cwd(), options = {}) {
   }
   await walk(top, '');
   return Object.fromEntries(Object.entries(files).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
+}
+
+/**
+ * A contract-3 working tree's names written in where they are missing: an
+ * `id` on each page and entry, a `_key` on each block, row and picture
+ * (identity.mjs, wiki/98 §15 · 12). Each file that changed is written back
+ * whole, two spaces to a level, its keys in their order with the new name
+ * first; nothing else is touched. Nothing at all on a tree that is not
+ * contract 3.
+ *
+ * @param {string} [root] the site's root, holding `jtk/`
+ * @param {{ dir?: string }} [options] `dir`: where `jtk/` is, relative to the root
+ * @returns {Promise<{ file: string; place: string; what: 'id' | 'key' }[]>} what was minted, file by file
+ */
+export async function mintJtk(root = process.cwd(), options = {}) {
+  const dir = options.dir ?? 'jtk';
+  const { files, minted } = mint(await readJtk(root, { dir }));
+  for (const [key, document] of Object.entries(files)) {
+    await writeFile(join(root, dir, key.slice('/jtk/'.length)), `${JSON.stringify(document, null, 2)}\n`);
+  }
+  return minted;
 }
 
 /**
