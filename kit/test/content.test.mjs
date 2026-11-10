@@ -378,3 +378,15 @@ test('a hand-ordered collection lists by rank, the unranked after', () => {
   const moved = content(ranked, { now });
   assert.deepEqual(moved.entries('categories').map((one) => one.slug), ['nails', 'gel', 'beauty']);
 });
+
+// A document's id is the platform's (jtakeit-core wiki/94 · M1), kept when
+// its file moves; the door hands it out, empty where a file has none yet.
+test('a page and an entry say their id, empty before the platform wrote one', () => {
+  const withIDs = files();
+  withIDs['/jtk/content/start.json'] = { ...withIDs['/jtk/content/start.json'], id: '0193a5c2-7f4e-7c1a-9b2e-5d1f0c3a8e21' };
+  withIDs['/jtk/content/categories/nails.json'] = { ...withIDs['/jtk/content/categories/nails.json'], id: '0193a5c3-1b2a-7e44-8a10-6c2f9d3e4b55' };
+  const read = content(withIDs, { now });
+  assert.equal(read.page('/').id, '0193a5c2-7f4e-7c1a-9b2e-5d1f0c3a8e21');
+  assert.equal(read.entry('categories', 'nails').id, '0193a5c3-1b2a-7e44-8a10-6c2f9d3e4b55');
+  assert.equal(read.entry('categories', 'gel').id, '');
+});
