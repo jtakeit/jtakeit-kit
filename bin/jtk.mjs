@@ -3,7 +3,7 @@
  * jtk — the command line of @jtakeit/astro.
  *
  *   jtk create <slug> …     scaffold a site (lib/create.mjs)
- *   jtk catalogue …         write jtk/catalogue.json and check it (lib/catalogue.mjs)
+ *   jtk catalogue …         write jtk/catalogue.json and check it; on contract 3, the names only (the kit's lib/catalogue.mjs)
  *   jtk a11y …              read the built pages against WCAG 2.1 AA (lib/a11y.mjs)
  *   jtk push|pull <url>     move the site's code to and from jtakeit (lib/code.mjs)
  */
@@ -66,7 +66,8 @@ switch (command) {
   jtk create <slug> [options]     scaffold a site into ./<slug>
   jtk catalogue [--emit-only] [--dist ./dist] [--judge]
                                   write jtk/catalogue.json from src/content/blocks.ts and
-                                  check it against the built pages
+                                  check it against the built pages; on a contract-3 tree,
+                                  mint the ids and _keys and write no catalogue
   jtk showroom [--photos <dir>] [--port 4330]
                                   every hero field, ground, edge, entrance and gallery,
                                   live on the dev server — in this project's colours and

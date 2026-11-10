@@ -10,13 +10,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { content, linksToListing } from '../lib/content/index.mjs';
 import { mint, unnamed, uuid7 } from '../lib/content/identity.mjs';
-import { readJtk } from '../lib/content/node.mjs';
+import { contractOf, readJtk } from '../lib/content/node.mjs';
 import { priceWords } from '../lib/money.mjs';
 
 const now = Date.parse('2026-11-10T12:00:00Z');
@@ -570,6 +570,30 @@ test('readJtk: the contract-3 tree off a disk reads as the glob hands it', async
   }
 });
 
+test('contractOf: a tree is contract 3 where jtk/schema.json says so, and contract 2 whatever else it holds', () => {
+  const root = mkdtempSync(join(tmpdir(), 'jtk-contract-'));
+  try {
+    const schema = (text) => {
+      mkdirSync(join(root, 'jtk'), { recursive: true });
+      writeFileSync(join(root, 'jtk', 'schema.json'), text);
+    };
+    assert.equal(contractOf(root), 2, 'no jtk/ at all');
+    mkdirSync(join(root, 'jtk'));
+    writeFileSync(join(root, 'jtk', 'catalogue.json'), '{"contract": 2, "blocks": []}');
+    assert.equal(contractOf(root), 2, 'a catalogue');
+    schema('{"contract": 3, "locale": "de", "blocks": []}');
+    assert.equal(contractOf(root), 3);
+    schema('{"contract": 2, "blocks": []}');
+    assert.equal(contractOf(root), 2, 'a schema.json saying another contract is not read');
+    schema('{"contract": 3,');
+    assert.equal(contractOf(root), 2, 'nor one that does not parse');
+    schema('[3]');
+    assert.equal(contractOf(root), 2);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 // ── the readings the owner settled (wiki/98 §15, 10 November 2026) ─────────
 //
 // Where wiki/98 left the door a choice, #55 read it one way and the owner
@@ -773,6 +797,59 @@ test('§15 · 12: jtk catalogue mints them on a contract-3 tree before anything 
     assert.match(home.id, /^[0-9a-f-]{36}$/);
     assert.match(home.blocks[0]._key, /^k[0-9a-f]{7}$/);
     assert.equal(readFileSync(join(root, 'jtk', 'pages', 'kontakt.json'), 'utf8'), '{"id":"0193a5c2-7f4e-7c1a-9b2e-5d1f0c3a8e23","path":"/kontakt","blocks":[{"_key":"hero","type":"hero","v":1}]}', 'a file with its names is not rewritten');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('§16: jtk catalogue writes no jtk/catalogue.json on a contract-3 tree, says where its schema is, and names one left there without removing it; contract 2 is written as before', () => {
+  const root = mkdtempSync(join(tmpdir(), 'jtk-no-catalogue-'));
+  try {
+    const write = (path, value) => {
+      mkdirSync(join(root, path, '..'), { recursive: true });
+      writeFileSync(join(root, path), typeof value === 'string' ? value : JSON.stringify(value));
+    };
+    const blocks = [{ type: 'hero', v: 1, label: 'Hero', fields: [{ key: 'title', label: 'Title', kind: 'text' }] }];
+    write('declaration.mjs', `export const BLOCKS = ${JSON.stringify(blocks)};`);
+    const catalogue = join(root, 'jtk', 'catalogue.json');
+    const tool = fileURLToPath(new URL('../lib/catalogue.mjs', import.meta.url));
+    const run = (...more) => spawnSync('node', [tool, '--emit-only', '--root', root, '--generator', 'test', ...more], { encoding: 'utf8' });
+
+    // Contract 2, no schema.json: the declaration emitted as it always was.
+    const two = run('--declaration', 'declaration.mjs');
+    assert.equal(two.status, 0, two.stderr);
+    assert.equal(readFileSync(catalogue, 'utf8'), `${JSON.stringify({ contract: 2, generator: 'test', blocks, page_seo: [], business_facts: [] }, null, 2)}\n`);
+    rmSync(catalogue);
+
+    // Contract 3: the names minted, and no catalogue beside the schema.
+    write('jtk/schema.json', { contract: 3, locale: 'de', blocks: [{ type: 'hero', v: 1, fields: [{ key: 'title', kind: 'text' }] }] });
+    write('jtk/pages/index.json', { path: '/', blocks: [{ type: 'hero', v: 1, title: 'Hallo' }] });
+    const three = run('--declaration', 'declaration.mjs', '--judge');
+    assert.equal(three.status, 0, three.stderr);
+    assert.match(three.stdout, /jtk\/pages\/index\.json — an id and 1 _key\(s\) minted/);
+    assert.match(three.stdout, /jtk\/schema\.json is a contract-3 site's schema, and this release does not yet write it from src\/content\/blocks\.ts — that is jtk schema, a later step \(jtakeit-core wiki\/98 §7 · 2\); no jtk\/catalogue\.json is written/);
+    assert.match(three.stdout, /--judge sends a catalogue, and a contract-3 tree has none/);
+    assert.equal(existsSync(catalogue), false, 'no jtk/catalogue.json beside jtk/schema.json');
+
+    // The declaration is not read on contract 3: without one, the same.
+    const none = run();
+    assert.equal(none.status, 0, none.stderr);
+    assert.equal(existsSync(catalogue), false);
+
+    // One left from before the move: said, left where it is, and the run fails.
+    write('jtk/catalogue.json', '{"contract":2,"blocks":[]}');
+    const stray = run('--declaration', 'declaration.mjs');
+    assert.equal(stray.status, 1);
+    assert.match(stray.stderr, /jtk\/catalogue\.json is contract 2's schema, beside contract 3's jtk\/schema\.json, and the platform refuses a tree with both — remove it/);
+    assert.equal(readFileSync(catalogue, 'utf8'), '{"contract":2,"blocks":[]}', 'said, not deleted');
+    rmSync(catalogue);
+
+    // A name it cannot mint counts as well: a misspelt id is never replaced.
+    write('jtk/pages/kontakt.json', { id: 'NOT-AN-ID', path: '/kontakt', blocks: [{ _key: 'hero', type: 'hero', v: 1 }] });
+    const misspelt = run('--declaration', 'declaration.mjs');
+    assert.equal(misspelt.status, 1);
+    assert.match(misspelt.stderr, /jtk\/pages\/kontakt\.json: "id" is "NOT-AN-ID"/);
+    assert.equal(existsSync(catalogue), false);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

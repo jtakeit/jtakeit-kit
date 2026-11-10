@@ -14,6 +14,12 @@
  * objects: it has no way to tell a draft from a page except to be told. This
  * is being told.
  *
+ * Contract 2's. On a contract-3 site which entries a visitor may not see is
+ * the platform's to say, from each entry's `visible` and its moments, for
+ * every build — its hidden list — and the build refuses a `_meta.json` that
+ * says `drafts` beside it (wiki/98 §6, JTK_E_META_INVALID). There the file is
+ * `redirects`, `immutable` and `cache`, and nothing else.
+ *
  * ── the specimens, which have no file at all ────────────────────────────────
  *
  * The build also draws one page per arrangement, so that the panel can lift
@@ -36,6 +42,7 @@ import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join, relative, sep } from 'node:path';
 import { shownAt } from './schedule.mjs';
 import { specimenId } from './content/index.mjs';
+import { contractOf } from './content/node.mjs';
 
 /** The id of one specimen, which is also its address under the collection — the door's (`@jtakeit/kit/content`). */
 export { specimenId };
@@ -156,6 +163,10 @@ export function draftsOf(site) {
  * a site on another generator says where its content is and what its
  * declaration holds, and the drafts are read off the files as before.
  *
+ * No drafts at all on contract 3 (above): the door's `site.contract` says
+ * which, or without `site` the working directory's `jtk/schema.json` — where
+ * a build runs, as the content root's default assumes.
+ *
  * @param {object} what
  * @param {import('../types/content').Site} [what.site] the door's reading of the site
  * @param {string} [what.root]                 the content root, `jtk/content` by default
@@ -164,11 +175,14 @@ export function draftsOf(site) {
  * @param {string[]} [what.locales]
  * @param {string[]} [what.immutable]          e.g. `['/_astro/']`
  * @param {{ from: string; to: string; status?: number }[]} [what.redirects]
- * @returns {Promise<{ redirects: object[]; drafts: string[]; immutable?: string[]; cache?: { prefix: string; maxAge: number }[] }>}
+ * @returns {Promise<{ redirects: object[]; drafts?: string[]; immutable?: string[]; cache?: { prefix: string; maxAge: number }[] }>}
  */
 export async function buildMeta({ site, root, collections = [], blocks = [], locales = [], immutable, cache, redirects = [] } = {}) {
-  const drafts = site !== undefined ? draftsOf(site) : [...(await hiddenEntries(root)), ...specimenAddresses(collections, blocks, locales)].sort();
-  const meta = { redirects, drafts };
+  /** @type {{ redirects: object[]; drafts?: string[]; immutable?: string[]; cache?: { prefix: string; maxAge: number }[] }} */
+  const meta = { redirects };
+  if ((site !== undefined ? site.contract : contractOf()) !== 3) {
+    meta.drafts = site !== undefined ? draftsOf(site) : [...(await hiddenEntries(root)), ...specimenAddresses(collections, blocks, locales)].sort();
+  }
   if (Array.isArray(immutable) && immutable.length > 0) meta.immutable = immutable;
   const lifetimes = cacheRules(cache);
   if (lifetimes.length > 0) meta.cache = lifetimes;
@@ -221,7 +235,7 @@ export function cacheRules(cache) {
  *
  * @param {string} dir   the build directory, `dist/`
  * @param {Parameters<typeof buildMeta>[0]} what
- * @returns {Promise<{ redirects: object[]; drafts: string[]; immutable?: string[]; cache?: { prefix: string; maxAge: number }[] }>}
+ * @returns {Promise<{ redirects: object[]; drafts?: string[]; immutable?: string[]; cache?: { prefix: string; maxAge: number }[] }>}
  */
 export async function writeMeta(dir, what = {}) {
   const meta = await buildMeta(what);

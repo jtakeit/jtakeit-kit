@@ -4,9 +4,11 @@
  *
  *   jtkit apply --kit <kind>|<file> [--locale uk] [--api <url>] [--root <dir>]
  *       lay a booking kit out: jtk/bookings.json, the rates as entries, and the
- *       kit's types, collections and module into jtk/catalogue.json
+ *       kit's types, collections and module into jtk/catalogue.json — contract 2's
+ *       files, so a contract-3 tree is refused
  *   jtkit catalogue [--declaration src/content/blocks.ts] [--emit-only] [--dist ./dist] [--judge]
- *       write jtk/catalogue.json from a declaration and check it against the built pages
+ *       write jtk/catalogue.json from a declaration and check it against the built pages;
+ *       on a contract-3 tree, mint the ids and _keys and write no catalogue
  *   jtkit lint [--dist dist] [--root .] [--site-url https://…]
  *       the annotation lint the platform's build runs, on this working tree
  *   jtkit progress [--root .] [--json]

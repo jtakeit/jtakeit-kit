@@ -18,6 +18,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
+import { contractOf } from './content/node.mjs';
 
 /** Where the platform is, for a kit asked by its kind. */
 export const API = 'https://api.jtakeit.com';
@@ -180,6 +181,12 @@ export function mergeKitIntoCatalogue(catalogue, kit) {
  * keeps `jtk/catalogue.json` by hand) — `@jtakeit/astro` writes the
  * declaration itself and passes false.
  *
+ * Contract 2's files, every one: on a contract-3 tree the settings are
+ * `jtk/modules/bookings.json`, an entry lives under `jtk/entries/` with its
+ * id, and a `jtk/catalogue.json` beside `jtk/schema.json` is a tree the
+ * platform refuses (wiki/98 §2, §16). Such a tree is refused here before
+ * anything is written, rather than left half in each contract.
+ *
  * @param {string} target     the repository's root
  * @param {any} kit
  * @param {object} [options]
@@ -188,6 +195,11 @@ export function mergeKitIntoCatalogue(catalogue, kit) {
  * @returns {string[]} the files written
  */
 export function layKitFiles(target, kit, { locale = 'en', catalogue = false } = {}) {
+  if (contractOf(target) === 3) {
+    throw new Error(
+      `${join(target, 'jtk', 'schema.json')} says contract 3, and a kit is laid out in contract 2's files (jtk/catalogue.json, jtk/bookings.json, entries under jtk/content) — this release lays no kit out on a contract-3 tree`,
+    );
+  }
   const literal = (value) => JSON.stringify(value, null, 2);
   const written = [];
   const settingsFile = join(target, 'jtk', 'bookings.json');

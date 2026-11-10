@@ -26,9 +26,10 @@
  *   jtk catalogue --dist ./dist   # check against a build made elsewhere
  *   jtk catalogue --judge         # and ask the real validator whether we agree
  *
- * On a contract-3 tree (`jtk/schema.json` saying `contract: 3`) it first mints
- * the `id` of every page and entry and the `_key` of every block, row and
- * picture that has none, in every mode (below, "a contract-3 tree").
+ * On a contract-3 tree (`jtk/schema.json` saying `contract: 3`) it mints the
+ * `id` of every page and entry and the `_key` of every block, row and picture
+ * that has none, in every mode, and stops there: it writes no
+ * `jtk/catalogue.json` (below, "a contract-3 tree").
  *
  * Exit code is the number of disagreements. Zero means the admin can be handed
  * this repository.
@@ -57,6 +58,7 @@ import { pathToFileURL } from 'node:url';
 
 import { E, isAdvice, isPlatformCode, LOCAL } from './codes.mjs';
 import { tappable } from './content/index.mjs';
+import { contractOf } from './content/node.mjs';
 import { shownAt } from './schedule.mjs';
 
 // What this tool calls itself in a catalogue it writes. Bumped when the shape
@@ -77,7 +79,7 @@ function die(message) {
   process.exit(1);
 }
 
-// --- a contract-3 tree: its names, before anything else ---------------------
+// --- a contract-3 tree: its names, and no catalogue -------------------------
 //
 // Contract 3 names a page or an entry by its `id`, and a block, a row and a
 // gallery's picture by its `_key`, and every file carries both from its first
@@ -89,31 +91,47 @@ function die(message) {
 // translation's key, which must be the original's — is said here and refused
 // by the lint.
 //
+// And nothing after the names. `jtk/catalogue.json` is contract 2's schema
+// and `jtk/schema.json` contract 3's, and the platform's import and build
+// refuse a tree holding both (wiki/98 §16) — which this command made of every
+// contract-3 tree it ran on, by going on to emit the declaration. The
+// declaration is not read here at all: it becomes `jtk/schema.json` through
+// `jtk schema` (§7 · 2), which this release has not got, and the checks
+// below are contract 2's, of contract 2's file. What is left to check is the
+// names, and a catalogue still lying beside the schema — said and not
+// removed, because it may hold what the developer means to carry over, and a
+// file under git is theirs to delete. The exit code counts both, as it
+// counts disagreements below.
+//
 // Read only where `jtk/schema.json` says contract 3: a contract-2 tree keeps
 // no names in its files, and this command reads it exactly as before.
-{
-  let schema;
-  try {
-    schema = JSON.parse(readFileSync(join(root, 'jtk', 'schema.json'), 'utf8'));
-  } catch {
-    // No schema.json, or none that parses: not a contract-3 tree to name.
+if (contractOf(root) === 3) {
+  const { mintJtk, readJtk } = await import('./content/node.mjs');
+  const { unnamed } = await import('./content/identity.mjs');
+  const minted = await mintJtk(root);
+  const byFile = new Map();
+  for (const one of minted) {
+    const count = byFile.get(one.file) ?? { id: 0, key: 0 };
+    count[one.what] += 1;
+    byFile.set(one.file, count);
   }
-  if (schema?.contract === 3) {
-    const { mintJtk, readJtk } = await import('./content/node.mjs');
-    const { unnamed } = await import('./content/identity.mjs');
-    const minted = await mintJtk(root);
-    const byFile = new Map();
-    for (const one of minted) {
-      const count = byFile.get(one.file) ?? { id: 0, key: 0 };
-      count[one.what] += 1;
-      byFile.set(one.file, count);
-    }
-    for (const [file, count] of byFile) {
-      const said = [count.id > 0 ? 'an id' : '', count.key > 0 ? `${count.key} _key(s)` : ''].filter(Boolean).join(' and ');
-      console.log(`${file.slice(1)} — ${said} minted`);
-    }
-    for (const one of unnamed(await readJtk(root))) console.error(`  ${one.says}`);
+  for (const [file, count] of byFile) {
+    const said = [count.id > 0 ? 'an id' : '', count.key > 0 ? `${count.key} _key(s)` : ''].filter(Boolean).join(' and ');
+    console.log(`${file.slice(1)} — ${said} minted`);
   }
+  const nameless = unnamed(await readJtk(root));
+  for (const one of nameless) console.error(`  ${one.says}`);
+  const stray = existsSync(join(root, 'jtk', 'catalogue.json'));
+  if (stray) {
+    console.error(
+      'jtk catalogue: jtk/catalogue.json is contract 2\'s schema, beside contract 3\'s jtk/schema.json, and the platform refuses a tree with both — remove it (git rm jtk/catalogue.json)',
+    );
+  }
+  console.log(
+    "jtk/schema.json is a contract-3 site's schema, and this release does not yet write it from src/content/blocks.ts — that is jtk schema, a later step (jtakeit-core wiki/98 §7 · 2); no jtk/catalogue.json is written",
+  );
+  if (has('judge')) console.log('--judge sends a catalogue, and a contract-3 tree has none: validate_catalogue judges the tree by site and ref once it is pushed');
+  process.exit(Math.min(nameless.length + (stray ? 1 : 0), 100));
 }
 
 // --- the declaration --------------------------------------------------------
