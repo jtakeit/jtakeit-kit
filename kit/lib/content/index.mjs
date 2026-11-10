@@ -406,6 +406,7 @@ export function content(files, options = {}) {
       const { blocks, block: find } = blocksOf(doc.blocks, prefix);
       return {
         kind: 'page',
+        id: idOf(doc),
         address: doc.path,
         locale: doc.locale,
         seo: doc.seo,
@@ -425,10 +426,20 @@ export function content(files, options = {}) {
     return both[form];
   }
 
+  /**
+   * The document's own id, which the platform writes into every file since
+   * jtakeit-core wiki/94 · M1: a file moved keeps it. Empty in a file written
+   * before, and in one an agent wrote and nobody has saved yet.
+   */
+  function idOf(doc) {
+    return typeof doc.raw?.id === 'string' ? doc.raw.id : '';
+  }
+
   /** A page nobody wrote: empty, and nothing on it annotated. */
   function nobodysPage(address, locale) {
     const self = {
       kind: 'page',
+      id: '',
       address,
       locale,
       seo: {},
@@ -471,6 +482,7 @@ export function content(files, options = {}) {
       });
       const entry = {
         kind: 'entry',
+        id: idOf(doc),
         collection: doc.collection,
         slug: doc.slug,
         locale: doc.locale,
