@@ -5,6 +5,7 @@
  *   jtk create <slug> …     scaffold a site (lib/create.mjs)
  *   jtk catalogue …         write jtk/catalogue.json and check it (lib/catalogue.mjs)
  *   jtk a11y …              read the built pages against WCAG 2.1 AA (lib/a11y.mjs)
+ *   jtk push|pull <url>     move the site's code to and from jtakeit (lib/code.mjs)
  */
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -50,7 +51,15 @@ switch (command) {
     }
     break;
   }
+  case 'push':
+  case 'pull': {
+    // The command prints its own errors, with the token taken out of them.
+    const { main } = await import(pathToFileURL(join(HERE, '..', 'lib', 'code.mjs')).href);
+    process.exitCode = await main(command, rest);
+    break;
+  }
   default: {
+    const code = await import(pathToFileURL(join(HERE, '..', 'lib', 'code.mjs')).href);
     const { usage } = await import(pathToFileURL(join(HERE, '..', 'lib', 'create.mjs')).href);
     console.error(`@jtakeit/astro — the scaffold and the catalogue tool for a site on jtakeit
 
@@ -65,6 +74,7 @@ switch (command) {
   jtk a11y [--dist ./dist] [/path …]
                                   read the built pages against WCAG 2.1 AA in Chrome
                                   (npm i -D playwright-core axe-core first)
+${code.usage()}
 
 ${usage()}
 

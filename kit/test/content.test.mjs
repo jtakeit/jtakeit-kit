@@ -368,6 +368,17 @@ test('readJtk: every .json under jtk/, keyed as the glob keys them, pictures and
   }
 });
 
+// A collection ordered by hand lists in the owner's order: each entry's
+// `rank`, written by their moves in the panel (jtakeit-core wiki/94 · M4).
+// An entry without one comes after, in the order it came.
+test('a hand-ordered collection lists by rank, the unranked after', () => {
+  const ranked = files();
+  ranked['/jtk/content/categories/nails.json'] = { ...ranked['/jtk/content/categories/nails.json'], rank: 'U' };
+  ranked['/jtk/content/categories/gel.json'] = { ...ranked['/jtk/content/categories/gel.json'], rank: 'k' };
+  const moved = content(ranked, { now });
+  assert.deepEqual(moved.entries('categories').map((one) => one.slug), ['nails', 'gel', 'beauty']);
+});
+
 // A document's id is the platform's (jtakeit-core wiki/94 · M1), kept when
 // its file moves; the door hands it out, empty where a file has none yet.
 test('a page and an entry say their id, empty before the platform wrote one', () => {

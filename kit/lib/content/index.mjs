@@ -514,7 +514,7 @@ export function content(files, options = {}) {
   /** The order a collection lists in: the declared field, or the files' own. */
   function ordered(list, collection) {
     const order = collection?.order;
-    if (order === undefined || order === 'manual') return list;
+    if (order === undefined || order === 'manual') return byRank(list);
     const compare = (a, b) => {
       const x = a.blocks[0]?.[order.by];
       const y = b.blocks[0]?.[order.by];
@@ -523,6 +523,22 @@ export function content(files, options = {}) {
     };
     const out = [...list].sort(compare);
     return order.desc ? out.reverse() : out;
+  }
+
+  /**
+   * A collection the owner orders by hand, in their order: each entry's
+   * `rank`, written by their moves in the panel (jtakeit-core wiki/94 · M4),
+   * compared as bytes. An entry with none comes after the ranked ones, in the
+   * order it came — which is every entry of a site from before ranks.
+   */
+  function byRank(list) {
+    const rankOf = (doc) => (typeof doc.raw?.rank === 'string' ? doc.raw.rank : '');
+    return [...list].sort((a, b) => {
+      const x = rankOf(a);
+      const y = rankOf(b);
+      if (x === '' || y === '') return x === y ? 0 : x === '' ? 1 : -1;
+      return x < y ? -1 : x > y ? 1 : 0;
+    });
   }
 
   /**
