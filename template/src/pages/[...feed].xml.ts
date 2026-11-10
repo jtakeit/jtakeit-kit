@@ -16,12 +16,14 @@ import { site } from '../lib/site';
  * to a reader is a preview competing with the site it previews.
  */
 export async function getStaticPaths() {
-  // A collection without pages has no feed: its entries have no address.
+  // A collection without pages has no feed: its entries have no address. Nor
+  // has one without a listing for the feed to sit under — a contract-3
+  // collection that declares none.
   return site.collections.filter((collection) => collection.pages).flatMap((collection) =>
-    EVERY_LOCALE.map((locale) => ({
-      params: { feed: `${site.listingOf(collection.name, locale).slice(1)}/rss` },
-      props: { name: collection.name, locale },
-    })),
+    EVERY_LOCALE.flatMap((locale) => {
+      const listing = site.listingOf(collection.name, locale);
+      return listing === undefined ? [] : [{ params: { feed: `${listing.slice(1)}/rss` }, props: { name: collection.name, locale } }];
+    }),
   );
 }
 
@@ -50,7 +52,7 @@ export const GET: APIRoute = async ({ props }) => {
 <rss version="2.0">
   <channel>
     <title>${escapeXML(site.words(collection?.label) || name)}</title>
-    <link>${canonicalFor(collection ? site.listingOf(name, '') : '/')}</link>
+    <link>${canonicalFor((collection ? site.listingOf(name, '') : undefined) ?? '/')}</link>
     <description>${escapeXML(site.words(collection?.label) || name)}</description>
 ${items}
   </channel>

@@ -28,9 +28,12 @@ export const getStaticPaths = (async ({ paginate }) => {
     const lasts = new Map<string, number>();
     const cut = [];
     for (const locale of EVERY_LOCALE) {
+      // A collection drawn here asked for its listing, so it has one.
+      const listing = site.listingOf(collection.name, locale);
+      if (listing === undefined) continue;
       const { entries, size, last } = site.listingPages(collection.name, locale);
       lasts.set(locale, last);
-      cut.push(...paginate(entries, { pageSize: size, params: { listing: site.listingOf(collection.name, locale).slice(1) }, props: { collection, locale } }).slice(1));
+      cut.push(...paginate(entries, { pageSize: size, params: { listing: listing.slice(1) }, props: { collection, locale } }).slice(1));
     }
     for (const one of cut) {
       const n = one.props.page.currentPage;

@@ -82,12 +82,17 @@ export interface Collection {
   /** The block types an entry may hold below its own values. */
   blocks: string[];
   /**
-   * Where its entries live, contract 2: `/works`. Under contract 3, read off
-   * `route`: the listing in the site's own language, else where the detail
-   * pattern puts its entries, else the page `shown_on` names.
+   * Where its entries live, contract 2: `/works`. Under contract 3, the
+   * `listing` its route declares, in the site's own language, and `''` where
+   * it declares none (wiki/98 §15 · 6).
    */
   prefix: string;
-  /** Contract 3: its entries' addresses, a pattern per language where they differ, or `'none'`. */
+  /**
+   * Contract 3: its entries' addresses, or `'none'`. A pattern per language is
+   * what follows the language's prefix, which always comes first (`{ en:
+   * '/works/{slug}' }` is `/en/works/…`); a language it does not name takes
+   * the base language's.
+   */
   route?: 'none' | { detail: string | Record<string, string>; listing?: string | Record<string, string>; per_page?: number };
   /** Contract 3: where its entries are shown besides their own pages, `['/prices#{slug}']`. */
   shown_on?: (string | Record<string, string>)[];
@@ -134,11 +139,12 @@ export interface Values {
    */
   at(field: string, row?: number | string, part?: string): At;
   /**
-   * Whether the value came from the original's language rather than this
-   * document's own — a word nobody has translated, or a value that is the
-   * same in every language — so a page can give it the original's `lang`.
-   * Contract 3; always `false` under contract 2, which copies every document
-   * whole per language.
+   * Whether the value is the original's words on a page in another language
+   * — a localized value nobody has translated — so a page can give it the
+   * original's `lang`. A value that is the same in every language (a price, a
+   * date, a phone number, a picture) has no language and is never from the
+   * base. Contract 3; always `false` under contract 2, which copies every
+   * document whole per language.
    */
   fromBase(field: string): boolean;
   /** The field's declaration, where the schema has one. */
@@ -265,8 +271,12 @@ export interface Site {
 
   addressOf(entry: Entry): string | undefined;
   anchorOf(entry: Entry): string | undefined;
-  /** A collection's listing in a language, page `n`: `/works`, `/de/works/page/2`. */
-  listingOf(name: string, locale?: string, page?: number): string;
+  /**
+   * A collection's listing in a language, page `n`: `/works`, `/de/works/page/2`.
+   * Contract 3: `undefined` for a collection that declares no `listing`
+   * (wiki/98 §15 · 6) — its entries are at their own pages, or at `anchorOf`.
+   */
+  listingOf(name: string, locale?: string, page?: number): string | undefined;
   /** The listing as its pages draw it: the entries in order, group by group, and how many to a page. */
   listingPages(name: string, locale?: string): { entries: Entry[]; size: number; last: number };
   /** Which language an address is in: `''` for the base. */
@@ -283,8 +293,14 @@ export interface Site {
   /** Where an entry sits in its collection's tree. */
   treeOf(entry: Entry): { trail: Entry[]; children: Entry[]; more: number };
 
-  /** A price in the site's currency: whole minor units (contract 2) or `{ minor }` (contract 3); `''` for a price on request. */
-  money(value: unknown, locale?: string): string;
+  /**
+   * A price in the site's currency: whole minor units (contract 2) or `{ minor }`
+   * (contract 3). Contract 3 says its qualifiers in the page's language —
+   * «ab CHF 45.–» for `{ minor, from: true }`, «auf Anfrage» for `{ on_request:
+   * true }` — in the kit's words (`priceWords`, `@jtakeit/kit/money`), or in
+   * the template's own: `{ from: '{amount} und mehr' }`.
+   */
+  money(value: unknown, locale?: string, own?: { from?: string; on_request?: string }): string;
   /** A label's words in a language. */
   words(text: Text | undefined, locale?: string): string;
   tappable(field: Field | undefined): boolean;
@@ -314,7 +330,7 @@ export function shownAt(document: { visible?: boolean; show_at?: unknown; hide_a
 export function canonicalLocale(tag: unknown): string | null;
 export function sharedLocaleOf(name: string): string | null;
 export function drawsPagedListing(collection: { pages?: boolean; listing?: boolean }, ownPage: boolean): boolean;
-export function linksToListing(collection: { pages?: boolean; listing?: boolean }): boolean;
+export function linksToListing(collection: { pages?: boolean; listing?: boolean; prefix?: string }): boolean;
 
 /** The content as one document, read off a disk — `@jtakeit/kit/content/node`'s, kept here too. */
 export { collectContent } from './content-node';

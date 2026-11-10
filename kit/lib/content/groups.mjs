@@ -339,8 +339,12 @@ export function drawsPagedListing(collection, ownPage) {
  * at its prefix written by hand, but nothing here promises it lists what the
  * line counts, so the line stays words.
  *
- * @param {{ pages?: boolean; listing?: boolean }} collection
+ * A contract-3 collection shown only on other pages (`route: "none"`) has no
+ * listing unless it declares one (jtakeit-core wiki/98 §15 · 6), and the door
+ * says so with an empty `prefix`; it stays words too.
+ *
+ * @param {{ pages?: boolean; listing?: boolean; prefix?: string }} collection
  */
 export function linksToListing(collection) {
-  return collection.pages === false || collection.listing === true;
+  return (collection.pages === false || collection.listing === true) && collection.prefix !== '';
 }

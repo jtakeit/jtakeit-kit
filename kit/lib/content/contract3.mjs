@@ -30,9 +30,11 @@
  * place. The door lays it over the original: what the translation says, the
  * page says; what it does not say — a value nobody translated, or one that
  * is the same in every language, such as a price or a photograph — is the
- * original's. Each value remembers which of the two it came from
- * (`fromBase`), so a page can give the original's words the original's
- * `lang`. An entry's body is the exception: it is whole per language (a
+ * original's. A word nobody translated says so (`fromBase`), so a page can
+ * give it the original's `lang`; a price, a date, a phone number or a
+ * picture has no language and never does (§15 · 3). A key the schema does
+ * not declare is never read from a translation (§15 · 17). An entry's body
+ * is the exception: it is whole per language (a
  * German post may have a paragraph the English one lacks), so a translation
  * with a body of its own replaces the original's, and one without shows it.
  *
@@ -51,9 +53,10 @@
  *
  * **An address comes from the collection's `route`** (§3.5):
  * `{ detail: "/works/{slug}", listing?: "/works", per_page? }`, a pattern per
- * language where the address differs by more than the language, or `"none"`
- * for a collection shown only on other pages — its `shown_on`,
- * `["/prices#{slug}"]`, says where.
+ * language where the words of the address differ — always after the
+ * language's prefix (§15 · 4) — or `"none"` for a collection shown only on
+ * other pages — its `shown_on`, `["/prices#{slug}"]`, says where. A
+ * collection that declares no `listing` has none (§15 · 6).
  *
  * **Values are typed** (§3.4): money `{ minor, from?, on_request? }`, a
  * picture `{ src, alt?, focus?, poster? }`, a gallery's pictures and a list's
@@ -74,7 +77,7 @@
  * Imports nothing outside the kit's content and money: the door runs in a
  * Vite build, in Node and in a test alike.
  */
-import { money as priced } from '../money.mjs';
+import { money as priced, priceWords } from '../money.mjs';
 import { shownAt } from '../schedule.mjs';
 import { ancestors, capped, descendants, grouped, groupField, selectHeadings } from './groups.mjs';
 import { canonicalLocale, baseAddressOf, inLocale, languagesOf, localeArg, localeOfAddress, sharedLocaleOf } from './locale.mjs';
@@ -83,17 +86,29 @@ import { byRank, labelWords, specimenId, tappable } from './rules.mjs';
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 
 /**
- * Empty is absent: `null`, `""` and `[]` (wiki/98 §1, 6, "readers fold them
- * to absent"). Whitespace-only text is folded by the platform's import
- * (§4.7), so a file never holds it, and the door keeps contract 2's reading
- * of it — the specimens are drawn with a space precisely so that it is a
- * value.
+ * Empty is absent: `null`, `""`, whitespace-only text and `[]` (wiki/98 §1, 6,
+ * "readers fold them to absent", and §4.7). Until 10 November 2026 a space was
+ * a value here, as it is to contract 2, because the specimens were drawn with
+ * one; the owner settled that whitespace is empty everywhere (§15 · 15), so a
+ * value of spaces reads as none and the specimens draw `PLACEHOLDER` instead.
  */
 function isEmpty(value) {
-  return value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
+  return value === undefined || value === null || (typeof value === 'string' && value.trim() === '') || (Array.isArray(value) && value.length === 0);
 }
 
 const str = (value) => (typeof value === 'string' ? value : '');
+
+/** A value as words, `''` for one that is empty — spaces included. */
+const wordsIn = (value) => (isEmpty(value) ? '' : str(value));
+
+/**
+ * What a specimen's text says: a zero-width space. The specimen draws every
+ * element a block's text fills, so the panel can lift it; with whitespace
+ * empty (§15 · 15) a space would leave the element out. This is a value to
+ * the door, to the platform's `TrimSpace` and to a template's `trim()`, and
+ * nothing a person sees.
+ */
+const PLACEHOLDER = '\u200B';
 
 // ── the annotation grammar (wiki/98 §5) ────────────────────────────────────
 //
@@ -103,24 +118,23 @@ const str = (value) => (typeof value === 'string' ? value : '');
 //   value      := FIELD ( "[" KEY "]." FIELD ){0,2} [ "." PART ]
 //
 // The door writes nothing the grammar does not parse: a key or a field that
-// does not match it is annotated nowhere. The grammar leaves ID and NAME
-// open; an id is the platform's UUID, so letters, digits and hyphens, and a
-// module's name is a word like a field's.
-const KEY = /^[a-z][a-z0-9-]{0,31}$/;
+// does not match it is annotated nowhere. The grammar left ID and NAME open,
+// and the owner settled them (§15 · 16): an id is a lowercase UUID, as the
+// platform writes it and as `jtk` mints it, and a module's name is one the
+// schema turns on under `modules` — which the platform's judge holds to the
+// modules it runs — so `module:<name>:` names settings somebody can open.
+export const KEY = /^[a-z][a-z0-9-]{0,31}$/;
 const FIELD = /^[a-z][a-z0-9_]{0,39}$/;
-const ID = /^[A-Za-z0-9][A-Za-z0-9-]*$/;
+export const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const PARTS = new Set(['src', 'alt', 'focus', 'poster']);
 /** How many `[KEY].FIELD` steps a value may take: a row, and a row inside a row's list (M5). */
 const DEEPEST_STEP = 2;
-
-/** The keys of an object the schema does not shape (§4.7): never laid from a translation. */
-const RESERVED = new Set(['_key', '_orphans', 'type', 'v', 'view']);
 
 /** The kinds whose words are per language unless a field says `localized: false` (§3.3). */
 const WORDS = new Set(['text', 'textarea', 'richtext_lite', 'markdown']);
 
 /** A translation's file name: `prices.en.json`, `vase.de-CH.json`. A path never has a dot (`[a-z0-9-]`), so the dot is the language's. */
-const TRANSLATION = /^(.+)\.([A-Za-z]{2}(?:-[A-Za-z]{2})?)$/;
+export const TRANSLATION = /^(.+)\.([A-Za-z]{2}(?:-[A-Za-z]{2})?)$/;
 
 /**
  * A field's declaration in the shape the interface declares (the header's
@@ -176,8 +190,11 @@ function typeDeclared(type) {
  *             translation's words (`alt`);
  *   'gallery' the original's pictures, each with the translation's words, by `_key`;
  *   'rows'    the original's rows, each laid over by the row of the same `_key`.
+ *
+ * 'whole' is also what has a language: the value a page shows "from the
+ * base", where nobody translated it (`fromBase`, §15 · 3).
  */
-function layOf(field) {
+export function layOf(field) {
   const said = typeof field.localized === 'boolean' ? field.localized : undefined;
   if (field.kind === 'media') {
     if (said === true) return 'whole';
@@ -204,9 +221,11 @@ const GIVEN = new WeakMap();
  * original's where it has them (an empty one is none, and leaves the
  * original's).
  *
- * A key the schema does not declare is taken from the translation where it
- * has one: the platform's judge refuses such a key, and until it does the
- * door shows what was written rather than guessing it is shared.
+ * A key the schema does not declare is the original's alone: a translation
+ * holds only the localized values the schema declares (§4.4), the judge
+ * refuses any other, and the door ignores it (§15 · 17). Until 10 November
+ * 2026 the door showed what the translation wrote there, which let a word
+ * nobody declared reach a page the panel could not edit it on.
  *
  * @param {Record<string, unknown>} base
  * @param {unknown} over the translation's object at the same place, or nothing
@@ -216,11 +235,9 @@ function lay(base, over, fields) {
   const out = { ...base };
   const given = new Set();
   const theirs = isObject(over) ? over : {};
-  const declared = new Set();
   for (const field of fields) {
     if (!isObject(field) || typeof field.key !== 'string') continue;
     const key = field.key;
-    declared.add(key);
     const mine = theirs[key];
     const how = layOf(field);
     if (how === 'whole') {
@@ -256,11 +273,6 @@ function lay(base, over, fields) {
       if (any) given.add(key);
     }
   }
-  for (const [key, mine] of Object.entries(theirs)) {
-    if (declared.has(key) || RESERVED.has(key) || isEmpty(mine)) continue;
-    out[key] = mine;
-    given.add(key);
-  }
   GIVEN.set(out, given);
   return out;
 }
@@ -268,11 +280,17 @@ function lay(base, over, fields) {
 /** The blocks of a document's file, each kept where it is: a block that is not an object reads as empty. */
 const blocksIn = (raw) => (Array.isArray(raw?.blocks) ? raw.blocks.map((one) => (isObject(one) ? one : {})) : []);
 
-/** The SEO of a document in a language: the original's, the translation's words over it. */
-function seoOf(raw, over) {
+/**
+ * The SEO of a document in a language: the original's, the translation's
+ * words over it — for the keys the schema's `page_seo` declares, as for any
+ * value of a translation (§15 · 17).
+ *
+ * @param {Set<string>} declared the keys `page_seo` declares
+ */
+function seoOf(raw, over, declared) {
   const out = { ...(isObject(raw?.seo) ? raw.seo : {}) };
   if (isObject(over?.seo)) {
-    for (const [key, value] of Object.entries(over.seo)) if (!isEmpty(value)) out[key] = value;
+    for (const [key, value] of Object.entries(over.seo)) if (declared.has(key) && !isEmpty(value)) out[key] = value;
   }
   return out;
 }
@@ -282,13 +300,6 @@ function inLocaleKeepingAnchor(language, address) {
   const at = address.indexOf('#');
   if (at === -1) return inLocale(language, address);
   return `${inLocale(language, address.slice(0, at) || '/')}${address.slice(at)}`;
-}
-
-/** The address a pattern's `{slug}` stands under: `/works/{slug}` → `/works`. */
-function directoryOf(pattern) {
-  const at = pattern.indexOf('{slug}');
-  const head = at === -1 ? pattern : pattern.slice(0, at);
-  return head.replace(/\/+$/, '') || '/';
 }
 
 const isPattern = (pattern) =>
@@ -339,6 +350,8 @@ export function contract3(byPath, names, { annotate, now }) {
 
   const types = Array.isArray(schema.blocks) ? schema.blocks.filter(isObject).map(typeDeclared) : [];
   const typeOf = (name) => types.find((one) => one.type === name);
+  /** The SEO keys the schema declares, the only ones a translation's `seo` is read for (§15 · 17). */
+  const seoKeys = new Set((Array.isArray(schema.page_seo) ? schema.page_seo : []).filter(isObject).map((one) => one.key).filter((key) => typeof key === 'string'));
 
   // ── the schema's collections ─────────────────────────────────────────────
 
@@ -374,20 +387,22 @@ export function contract3(byPath, names, { annotate, now }) {
     };
     collections.set(one.name, collection);
     // Contract 2's word for where a collection's entries live, kept for a
-    // template that reads it: the listing in the site's own language, else
-    // the directory the detail pattern puts them in, else the page a
-    // collection without a route is shown on.
-    collection.prefix = listingIn(collection, '');
+    // template that reads it: the listing it declares, in the site's own
+    // language, and `''` — contract 2's reading of no prefix — where it
+    // declares none (§15 · 6). The door used to make one up: the directory
+    // the detail pattern puts the entries in, the page `shown_on` names, or
+    // `/<name>`, addresses no page of the platform's promised.
+    collection.prefix = listingIn(collection, '') ?? '';
   }
 
   /**
-   * A pattern in a language (§3.5): a language's own pattern as it is
-   * written — the developer wrote the whole address, `/werke/{slug}` — and
-   * otherwise the one pattern, or the base language's, with the language put
-   * before it, as every other address of the site has it (`/de/works/{slug}`).
-   * wiki/98 says "a pattern may be per language … otherwise the language
-   * prefix is put before it", read here as: a pattern given for a language
-   * is that language's address whole.
+   * A pattern in a language (§3.5), with the language's prefix always first
+   * and the pattern only what follows it (§15 · 4): `{ "en": "/works/{slug}" }`
+   * is `/en/works/{slug}` in English, as every other address of the site has
+   * its language in front. A language the map does not name takes the base
+   * language's pattern, under its own prefix (`/fr-ch/werke/{slug}`). The
+   * door read a language's pattern as its address whole until 10 November
+   * 2026, so a map had to repeat the prefix it can never leave out.
    */
   function patternIn(pattern, language) {
     if (typeof pattern === 'string') return inLocaleKeepingAnchor(language, pattern);
@@ -397,10 +412,8 @@ export function contract3(byPath, names, { annotate, now }) {
       const canonical = canonicalLocale(tag);
       if (canonical !== null && typeof one === 'string' && one !== '' && !byTag.has(canonical)) byTag.set(canonical, one);
     }
-    const own = byTag.get(langOf(language));
-    if (own !== undefined) return own;
-    const fallback = byTag.get(base);
-    return fallback === undefined ? undefined : inLocaleKeepingAnchor(language, fallback);
+    const own = byTag.get(langOf(language)) ?? byTag.get(base);
+    return own === undefined ? undefined : inLocaleKeepingAnchor(language, own);
   }
 
   /** An entry's page in a language: the detail pattern with its slug. */
@@ -415,16 +428,15 @@ export function contract3(byPath, names, { annotate, now }) {
     return place === undefined ? undefined : patternIn(place, language)?.replaceAll('{slug}', slug);
   }
 
-  /** A collection's listing in a language, page one (see `prefix` above for the order asked in). */
+  /**
+   * A collection's listing in a language, page one: the `listing` its route
+   * declares, and nothing where it declares none (§15 · 6) — a collection
+   * shown only on other pages (`route: "none"`) included, whose entries are
+   * where `anchorOf` says.
+   */
   function listingIn(collection, language) {
-    if (collection.route === 'none') {
-      const place = collection.shown_on[0] === undefined ? undefined : patternIn(collection.shown_on[0], language);
-      return place === undefined ? inLocale(language, `/${collection.name}`) : place.split('#')[0] || '/';
-    }
-    const listing = collection.route.listing === undefined ? undefined : patternIn(collection.route.listing, language);
-    if (listing !== undefined) return listing;
-    const detail = patternIn(collection.route.detail, language);
-    return detail === undefined ? inLocale(language, `/${collection.name}`) : directoryOf(detail);
+    if (collection.route === 'none' || collection.route.listing === undefined) return undefined;
+    return patternIn(collection.route.listing, language);
   }
 
   // ── the documents ────────────────────────────────────────────────────────
@@ -529,7 +541,7 @@ export function contract3(byPath, names, { annotate, now }) {
       id: file.id,
       path: file.path,
       address: inLocale(language, file.path),
-      seo: seoOf(file.raw, over?.raw),
+      seo: seoOf(file.raw, over?.raw, seoKeys),
       blocks: language === '' ? blocksIn(file.raw) : laidBlocks(blocksIn(file.raw), over?.raw),
       origin: language === '' ? 'own' : 'laid',
     };
@@ -567,8 +579,8 @@ export function contract3(byPath, names, { annotate, now }) {
         language,
         id: file.id,
         collection: file.collection,
-        slug: over !== undefined && typeof over.raw.slug === 'string' && over.raw.slug !== '' ? over.raw.slug : file.slug,
-        seo: seoOf(file.raw, over?.raw),
+        slug: over !== undefined && typeof over.raw.slug === 'string' && !isEmpty(over.raw.slug) ? over.raw.slug : file.slug,
+        seo: seoOf(file.raw, over?.raw, seoKeys),
         fields: language === '' ? own : lay(own, over?.raw.fields, collection?.fields ?? []),
         body: theirBody ? blocksIn(over.raw) : blocksIn(file.raw),
         fieldsOrigin: language === '' ? 'own' : 'laid',
@@ -604,10 +616,23 @@ export function contract3(byPath, names, { annotate, now }) {
     const value = (key) => (isEmpty(values[key]) ? undefined : values[key]);
     const text = (key) => {
       const one = values[key];
-      return one === undefined || one === null ? '' : typeof one === 'string' ? one : String(one);
+      return isEmpty(one) ? '' : typeof one === 'string' ? one : String(one);
     };
+    /**
+     * Whether a value is the original's words on a page in another language:
+     * only a value with a language — what its declaration lays whole, the
+     * text kinds unless they say `localized: false`, and a picture, a link or
+     * a list that says `localized: true` (§3.3) — and only where nobody
+     * translated it (§15 · 3). A price, a date, a phone number or a picture
+     * is the same in every language and has no language to mark, nor has a
+     * key the schema does not declare. Until 10 November 2026 every value a
+     * translation did not give was "from the base", so a page marked a price
+     * `lang="de"`.
+     */
     const fromBase = (key) => {
       if (how.origin === 'own') return false;
+      const declared = field(key);
+      if (declared === undefined || layOf(declared) !== 'whole') return false;
       if (how.origin === 'base') return true;
       return !(GIVEN.get(values)?.has(key) ?? false);
     };
@@ -693,22 +718,22 @@ export function contract3(byPath, names, { annotate, now }) {
         const one = values[key];
         // A picture is `{ src, alt?, focus?, poster? }`; a bare key, the
         // contract-2 shape the upgrade turns into `{ src }`, is read as one.
-        const media = isObject(one) ? one : typeof one === 'string' && one !== '' ? { src: one } : {};
+        const media = isObject(one) ? one : !isEmpty(one) && typeof one === 'string' ? { src: one } : {};
         // Its words are its own `alt` (§13): no `<key>_alt` beside it, and no
         // entry's title standing in — an empty alt is the owner's to fill.
-        const picture = { src: str(media.src), alt: str(media.alt) };
-        if (typeof media.focus === 'string' && media.focus !== '') picture.focus = media.focus;
-        if (typeof media.poster === 'string' && media.poster !== '') picture.poster = media.poster;
+        const picture = { src: wordsIn(media.src), alt: wordsIn(media.alt) };
+        if (!isEmpty(media.focus) && typeof media.focus === 'string') picture.focus = media.focus;
+        if (!isEmpty(media.poster) && typeof media.poster === 'string') picture.poster = media.poster;
         return { ...picture, ...at(key) };
       },
       gallery(key) {
         const list = values[key];
         if (!Array.isArray(list)) return [];
         return list.flatMap((item) => {
-          if (!isObject(item) || typeof item.src !== 'string' || item.src === '') return [];
-          const picture = { src: item.src, alt: str(item.alt) };
-          if (typeof item.focus === 'string' && item.focus !== '') picture.focus = item.focus;
-          if (typeof item.poster === 'string' && item.poster !== '') picture.poster = item.poster;
+          if (!isObject(item) || typeof item.src !== 'string' || isEmpty(item.src)) return [];
+          const picture = { src: item.src, alt: wordsIn(item.alt) };
+          if (!isEmpty(item.focus) && typeof item.focus === 'string') picture.focus = item.focus;
+          if (!isEmpty(item.poster) && typeof item.poster === 'string') picture.poster = item.poster;
           const keyed = typeof item._key === 'string' && KEY.test(item._key);
           const place = keyed && writable() && FIELD.test(key) && how.depth < DEEPEST_STEP ? path(`${how.trail}${key}[${item._key}].src`) : {};
           return [{ ...picture, ...place }];
@@ -926,8 +951,10 @@ export function contract3(byPath, names, { annotate, now }) {
           if (gallery !== undefined) {
             values[gallery.key] = pictures.slice(0, Math.max(1, view?.min ?? 1)).map((src, i) => ({ _key: `p${i + 1}`, src, alt: '' }));
           }
+          // A value in every text the block's markup draws, so none is left
+          // out: `PLACEHOLDER`, since a space is empty now (§15 · 15).
           for (const field of type.fields) {
-            if ((field.kind === 'text' || field.kind === 'markdown') && values[field.key] === undefined) values[field.key] = ' ';
+            if ((field.kind === 'text' || field.kind === 'markdown') && values[field.key] === undefined) values[field.key] = PLACEHOLDER;
           }
           made.push({ id: specimenId(kind, view?.key), values });
         }
@@ -948,7 +975,7 @@ export function contract3(byPath, names, { annotate, now }) {
           collection: name,
           slug: id,
           seo: {},
-          fields: { title: ' ' },
+          fields: { title: PLACEHOLDER },
           body: [values],
           fieldsOrigin: 'own',
           bodyOrigin: 'own',
@@ -1009,12 +1036,12 @@ export function contract3(byPath, names, { annotate, now }) {
     locales: [base, ...others],
     /**
      * The site's currency, ISO 4217, upper case; `''` while nobody has said.
-     * Contract 3 has it at the top of `site.json` (§6). The platform moves it
-     * there in a stage of its own (§10, "the currency"), so a `site.json`
-     * still carrying it in `business` is read too rather than pricing a
-     * contract-3 site in nothing.
+     * Contract 3 has it at the top of `site.json` (§6), the site's one
+     * setting (§14 · 4), and only there (§15 · 14): a `site.json` that still
+     * carries it in `business` is contract 2's, and a contract-3 site priced
+     * from it would be priced from the fact the move removes.
      */
-    currency: String(siteFile.currency ?? (isObject(siteFile.business) ? siteFile.business.currency : undefined) ?? '').toUpperCase(),
+    currency: typeof siteFile.currency === 'string' ? siteFile.currency.trim().toUpperCase() : '',
     types,
     type: typeOf,
     collections: [...collections.values()],
@@ -1062,10 +1089,16 @@ export function contract3(byPath, names, { annotate, now }) {
       const file = byPath.get(`/jtk/modules/${name}.json`);
       return isObject(file) && isObject(file.settings) ? { ...file.settings } : {};
     },
-    /** A module's settings read like any values, each annotated `module:<name>:hours[h1].opens`. */
+    /**
+     * A module's settings read like any values, each annotated
+     * `module:<name>:hours[h1].opens` — for a module the schema turns on
+     * under `modules` (§15 · 16), and nowhere for any other: the panel has no
+     * screen for a module the site has not got.
+     */
     settings(name) {
+      const on = typeof name === 'string' && FIELD.test(name) && isObject(schema.modules) && isObject(schema.modules[name]);
       return reader(site.module(name), {
-        prefix: typeof name === 'string' && FIELD.test(name) ? `module:${name}:` : undefined,
+        prefix: on ? `module:${name}:` : undefined,
         trail: '',
         depth: 0,
         fields: [],
@@ -1094,10 +1127,16 @@ export function contract3(byPath, names, { annotate, now }) {
 
     addressOf: (entry) => entry?.address,
     anchorOf: (entry) => entry?.anchor,
+    /**
+     * A collection's listing in a language, page `n`: the `listing` its
+     * route declares, and a later page of it at `<listing>/page/<n>`;
+     * `undefined` for a collection that declares none, or that the schema
+     * has not got (§15 · 6).
+     */
     listingOf(name, locale, page = 1) {
       const collection = collections.get(name);
-      const language = want(locale);
-      const first = collection === undefined ? inLocale(language, `/${name}`) : listingIn(collection, language);
+      const first = collection === undefined ? undefined : listingIn(collection, want(locale));
+      if (first === undefined) return undefined;
       return page <= 1 ? first : `${first}/page/${page}`;
     },
     localeOf: (address) => localeOfAddress(address, others),
@@ -1215,18 +1254,30 @@ export function contract3(byPath, names, { annotate, now }) {
     },
 
     /**
-     * A price in the site's currency: `{ minor }` (or whole minor units, as
-     * contract 2 wrote them) in, «CHF 45.–» out. A price `on_request` has no
-     * amount, and says nothing here rather than «NaN»; `from` and
-     * `on_request` are words, and the words are the site's
-     * (`row.value('price').from`).
+     * A price as the page says it, in the site's currency and the page's
+     * language: `{ minor }` (or whole minor units, as contract 2 wrote them)
+     * in, «CHF 45.–» out — and its qualifiers with it (§15 · 11): «ab CHF
+     * 45.–» for `{ minor, from: true }`, «auf Anfrage» for `{ on_request:
+     * true }`, in the kit's words for the language (`priceWords`,
+     * @jtakeit/kit/money). A template that says its own passes them, `{ from:
+     * '{amount} und mehr' }`, or reads the amount alone from `value.minor`.
+     * Until 10 November 2026 the qualifiers were left to every template, and
+     * a price on request said nothing at all.
+     *
+     * @param {unknown} value
+     * @param {string} [locale]
+     * @param {{ from?: string; on_request?: string }} [own] the template's words, over the kit's
      */
-    money(value, locale) {
+    money(value, locale, own) {
+      const tag = langOf(want(locale)) || undefined;
+      const said = { ...priceWords(tag), ...(isObject(own) ? own : {}) };
+      if (isObject(value) && value.on_request === true) return str(said.on_request);
       const amount = isObject(value) ? value.minor : value;
       if (typeof amount !== 'number' && !(typeof amount === 'string' && amount.trim() !== '')) return '';
       const minor = Number(amount);
       if (!Number.isFinite(minor)) return '';
-      return priced(minor, site.currency || undefined, langOf(want(locale)) || undefined);
+      const price = priced(minor, site.currency || undefined, tag);
+      return isObject(value) && value.from === true ? str(said.from).replaceAll('{amount}', price) : price;
     },
 
     words,
