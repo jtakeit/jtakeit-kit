@@ -1,6 +1,8 @@
 /**
  * `@jtakeit/kit/content` — the door: the one place a site reads its content
- * files (wiki/98 §13 of the platform). This version reads contract 2.
+ * files (wiki/98 §13 of the platform). It reads contract 2 (`jtk/catalogue.json`)
+ * and contract 3 (`jtk/schema.json` saying `contract: 3`) behind one
+ * interface: a template calls the same functions on either.
  *
  *   import { content } from '@jtakeit/kit/content';
  *   export const site = content(import.meta.glob('/jtk/**\/*.json', { eager: true, import: 'default' }));
@@ -9,12 +11,24 @@
 /** Words written once, or per language: `'Works'`, `{ en: 'Works', de: 'Arbeiten' }`. */
 export type Text = string | Record<string, string>;
 
-/** A field as `jtk/catalogue.json` declares it. */
+/**
+ * A field as the schema declares it, in one shape for both contracts. Under
+ * contract 3 a select's `options: [{ value, label }]` is handed out as
+ * `options` and `option_labels`, and a reference's `ref: { to, many }` as
+ * `to` and `many`, with `ref` the one collection where `to` names one.
+ */
 export interface Field {
   key: string;
   label?: Text;
   kind: string;
+  /** The collection a reference names, where it names one. */
   ref?: string;
+  /** Every collection a reference may name: `[ref]` under contract 2. */
+  to?: string[];
+  /** Contract 3: a reference holding several entries' ids. */
+  many?: boolean;
+  /** Contract 3: whether the value is per language (wiki/98 §3.3); absent, its kind's default. */
+  localized?: boolean;
   hint?: Text;
   required?: boolean;
   min?: number;
@@ -67,8 +81,18 @@ export interface Collection {
   group?: string;
   /** The block types an entry may hold below its own values. */
   blocks: string[];
-  /** Where its entries live, contract 2: `/works`. */
+  /**
+   * Where its entries live, contract 2: `/works`. Under contract 3, read off
+   * `route`: the listing in the site's own language, else where the detail
+   * pattern puts its entries, else the page `shown_on` names.
+   */
   prefix: string;
+  /** Contract 3: its entries' addresses, a pattern per language where they differ, or `'none'`. */
+  route?: 'none' | { detail: string | Record<string, string>; listing?: string | Record<string, string>; per_page?: number };
+  /** Contract 3: where its entries are shown besides their own pages, `['/prices#{slug}']`. */
+  shown_on?: (string | Record<string, string>)[];
+  /** Contract 3: what a language without a translation does with an entry: shows the original, or leaves it out. */
+  untranslated?: 'base' | 'hide';
 }
 
 /** The annotation of one value: spread it onto the element that draws it. Empty when annotation is off. */
@@ -78,7 +102,7 @@ export type At = { 'data-jtk-path'?: string };
 export interface Picture extends At {
   /** An upload key (`media/<site>/<hash>.jpg`) or a slot the repository ships. `''` where there is none. */
   src: string;
-  /** Contract 2: the `<key>_alt` beside it, else an entry's title. */
+  /** Contract 2: the `<key>_alt` beside it, else an entry's title. Contract 3: the picture's own `alt`. */
   alt: string;
   focus?: string;
   /** A clip's poster. */
@@ -101,8 +125,22 @@ export interface Values {
    * The annotation of a value — `{ 'data-jtk-path': … }` — or `{}` when
    * annotation is off. With a row (its index, or its `_key`) and a part, a
    * cell of a list or an item of a gallery: `at('items', 3, 'title')`.
+   *
+   * Contract 2 writes a place, `blocks[1].items[3].title`; contract 3 a key
+   * and an id, `blocks[list].items[r7k2].title`, a picture by its part
+   * (`at('image')` is `image.src`, `at('image', undefined, 'alt')` is
+   * `image.alt`), and `{}` for what the grammar cannot name: a block or a
+   * row without a key, a document without an id, a place too deep.
    */
   at(field: string, row?: number | string, part?: string): At;
+  /**
+   * Whether the value came from the original's language rather than this
+   * document's own — a word nobody has translated, or a value that is the
+   * same in every language — so a page can give it the original's `lang`.
+   * Contract 3; always `false` under contract 2, which copies every document
+   * whole per language.
+   */
+  fromBase(field: string): boolean;
   /** The field's declaration, where the schema has one. */
   field(field: string): Field | undefined;
   /** Whether the field, filled, must carry a tap target (`TAPPABLE`, `client_editable`, `no_tap_target`). */
@@ -139,7 +177,7 @@ export interface Page {
   block(type: string): Block;
   /** Annotated as the page it is drawn on (no document named). The default for a page. */
   here: Page;
-  /** Annotated as another page's words: `page:<address>:…`. */
+  /** Annotated as another page's words: `page:<address>:…` (contract 2), `page:<id>:…` (contract 3). */
   elsewhere: Page;
 }
 
@@ -158,7 +196,7 @@ export interface Entry {
   /** The entry's own id, kept when its file moves; `''` before the platform's first save. */
   id: string;
   collection: string;
-  /** Its path without the language and the collection's prefix. */
+  /** Its path without the language and the collection's prefix (contract 2); its `slug` in its language (contract 3). */
   slug: string;
   /** `''` for the base language, the tag of any other. */
   locale: string;
@@ -168,7 +206,7 @@ export interface Entry {
   file?: string;
   /** A specimen page: one arrangement of a block type, built for the panel, listed nowhere. */
   specimen: boolean;
-  /** Its own values (contract 2: its first block). */
+  /** Its own values (contract 2: its first block; contract 3: its `fields`). On its own page `title` is `blocks[0].title` (contract 2), `title` (contract 3). */
   fields: Values;
   /** The blocks below its own values. */
   body: Block[];
@@ -183,7 +221,7 @@ export interface Entry {
 }
 
 export interface Heading {
-  /** The stored value it stands for: the option, or the referenced entry's slug. */
+  /** The stored value it stands for: the option, or the referenced entry's slug (contract 2) or id (contract 3). */
   key: string;
   text: string;
   /** The entry whose title it is, for a group by a ref. */
@@ -195,7 +233,8 @@ export interface Heading {
 }
 
 export interface Site {
-  contract: 2;
+  /** Which contract the door read the files as. */
+  contract: 2 | 3;
   /** The base language's tag. */
   locale: string;
   /** Every language, base first. */
@@ -213,8 +252,10 @@ export interface Site {
   page(address: string, locale?: string): Page;
   pages(locale?: string): Page[];
   shared(locale?: string): Shared;
-  /** A module's settings (contract 2: its `<module>_config` block); `{}` for none. */
+  /** A module's settings (contract 2: its `<module>_config` block; contract 3: `settings` of `jtk/modules/<module>.json`); `{}` for none. */
   module(name: string): Record<string, unknown>;
+  /** The same settings read like any values, `rows('hours')`; annotated `module:<module>:hours[h1].opens` under contract 3, nowhere under contract 2. */
+  settings(name: string): Values;
 
   /** A collection's entries in a language, offered (`all: true` for every one) and in its order. */
   entries(name: string, options?: { locale?: string; now?: number; all?: boolean }): Entry[];
@@ -242,14 +283,19 @@ export interface Site {
   /** Where an entry sits in its collection's tree. */
   treeOf(entry: Entry): { trail: Entry[]; children: Entry[]; more: number };
 
-  /** A price in the site's currency: whole minor units (contract 2) or `{ minor }` (contract 3). */
+  /** A price in the site's currency: whole minor units (contract 2) or `{ minor }` (contract 3); `''` for a price on request. */
   money(value: unknown, locale?: string): string;
   /** A label's words in a language. */
   words(text: Text | undefined, locale?: string): string;
   tappable(field: Field | undefined): boolean;
 
-  /** Every page and entry document as its file holds it — for the kit's own checks. */
-  documents(): { file: string; path: string; locale: string; collection?: string; slug?: string; seo: Record<string, unknown>; blocks: Record<string, unknown>[]; visible?: unknown; shown: boolean }[];
+  /**
+   * Every page and entry document as its file holds it — for the kit's own
+   * checks. Contract 3: each in every language it is in, with its `id`, an
+   * entry's `fields` apart from its body `blocks`, and no `path` for an entry
+   * shown only on another page.
+   */
+  documents(): { file: string; id?: string; path?: string; locale: string; collection?: string; slug?: string; seo: Record<string, unknown>; fields?: Record<string, unknown>; blocks: Record<string, unknown>[]; visible?: unknown; shown: boolean }[];
   sharedDocuments(): { file: string; locale: string; blocks: Record<string, unknown>[] }[];
 }
 

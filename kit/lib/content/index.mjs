@@ -42,10 +42,18 @@
  * Anything it does not know it ignores: `jtk/session.json`, `jtk/design.json`
  * (the template's own), a picture's directory, a module file nothing names.
  *
- * ── contract 2, read as the platform reads it ───────────────────────────────
+ * ── two contracts, one interface ────────────────────────────────────────────
  *
- * This version reads contract 2 (wiki/98 §0–5 has contract 3, which a later
- * version reads behind the same interface):
+ * A site whose `jtk/schema.json` says `contract: 3` is read by
+ * `contract3.mjs` (wiki/98 §2–5): pages and entries in a directory of their
+ * own kind, translations beside their originals and merged over them, an
+ * entry's own values under `fields`, addresses from a collection's `route`,
+ * and annotations by `_key` and id. Every other site is read here, as
+ * contract 2. A template calls the same functions on either and gets the
+ * same shapes back; only what `at()` writes, and where the values came from,
+ * differ.
+ *
+ * ── contract 2, read as the platform reads it ───────────────────────────────
  *
  *   - the schema is `jtk/catalogue.json`, the emitted JSON — never the
  *     developer's `blocks.ts`, which is a declaration the platform never sees;
@@ -86,6 +94,7 @@ import {
 } from './groups.mjs';
 import { baseAddressOf, canonicalLocale, inLocale, languagesOf, localeArg, localeOfAddress, segmentOf, sharedLocaleOf } from './locale.mjs';
 import { byRank, labelWords, specimenId, TAPPABLE, tappable } from './rules.mjs';
+import { contract3 } from './contract3.mjs';
 
 export { shownAt, drawsPagedListing, linksToListing, canonicalLocale, sharedLocaleOf };
 export { DEEPEST, ancestors, capped, descendants, grouped, groupField, pointersInto, pointsAt, pointsAtAny, refHeadings, selectHeadings, treeFields } from './groups.mjs';
@@ -125,6 +134,18 @@ export function content(files, options = {}) {
     byPath.set(`/${String(key).replaceAll('\\', '/').replace(/^\/+/, '')}`, value);
   }
   const names = [...byPath.keys()].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+
+  // ── contract 3 ───────────────────────────────────────────────────────────
+  //
+  // A site whose schema is `jtk/schema.json` saying `contract: 3` is read by
+  // its own reader (contract3.mjs), behind this same interface: a template
+  // calls the same `page`, `entries`, `at` and `picture` on either. Anything
+  // else — `jtk/catalogue.json`, or no schema at all — is contract 2, read
+  // below exactly as before. A `schema.json` that says another contract is
+  // not taken for a catalogue: the platform reads contract 2 from
+  // `catalogue.json` and only from there.
+  const schema = byPath.get('/jtk/schema.json');
+  if (isObject(schema) && schema.contract === 3) return contract3(byPath, names, { annotate, now });
 
   const catalogue = isObject(byPath.get('/jtk/catalogue.json')) ? byPath.get('/jtk/catalogue.json') : {};
   const siteFile = isObject(byPath.get('/jtk/site.json')) ? byPath.get('/jtk/site.json') : {};
@@ -276,6 +297,10 @@ export function content(files, options = {}) {
       value,
       field,
       tappable: (key) => tappable(field(key)),
+      // Contract 2 keeps a whole copy of every document per language, so no
+      // value on a page in one language is another's (contract3.mjs has the
+      // merge where one is).
+      fromBase: () => false,
       rows(key) {
         const list = values[key];
         if (!Array.isArray(list)) return [];
@@ -639,6 +664,15 @@ export function content(files, options = {}) {
       if (found === undefined) return {};
       const { type: _type, v: _v, _key, ...settings } = found;
       return settings;
+    },
+    /**
+     * A module's settings read like any values — `rows('hours')`, `text`,
+     * `value` — for a template that draws them. Contract 2 has no annotation
+     * for them: the settings are edited in the module's screens, and
+     * `blocks[0].hours[2]` on a page would name the page's own first block.
+     */
+    settings(name) {
+      return reader(site.module(name), { at: () => ({}), fields: [] });
     },
 
     entries,
