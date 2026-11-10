@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { content } from '@jtakeit/kit/content';
-import { readJtk } from '@jtakeit/kit/content/node';
+import { contractOf, readJtk } from '@jtakeit/kit/content/node';
 import { writeMeta } from '@jtakeit/kit/meta';
 import { keepByName } from '@jtakeit/kit/kept';
 import { readProgress } from '@jtakeit/kit/progress';
@@ -119,6 +119,14 @@ function catalogueWriter(root, logger) {
   let running = false;
   let again = false;
   const write = async () => {
+    // A contract-3 site renders from jtk/schema.json, which the tool does not
+    // write from the declaration yet (`jtk schema`, wiki/98 §7 · 2) — and
+    // writes no jtk/catalogue.json beside it, which the platform refuses. So
+    // a save of the declaration changes nothing the pages read, and is said.
+    if (contractOf(root) === 3) {
+      logger.warn(`${DECLARATION} changed, and this contract-3 site renders from jtk/schema.json, which is not written from it yet (jtk schema) — edit jtk/schema.json`);
+      return;
+    }
     if (running) {
       again = true;
       return;
@@ -269,7 +277,9 @@ export function jtakeitMeta() {
           immutable: ['/_astro/'],
           cache: CACHE,
         });
-        const drafts = meta.drafts.length;
+        // None on contract 3, where the platform's hidden list is the one
+        // answer and the build refuses the key (wiki/98 §6).
+        const drafts = meta.drafts?.length ?? 0;
         if (drafts > 0) {
           logger.info(`${drafts} unfinished entr${drafts === 1 ? 'y' : 'ies'} and specimen page(s) — served only to an editing session`);
         }

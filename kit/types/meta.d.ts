@@ -2,7 +2,12 @@ import type { Site } from './content';
 
 export interface Meta {
   redirects: { from: string; to: string; status?: number }[];
-  drafts: string[];
+  /**
+   * Contract 2: the entries not shown and the specimen pages, served only to
+   * an editing session. Absent on contract 3, where the platform's hidden
+   * list is the one answer and the build refuses the key (wiki/98 §6).
+   */
+  drafts?: string[];
   immutable?: string[];
   cache?: CacheRule[];
 }

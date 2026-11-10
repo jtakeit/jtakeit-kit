@@ -12,10 +12,37 @@
  *   import { readJtk } from '@jtakeit/kit/content/node';
  *   const site = content(await readJtk());
  */
+import { readFileSync } from 'node:fs';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { content } from './index.mjs';
 import { mint } from './identity.mjs';
+
+/**
+ * Which contract a working tree is in, by the door's rule (index.mjs): 3
+ * where `jtk/schema.json` parses and says `contract: 3`, 2 for anything else
+ * — a `jtk/catalogue.json`, no schema at all, or a `schema.json` saying
+ * another contract, which the door does not read (wiki/98 §15 · 25).
+ *
+ * Synchronous, and asked before anything is written: the writers of
+ * contract 2's files — `jtk catalogue`, a kit laid out, the scaffold — stop
+ * short of a contract-3 tree, where the platform refuses `jtk/catalogue.json`
+ * beside `jtk/schema.json` (wiki/98 §16).
+ *
+ * @param {string} [root] the site's root, holding `jtk/` — the working directory by default
+ * @param {{ dir?: string }} [options] `dir`: where `jtk/` is, relative to the root
+ * @returns {2 | 3}
+ */
+export function contractOf(root = process.cwd(), options = {}) {
+  let schema;
+  try {
+    schema = JSON.parse(readFileSync(join(root, options.dir ?? 'jtk', 'schema.json'), 'utf8'));
+  } catch {
+    // No schema.json, or none that parses: not contract 3's file.
+    return 2;
+  }
+  return schema !== null && typeof schema === 'object' && !Array.isArray(schema) && schema.contract === 3 ? 3 : 2;
+}
 
 /**
  * Every `.json` under a site's `jtk/`, parsed, keyed by its path from the

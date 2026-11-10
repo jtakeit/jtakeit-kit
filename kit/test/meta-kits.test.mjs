@@ -1,10 +1,11 @@
 // _meta.json, the specimens, and a kit laid out — as the kit does them for any repository.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { specimenId, specimenAddresses, hiddenEntries, buildMeta, writeMeta } from '../lib/meta.mjs';
+import { content } from '../lib/content/index.mjs';
+import { specimenId, specimenAddresses, hiddenEntries, buildMeta, writeMeta, draftsOf } from '../lib/meta.mjs';
 import { checkKit, kitSettings, kitEntries, mergeKitIntoCatalogue, layKitFiles, kitLanguage } from '../lib/kits.mjs';
 
 const blocks = [
@@ -51,6 +52,63 @@ test('the drafts are the entries whose document says visible: false, and _meta.j
     const bare = await buildMeta({ root: join(dir, 'nowhere') });
     assert.deepEqual(bare, { redirects: [], drafts: [] });
   } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("contract 3's _meta.json says no drafts — the platform's hidden list is the one (wiki/98 §6) — and contract 2's is byte for byte what it was", async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'jtk-meta-3-'));
+  const here = process.cwd();
+  try {
+    const post = { type: 'post', v: 1, label: 'Post', fields: [{ key: 'title', label: 'Title', kind: 'text' }] };
+    const quote = { type: 'quote', v: 1, label: 'Quote', fields: [{ key: 'text', label: 'Text', kind: 'text' }] };
+    const schema = {
+      contract: 3, locale: 'de', locales: ['en'], blocks: [post, quote],
+      collections: [{ name: 'posts', label: 'Posts', type: 'post', route: { detail: '/blog/{slug}', listing: '/blog' }, blocks: ['quote'] }],
+    };
+    // An entry held back and a body that draws a specimen: what contract 2
+    // lists as drafts, and the door still knows of on contract 3.
+    const three = content({
+      '/jtk/schema.json': schema,
+      '/jtk/entries/posts/done.json': { id: '0193a5c3-1b2a-7e44-8a10-6c2f9d3e4b55', collection: 'posts', slug: 'done', visible: true, fields: { title: 'Fertig' } },
+      '/jtk/entries/posts/draft.json': { id: '0193a5c3-1b2a-7e44-8a10-6c2f9d3e4b56', collection: 'posts', slug: 'draft', visible: false, fields: { title: 'Entwurf' } },
+    });
+    assert.equal(three.contract, 3);
+    assert.ok(draftsOf(three).includes('/blog/draft/'), 'the door still reads the entry as hidden');
+
+    const dist = join(dir, 'dist');
+    mkdirSync(dist);
+    const cache = [{ prefix: '/clips/', maxAge: 86400 }];
+    const meta = await writeMeta(dist, { site: three, immutable: ['/_astro/'], cache, redirects: [{ from: '/alt', to: '/neu', status: 301 }] });
+    assert.deepEqual(meta, { redirects: [{ from: '/alt', to: '/neu', status: 301 }], immutable: ['/_astro/'], cache });
+    // What the platform's build holds the file to (JTK_E_META_INVALID): these three keys and no other.
+    const keys = Object.keys(JSON.parse(readFileSync(join(dist, '_meta.json'), 'utf8')));
+    assert.deepEqual(keys.filter((key) => !['redirects', 'immutable', 'cache'].includes(key)), []);
+
+    // Without the door's reading — a site on another generator — the working
+    // directory's jtk/schema.json says which contract the build is in.
+    mkdirSync(join(dir, 'jtk'));
+    writeFileSync(join(dir, 'jtk', 'schema.json'), JSON.stringify(schema));
+    process.chdir(dir);
+    assert.deepEqual(await buildMeta({ collections, blocks }), { redirects: [] });
+    process.chdir(here);
+
+    // Contract 2, the same call: its drafts, and the file in the order of keys it always had.
+    const two = content({
+      '/jtk/catalogue.json': { contract: 2, blocks: [post, quote], collections: [{ name: 'posts', label: 'Posts', prefix: '/blog', type: 'post', body: ['quote'] }] },
+      '/jtk/content/blog/done.json': { path: '/blog/done', collection: 'posts', visible: true, blocks: [{ type: 'post', v: 1, title: 'Fertig' }] },
+      '/jtk/content/blog/draft.json': { path: '/blog/draft', collection: 'posts', visible: false, blocks: [{ type: 'post', v: 1, title: 'Entwurf' }] },
+    });
+    const twoDist = join(dir, 'dist-2');
+    mkdirSync(twoDist);
+    const twoMeta = await writeMeta(twoDist, { site: two, immutable: ['/_astro/'] });
+    assert.deepEqual(twoMeta.drafts, ['/blog/_fl-quote/', '/blog/draft/']);
+    assert.equal(
+      readFileSync(join(twoDist, '_meta.json'), 'utf8'),
+      `${JSON.stringify({ redirects: [], drafts: ['/blog/_fl-quote/', '/blog/draft/'], immutable: ['/_astro/'] }, null, 2)}\n`,
+    );
+  } finally {
+    process.chdir(here);
     rmSync(dir, { recursive: true, force: true });
   }
 });
@@ -114,6 +172,20 @@ test('the kit\'s files are laid out under a repository, the catalogue only when 
     const other = join(dir, 'astro');
     layKitFiles(other, kit, { locale: 'de' });
     assert.ok(!existsSync(join(other, 'jtk', 'catalogue.json')), 'the scaffold writes its declaration itself');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a kit is not laid out on a contract-3 tree: every file it writes is contract 2's, and nothing is written", () => {
+  const dir = mkdtempSync(join(tmpdir(), 'jtk-kit-3-'));
+  try {
+    mkdirSync(join(dir, 'jtk'));
+    writeFileSync(join(dir, 'jtk', 'schema.json'), JSON.stringify({ contract: 3, locale: 'de', blocks: [] }));
+    for (const catalogue of [true, false]) {
+      assert.throws(() => layKitFiles(dir, kit, { locale: 'de', catalogue }), /schema\.json says contract 3, and a kit is laid out in contract 2's files/);
+    }
+    assert.deepEqual(readdirSync(join(dir, 'jtk')), ['schema.json']);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

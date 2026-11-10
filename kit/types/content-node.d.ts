@@ -1,5 +1,11 @@
 /** `@jtakeit/kit/content/node` — the files the door reads, from a disk. */
 
+/**
+ * Which contract a working tree is in, as the door reads it: 3 where
+ * `jtk/schema.json` says `contract: 3`, 2 otherwise.
+ */
+export function contractOf(root?: string, options?: { dir?: string }): 2 | 3;
+
 /** Every `.json` under `jtk/`, keyed `/jtk/…`, parsed; `media/` directories and `jtk/session.json` left out. */
 export function readJtk(root?: string, options?: { dir?: string }): Promise<Record<string, unknown>>;
 

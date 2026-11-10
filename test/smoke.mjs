@@ -1,7 +1,7 @@
 // The scaffold writes a project with every token filled and nothing of the
 // studio's left in it; the catalogue tool emits a file from it.
 import { execFileSync, spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -189,6 +189,21 @@ try {
     whined = String(why.stderr);
   }
   if (!whined.includes('is a file, not a directory') || whined.includes('readdirSync')) fail(`--out on a file: ${whined || 'was not refused'}`);
+
+  // A contract-3 tree is not scaffolded over, not even with --force: the
+  // template's jtk/content and jtk/catalogue.json beside jtk/schema.json are a
+  // tree the platform refuses. Nothing is written into it.
+  const three = join(dir, 'three');
+  mkdirSync(join(three, 'jtk'), { recursive: true });
+  writeFileSync(join(three, 'jtk', 'schema.json'), '{"contract": 3, "locale": "de", "blocks": []}');
+  let overThree = '';
+  try {
+    execFileSync('node', [bin, 'create', 'smoke-three', '--out', three, '--force', '--no-git'], { stdio: 'pipe' });
+  } catch (why) {
+    overThree = String(why.stderr);
+  }
+  if (!overThree.includes('says contract 3')) fail(`a contract-3 tree was scaffolded over: ${overThree || 'not refused'}`);
+  if (existsSync(join(three, 'jtk', 'catalogue.json')) || existsSync(join(three, 'package.json'))) fail('the refused scaffold wrote into the contract-3 tree');
 
   console.log('smoke: the scaffold is whole');
 } finally {
