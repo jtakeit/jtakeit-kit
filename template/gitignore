@@ -20,3 +20,7 @@ jtk/content/**/media/
 # half through it. One session's, read-only, dead with the session — and not
 # in git all the same.
 jtk/session.json
+
+# Where this copy stands on jtakeit (jtk push / jtk pull): the sha it was last
+# brought to. A machine's position, not the site's; the kit never sends it.
+.jtakeit/code.json

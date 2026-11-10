@@ -499,6 +499,22 @@ export function content(files, options = {}) {
   }
 
   /**
+   * A collection the owner orders by hand, in their order: each entry's
+   * `rank`, written by their moves in the panel (jtakeit-core wiki/94 · M4),
+   * compared as bytes. An entry with none comes after the ranked ones, in the
+   * order it came — which is every entry of a site from before ranks.
+   */
+  function byRank(list) {
+    const rankOf = (doc) => (typeof doc.raw?.rank === 'string' ? doc.raw.rank : '');
+    return [...list].sort((a, b) => {
+      const x = rankOf(a);
+      const y = rankOf(b);
+      if (x === '' || y === '') return x === y ? 0 : x === '' ? 1 : -1;
+      return x < y ? -1 : x > y ? 1 : 0;
+    });
+  }
+
+  /**
    * The documents of a collection in a language, in the collection's order.
    *
    * Under a manual order that is the order of their addresses — contract 2
