@@ -106,25 +106,38 @@ async function platformHalf(root) {
  *
  * A build reads the committed file and writes nothing: outside the dev
  * server, `npx @jtakeit/astro catalogue` before a commit is still the way.
+ *
+ * ── and a contract-3 site's, the same way ───────────────────────────────────
+ *
+ * A site whose `jtk/schema.json` says contract 3 renders from that file, and
+ * `jtk schema` writes it from the declaration (wiki/98 §7 · 2): the dev
+ * server runs `@jtakeit/kit/schema` on a save as it runs the catalogue's
+ * tool, `--emit-only`, keeping the file's `generator`. It writes no
+ * `jtk/catalogue.json` there — the platform refuses a tree with both — and a
+ * declaration still in contract 2's words is said, the schema left as it
+ * was. Which tool runs is the tree's to say, not the declaration's: a
+ * declaration half-way through its move does not switch the pages to
+ * contract 3 before its documents have moved.
  */
 const DECLARATION = join('src', 'content', 'blocks.ts');
 
 function catalogueWriter(root, logger) {
-  let tool;
-  try {
-    tool = createRequire(join(root, 'package.json')).resolve('@jtakeit/kit/catalogue');
-  } catch {
-    return () => logger.warn('@jtakeit/kit/catalogue was not found, so jtk/catalogue.json is not written again — run npx @jtakeit/astro catalogue --emit-only');
-  }
+  const toolOf = (name) => {
+    try {
+      return createRequire(join(root, 'package.json')).resolve(name);
+    } catch {
+      return undefined;
+    }
+  };
   let running = false;
   let again = false;
   const write = async () => {
-    // A contract-3 site renders from jtk/schema.json, which the tool does not
-    // write from the declaration yet (`jtk schema`, wiki/98 §7 · 2) — and
-    // writes no jtk/catalogue.json beside it, which the platform refuses. So
-    // a save of the declaration changes nothing the pages read, and is said.
-    if (contractOf(root) === 3) {
-      logger.warn(`${DECLARATION} changed, and this contract-3 site renders from jtk/schema.json, which is not written from it yet (jtk schema) — edit jtk/schema.json`);
+    const three = contractOf(root) === 3;
+    const file = three ? 'jtk/schema.json' : 'jtk/catalogue.json';
+    const command = three ? 'schema' : 'catalogue';
+    const tool = toolOf(`@jtakeit/kit/${command}`);
+    if (tool === undefined) {
+      logger.warn(`@jtakeit/kit/${command} was not found, so ${file} is not written again — run npx @jtakeit/astro ${command} --emit-only`);
       return;
     }
     if (running) {
@@ -134,18 +147,18 @@ function catalogueWriter(root, logger) {
     running = true;
     let generator;
     try {
-      generator = JSON.parse(await readFile(join(root, 'jtk', 'catalogue.json'), 'utf8')).generator;
+      generator = JSON.parse(await readFile(join(root, file), 'utf8')).generator;
     } catch {
-      // No catalogue yet, or one that is not JSON: the tool signs it itself.
+      // No file yet, or one that is not JSON: the tool signs it itself.
     }
     const args = [tool, '--emit-only', '--root', root, ...(typeof generator === 'string' && generator !== '' ? ['--generator', generator] : [])];
     execFile(process.execPath, args, { cwd: root }, (error, stdout, stderr) => {
       running = false;
       if (error) {
         const said = String(stderr || stdout || error.message).trim();
-        logger.error(`${DECLARATION} does not check, so jtk/catalogue.json is left as it was and the pages show the declaration before this change:\n${said}`);
+        logger.error(`${DECLARATION} does not check, so ${file} is left as it was and the pages show the declaration before this change:\n${said}`);
       } else {
-        logger.info(`jtk/catalogue.json written again from ${DECLARATION}`);
+        logger.info(`${file} written again from ${DECLARATION}`);
       }
       if (again) {
         again = false;
@@ -191,8 +204,9 @@ export function jtakeitMeta() {
       // Network Access, Chrome 142+) and may preflight; the private-network
       // header is the answer that preflight wants.
       'astro:server:setup': ({ server, logger }) => {
-        // The declaration, emitted into jtk/catalogue.json whenever it is
-        // saved (`catalogueWriter` above says why). After a pause, like every
+        // The declaration, emitted into jtk/catalogue.json — a contract-3
+        // site's jtk/schema.json — whenever it is saved (`catalogueWriter`
+        // above says why). After a pause, like every
         // watcher here: an editor's save is often two events.
         {
           const declaration = join(process.cwd(), DECLARATION);

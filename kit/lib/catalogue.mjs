@@ -29,7 +29,9 @@
  * On a contract-3 tree (`jtk/schema.json` saying `contract: 3`) it mints the
  * `id` of every page and entry and the `_key` of every block, row and picture
  * that has none, in every mode, and stops there: it writes no
- * `jtk/catalogue.json` (below, "a contract-3 tree").
+ * `jtk/catalogue.json` (below, "a contract-3 tree"). A declaration that says
+ * `CONTRACT = 3` is not read as contract 2's either: `jtk schema` writes its
+ * file (schema.mjs).
  *
  * Exit code is the number of disagreements. Zero means the admin can be handed
  * this repository.
@@ -50,7 +52,7 @@
  * client project the studio runs through it is one sitting.
  */
 
-import { filesBeside } from './judgeFiles.mjs';
+import { filesBeside, judgeRequest } from './judgeFiles.mjs';
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
@@ -60,6 +62,7 @@ import { E, isAdvice, isPlatformCode, LOCAL } from './codes.mjs';
 import { tappable } from './content/index.mjs';
 import { contractOf } from './content/node.mjs';
 import { shownAt } from './schedule.mjs';
+import { builtPages, prefixBuild, servedFaults, unboundedHeights, unowned } from './served.mjs';
 
 // What this tool calls itself in a catalogue it writes. Bumped when the shape
 // it emits changes; the `contract` beside it moves only when the format does.
@@ -96,12 +99,11 @@ function die(message) {
 // refuse a tree holding both (wiki/98 §16) — which this command made of every
 // contract-3 tree it ran on, by going on to emit the declaration. The
 // declaration is not read here at all: it becomes `jtk/schema.json` through
-// `jtk schema` (§7 · 2), which this release has not got, and the checks
-// below are contract 2's, of contract 2's file. What is left to check is the
-// names, and a catalogue still lying beside the schema — said and not
-// removed, because it may hold what the developer means to carry over, and a
-// file under git is theirs to delete. The exit code counts both, as it
-// counts disagreements below.
+// `jtk schema` (§7 · 2, schema.mjs), and the checks below are contract 2's,
+// of contract 2's file. What is left to check is the names, and a catalogue
+// still lying beside the schema — said and not removed, because it may hold
+// what the developer means to carry over, and a file under git is theirs to
+// delete. The exit code counts both, as it counts disagreements below.
 //
 // Read only where `jtk/schema.json` says contract 3: a contract-2 tree keeps
 // no names in its files, and this command reads it exactly as before.
@@ -128,9 +130,9 @@ if (contractOf(root) === 3) {
     );
   }
   console.log(
-    "jtk/schema.json is a contract-3 site's schema, and this release does not yet write it from src/content/blocks.ts — that is jtk schema, a later step (jtakeit-core wiki/98 §7 · 2); no jtk/catalogue.json is written",
+    "jtk/schema.json is a contract-3 site's schema, which jtk schema writes from src/content/blocks.ts and checks against the page (jtakeit-core wiki/98 §7 · 2); no jtk/catalogue.json is written",
   );
-  if (has('judge')) console.log('--judge sends a catalogue, and a contract-3 tree has none: validate_catalogue judges the tree by site and ref once it is pushed');
+  if (has('judge')) console.log('--judge sends a catalogue, and a contract-3 tree has none: jtk schema --judge sends its schema and the files beside it');
   process.exit(Math.min(nameless.length + (stray ? 1 : 0), 100));
 }
 
@@ -160,6 +162,17 @@ try {
 } catch (why) {
   die(`could not read ${declarationPath}: ${why.message}
      Node runs TypeScript by stripping types, so the file may hold no enums and no namespaces.`);
+}
+
+// A declaration that says `CONTRACT = 3` is written in contract 3's words —
+// routes, options as `{ value, label }`, references as `{ to }` — which a
+// contract-2 catalogue cannot hold and the platform would refuse in one
+// (registry.contract3KeyIn). It is `jtk schema`'s, which writes
+// `jtk/schema.json` from it; this writes nothing rather than a catalogue
+// that says contract 2 of a declaration that says 3.
+if (declared.CONTRACT === 3) {
+  console.error(`jtk catalogue: ${declarationPath} says CONTRACT = 3, and its file is jtk/schema.json, which jtk schema writes from it — no jtk/catalogue.json is written`);
+  process.exit(1);
 }
 
 // Who wrote the file, for the record: this package, unless the scaffold
@@ -799,99 +812,13 @@ for (const collection of collections) {
 /*
  * ── can the platform serve this at all ─────────────────────────────────────
  *
- * A site is served two ways and the difference is a path. On its own host it is
- * at the root, so `/preise/` and `/favicon.png` mean what they say. In the
- * studio's preview the same build is served under
- * `https://preview…/p/<slug>/`, where the root is not the site: every one of
- * those addresses leaves it, and what the client is shown is a page with no
- * stylesheet, no pictures and navigation that 404s.
- *
- * It reads as a broken build rather than as a wrong prefix, which is why it is
- * checked here rather than written down anywhere: it has cost three separate
- * afternoons, and the third one was a site the kit had already been used to
- * build. Two things are needed and neither is visible in a browser at
- * `localhost:4321`, where the base is `/` and everything works.
- *
- * ── and these three carry no JTK_E_ code, on purpose ────────────────────────
- *
- * The judge has no opinion about any of it, correctly. Where a build is served
- * from is the studio's arrangement — our preview, our prefix — and not something
- * the catalogue format says anything about; a stranger's repository could get
- * every one of these "wrong" and still be a repository the platform can build.
- * Giving them a `JTK_E_…` would put a name in the terminal that the platform's
- * own reference has no row for, and `--judge` would then read the server's
- * silence about them as a false refusal. They are marked LOCAL instead.
+ * In the studio's preview a build is served under `/p/<slug>/`, where an
+ * address written from the root leaves the site: `base` in the Astro config,
+ * and every address a person typed (served.mjs, which says why). They carry no
+ * JTK_E_ code — the studio's arrangement, not the format's — and are marked
+ * LOCAL.
  */
-
-const configPath = join(root, 'astro.config.mjs');
-if (existsSync(configPath)) {
-  const config = readFileSync(configPath, 'utf8');
-  if (!/\bbase\s*:/.test(config)) {
-    fault(
-      LOCAL,
-      'astro.config.mjs',
-      'sets no `base`, so this build can only be served at the root of a host — ' +
-        "the studio's preview serves it under /p/<slug>/, where every asset it emits is a 404. " +
-        'Derive it from the site URL: `const BASE = new URL(SITE).pathname` and `base: BASE`',
-    );
-  } else if (!/new URL\(\s*SITE\s*\)\.pathname/.test(config) && !/BASE_URL/.test(config)) {
-    fault(
-      LOCAL,
-      'astro.config.mjs',
-      'sets `base` from something other than the site URL — the two are one ' +
-        'decision, and setting one and forgetting the other is the failure this check exists for',
-    );
-  }
-}
-
-/*
- * And the addresses a person typed.
- *
- * `base` fixes what Astro emits — the bundled CSS, the optimised images — and
- * it cannot fix a string. `href="/preise/"` is a link out of the preview and
- * `href="/favicon.png"` is a 404, in a build where everything Astro made is
- * right. src/lib/under.ts is the one way to write these.
- *
- * `/api/…` is exempt: a form posts to the host it is served from, which is the
- * real site in production and is not part of the build.
- */
-const absolute = /(?:href|src|poster|action|content)\s*=\s*"(\/(?!\/)[^"#]*)"/g;
-const cssAbsolute = /url\(\s*['"]?(\/(?!\/)[^)'"]*)/g;
-
-function sourceFiles(dir) {
-  const found = [];
-  if (!existsSync(dir)) return found;
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      found.push(...sourceFiles(full));
-      continue;
-    }
-    // Whatever a generator writes a page in: the check is for an address a
-    // person typed, and those are typed in any of these.
-    if (/\.(astro|ts|tsx|js|jsx|mjs|vue|svelte|html|njk|liquid|hbs|css)$/.test(entry.name)) found.push(full);
-  }
-  return found;
-}
-
-for (const file of sourceFiles(join(root, 'src'))) {
-  const text = readFileSync(file, 'utf8');
-  const where = relative(root, file);
-  const seen = new Set();
-
-  for (const [, address] of [...text.matchAll(absolute), ...text.matchAll(cssAbsolute)]) {
-    if (address.startsWith('/api/')) continue;
-    if (seen.has(address)) continue;
-    seen.add(address);
-    fault(
-      LOCAL,
-      where,
-      `"${address}" is written from the root, so it leaves the site wherever the site ` +
-        "is not at the root — which is the studio's preview, always. Write it as " +
-        `under('${address}') — see src/lib/under.ts`,
-    );
-  }
-}
+for (const one of servedFaults(root)) fault(one.code, one.where, one.says);
 
 /*
  * ── the exam ────────────────────────────────────────────────────────────────
@@ -910,31 +837,6 @@ for (const file of sourceFiles(join(root, 'src'))) {
  * and it did not means this file refuses a catalogue the platform would accept.
  * Both are gaps and both are ours to close.
  */
-
-/** The credential, presented the way the admin API reads it. */
-
-function judgeRequest(text, files) {
-  const api = (process.env.JTK_API ?? '').trim().replace(/\/+$/, '');
-  const token = (process.env.JTK_TOKEN ?? '').trim();
-  return {
-    url: `${api}/v1/registry/validate`,
-    init: {
-      method: 'POST',
-      headers: {
-        // Two credentials, and the API reads each in its own place
-        // (auth/authHandler.go): an agent's `jtk_…` token as a bearer, a
-        // person's signed-in session as the `sid` cookie. This said once that
-        // there were no bearer tokens in the app, which stopped being true
-        // when agents got theirs; a `jtk_…` token sent as a cookie
-        // is not read at all.
-        ...(token.startsWith('jtk_') ? { authorization: `Bearer ${token}` } : { cookie: `sid=${token}` }),
-        accept: 'application/json',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify(files.length > 0 ? { catalogue: text, files } : { catalogue: text }),
-    },
-  };
-}
 
 /**
  * Ask the judge, and report where the two of us disagree.
@@ -1318,25 +1220,6 @@ function contentPages(dir) {
   return out;
 }
 
-/** Every stylesheet under src, as one string. Crude on purpose: the question is
- *  only whether a name appears at all. */
-function readStyles(dir) {
-  if (!existsSync(dir)) return '';
-
-  let found = '';
-  for (const name of readdirSync(dir)) {
-    const full = join(dir, name);
-    if (statSync(full).isDirectory()) {
-      found += readStyles(full);
-      continue;
-    }
-    // Astro components carry their styles inside them, which is where a site is
-    // as likely to have put these as in a stylesheet.
-    if (/\.(css|astro)$/.test(name)) found += readFileSync(full, 'utf8');
-  }
-  return found;
-}
-
 const pages = contentPages(contentDir);
 
 /*
@@ -1387,26 +1270,12 @@ if (pages.some(hasBodyPicture)) {
 }
 
 /*
- * A height that is the viewport's, with no ceiling.
- *
- * The panel draws a page in a frame as tall as the whole document — its
- * thumbnails and its comparison of two versions — because a browser does not
- * render what lies below a frame. In that frame `100svh` is the document's
- * height, so a first screen of `min-height: 100svh` grew to fill all of it and
- * the rest of the site was nowhere (Kaif, 30 October 2026). A viewport height
- * with a ceiling — `min(100svh, 56rem)` — is the same screen on a phone and a
- * bounded one in a frame.
+ * A height that is the viewport's, with no ceiling: in the panel's frame,
+ * as tall as the document, it is all of it (served.mjs).
  */
 {
-  const unbounded = /(?:^|[;{\s])((?:min-|max-)?(?:height|block-size))\s*:\s*100(?:s|d|l)?vh\s*(?:!important)?\s*[;}]/g;
-  const found = new Set();
-  for (const [, property] of readStyles(join(root, 'src')).matchAll(unbounded)) found.add(property);
-  if (found.size > 0) {
-    contentProblems.push(
-      `${[...found].join(', ')}: 100vh with no ceiling. The panel draws the page in a frame as tall as the document, ` +
-        'where a viewport height is all of it — give it one: min(100svh, 56rem).',
-    );
-  }
+  const unbounded = unboundedHeights(root);
+  if (unbounded !== '') contentProblems.push(unbounded);
 }
 
 /*
@@ -1852,16 +1721,9 @@ for (const [at, found] of annotationsByPage) {
 /*
  * ── and prove it survives being served under a prefix ──────────────────────
  *
- * The source check above catches an address somebody typed. It cannot catch one
- * that arrives as data — a nav list of `{ label, href }`, rendered with
- * `href={item.href}` — and that is how the failure actually shipped: a site with
- * every link in one file, none of them under the base, and a preview where the
- * front page is right and every other page leaves the site.
- *
- * So the build is done a second time with a path in SITE_URL, into a directory
- * that is thrown away, and every address it emitted is held to that path. It is
- * the only proof that does not depend on how the site is written: whatever the
- * link went through, this is what came out. About five seconds on a whole site.
+ * The site built a second time with a path in SITE_URL, into a directory that
+ * is thrown away, and every address it emitted held to that path — the one
+ * proof that does not depend on how a link was written (served.mjs).
  */
 // Astro's build takes `--outDir`, which is what lets this run into a directory
 // that is thrown away. Another generator is asked with `--dist`: build it once
@@ -1871,52 +1733,26 @@ if (!flag('dist') && !existsSync(join(root, 'astro.config.mjs'))) {
   console.log('not an Astro project: the second build under a path is skipped — build with SITE_URL=https://x.invalid/p/check/ and run again with --dist <dir> to prove the addresses');
 }
 if (!flag('dist') && existsSync(join(root, 'astro.config.mjs'))) {
-  const prefix = '/p/jtk-check/';
-  const out = join(root, '.jtk-prefix-check');
+  const { prefix, out, leaks, failed } = prefixBuild(root);
 
-  try {
-    execFileSync('npx', ['astro', 'build', '--outDir', out], {
-      cwd: root,
-      stdio: 'pipe',
-      env: { ...process.env, SITE_URL: `https://jtk-check.invalid${prefix}`, PUBLIC_INDEXABLE: 'false' },
-    });
-
-    const leaks = [];
-    const emitted = /(?:href|src|poster|action|content)="(\/(?!\/)[^"#]*)"/g;
-
-    for (const file of builtPages(out)) {
-      const page = relative(out, file);
-      for (const [, address] of readFileSync(file, 'utf8').matchAll(emitted)) {
-        if (address.startsWith(prefix) || address.startsWith('/api/')) continue;
-        if (leaks.some((one) => one.address === address)) continue;
-        leaks.push({ page, address });
-      }
-    }
-
-    if (leaks.length > 0) {
-      console.error(`\njtk catalogue: built under ${prefix}, and ${leaks.length} address(es) still point at the root\n`);
-      for (const leak of leaks.slice(0, 20)) console.error(`  ✗ ${leak.page}: ${leak.address}`);
-      if (leaks.length > 20) console.error(`  … and ${leaks.length - 20} more`);
-      console.error(`
+  if (leaks !== undefined && leaks.length > 0) {
+    console.error(`\njtk catalogue: built under ${prefix}, and ${leaks.length} address(es) still point at the root\n`);
+    for (const leak of leaks.slice(0, 20)) console.error(`  ✗ ${leak.page}: ${leak.address}`);
+    if (leaks.length > 20) console.error(`  … and ${leaks.length - 20} more`);
+    console.error(`
 The studio's preview serves this build under /p/<slug>/. Every address above
 leaves the site there: a stylesheet that 404s, a link back to somebody else's
 home page. Write them through src/lib/under.ts — including the ones that arrive
 as data, which is what this second build is here to catch.`);
-      rmSync(out, { recursive: true, force: true });
-      process.exit(Math.min(leaks.length, 100));
-    }
-
-    console.log(`built again under ${prefix} — every address it emits stays inside the site`);
-  } catch (err) {
-    // A build that fails only with a prefix is worth saying out loud; a build
-    // that fails outright has already been reported above, and this one is
-    // running against a directory nobody will deploy.
-    if (err?.status !== undefined) {
-      console.error('\njtk catalogue: this site does not build when it is served under a path');
-      console.error(String(err.stderr ?? '').slice(-2000));
-      rmSync(out, { recursive: true, force: true });
-      process.exit(1);
-    }
+    rmSync(out, { recursive: true, force: true });
+    process.exit(Math.min(leaks.length, 100));
+  }
+  if (leaks !== undefined) console.log(`built again under ${prefix} — every address it emits stays inside the site`);
+  if (failed !== undefined) {
+    console.error('\njtk catalogue: this site does not build when it is served under a path');
+    console.error(failed);
+    rmSync(out, { recursive: true, force: true });
+    process.exit(1);
   }
 
   rmSync(out, { recursive: true, force: true });
@@ -1934,131 +1770,11 @@ console.log(`checked against ${dist} — the catalogue and the page agree`);
 
 // --- and what is on the page that nobody can edit --------------------------
 //
-// The checks above compare the catalogue with the annotations. Neither of them
-// can see the failure that is actually most common: a sentence written straight
-// into a component, which carries no annotation, is in nobody's catalogue and is
-// therefore invisible to both directions of the check.
-//
-// It is found by tapping, one string at a time, by whoever is looking at the
-// site — "I cannot edit the header", "nor the footer", "nor the labels on the
-// form", "nor the word above each section" — and every one of those is a
-// message and a deploy.
-//
-// **This used to be a report and is now a gate.** A report made the decision
-// optional, and optional is how twenty-six strings on a real site ended up
-// belonging to nobody: the navigation, the footer and the labels on the form,
-// with a note in the handover saying the line had been drawn deliberately. It
-// had not been drawn at all — nothing was written down, so nothing could be
-// changed, and the owner found out by wanting to change one.
-//
-// So every visible sentence must be one of two things, and both are a decision
-// somebody made **in the repository**:
-//
-//   the owner's   →  declared in the catalogue and annotated: `data-jtk-path`
-//                    (text on every page goes in the shared document — one
-//                    copy, annotated everywhere it is drawn)
-//   the design's  →  marked `data-jtk-fixed`, which says "these words are part
-//                    of the composition and not the business's to change"
-//
-// `data-jtk-fixed` is what a skip link, a honeypot's label and a decorative
-// caption carry. It silences a subtree, so one attribute on a wrapper covers a
-// whole ornament. The edge takes it off the public copy the same way it takes
-// `data-jtk-path` off.
-
-/** Text on the page with no annotated element above it. */
-function unowned(html) {
-  const found = [];
-  const stack = [];
-  let skipping = null;
-  let at = 0;
-
-  const VOID = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
-    'link', 'meta', 'param', 'source', 'track', 'wbr']);
-  const OPAQUE = new Set(['script', 'style', 'svg', 'head', 'template', 'noscript']);
-
-  while (at < html.length) {
-    const open = html.indexOf('<', at);
-    if (open === -1) break;
-
-    const text = html.slice(at, open);
-    if (skipping === null && stack.length > 0 && !stack.some((frame) => frame.annotated)) {
-      const words = text.replace(/\s+/g, ' ').trim();
-      /*
-       * Anything with letters in it, and that bar is low on purpose.
-       *
-       * The first version asked for a dozen characters and two words, and it
-       * missed exactly the ones somebody was complaining about: `Method`,
-       * `Evidence`, `One piece` — the word above each section, six letters
-       * each, and as much the business's own as the heading under it. A bullet,
-       * a dash and a page number have no letters and fall out anyway.
-       */
-      if (/\p{L}/u.test(words) && words.length >= 3) {
-        found.push({ where: stack[stack.length - 1].tag, words });
-      }
-    }
-
-    const close = html.indexOf('>', open);
-    if (close === -1) break;
-    const tag = html.slice(open + 1, close);
-    at = close + 1;
-
-    if (tag.startsWith('!') || tag.startsWith('?')) continue;
-
-    if (tag.startsWith('/')) {
-      const name = tag.slice(1).trim().toLowerCase();
-      if (skipping === name) skipping = null;
-      for (let i = stack.length - 1; i >= 0; i--) {
-        if (stack[i].tag === name) {
-          stack.length = i;
-          break;
-        }
-      }
-      continue;
-    }
-
-    const name = tag.split(/[\s/>]/)[0].toLowerCase();
-    if (skipping !== null) continue;
-    if (OPAQUE.has(name)) {
-      skipping = name;
-      continue;
-    }
-    if (VOID.has(name) || tag.endsWith('/')) continue;
-
-    stack.push({
-      tag: name,
-      /*
-       * Either the owner's or the design's — both are decisions, and what is
-       * left is the failure: a sentence nobody has claimed.
-       *
-       * The `|$` is not a flourish. `tag` is held here with its brackets already
-       * stripped, so a boolean attribute written last — which is where a person
-       * naturally writes it, `<a class="skip" href="#main" data-jtk-fixed>` — has
-       * nothing after it to match. Without the alternative the mark was silently
-       * ignored and the sentence reported as belonging to nobody. It passed on
-       * the two sites it was tried on only because Astro appends its own
-       * `data-astro-cid-…` to elements in a component that has styles; the first
-       * element without one failed, and was worked around locally rather than
-       * reported as a bug for a day.
-       *
-       * The lookahead itself stays, so `data-jtk-fixedly` is still not a mark.
-       */
-      annotated: /\sdata-jtk-path=/.test(tag) || /\sdata-jtk-fixed(?=[\s/>=]|$)/.test(tag),
-    });
-  }
-
-  return found;
-}
-
-/** Every built page, as files. `pages` above is the content, not the build. */
-function builtPages(dir) {
-  const out = [];
-  for (const name of readdirSync(dir)) {
-    const full = join(dir, name);
-    if (statSync(full).isDirectory()) out.push(...builtPages(full));
-    else if (full.endsWith('.html')) out.push(full);
-  }
-  return out;
-}
+// The checks above compare the catalogue with the annotations, and neither can
+// see a sentence written straight into a component: no annotation, in nobody's
+// catalogue. Every visible sentence is the owner's (declared and annotated) or
+// the design's (`data-jtk-fixed`), and both are decisions made in the
+// repository — a gate, not a report (served.mjs, `unowned`, says why).
 
 const loose = [];
 for (const file of builtPages(dist)) {
