@@ -152,11 +152,16 @@ booking*. Empty means the front page.
 <BookingForm services={services} resources={masters} locale="de" combine={combine} scale={scale} kind={kind} />
 ```
 
-**The currency is the site's, never the page's.** It is set once, in
-`jtk/site.json` (`"business": {"currency": "chf"}`) or on the Business facts in
-the panel, and the form, the price list and the total read it from there —
-`site.currency`, and `site.money(value, locale)` for a price, both the door's
-(`src/lib/site.ts`). Do not
+**The currency is the site's, never the page's.** The agent gives it once:
+`create_site`'s `currency` for a new site, or `"currency": "CHF"` at the top of
+contract 3's `jtk/site.json`, which the next import takes while the site has
+none (contract 2, the older contract, carries it as
+`"business": {"currency": "chf"}`). Once the site has its currency, a person
+changes it in the panel (The site → The business), which asks first on a site
+with prices, and an import that brings a new one is refused
+(`JTK_E_CURRENCY_SET`). The form, the price list and the total read it from
+`jtk/site.json` — `site.currency`, and `site.money(value, locale)` for a price,
+both the door's (`src/lib/site.ts`). Do not
 pass `currency="CHF"` or write a sign into a page: when the business changes its
 currency the diary and the payment follow, and a page with its own would go on
 saying francs. The platform's preflight reads the built prices and fails one in

@@ -1078,16 +1078,21 @@ export function documentsOf(files, how) {
     if (currency !== '') out.currency = currency;
     write.set('/jtk/site.json', out);
   }
-  // The currency is the site's setting (§6, §14 · 4), not content and not a
-  // file's: nothing here makes one up, and nothing promises that a save
-  // will — a new site's setting is empty, and the platform writes what it
-  // holds. It was said as "until the platform writes one (its next save
-  // does)", which a new site's next save never did (the contract-3
-  // rehearsal, 11 November 2026).
+  // The currency is the site's setting (§6, §14 · 4), not content: nothing
+  // here makes one up, and nothing promises that a save will — a new site's
+  // setting is empty, and the platform writes what it holds. It was said as
+  // "until the platform writes one (its next save does)", which a new site's
+  // next save never did (the contract-3 rehearsal, 11 November 2026). The
+  // agent gives it once (jtakeit-core #212, the owner, 11 November 2026):
+  // `currency` at the top of jtk/site.json, which an import takes while the
+  // site has none, or create_site's `currency` for a new site; once the site
+  // has one, a person changes it in the panel, and an import that brings a
+  // new one is refused (JTK_E_CURRENCY_SET). So the note says where to write it.
   if (currency === '' && (to.modules !== undefined || hasMoney(to))) {
     notes.push(
       `no currency: ${Object.keys(state.site).length > 0 ? "the platform's state says none" : 'jtk/site.json carries none and no state was handed over'} — ` +
-        "the currency is the site's setting, set on the panel's business screen; until it is set, prices are drawn with no currency",
+        'write it at the top of jtk/site.json ("currency": "CHF") and the next import takes it while the site has none (create_site\'s `currency` for a new site); ' +
+        'once set, a person changes it in the panel (The site → The business); until then prices are drawn with no currency',
     );
   }
 

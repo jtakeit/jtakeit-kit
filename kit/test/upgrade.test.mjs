@@ -301,15 +301,19 @@ test('documents: the platform\'s state gives the ids a file lacks and the order 
   assert.deepEqual(stateOf({ pages: [{ id: 'nope', path: '/' }] }).faults, ['pages[0] has no id the platform writes (a lowercase UUID)']);
 });
 
-test('documents: no currency anywhere is said to be the site\'s setting, set on the panel\'s business screen — never promised to a save', () => {
+test('documents: no currency anywhere says where the agent gives it once — site.json\'s top, which the next import takes, or create_site — and that a person changes it after; never promised to a save', () => {
   const files = tree();
   delete files['/jtk/site.json'].business.currency;
   const without = moved(files).notes.find((one) => one.startsWith('no currency'));
-  assert.match(without, /^no currency: jtk\/site\.json carries none and no state was handed over — the currency is the site's setting, set on the panel's business screen; until it is set, prices are drawn with no currency$/);
+  assert.equal(
+    without,
+    'no currency: jtk/site.json carries none and no state was handed over — write it at the top of jtk/site.json ("currency": "CHF") and the next import takes it while the site has none ' +
+      "(create_site's `currency` for a new site); once set, a person changes it in the panel (The site → The business); until then prices are drawn with no currency",
+  );
   assert.doesNotMatch(without, /next save/);
   // A new site's state says none, as its setting is empty: said as the state's.
   const empty = moved(files, stateOf({ site: { id: 'site-1' }, pages: [] })).notes.find((one) => one.startsWith('no currency'));
-  assert.match(empty, /^no currency: the platform's state says none — the currency is the site's setting, set on the panel's business screen/);
+  assert.match(empty, /^no currency: the platform's state says none — write it at the top of jtk\/site\.json \("currency": "CHF"\) and the next import takes it while the site has none/);
   assert.equal(moved().notes.find((one) => one.startsWith('no currency')), undefined, 'a currency the files carry is no note');
 });
 

@@ -217,7 +217,7 @@ test('contract 3: what only a contract-3 tree can lack is said — a catalogue b
     '1 place in jtk/ without the id or the _key the panel taps it by (npx @jtakeit/astro catalogue mints them; jtkit lint names each)',
     'masters: no entry yet',
     'jtk/modules/bookings.json is not written yet',
-    "the site has prices and no currency yet — jtk/site.json says none; it is the site's, set in the panel, and every price is drawn without one until then",
+    "the site has prices and no currency yet — jtk/site.json says none: write it at its top (\"currency\": \"CHF\") and the next import takes it while the site has none (create_site's `currency` for a new site); once set, a person changes it in the panel; every price is drawn without one until then",
   ]);
   assert.equal(progress.settings, null);
   assert.equal(progress.kit, null);

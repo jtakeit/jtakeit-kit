@@ -37,10 +37,13 @@
  *
  * ── the currency is the site's, and only here ───────────────────────────────
  *
- * `site.money(value, locale)` says a price in the currency the platform writes
- * into `jtk/site.json` — what the diary prices in, what Stripe charges in,
- * what the panel shows — and `site.currency` is that code for a component
- * that needs it. A page never names a currency of its own: a literal «CHF»
+ * `site.money(value, locale)` says a price in the currency of `jtk/site.json`
+ * — what the diary prices in, what Stripe charges in, what the panel shows —
+ * and `site.currency` is that code for a component that needs it. The agent
+ * gives it once, while the site has none (`create_site`'s `currency`, or
+ * contract 3's `currency` at the top of `jtk/site.json`, which the next import
+ * takes); after that a person changes it in the panel and the platform's save
+ * writes it there. A page never names a currency of its own: a literal «CHF»
  * went on saying francs after the business changed its currency in the panel
  * (11 October 2026), and the platform's preflight looks for exactly that.
  *

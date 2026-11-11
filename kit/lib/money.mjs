@@ -6,8 +6,9 @@
  * price, because «,00» on a price list reads like a spreadsheet. And no sign
  * at all where the site has not said what its prices are in — one made up
  * here is a lie on every price: a hotel's hryvnias read as francs (2 October
- * 2026). The currency is the site's, from the brief, written into
- * jtk/site.json by the platform; it is for showing a price, nothing more.
+ * 2026). The currency is the site's, from the brief, in jtk/site.json — the
+ * agent gives it once, a person changes it in the panel after, and the
+ * platform writes it there; it is for showing a price, nothing more.
  *
  * The amount alone: a price «from» or «on request» says so in words
  * (`priceWords` below), which the door puts around it.
