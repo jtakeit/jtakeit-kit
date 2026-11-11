@@ -81,7 +81,7 @@ import { money as priced, priceWords } from '../money.mjs';
 import { shownAt } from '../schedule.mjs';
 import { ancestors, capped, descendants, grouped, groupField, selectHeadings } from './groups.mjs';
 import { canonicalLocale, baseAddressOf, inLocale, languagesOf, localeArg, localeOfAddress, sharedLocaleOf } from './locale.mjs';
-import { byRank, labelWords, specimenId, tappable } from './rules.mjs';
+import { byRank, labelWords, minorOf, namesIn, specimenId, tappable } from './rules.mjs';
 
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 
@@ -604,12 +604,13 @@ export function contract3(byPath, names, { annotate, now }) {
    * module's settings — and the annotation of each, by key.
    *
    * @param {Record<string, unknown>} values
-   * @param {{ prefix?: string; trail?: string; depth: number; fields: any[]; origin: 'own' | 'base' | 'laid' }} how
+   * @param {{ prefix?: string; trail?: string; depth: number; fields: any[]; origin: 'own' | 'base' | 'laid'; locale?: string }} how
    *   `prefix`: the document's part (`''` for the page's own, `entry:<id>:`, `shared:`), nothing where
    *   the document cannot be named; `trail`: this object's place in it (`blocks[hero].`,
    *   `blocks[faq].items[r7k2].`, `''` for an entry's `fields`), nothing where it has no key;
    *   `depth`: how many `[KEY]` steps the trail took; `origin`: whose values these are — the
-   *   document's own language's, all the original's, or a translation laid over the original
+   *   document's own language's, all the original's, or a translation laid over the original;
+   *   `locale`: the language of the document, which a reference is resolved in
    */
   function reader(values, how) {
     const field = (key) => how.fields.find((one) => isObject(one) && one.key === key);
@@ -689,6 +690,8 @@ export function contract3(byPath, names, { annotate, now }) {
       value,
       field,
       tappable: (key) => tappable(field(key)),
+      minor: (key) => minorOf(values[key]),
+      refs: (key) => resolved(field(key), values[key], how.locale ?? ''),
       fromBase,
       rows(key) {
         const list = values[key];
@@ -709,6 +712,7 @@ export function contract3(byPath, names, { annotate, now }) {
               depth: how.depth + 1,
               fields: of,
               origin,
+              locale: how.locale,
             }),
             { key: rowKey, index: j },
           );
@@ -743,8 +747,30 @@ export function contract3(byPath, names, { annotate, now }) {
     };
   }
 
+  /**
+   * The entries a field names, in the order it names them: a reference's id,
+   * a `many` reference's ids, or the one reference in each row of a list of
+   * them — each in the document's language. A slug, contract 2's name, is
+   * found too, as `site.entry` finds one, for a tree on its way over (§15 ·
+   * 23); a name no entry has is left out.
+   */
+  function resolved(declared, held, locale) {
+    const { to, names } = namesIn(declared, held);
+    const out = [];
+    for (const name of names) {
+      for (const collection of to) {
+        const found = site.entry(collection, name, locale);
+        if (found !== undefined) {
+          out.push(found);
+          break;
+        }
+      }
+    }
+    return out;
+  }
+
   /** One block of a document, named by its `_key`. */
-  function block(values, prefix, origin) {
+  function block(values, prefix, origin, locale = '') {
     const type = typeof values.type === 'string' ? values.type : '';
     const key = typeof values._key === 'string' ? values._key : undefined;
     return {
@@ -757,6 +783,7 @@ export function contract3(byPath, names, { annotate, now }) {
         depth: 0,
         fields: typeOf(type)?.fields ?? [],
         origin,
+        locale,
       }),
     };
   }
@@ -769,8 +796,8 @@ export function contract3(byPath, names, { annotate, now }) {
     ...reader({}, { prefix: undefined, trail: undefined, depth: 0, fields: typeOf(type)?.fields ?? [], origin: 'own' }),
   });
 
-  function blocksOf(list, prefix, origin) {
-    const out = list.map((values) => block(values, prefix, origin));
+  function blocksOf(list, prefix, origin, locale = '') {
+    const out = list.map((values) => block(values, prefix, origin, locale));
     return { blocks: out, block: (type) => out.find((one) => one.type === type) ?? missing(type) };
   }
 
@@ -785,7 +812,7 @@ export function contract3(byPath, names, { annotate, now }) {
     const cached = pageCache.get(doc);
     if (cached !== undefined) return cached[form];
     const make = (which) => {
-      const { blocks, block: find } = blocksOf(doc.blocks, which === 'here' ? '' : named('page', doc.id), doc.origin);
+      const { blocks, block: find } = blocksOf(doc.blocks, which === 'here' ? '' : named('page', doc.id), doc.origin, doc.language);
       const page = {
         kind: 'page',
         id: doc.id,
@@ -855,8 +882,8 @@ export function contract3(byPath, names, { annotate, now }) {
         seo: doc.seo,
         file: doc.file,
         specimen: doc.specimen,
-        fields: reader(doc.fields, { prefix, trail: '', depth: 0, fields: collection?.fields ?? [], origin: doc.fieldsOrigin }),
-        body: doc.body.map((values) => block(values, prefix, doc.bodyOrigin)),
+        fields: reader(doc.fields, { prefix, trail: '', depth: 0, fields: collection?.fields ?? [], origin: doc.fieldsOrigin, locale: doc.language }),
+        body: doc.body.map((values) => block(values, prefix, doc.bodyOrigin, doc.language)),
         get here() {
           return entryOf(doc, 'here');
         },
@@ -1081,7 +1108,7 @@ export function contract3(byPath, names, { annotate, now }) {
       const original = sharedFiles.get('');
       const over = language === '' ? undefined : sharedFiles.get(language);
       const list = !served(language) ? [] : language === '' ? blocksIn(original?.raw) : laidBlocks(blocksIn(original?.raw), over?.raw);
-      const { blocks, block: find } = blocksOf(list, 'shared:', language === '' ? 'own' : 'laid');
+      const { blocks, block: find } = blocksOf(list, 'shared:', language === '' ? 'own' : 'laid', language);
       return { kind: 'shared', locale: language, file: over?.file ?? original?.file, blocks, block: find };
     },
     /** A module's settings: `settings` of `jtk/modules/<module>.json` (§4.6); `{}` for none. */
@@ -1138,6 +1165,20 @@ export function contract3(byPath, names, { annotate, now }) {
       const first = collection === undefined ? undefined : listingIn(collection, want(locale));
       if (first === undefined) return undefined;
       return page <= 1 ? first : `${first}/page/${page}`;
+    },
+    /**
+     * The page a collection's entries are shown on besides their own pages,
+     * in a language: the first its `shown_on` names, without the anchor —
+     * `/services` for `/services#services-{slug}`. A collection with `route:
+     * "none"` is listed there, as contract 2's was at its prefix.
+     */
+    shownOn(name, locale) {
+      const collection = collections.get(name);
+      const place = collection?.shown_on[0];
+      const at = place === undefined ? undefined : patternIn(place, want(locale));
+      if (at === undefined) return undefined;
+      const page = at.split('#')[0];
+      return page === '' || page.includes('{slug}') ? undefined : page;
     },
     localeOf: (address) => localeOfAddress(address, others),
     inLocale: (locale, address) => inLocale(want(locale), address),

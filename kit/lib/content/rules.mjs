@@ -111,3 +111,53 @@ export function byRank(list) {
     return x < y ? -1 : x > y ? 1 : 0;
   });
 }
+
+/**
+ * A price as the whole minor units a booking form sums and the platform
+ * charges, whichever contract wrote it: the number contract 2 keeps (`4500`)
+ * or contract 3's `{ minor: 4500 }` (wiki/98 §3.4). `undefined` for none, for
+ * a number that is not whole, and for a price said «from» or «on request»,
+ * which nobody is charged online: there is no amount to charge (the owner,
+ * 10 November 2026; the platform's `priceIn` reads it as none).
+ *
+ * A template reads a price it sums through this, never `value('costs')`:
+ * read raw, contract 3's object was no number, and the form priced every
+ * service at nothing.
+ *
+ * @param {unknown} value
+ * @returns {number | undefined}
+ */
+export function minorOf(value) {
+  let amount = value;
+  if (isObject(value)) {
+    if (value.from === true || value.on_request === true) return undefined;
+    amount = value.minor;
+  }
+  return typeof amount === 'number' && Number.isInteger(amount) ? amount : undefined;
+}
+
+/**
+ * What a field names, and where: the collections a reference may point into,
+ * and the names it holds, in its order — a reference's one name, a `many`
+ * reference's several (contract 3), or the one reference in each row of a
+ * list of them, contract 2's `does: [{ service }]` (wiki/98 §3.3: "a one-ref
+ * list becomes a `ref` with `many: true`"). A name is an entry's slug in
+ * contract 2 and its id in contract 3; the door resolves it either way.
+ *
+ * @param {any} declared the field's declaration, as the door hands it out
+ * @param {unknown} held the field's value
+ * @returns {{ to: string[]; names: string[] }}
+ */
+export function namesIn(declared, held) {
+  const targets = (one) =>
+    Array.isArray(one?.to) && one.to.length > 0 ? one.to.filter((to) => typeof to === 'string') : typeof one?.ref === 'string' && one.ref !== '' ? [one.ref] : [];
+  const words = (list) => list.filter((one) => typeof one === 'string' && one.trim() !== '');
+  if (!isObject(declared)) return { to: [], names: [] };
+  if (declared.kind === 'ref') return { to: targets(declared), names: words(Array.isArray(held) ? held : [held]) };
+  const of = Array.isArray(declared.of) ? declared.of : [];
+  if (declared.kind === 'list' && of.length === 1 && of[0]?.kind === 'ref' && Array.isArray(held)) {
+    const key = of[0].key;
+    return { to: targets(of[0]), names: words(held.map((row) => (isObject(row) ? row[key] : undefined))) };
+  }
+  return { to: [], names: [] };
+}

@@ -120,6 +120,20 @@ export interface Values {
   text(field: string): string;
   /** A value as stored; `undefined` for none — `null`, `''` and `[]` are none. */
   value(field: string): unknown;
+  /**
+   * A price in whole minor units, whichever contract wrote it — `4500`
+   * (contract 2) or `{ minor: 4500 }` (contract 3) — for a form that sums
+   * prices. `undefined` for none, and for a price said «from» or «on
+   * request», which nobody is charged online (wiki/98 §3.4).
+   */
+  minor(field: string): number | undefined;
+  /**
+   * The entries a field names, in its order and the document's language: a
+   * reference (an entry's slug in contract 2, its id in contract 3), a
+   * `many` reference, or a list whose rows each hold one reference —
+   * contract 2's `does: [{ service }]`. A name no entry has is left out.
+   */
+  refs(field: string): Entry[];
   /** A list's rows, each read the same way. */
   rows(field: string): Row[];
   /** A single picture. */
@@ -277,6 +291,13 @@ export interface Site {
    * (wiki/98 §15 · 6) — its entries are at their own pages, or at `anchorOf`.
    */
   listingOf(name: string, locale?: string, page?: number): string | undefined;
+  /**
+   * The page a collection's entries are shown on, in a language, without the
+   * anchor: a collection without pages is listed there. Contract 2: its
+   * prefix (`/services`); contract 3: the first page its `shown_on` names.
+   * `undefined` for a collection with pages (contract 2) or none named.
+   */
+  shownOn(name: string, locale?: string): string | undefined;
   /** The listing as its pages draw it: the entries in order, group by group, and how many to a page. */
   listingPages(name: string, locale?: string): { entries: Entry[]; size: number; last: number };
   /** Which language an address is in: `''` for the base. */

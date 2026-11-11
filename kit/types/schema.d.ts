@@ -109,8 +109,12 @@ export interface SelectField extends FieldBase {
   options: Option[];
 }
 
-/** A reference to an entry of one of the schema's collections, by its id. */
-export interface RefField extends FieldBase {
+/**
+ * A reference to an entry of one of the schema's collections, by its id;
+ * with `many`, several, bounded in how many it names as the list of one-ref
+ * rows it replaced was in rows.
+ */
+export interface RefField extends FieldBase, Bounds {
   kind: 'ref';
   ref: Ref;
 }
@@ -154,13 +158,23 @@ export interface SkuField extends FieldBase, Bounds {
   kind: 'sku';
 }
 
-/** The kinds with nothing of their own to say: a whole number of minutes, a time of day, a date, a switch, a telephone number, an address to write to. */
+/** Whole minutes: a length, or a time of day from midnight — bounded as a number is (a service takes 5 to 480). */
+export interface MinutesField extends FieldBase, Bounds {
+  kind: 'duration' | 'time_of_day';
+}
+
+/** A telephone number, an address to write to: bounded in characters, as text is. */
+export interface ContactField extends FieldBase, Bounds {
+  kind: 'tel' | 'email';
+}
+
+/** The kinds with nothing of their own to say, and no bounds (§3.3): a date, a switch. */
 export interface PlainField extends FieldBase {
-  kind: 'duration' | 'time_of_day' | 'date' | 'bool' | 'tel' | 'email';
+  kind: 'date' | 'bool';
 }
 
 /** One field of a block, a row, a form's asks or the page's SEO (§3.3). */
-export type Field = TextField | NumberField | MoneyField | SelectField | RefField | MediaField | ListField | UrlField | SkuField | PlainField;
+export type Field = TextField | NumberField | MoneyField | SelectField | RefField | MediaField | ListField | UrlField | SkuField | MinutesField | ContactField | PlainField;
 
 /** The kinds, eighteen (§3.4). */
 export type Kind = Field['kind'];

@@ -142,36 +142,34 @@ function weekday(day: string): string {
 }
 
 /*
- * The titles a slug stands for: a `ref` names its collection, and a
- * resource's `does` names services of the diary's own.
+ * What a reference names, as words and as a link: the door resolves it
+ * (`refs`), whichever contract wrote it — an entry's slug in contract 2, its
+ * id in contract 3, a list of one-ref rows or one reference to many. Its
+ * title is in the page's language, the site's own standing in for one not
+ * translated yet — a German post's tag reads «Rot» once somebody writes it,
+ * and «Red» until then rather than its slug — as a group's heading does.
  */
-const titles = new Map<string, Map<string, string>>();
-const addresses = new Map<string, Map<string, string>>();
-function titlesOf(name: string | undefined): Map<string, string> {
-  const target = name === undefined ? undefined : site.collection(name);
-  if (name === undefined || target === undefined) return new Map();
-  if (!titles.has(name)) {
-    const all = site.entries(name, { locale });
-    // A title in the site's own language stands in for one not translated
-    // yet — a German post's tag reads «Rot» once somebody writes it, and «Red»
-    // until then rather than its slug — as a group's heading does.
-    const own = locale === '' ? [] : site.entries(name, { locale: '' });
-    titles.set(name, new Map([...own, ...all].map((one) => [one.slug, String(one.fields.value('title') ?? one.slug)])));
-    // Where each has a page, for a ref to be a link: a post's tags lead to
-    // the tags' pages, which list the posts (12 October 2026).
-    addresses.set(name, new Map(target.pages ? all.map((one) => [one.slug, href(one)]) : []));
-  }
-  return titles.get(name)!;
+function nameOf(one: Entry): string {
+  const own = String(one.fields.value('title') ?? '');
+  if (own !== '' || one.locale === '') return own || one.slug;
+  const base = site.entry(one.collection, one.id || one.slug, '');
+  return String(base?.fields.value('title') ?? one.slug);
 }
 
-/** The page a ref's value has, where its collection gives entries pages and the entry is listed. */
-function linkOf(field: Field, value: unknown): string | undefined {
-  if (field.kind !== 'ref' || typeof value !== 'string') return undefined;
-  titlesOf(field.ref);
-  return addresses.get(field.ref ?? '')?.get(value);
+/**
+ * The entries a value names that are out: one hidden, or not yet shown, is
+ * said by nothing on another entry's page — neither its title nor its slug.
+ */
+function named(values: { refs(key: string): Entry[] }, key: string): Entry[] {
+  return values.refs(key).filter((one) => one.visible);
 }
 
-/** One value as words, for a field that is drawn plain. */
+/** Where an entry a reference names has a page, for the reference to be a link: a post's tags lead to the tags' pages, which list the posts (12 October 2026). */
+function pageOf(one: Entry): string | undefined {
+  return one.address !== undefined ? href(one) : undefined;
+}
+
+/** One value as words, for a field that is drawn plain. References are said by `cellSaid`, which reads them through the door. */
 function spoken(field: Field, value: unknown): string {
   if (value === undefined || value === null || value === '') return '';
   switch (field.kind) {
@@ -188,18 +186,27 @@ function spoken(field: Field, value: unknown): string {
       return WEEK.includes(String(value)) ? weekday(String(value)) : String(value);
     }
     case 'bool': return value === true ? site.words(field.label, LANG) : '';
-    case 'ref': return titlesOf(field.ref).get(String(value)) ?? String(value);
     case 'list': return '';
     default: {
+      // The diary's own word for a service, by the slug the platform keeps.
       const services = site.rolesOf('bookings')?.services;
-      if (field.key === 'service' && services) return titlesOf(services).get(String(value)) ?? String(value);
+      if (field.key === 'service' && services) {
+        const one = site.entry(services, String(value), locale);
+        return one === undefined ? String(value) : nameOf(one);
+      }
       return String(value);
     }
   }
 }
 
+/** A cell of a row, or a value of the entry's own, as words: a reference by the titles of what it names. */
+function cellSaid(field: Field, values: { value(key: string): unknown; refs(key: string): Entry[] }): string {
+  if (field.kind === 'ref') return named(values, field.key).map(nameOf).join(' · ');
+  return spoken(field, values.value(field.key));
+}
+
 /** A row of a list as one line: a week's row is «понеділок 09:00–18:00». */
-function rowSaid(of: Field[], row: { value(key: string): unknown }): string {
+function rowSaid(of: Field[], row: { value(key: string): unknown; refs(key: string): Entry[] }): string {
   const keys = new Set(of.map((one) => one.key));
   if (keys.has('opens') && keys.has('closes')) {
     const day = of.find((one) => one.key === 'day');
@@ -208,7 +215,7 @@ function rowSaid(of: Field[], row: { value(key: string): unknown }): string {
   }
   const parts: string[] = [];
   for (const one of of) {
-    const part = spoken(one, row.value(one.key));
+    const part = cellSaid(one, row);
     if (part !== '') parts.push(part);
   }
   return parts.join(' · ');
@@ -254,14 +261,23 @@ for (const field of collection.fields) {
     const only = field.of?.length === 1 ? field.of[0] : undefined;
     for (const row of fields.rows(field.key)) {
       const line = rowSaid(field.of ?? [], row);
-      if (line !== '') rows.push({ text: line, href: only ? linkOf(only, row.value(only.key)) : undefined });
+      const one = only?.kind === 'ref' ? named(row, only.key)[0] : undefined;
+      if (line !== '') rows.push({ text: line, href: one === undefined ? undefined : pageOf(one) });
     }
     if (rows.length > 0) facts.push({ key: field.key, label, kind: 'rows', rows });
     continue;
   }
-  const text = spoken(field, value);
+  // A reference to several (contract 3's `many`, which a list of one-ref
+  // rows became) is drawn as that list was: a line for each, linked.
+  if (field.kind === 'ref' && field.many === true) {
+    const rows = named(fields, field.key).map((one) => ({ text: nameOf(one), href: pageOf(one) }));
+    if (rows.length > 0) facts.push({ key: field.key, label, kind: 'rows', rows });
+    continue;
+  }
+  const target = field.kind === 'ref' ? named(fields, field.key)[0] : undefined;
+  const text = field.kind === 'ref' ? (target === undefined ? '' : nameOf(target)) : spoken(field, value);
   if (text === '') continue;
-  const link = field.kind === 'url' ? String(value) : field.kind === 'email' ? `mailto:${value}` : field.kind === 'tel' ? `tel:${String(value).replace(/[^+\d]/g, '')}` : linkOf(field, value);
+  const link = field.kind === 'url' ? String(value) : field.kind === 'email' ? `mailto:${value}` : field.kind === 'tel' ? `tel:${String(value).replace(/[^+\d]/g, '')}` : target === undefined ? undefined : pageOf(target);
   // A field the owner edits by tapping it carries its annotation, by the
   // platform's one rule (`tappable`, the door's); the rest are edited in the
   // panel beside the page and are drawn plain.

@@ -63,21 +63,27 @@ import { isUpload, uploaded } from '../lib/uploads';
 import { photo } from '../lib/photos';
 
 export async function getStaticPaths() {
-  // A listing per language: `/services`, and `/de/services` beside it — where
-  // the collection has one: a contract-3 collection shown only on other
-  // pages has none unless it declares it.
+  // A listing per language: `/services`, and `/de/services` beside it —
+  // where the collection has one. One with pages is listed at the listing it
+  // declares, and a contract-3 one declares none unless it asks; one without
+  // at the page its entries are shown on: its prefix in contract 2, the page
+  // its `shown_on` names in contract 3 (`/services` for
+  // `/services#services-{slug}`) — both the door's to say. Inside, because
+  // Astro runs this function apart from the rest of the file.
+  const listedAt = (collection: Collection, locale: string) =>
+    collection.pages ? site.listingOf(collection.name, locale) : site.shownOn(collection.name, locale);
   return site.collections.filter((one) => !one.pages || listsPaged(one)).flatMap((collection) =>
     EVERY_LOCALE.flatMap((locale) => {
-      const listing = site.listingOf(collection.name, locale);
+      const listing = listedAt(collection, locale);
       return listing === undefined ? [] : [{ params: { listing: listing.slice(1) }, props: { collection, locale } }];
     }),
   );
 }
 
 const { collection, locale } = Astro.props as { collection: Collection; locale: string };
-// A listing exists in every language the site has.
+// A listing exists in every language the site has, where getStaticPaths drew it.
 const alternates = EVERY_LOCALE.flatMap((one) => {
-  const address = site.listingOf(collection.name, one);
+  const address = collection.pages ? site.listingOf(collection.name, one) : site.shownOn(collection.name, one);
   return address === undefined ? [] : [{ locale: one, address }];
 });
 
@@ -125,7 +131,9 @@ const form = sells
             slug: entry.slug,
             title: String(entry.fields.value('title') ?? entry.slug),
             takes: entry.fields.value('takes') as number,
-            costs: typeof entry.fields.value('costs') === 'number' ? (entry.fields.value('costs') as number) : undefined,
+            // In whole minor units, whichever contract stored it (the door's
+            // `minor`): contract 3's price is `{ minor }`, not a number.
+            costs: entry.fields.minor('costs'),
             group: run.heading?.text,
           })),
       ),
@@ -134,9 +142,10 @@ const form = sells
             slug: entry.slug,
             title: String(entry.fields.value('title') ?? entry.slug),
             // What each does, for the form to grey the other services out once
-            // they are chosen; empty is everything. Rows of `{ service }`, as
-            // the kit and the panel write them.
-            does: entry.fields.rows('does').map((row) => row.value('service') as string),
+            // they are chosen; empty is everything. The door resolves it in
+            // either contract — rows of `{ service }` naming slugs, or one
+            // reference to many ids — and the form names a service by its slug.
+            does: entry.fields.refs('does').map((one) => one.slug),
           }))
         : [],
       // The days the business opens, for the week of days: a closed day is
