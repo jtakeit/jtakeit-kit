@@ -1,19 +1,22 @@
 import type { APIRoute } from 'astro';
-import { INDEXABLE, PAGES, canonicalFor } from '../data/site';
-import { href } from '../lib/entries';
+import { INDEXABLE, canonicalFor } from '../data/site';
 import { EVERY_LOCALE } from '../lib/locale';
+import { everyPage } from '../lib/pages';
 import { site } from '../lib/site';
 
 /**
- * The pages are written by hand in `PAGES` rather than generated, so that
- * adding a page and forgetting to list it is a visible omission in one file
- * instead of a silent one across the build.
+ * The pages are src/lib/pages.ts's list: the ones written by hand in `PAGES`,
+ * every page of the content, every listing and the privacy page — one list
+ * with `llms.txt`'s.
  *
- * The entries are not, and cannot be: nobody writes them here — the owner makes
- * them in the admin — so they are read from the collections, which is the only
- * list of them that exists. A hidden entry is absent, because `site.entries`
- * is how anything here enumerates them, and an entry of a collection without
- * pages has no address of its own to list.
+ * The entries are read from the collections, which is the only list of them
+ * that exists: nobody writes them here — the owner makes them in the admin. A
+ * hidden entry is absent, because `site.entries` is how anything here
+ * enumerates them, and an entry of a collection without pages has no address
+ * of its own to list.
+ *
+ * Each address as the page's canonical link says it — with its trailing
+ * slash — and under this build's base once, by `canonicalFor`.
  *
  * With INDEXABLE off the file is still served, but empty — an empty sitemap
  * says «nothing to crawl», where a 404 says «try again later».
@@ -22,15 +25,16 @@ export const GET: APIRoute = async () => {
   const urls: { loc: string; priority: number }[] = [];
 
   if (INDEXABLE) {
-    for (const page of PAGES) {
-      urls.push({ loc: canonicalFor(page.path), priority: page.priority });
+    const slashed = (address: string) => (address === '/' ? '/' : `${address}/`);
+    for (const page of everyPage()) {
+      urls.push({ loc: canonicalFor(slashed(page.address)), priority: page.priority });
     }
     for (const locale of EVERY_LOCALE) {
       for (const collection of site.collections.filter((one) => one.pages)) {
         for (const entry of site.entries(collection.name, { locale })) {
           // Below every page of the site and above nothing: an entry is worth
           // crawling and is not what the site is for.
-          urls.push({ loc: canonicalFor(href(entry)), priority: 0.5 });
+          if (entry.address !== undefined) urls.push({ loc: canonicalFor(slashed(entry.address)), priority: 0.5 });
         }
       }
     }

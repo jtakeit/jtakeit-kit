@@ -33,9 +33,11 @@ scaffold ships for the home page. A page whose document does not exist builds
 empty — every value blank, nothing annotated — which looks finished and is
 not, so commit the document with the page.
 
-**A line in `PAGES`** — `src/data/site.ts`. It feeds the sitemap and `llms.txt`,
-and it is written by hand so that adding a page and forgetting to list it is a
-visible omission in one file rather than a silent one across the build.
+**In the sitemap and `llms.txt`** by itself, once its document is committed:
+`src/lib/pages.ts` lists every page of the content in every language, every
+listing a collection is drawn at, and the privacy page. A page with no document
+of its own — a route that draws only the design's words — is a line in `PAGES`
+(`src/data/site.ts`), written by hand.
 
 **A way to get there.** A page nothing links to is a page nobody reads. That is
 design, and it is the part worth thinking about longest.

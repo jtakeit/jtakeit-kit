@@ -30,3 +30,17 @@ export function base(): string {
 export function under(path: string): string {
   return `${base()}${path.replace(/^\//, '')}`;
 }
+
+/**
+ * A link the content holds — a button's `cta_href`, which the owner sets in
+ * the panel — as this build serves it: a site-absolute path under `under()`,
+ * and anything else as written: `#contact`, `https://…`, `tel:…`, `mailto:…`.
+ *
+ * A component drew `cta_href` straight into `href`, and `/services` left the
+ * site under the preview's `/p/<slug>/` (the contract-3 rehearsal, 11
+ * November 2026): an address that arrives as data is still an address
+ * written here.
+ */
+export function linkTo(href: string): string {
+  return href.startsWith('/') && !href.startsWith('//') ? under(href) : href;
+}

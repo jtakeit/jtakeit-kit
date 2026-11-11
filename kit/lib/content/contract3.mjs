@@ -81,7 +81,7 @@ import { money as priced, priceWords } from '../money.mjs';
 import { shownAt } from '../schedule.mjs';
 import { ancestors, capped, descendants, grouped, groupField, selectHeadings } from './groups.mjs';
 import { canonicalLocale, baseAddressOf, inLocale, languagesOf, localeArg, localeOfAddress, sharedLocaleOf } from './locale.mjs';
-import { byRank, labelWords, minorOf, namesIn, specimenId, tappable } from './rules.mjs';
+import { byRank, factsOf, labelWords, minorOf, namesIn, specimenId, tappable } from './rules.mjs';
 
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 
@@ -1110,6 +1110,16 @@ export function contract3(byPath, names, { annotate, now }) {
       const list = !served(language) ? [] : language === '' ? blocksIn(original?.raw) : laidBlocks(blocksIn(original?.raw), over?.raw);
       const { blocks, block: find } = blocksOf(list, 'shared:', language === '' ? 'own' : 'laid', language);
       return { kind: 'shared', locale: language, file: over?.file ?? original?.file, blocks, block: find };
+    },
+    /**
+     * The business's facts in a language, by role (§4.5): the shared text's
+     * fields that say one — its name, its address, its telephone — each read
+     * and annotated (`shared:blocks[contacts].phone`) as the shared text is.
+     * What the page's structured data, its head and `llms.txt` say of the
+     * business; contract 2's business facts are gone.
+     */
+    facts(locale) {
+      return factsOf(site.shared(locale), schema.shared, typeOf);
     },
     /** A module's settings: `settings` of `jtk/modules/<module>.json` (§4.6); `{}` for none. */
     module(name) {

@@ -528,8 +528,13 @@ export const BLOCKS: Block[] = [
      * form asks what the message is about; a salon asks for a service, a
      * restaurant for a number of guests. Rewrite it for the business, or
      * take it out — a field the owner never reads costs a visitor for nothing.
+     *
+     * Its label is what a visitor reads above the control, so it is in the
+     * site's language from the first commit (`jtk create` writes it), not in
+     * the English the panel's labels arrive in: a Swiss form asked «What it
+     * is about» (the contract-3 rehearsal, 11 November 2026).
      */
-    asks: [{ key: 'topic', label: 'What it is about', kind: 'text', max: 120 }],
+    asks: [{ key: 'topic', label: '{{UI_ASK_TOPIC}}', kind: 'text', max: 120 }],
     fields: [
       { key: 'title', label: 'Heading', kind: 'text', required: true, max: 80, client_editable: true },
       { key: 'lead', label: 'Subheading', kind: 'textarea', max: 240, client_editable: true },

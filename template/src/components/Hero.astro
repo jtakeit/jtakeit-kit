@@ -10,6 +10,7 @@
  */
 import { copyFor } from '../copy';
 import { localeOf } from '../lib/locale';
+import { linkTo } from '../lib/under';
 import Shot from './Shot.astro';
 
 const { PAGE, HOME } = copyFor(localeOf(Astro.url.pathname));
@@ -47,7 +48,7 @@ const shot = hero.picture('image');
   )}
   {HOME.hero.cta && (
     <p class="actions">
-      <a class="btn" href={HOME.hero.ctaHref} {...hero.at('cta_label')}>
+      <a class="btn" href={linkTo(HOME.hero.ctaHref)} {...hero.at('cta_label')}>
         {HOME.hero.cta}
       </a>
     </p>

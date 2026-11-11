@@ -67,9 +67,10 @@ src/
   components/      one directory per variant + shared/
     motion/        the hero fields — one canvas, no dependencies
   copy/<locale>.ts every user-facing sentence
-  data/site.ts     the business's facts + INDEXABLE
+  data/site.ts     the business's facts where the shared text says none + INDEXABLE
   layouts/         <head>, SEO, the inline pre-paint script
   lib/site.ts      the content, read through the kit's door (@jtakeit/kit/content)
+  lib/pages.ts     every page the sitemap and llms.txt list
   lib/photos.ts    slot → file, via import.meta.glob
   pages/           routes; robots.txt.ts and sitemap.xml.ts are routes too
   styles/          tokens and globals

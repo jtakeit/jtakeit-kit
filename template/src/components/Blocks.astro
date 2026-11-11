@@ -22,6 +22,7 @@
  */
 import { copyFor } from '../copy';
 import { localeOf } from '../lib/locale';
+import { linkTo } from '../lib/under';
 import LeadForm from './LeadForm.astro';
 import design from '../../jtk/design.json';
 
@@ -67,6 +68,16 @@ const rendered = PAGE.blocks.findIndex((block) => block.type === 'hero');
 /** The band under the hero: the one that is in the first screen on a phone. */
 const first = PAGE.blocks.findIndex((_, at) => at !== rendered);
 const arrives = (at: number) => (at === first ? undefined : reveal);
+
+/**
+ * The one band that is `#contact`, where a button with no link of its own
+ * leads: the first that carries the form, else the last. An id is the
+ * page's once — both were it on the scaffold's own home page, the form's
+ * band and the questions under it, and `#contact` led to whichever a
+ * browser picked (the contract-3 rehearsal, 11 November 2026).
+ */
+const withForm = PAGE.blocks.findIndex((block, at) => at !== rendered && block.value('form') === true);
+const contactAt = withForm !== -1 ? withForm : PAGE.blocks.length - 1;
 ---
 
 {
@@ -83,7 +94,7 @@ const arrives = (at: number) => (at === first ? undefined : reveal);
     return (
       <section
         class={`band band--${type}`}
-        id={carriesForm || at === PAGE.blocks.length - 1 ? 'contact' : undefined}
+        id={at === contactAt ? 'contact' : undefined}
         data-reveal={arrives(at)}
       >
         <div class="band__inner">
@@ -137,7 +148,7 @@ const arrives = (at: number) => (at === first ? undefined : reveal);
             <p class="actions">
               <a
                 class="btn"
-                href={block.text('cta_href') || '#contact'}
+                href={linkTo(block.text('cta_href') || '#contact')}
                 {...block.at('cta_label')}
               >
                 {block.text('cta_label')}

@@ -3,11 +3,14 @@ import DESIGN from '../../jtk/design.json';
 /**
  * The document. Written once, derived from data, never repeated per page.
  *
- * Everything SEO-shaped here comes out of src/data/site.ts and src/copy — the
- * host from the build, the facts from one object, the indexability from one
- * flag. There is deliberately no second place to change any of them.
+ * Everything SEO-shaped here comes out of the shared text, src/data/site.ts
+ * and src/copy — the host from the build, the business's facts from the
+ * shared text the owner edits (`site.facts`, by role) and src/data/site.ts
+ * where it says nothing, the indexability from one flag. There is
+ * deliberately no second place to change any of them.
  */
 import { BUSINESS, INDEXABLE, SCHEMA_TYPE, canonicalFor } from '../data/site';
+import { site } from '../lib/site';
 import { under } from '../lib/under';
 import { copyFor } from '../copy';
 import { localeOf, langOf } from '../lib/locale';
@@ -43,6 +46,21 @@ const locale = localeOf(Astro.url.pathname);
 const COPY = copyFor(locale);
 const META = { ...COPY.META, lang: langOf(locale) };
 
+/*
+ * The business's facts: what the owner keeps in the panel's contacts — the
+ * shared text's fields that say a `role` (contract 3, wiki/98 §4.5) — read
+ * through the door in this page's language, and src/data/site.ts only where
+ * a role is empty. Read from the constant alone, the site went on naming the
+ * business by `jtk create --name`, with no address and no telephone, while
+ * the contacts the owner had filled in said otherwise (the contract-3
+ * rehearsal, 11 November 2026). Contract 2 says no roles: every fact is
+ * src/data/site.ts's, as it always was.
+ */
+const facts = site.facts(locale);
+const fact = (role: string, own: string): string => facts.text(role).trim() || own;
+const NAME = fact('name', BUSINESS.name);
+const CITY = fact('city', BUSINESS.city);
+
 const canonical = canonicalFor(Astro.url.pathname);
 // `under` and not a leading slash: `new URL('/og.jpg', …)` throws away the
 // path this build is served under, which under the studio's preview is the
@@ -51,7 +69,7 @@ const ogImage = new URL(under('/og.jpg'), Astro.site).href;
 // Never an empty <title> (WCAG 2.4.2): a page whose own title nobody has
 // written yet is named after the business, which is what a visitor would
 // call it anyway (12 October 2026: the home page of a fresh site had none).
-const named = title.trim() || BUSINESS.name || '';
+const named = title.trim() || NAME || '';
 const fullTitle = suffix && title.trim() ? `${named}${META.titleSuffix}` : named;
 
 /**
@@ -62,7 +80,8 @@ const fullTitle = suffix && title.trim() ? `${named}${META.titleSuffix}` : named
  * asserted as an empty string. geo and openingHours are absent on purpose until
  * the client confirms them — see src/data/site.ts.
  */
-const sameAs = [BUSINESS.instagram, BUSINESS.facebook].filter(Boolean);
+const social = facts.rows('social').map((row) => row.text('url').trim()).filter(Boolean);
+const sameAs = social.length > 0 ? social : [BUSINESS.instagram, BUSINESS.facebook].filter(Boolean);
 
 /**
  * The palette, as CSS custom properties on :root.
@@ -159,32 +178,37 @@ const rootStyle = Object.entries(palette)
   .map(([name, value]) => `${name}:${value}`)
   .join(';');
 
+// The telephone as it is dialled: the contacts' one number, as the owner
+// typed it, or the E.164 form src/data/site.ts keeps beside the display one.
+const telephone = fact('phone', BUSINESS.phoneDial);
+const email = fact('email', BUSINESS.email);
+const priceRange = fact('price_range', BUSINESS.priceRange);
+const hasMap = fact('maps', BUSINESS.mapsUrl);
+const address = Object.fromEntries(
+  Object.entries({
+    streetAddress: fact('street', BUSINESS.street),
+    postalCode: fact('postal_code', BUSINESS.postalCode),
+    addressLocality: CITY,
+    addressRegion: fact('region', BUSINESS.region),
+    addressCountry: fact('country', BUSINESS.country),
+  }).filter(([, value]) => value !== ''),
+);
+
 const businessSchema = {
   '@context': 'https://schema.org',
-  '@type': SCHEMA_TYPE,
+  '@type': fact('business_type', SCHEMA_TYPE),
   '@id': `${canonicalFor('/')}#business`,
-  name: BUSINESS.name,
+  name: NAME,
   description: BUSINESS.description || description,
   url: canonicalFor('/'),
   image: ogImage,
   inLanguage: META.lang,
-  ...(BUSINESS.phoneDial ? { telephone: BUSINESS.phoneDial } : {}),
-  ...(BUSINESS.email ? { email: BUSINESS.email } : {}),
-  ...(BUSINESS.priceRange ? { priceRange: BUSINESS.priceRange } : {}),
-  ...(BUSINESS.mapsUrl ? { hasMap: BUSINESS.mapsUrl } : {}),
+  ...(telephone ? { telephone } : {}),
+  ...(email ? { email } : {}),
+  ...(priceRange ? { priceRange } : {}),
+  ...(hasMap ? { hasMap } : {}),
   ...(sameAs.length ? { sameAs } : {}),
-  ...(BUSINESS.city
-    ? {
-        address: {
-          '@type': 'PostalAddress',
-          streetAddress: BUSINESS.street,
-          postalCode: BUSINESS.postalCode,
-          addressLocality: BUSINESS.city,
-          addressRegion: BUSINESS.region,
-          addressCountry: BUSINESS.country,
-        },
-      }
-    : {}),
+  ...(CITY ? { address: { '@type': 'PostalAddress', ...address } } : {}),
 };
 ---
 
@@ -229,7 +253,7 @@ const businessSchema = {
     {/* <meta name="google-site-verification" content="" /> */}
 
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content={BUSINESS.name} />
+    <meta property="og:site_name" content={NAME} />
     <meta property="og:locale" content={META.ogLocale} />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
@@ -238,10 +262,10 @@ const businessSchema = {
     <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content={BUSINESS.name} />
+    <meta property="og:image:alt" content={NAME} />
     <meta name="twitter:card" content="summary_large_image" />
 
-    {BUSINESS.city && <meta name="geo.placename" content={BUSINESS.city} />}
+    {CITY && <meta name="geo.placename" content={CITY} />}
 
     {/* iOS turns any number that looks like one into a call link — including
         prices and dates. The real phone numbers are explicit tel: links. */}

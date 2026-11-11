@@ -210,6 +210,29 @@ export interface Shared {
   block(type: string): Block;
 }
 
+/**
+ * The business's facts, by role (wiki/98 §4.5): the fields of the shared text
+ * that say a `role` — `name`, `phone`, `email`, `street`, `postal_code`,
+ * `city`, `region`, `country`, `maps`, `social`, `price_range`,
+ * `business_type`, `hours` — each read and annotated as the shared text is.
+ * Contract 2 has none: every answer is empty, and a template falls back to
+ * its own constants.
+ */
+export interface Facts {
+  /** Every role a field of the shared text says, filled or not. */
+  roles: string[];
+  /** A role's value as words; `''` for none — and for a role no field says. */
+  text(role: string): string;
+  /** A role's value as stored; `undefined` for none. */
+  value(role: string): unknown;
+  /** A list's rows — `social`, its links. */
+  rows(role: string): Row[];
+  /** The annotation of a role's field, `shared:blocks[contacts].phone`; `{}` for none. */
+  at(role: string, row?: number | string, part?: string): At;
+  /** The field that says the role. */
+  field(role: string): Field | undefined;
+}
+
 /** An entry of a collection. */
 export interface Entry {
   kind: 'entry';
@@ -272,6 +295,8 @@ export interface Site {
   page(address: string, locale?: string): Page;
   pages(locale?: string): Page[];
   shared(locale?: string): Shared;
+  /** The business's facts in a language, by role: the shared text's fields that say one (contract 3); none under contract 2. */
+  facts(locale?: string): Facts;
   /** A module's settings (contract 2: its `<module>_config` block; contract 3: `settings` of `jtk/modules/<module>.json`); `{}` for none. */
   module(name: string): Record<string, unknown>;
   /** The same settings read like any values, `rows('hours')`; annotated `module:<module>:hours[h1].opens` under contract 3, nowhere under contract 2. */
