@@ -260,6 +260,44 @@ test('the scaffold\'s own files: which they are, a token put back, the copy\'s r
   assert.deepEqual(changes.map((one) => one.split(':')[0]), ["text('image_alt')", "value('costs')", "rows('does')", "value('mentor')", "text('image')", 'jtk/content/', 'an annotation by index, written by hand']);
 });
 
+test('a kit taken from somewhere else than the registry — a tarball in the repository, a checkout — is kept as written; a version is bumped', () => {
+  const site = scaffold();
+  try {
+    const pkg = read(site, 'package.json');
+    pkg.dependencies['@jtakeit/kit'] = 'file:vendor/jtakeit-kit-0.14.0.tgz';
+    write(site, 'package.json', pkg);
+    const run = upgrade(site, '--no-install');
+    assert.equal(run.status, 0, said(run));
+    assert.equal(read(site, 'package.json').dependencies['@jtakeit/kit'], 'file:vendor/jtakeit-kit-0.14.0.tgz');
+    assert.match(run.stdout, /package\.json: @jtakeit\/kit file:vendor\/jtakeit-kit-0\.14\.0\.tgz — not from the registry, kept as written/);
+  } finally {
+    rmSync(join(site, '..'), { recursive: true, force: true });
+  }
+  const linked = scaffold();
+  try {
+    const pkg = read(linked, 'package.json');
+    pkg.dependencies['@jtakeit/kit'] = 'link:../kit';
+    write(linked, 'package.json', pkg);
+    assert.equal(upgrade(linked, '--no-install').status, 0);
+    assert.equal(read(linked, 'package.json').dependencies['@jtakeit/kit'], 'link:../kit');
+  } finally {
+    rmSync(join(linked, '..'), { recursive: true, force: true });
+  }
+  const versioned = scaffold();
+  try {
+    const pkg = read(versioned, 'package.json');
+    const now = pkg.dependencies['@jtakeit/kit'];
+    pkg.dependencies['@jtakeit/kit'] = '0.1.0';
+    write(versioned, 'package.json', pkg);
+    const run = upgrade(versioned, '--no-install');
+    assert.equal(run.status, 0, said(run));
+    assert.equal(read(versioned, 'package.json').dependencies['@jtakeit/kit'], now);
+    assert.match(run.stdout, new RegExp(`@jtakeit/kit 0\\.1\\.0 → ${now.replaceAll('.', '\\.')}`));
+  } finally {
+    rmSync(join(versioned, '..'), { recursive: true, force: true });
+  }
+});
+
 test('jtk upgrade says which contract, or what it does', () => {
   const none = spawnSync('node', [bin, 'upgrade'], { encoding: 'utf8' });
   assert.equal(none.status, 0);

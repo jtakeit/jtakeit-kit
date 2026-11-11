@@ -157,6 +157,15 @@ test('shared text: shared.json, shared.de.json, and shared.de-CH.json found what
   assert.equal(sharedLocaleOf('sharedness.json'), null);
 });
 
+test('contract 2 has no facts by role: every answer empty, so a template falls back to its own (src/data/site.ts)', () => {
+  const facts = site.facts();
+  assert.deepEqual(facts.roles, []);
+  assert.equal(facts.text('name'), '');
+  assert.equal(facts.value('phone'), undefined);
+  assert.deepEqual(facts.rows('social'), []);
+  assert.deepEqual(facts.at('name'), {});
+});
+
 test('a collection with pages gives an entry an address; one without, an anchor on its listing', () => {
   const oak = site.entry('works', 'oak');
   assert.equal(oak.slug, 'oak');

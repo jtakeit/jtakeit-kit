@@ -1078,8 +1078,17 @@ export function documentsOf(files, how) {
     if (currency !== '') out.currency = currency;
     write.set('/jtk/site.json', out);
   }
+  // The currency is the site's setting (§6, §14 · 4), not content and not a
+  // file's: nothing here makes one up, and nothing promises that a save
+  // will — a new site's setting is empty, and the platform writes what it
+  // holds. It was said as "until the platform writes one (its next save
+  // does)", which a new site's next save never did (the contract-3
+  // rehearsal, 11 November 2026).
   if (currency === '' && (to.modules !== undefined || hasMoney(to))) {
-    notes.push('no currency: jtk/site.json carries none and no state was handed over — prices are drawn with no currency until the platform writes one (its next save does)');
+    notes.push(
+      `no currency: ${Object.keys(state.site).length > 0 ? "the platform's state says none" : 'jtk/site.json carries none and no state was handed over'} — ` +
+        "the currency is the site's setting, set on the panel's business screen; until it is set, prices are drawn with no currency",
+    );
   }
 
   remove.add('/jtk/catalogue.json');

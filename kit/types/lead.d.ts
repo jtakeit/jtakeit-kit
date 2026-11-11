@@ -59,9 +59,21 @@ export interface LeadFormProps {
   tag?: string;
   /** How many photographs the form takes, 1 to 7 — the collecting block's `photos`. Absent is none. */
   photos?: number;
-  /** The page's language, for the photo control's words. */
+  /** The page's language, for the photo control's words, and for the labels and the button where `copy` leaves them empty (`leadWords`). */
   lang?: string;
 }
+
+/** The form's own labels and its button, said where the collecting block leaves its words empty. */
+export interface LeadWords {
+  name: string;
+  contact: string;
+  message: string;
+  submit: string;
+}
+/** The kit's words, by language: en, de, fr, it, es, pt, uk, ru. */
+export const LEAD_WORDS: Record<string, LeadWords>;
+/** The words for a language — `de-CH` reads `de`, an unknown one English. */
+export function leadWords(lang?: string): LeadWords;
 
 export function inputType(kind: string): 'number' | 'tel' | 'email' | 'url' | 'date' | 'time' | 'text';
 /** The enquiry form as HTML, wrapped in `<jtk-lead>`. */

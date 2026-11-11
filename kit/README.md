@@ -115,6 +115,10 @@ const html = renderLeadForm({
 
 `copy` is the collecting block's own words — the owner edits them by tapping,
 which is what `paths` annotates — and `asks` are the catalogue's, drawn fixed.
+A label or the button the block leaves empty says the kit's word in `lang`
+(`leadWords`: en, de, fr, it, es, pt, uk, ru), carrying the field's path so a
+tap opens it, or `data-jtk-fixed` where there is none: a control is never
+drawn without a name.
 `@jtakeit/kit/lead.css` is the legible minimum; keep `.trap` off-screen
 whatever you restyle.
 
@@ -141,7 +145,15 @@ const hero = site.page('/', 'de').block('hero');
 hero.text('title');                    // the words
 hero.at('title');                      // { 'data-jtk-path': 'blocks[0].title' } — spread it onto the element
 site.entries('works', { locale: 'de' }); // offered and ordered; { all: true } for every one
+site.facts('de').text('phone');        // the business's facts by role, from the shared text (contract 3); '' under contract 2
 ```
+
+`site.facts(locale)` reads the fields of the shared text that say a `role`
+— the contacts' `name`, `street`, `city`, `phone`… — by that role, each with
+its annotation (`facts.at('phone')`). It is what a layout's structured data,
+its head and `llms.txt` say of the business, so what the owner edits in the
+panel is what search engines are told. Contract 2 declares no roles, and every
+answer is empty: a template falls back to its own constants there.
 
 `TAPPABLE` and `tappable(field)` are the platform's kinds that must carry a
 tap target, one set for the lint, the catalogue check and the scaffold. The

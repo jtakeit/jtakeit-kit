@@ -62,7 +62,7 @@ import { content } from './content/index.mjs';
 import { contractOf, mintJtk, readJtk } from './content/node.mjs';
 import { canonicalTag, judgeSchema } from './judge3.mjs';
 import { filesBeside, judgeRequest } from './judgeFiles.mjs';
-import { BY_INDEX, DOCUMENT_ID, ID, placesIn } from './places3.mjs';
+import { BY_INDEX, DOCUMENT_ID, ID, isEmpty, KEY, placesIn, tappable3 } from './places3.mjs';
 import { builtPages, prefixBuild, servedFaults, unboundedHeights, unowned } from './served.mjs';
 
 export { judgeSchema };
@@ -137,12 +137,29 @@ export function schemaText(schema) {
 //
 //   every annotation names a place the schema declares, in the document it
 //   says — the page's own, `shared:`, `page:<id>:`, `entry:<id>:` — filled or
-//   not: a field outside the rule may be annotated, never one nobody declared.
+//   not: a field outside the rule may be annotated, never one nobody declared;
+//
+//   and every value of the shared text the owner fills and taps nowhere — a
+//   `no_tap_target` name, a phone, an email, a country — drawn somewhere all
+//   the same: in the words, an attribute, a `tel:` link or the structured
+//   data. The annotations cannot say where such a value is, so the pages'
+//   own text is asked; a value on no page is one the owner edits for nothing.
 //
 // The rules of a place are places3.mjs's, which `jtkit lint` reads too.
 
 /** A module's settings by the module's name; its fields are the module's, not the schema's. */
 const MODULE = /^module:([a-z][a-z0-9_]*):([a-z][a-z0-9_]{0,39}(?:\[[a-z][a-z0-9-]{0,31}\]\.[a-z][a-z0-9_]{0,39}){0,2}(?:\.(?:src|alt|focus|poster))?)$/;
+
+/** The kinds whose value a page draws as it is stored, so the page's text can be searched for it. */
+const SAID_AS_STORED = new Set(['text', 'textarea', 'richtext_lite', 'markdown', 'tel', 'email', 'url', 'select', 'number']);
+
+/** A page's text with the entities a build writes put back: what a visitor and a crawler read. */
+function decoded(html) {
+  return html
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(Number.parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(Number(dec)))
+    .replace(/&(quot|apos|lt|gt|nbsp|amp);/g, (_, name) => ({ quot: '"', apos: "'", lt: '<', gt: '>', nbsp: '\u00a0', amp: '&' })[name]);
+}
 
 /**
  * Every place the schema and the built pages disagree, as sentences.
@@ -159,6 +176,7 @@ export function pagesAgainst({ files, schema, dist }) {
   const own = documents.filter((one) => one.locale === '');
   const shared = site.sharedDocuments().flatMap((one) => one.blocks);
   const { types, blockPlaces, entryPlaces, declares } = placesIn(schema, shared);
+  const fieldsOfType = (name) => (Array.isArray(types.get(name)?.fields) ? types.get(name).fields.filter(isObject) : []);
   const byId = { page: new Map(), entry: new Map() };
   for (const one of own) byId[one.collection === undefined ? 'page' : 'entry'].set(one.id, one);
   // Whose a built page is, in every language: a page's, or an entry's own.
@@ -167,9 +185,12 @@ export function pagesAgainst({ files, schema, dist }) {
 
   /** The annotations of every built page, by its address. */
   const built = new Map();
+  /** Every page's text, decoded, for the values no annotation places. */
+  let corpus = '';
   for (const file of builtPages(dist)) {
     const page = `/${relative(dist, file).split(sep).join('/')}`.replace(/\/index\.html$/, '').replace(/\.html$/, '') || '/';
     const html = readFileSync(file, 'utf8');
+    corpus += `\n${decoded(html)}`;
     built.set(page, {
       paths: new Set([...html.matchAll(/data-jtk-path="([^"]+)"/g)].map((one) => one[1])),
       binds: [...html.matchAll(/data-jtk-bind="([^"]*)"/g)].flatMap((one) => one[1].split(/\s+/).filter(Boolean)),
@@ -190,6 +211,46 @@ export function pagesAgainst({ files, schema, dist }) {
   }
   for (const place of blockPlaces(shared, 'shared:')) {
     if (!everywhere.has(place)) out.push(`${place} is declared and no page renders it`);
+  }
+
+  // ── every value of the shared text, drawn somewhere ──────────────────────
+  //
+  // A field of the shared text the owner fills and no tap reaches — the
+  // contacts' name, address and telephone are `no_tap_target`, said in the
+  // head and the structured data — has no annotation to look for, and the
+  // check above passed a site whose every contact was drawn nowhere: the
+  // layout read the business's facts from a constant, and what the owner
+  // typed in the panel changed nothing (the contract-3 rehearsal, 11
+  // November 2026). So the pages' text is asked for the value itself; a phone
+  // also as it is dialled, its spaces and dashes left out.
+  const drawn = (field, value) => {
+    const said = String(value).trim();
+    if (said === '' || corpus.includes(said)) return true;
+    return field.kind === 'tel' && corpus.includes(said.replace(/[\s().\-/]/g, ''));
+  };
+  const undrawn = (values, fields, prefix, steps = 0) => {
+    const places = [];
+    for (const field of fields) {
+      if (typeof field.key !== 'string' || field.client_editable !== true) continue;
+      const value = values[field.key];
+      if (isEmpty(value)) continue;
+      const here = prefix + field.key;
+      if (field.kind === 'list') {
+        if (!Array.isArray(value) || steps >= 2) continue;
+        const of = Array.isArray(field.of) ? field.of.filter(isObject) : [];
+        for (const row of value) if (isObject(row) && KEY.test(row._key ?? '')) places.push(...undrawn(row, of, `${here}[${row._key}].`, steps + 1));
+        continue;
+      }
+      if (tappable3(field) || !SAID_AS_STORED.has(field.kind) || (typeof value !== 'string' && typeof value !== 'number')) continue;
+      if (!drawn(field, value)) places.push({ place: here, value: String(value).trim() });
+    }
+    return places;
+  };
+  for (const block of shared) {
+    if (!isObject(block) || !KEY.test(block._key ?? '')) continue;
+    for (const { place, value } of undrawn(block, fieldsOfType(block.type), `shared:blocks[${block._key}].`)) {
+      out.push(`${place} is filled («${value.length > 40 ? `${value.slice(0, 39)}…` : value}») and no page draws it — not in its words, an attribute, a link or the structured data: what the owner types there changes nothing on the site`);
+    }
   }
   for (const document of own) {
     const isEntry = document.collection !== undefined;

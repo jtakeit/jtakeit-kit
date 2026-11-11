@@ -104,6 +104,7 @@ const RowTitle = isGrouped ? 'h3' : 'h2';
 // edited in the panel beside it.
 const shown = collection.fields.filter((field) => site.tappable(field));
 
+
 const lang = langOf(locale).slice(0, 2);
 // The diary's settings: its `bookings_config` block, through the door.
 const settings = site.module('bookings');
@@ -154,6 +155,15 @@ const form = sells
     }
   : undefined;
 
+/*
+ * How far ahead the form lets a visitor pick a day: the diary's own
+ * `horizon`, in days, as the owner set it — the form's default of thirty
+ * cut a diary open for sixty off at thirty (the contract-3 rehearsal, 11
+ * November 2026). Empty is no limit, which the platform bounds at 730 days,
+ * the most the setting can say; the platform clamps to its own either way.
+ */
+const horizon = typeof settings.horizon === 'number' && settings.horizon > 0 ? Math.floor(settings.horizon) : 730;
+
 const heading = site.words(collection.label, langOf(locale));
 ---
 
@@ -197,8 +207,8 @@ const heading = site.words(collection.label, langOf(locale));
                           if (!file) return null;
                           return <Image src={file} alt={picture.alt} data-jtk-path={picture['data-jtk-path']} widths={[480, 960]} sizes="(min-width: 900px) 20rem, 92vw" layout="none" />;
                         }
-                        if (field.kind === 'duration') return <span {...fields.at(field.key)}>{length(Number(value))}</span>;
-                        if (field.kind === 'money') return <span {...fields.at(field.key)}>{site.money(value, locale)}</span>;
+                        if (field.kind === 'duration') return <span class="listing-row__term" {...fields.at(field.key)}>{length(Number(value))}</span>;
+                        if (field.kind === 'money') return <span class="listing-row__term" {...fields.at(field.key)}>{site.money(value, locale)}</span>;
                         if (field.key === 'title') return <RowTitle {...fields.at(field.key)}>{String(value)}</RowTitle>;
                         return <p {...fields.at(field.key)}>{String(value)}</p>;
                       })}
@@ -220,6 +230,7 @@ const heading = site.words(collection.label, langOf(locale));
             resources={form.resources}
             open={form.open}
             locale={(['uk', 'de', 'en'].includes(lang) ? lang : 'en') as 'uk' | 'de' | 'en'}
+            daysAhead={horizon}
             combine={settings.combine === true}
             scale={typeof settings.scale === 'string' ? settings.scale : ''}
             kind={typeof settings.kind === 'string' ? settings.kind : ''}
@@ -231,3 +242,16 @@ const heading = site.words(collection.label, langOf(locale));
   </main>
 </Layout>
 )}
+
+<style is:global>
+  /*
+   * A length and a price side by side are two values, and said apart: drawn
+   * as two bare spans they ran together, «30 Minuten30» (the contract-3
+   * rehearsal, 11 November 2026). The dot is drawn here and not written
+   * between them — a text node between two annotated values belongs to
+   * neither (docs/catalogue.md, «A separator between two values is CSS»).
+   */
+  .listing-row__term + .listing-row__term::before {
+    content: ' · ';
+  }
+</style>

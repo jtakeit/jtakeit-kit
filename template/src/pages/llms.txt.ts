@@ -1,7 +1,8 @@
 import type { APIRoute } from 'astro';
-import { BUSINESS, INDEXABLE, PAGES, fullAddress } from '../data/site';
+import { BUSINESS, INDEXABLE } from '../data/site';
 import { href } from '../lib/entries';
-import { EVERY_LOCALE } from '../lib/locale';
+import { EVERY_LOCALE, langOf } from '../lib/locale';
+import { everyPage } from '../lib/pages';
 import { site } from '../lib/site';
 
 /**
@@ -10,8 +11,10 @@ import { site } from '../lib/site';
  * whose pitch is «be findable» it is a reasonable thing to ship.
  *
  * Built from the same data as the page and the structured data, so it cannot
- * contradict either. Empty while INDEXABLE is false — a preview should not be
- * summarising itself to anyone.
+ * contradict either: the business's facts from the shared text the owner
+ * edits (`site.facts`, by role) and src/data/site.ts where it says nothing,
+ * the pages from src/lib/pages.ts, as the sitemap's. Empty while INDEXABLE is
+ * false — a preview should not be summarising itself to anyone.
  */
 export const GET: APIRoute = async () => {
   if (!INDEXABLE) {
@@ -22,27 +25,40 @@ export const GET: APIRoute = async () => {
   // lands here is looking for what this business has said, and a title with an
   // address is the shortest honest form of it.
   const collections = EVERY_LOCALE.flatMap((locale) =>
-    site.collections.filter((one) => one.pages).map((collection) => ({ collection, entries: site.entries(collection.name, { locale }) })),
+    site.collections.filter((one) => one.pages).map((collection) => ({ collection, locale, entries: site.entries(collection.name, { locale }) })),
   );
 
+  // The site's own language's: what the owner keeps in the panel's contacts,
+  // and src/data/site.ts where a role is empty (Layout.astro says why).
+  const facts = site.facts();
+  const fact = (role: string, own: string): string => facts.text(role).trim() || own;
+  const address = [
+    fact('street', BUSINESS.street),
+    [fact('postal_code', BUSINESS.postalCode), fact('city', BUSINESS.city)].filter(Boolean).join(' '),
+  ]
+    .filter(Boolean)
+    .join(', ');
+
   const lines = [
-    `# ${BUSINESS.name}`,
+    `# ${fact('name', BUSINESS.name)}`,
     '',
     `> ${BUSINESS.description}`,
     '',
-    fullAddress,
-    BUSINESS.phoneDisplay,
-    BUSINESS.email,
-    BUSINESS.priceRange,
+    address,
+    fact('phone', BUSINESS.phoneDisplay),
+    fact('email', BUSINESS.email),
+    fact('price_range', BUSINESS.priceRange),
     '',
     '## Pages',
-    ...PAGES.map((p) => `- ${p.path}: ${p.summary}`),
-    ...collections.flatMap(({ collection, entries }) =>
+    ...everyPage().map((p) => `- ${p.address}: ${p.summary}`),
+    ...collections.flatMap(({ collection, locale, entries }) =>
       entries.length === 0
         ? []
         : [
             '',
-            `## ${collection.label}`,
+            // A label is words per language (`{ de: 'Blog', en: 'Blog' }`):
+            // said in the listing's, never as `[object Object]`.
+            `## ${site.words(collection.label, langOf(locale))}`,
             ...entries.map((entry) => `- ${href(entry)}: ${String(entry.fields.value('title') ?? '')}`),
           ],
     ),

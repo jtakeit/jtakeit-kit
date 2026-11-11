@@ -34,6 +34,25 @@ test('a build without annotations carries no path, and an empty word no element'
   assert.ok(!html.includes('lead__legal'));
 });
 
+test('a label or a button the block leaves empty says the kit\'s word in the page\'s language: tappable where the field is annotated, fixed where not', async () => {
+  const { leadWords, LEAD_WORDS } = await import('../lib/lead/render.mjs');
+  const bare = { ...copy, name: '', contact: '', message: undefined, submit: '' };
+  const html = renderLeadForm({ action: '/api/lead', copy: bare, paths, lang: 'de-CH' });
+  assert.ok(html.includes('<label class="field__label" for="lead-name"><span data-jtk-path="blocks[3].name_label">Name</span> <span aria-hidden="true">*</span></label>'));
+  assert.ok(html.includes('<label class="field__label" for="lead-contact"><span data-jtk-path="blocks[3].contact_label">Telefon oder E-Mail</span> <span aria-hidden="true">*</span></label>'));
+  assert.ok(html.includes('<label class="field__label" for="lead-message"><span data-jtk-path="blocks[3].message_label">Nachricht</span></label>'));
+  assert.ok(html.includes('<button class="btn" type="submit" data-submit><span data-submit-label data-jtk-path="blocks[3].cta_label">Senden</span></button>'));
+  // No path, as on a page that is not the block's own: the kit's words are nobody's to tap, and said so.
+  const away = renderLeadForm({ action: '/api/lead', copy: bare, lang: 'fr' });
+  assert.ok(away.includes('<label class="field__label" for="lead-name"><span data-jtk-fixed>Nom</span>'));
+  assert.ok(away.includes('<span data-submit-label data-jtk-fixed>Envoyer</span>'));
+  // The owner's words win over the kit's.
+  assert.ok(renderLeadForm({ action: '/api/lead', copy, lang: 'de' }).includes('<span>Your name</span>'));
+  assert.deepEqual(Object.keys(LEAD_WORDS).sort(), ['de', 'en', 'es', 'fr', 'it', 'pt', 'ru', 'uk']);
+  assert.equal(leadWords('uk').submit, 'Надіслати');
+  assert.equal(leadWords('pl').name, 'Name', 'a language the kit has no words in reads English');
+});
+
 test('the asks from the catalogue are drawn by kind, fixed, and nothing else is asked', () => {
   const asks = [
     { key: 'topic', label: 'What it is about', kind: 'text', max: 120 },

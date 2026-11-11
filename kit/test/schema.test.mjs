@@ -351,6 +351,41 @@ test('a declared field the page does not draw, a shared one drawn nowhere, an en
   assert.equal(status, 3);
 });
 
+test('a value of the shared text the owner fills and taps nowhere is drawn somewhere all the same — said where no page has it', () => {
+  // The scaffold's contacts: every field the owner's, none tapped; drawn in the head, the structured data, a tel: link.
+  const quiet = (root, street) => {
+    const file = join(root, 'src/content/blocks.ts');
+    writeFileSync(file, readFileSync(file, 'utf8').replace(
+      "{ type: 'contacts', v: 1, label: 'Kontakt', fields: [{ key: 'phone', label: 'Telefon', kind: 'tel', role: 'phone', ...ce }, { key: 'name', label: 'Name', kind: 'text', role: 'name', ...ce }] },",
+      "{ type: 'contacts', v: 1, label: 'Kontakt', fields: [{ key: 'phone', label: 'Telefon', kind: 'tel', role: 'phone', no_tap_target: true, ...ce }, { key: 'name', label: 'Name', kind: 'text', role: 'name', no_tap_target: true, ...ce }, { key: 'street', label: 'Strasse', kind: 'text', role: 'street', no_tap_target: true, ...ce }, { key: 'note', label: 'Notiz', kind: 'text' }] },",
+    ));
+    writeFileSync(join(root, 'jtk/shared.json'), JSON.stringify({ blocks: [{ _key: 'contacts', type: 'contacts', v: 1, phone: '+41 44 123 45 67', name: 'Salon & Söhne', street, note: 'the developer\'s, drawn nowhere' }] }));
+  };
+  const page = HOME_PAGE.replace(shared, '');
+  const checkedQuiet = (head, street) => {
+    const root = site(`${head}${page}`, OAK_PAGE.replace(shared, ''));
+    try {
+      quiet(root, street);
+      const said = run(root, '--dist', join(root, 'dist'));
+      return { status: said.status, out: `${said.stdout}\n${said.stderr}` };
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  };
+  // Drawn: the name escaped in an attribute, the street in the structured data, the phone only as it is dialled.
+  const head = '<meta property="og:site_name" content="Salon &amp; Söhne"><script type="application/ld+json">{"streetAddress":"Langstrasse 12"}</script><a href="tel:+41441234567" data-jtk-fixed>Anrufen</a>';
+  const drawn = checkedQuiet(head, 'Langstrasse 12');
+  assert.match(drawn.out, /the schema and the page agree/);
+  assert.equal(drawn.status, 0, drawn.out);
+  // Drawn nowhere: each said, with its value; the developer's own field is not the owner's, and not asked after.
+  const nowhere = checkedQuiet('', 'Langstrasse 12');
+  assert.match(nowhere.out, /✗ shared:blocks\[contacts\]\.phone is filled \(«\+41 44 123 45 67»\) and no page draws it/);
+  assert.match(nowhere.out, /✗ shared:blocks\[contacts\]\.name is filled \(«Salon & Söhne»\) and no page draws it/);
+  assert.match(nowhere.out, /✗ shared:blocks\[contacts\]\.street is filled \(«Langstrasse 12»\) and no page draws it — not in its words, an attribute, a link or the structured data: what the owner types there changes nothing on the site/);
+  assert.doesNotMatch(nowhere.out, /contacts\]\.note/);
+  assert.equal(nowhere.status, 3);
+});
+
 test('an annotation nobody declared, one by index, one of a document the site has not got — and a field outside the rule may be annotated', () => {
   const page = HOME_PAGE
     + '<p data-jtk-path="blocks[hero].note">still</p>'

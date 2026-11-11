@@ -93,7 +93,7 @@ import {
   treeFields,
 } from './groups.mjs';
 import { baseAddressOf, canonicalLocale, inLocale, languagesOf, localeArg, localeOfAddress, segmentOf, sharedLocaleOf } from './locale.mjs';
-import { byRank, labelWords, minorOf, namesIn, specimenId, TAPPABLE, tappable } from './rules.mjs';
+import { byRank, factsOf, labelWords, minorOf, namesIn, specimenId, TAPPABLE, tappable } from './rules.mjs';
 import { contract3 } from './contract3.mjs';
 
 export { shownAt, drawsPagedListing, linksToListing, canonicalLocale, sharedLocaleOf };
@@ -699,6 +699,16 @@ export function content(files, options = {}) {
       const found = shared.get(language);
       const { blocks, block: find } = blocksOf(found?.blocks ?? [], 'shared:', language);
       return { kind: 'shared', locale: language, file: found?.file, blocks, block: find };
+    },
+    /**
+     * The business's facts by role: none in contract 2, whose catalogue
+     * says no `role` — its facts are the template's (`src/data/site.ts`)
+     * and the platform's settings, read by nothing here (wiki/98 §0, 5). A
+     * template asks the same question of either contract and falls back to
+     * its own where the answer is empty.
+     */
+    facts(locale) {
+      return factsOf(site.shared(locale), [], typeOf);
     },
     module(name) {
       const file = byPath.get(`/jtk/${name}.json`);

@@ -161,3 +161,51 @@ export function namesIn(declared, held) {
   }
   return { to: [], names: [] };
 }
+
+/**
+ * The business's facts, by role (wiki/98 §4.5): every field of the shared
+ * text that says a `role` — the scaffold's `contacts` — read where the shared
+ * text has it, in the language it was read in. What the owner edits in the
+ * panel as the business's name, address and telephone is what the page's
+ * structured data, its head and `llms.txt` say: a template reads
+ * `facts.text('name')`, never a constant of its own, and falls back to one
+ * only where the role is empty.
+ *
+ * The first block of a type the schema lists in `shared` that declares the
+ * role wins, as the judge allows one field a role. A schema with no `shared`
+ * — every contract-2 catalogue — has no facts: there the business's facts
+ * are the template's (`src/data/site.ts`) and the platform's settings, and
+ * contract 2 gets no new readers (wiki/98 §7).
+ *
+ * @param {{ blocks: any[] }} shared the shared text in a language, as `site.shared(locale)` hands it out
+ * @param {unknown} listed the schema's `shared`: the block types the shared text holds
+ * @param {(type: string) => any} typeOf a block type's declaration, as the door hands it out
+ */
+export function factsOf(shared, listed, typeOf) {
+  const types = new Set(Array.isArray(listed) ? listed.filter((one) => typeof one === 'string') : []);
+  /** @type {Map<string, { block: any; key: string }>} */
+  const found = new Map();
+  /** @type {Set<string>} */
+  const roles = new Set();
+  for (const type of types) {
+    for (const field of Array.isArray(typeOf(type)?.fields) ? typeOf(type).fields : []) {
+      if (isObject(field) && typeof field.role === 'string' && field.role !== '') roles.add(field.role);
+    }
+  }
+  for (const block of Array.isArray(shared?.blocks) ? shared.blocks : []) {
+    if (!types.has(block?.type)) continue;
+    for (const field of Array.isArray(typeOf(block.type)?.fields) ? typeOf(block.type).fields : []) {
+      if (!isObject(field) || typeof field.role !== 'string' || field.role === '' || found.has(field.role)) continue;
+      found.set(field.role, { block, key: field.key });
+    }
+  }
+  const of = (role) => found.get(role);
+  return {
+    roles: [...roles],
+    text: (role) => (of(role) === undefined ? '' : of(role).block.text(of(role).key)),
+    value: (role) => (of(role) === undefined ? undefined : of(role).block.value(of(role).key)),
+    rows: (role) => (of(role) === undefined ? [] : of(role).block.rows(of(role).key)),
+    at: (role, row, part) => (of(role) === undefined ? {} : of(role).block.at(of(role).key, row, part)),
+    field: (role) => (of(role) === undefined ? undefined : of(role).block.field(of(role).key)),
+  };
+}

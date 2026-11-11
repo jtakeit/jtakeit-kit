@@ -276,6 +276,27 @@ test('shared text: shared.<locale>.json laid over shared.json by key, the phone 
   assert.deepEqual(site.sharedDocuments().map((one) => [one.locale, one.blocks[0].name]), [['', 'Salon'], ['en', 'The Salon']]);
 });
 
+test('the business\'s facts by role (wiki/98 §4.5): the shared text\'s fields that say one, read and annotated as the shared text is', () => {
+  const facts = site.facts();
+  assert.deepEqual(facts.roles.sort(), ['name', 'phone']);
+  assert.equal(facts.text('name'), 'Salon');
+  assert.equal(facts.text('phone'), '+41 1');
+  assert.deepEqual(facts.at('phone'), { 'data-jtk-path': 'shared:blocks[contacts].phone' });
+  assert.equal(facts.field('name')?.role, 'name');
+  // A role no field says is empty, never an error: the template falls back to its own.
+  assert.equal(facts.text('street'), '');
+  assert.equal(facts.value('street'), undefined);
+  assert.deepEqual(facts.rows('social'), []);
+  assert.deepEqual(facts.at('street'), {});
+  // In a language: the translation's words, the original's number.
+  assert.equal(site.facts('en').text('name'), 'The Salon');
+  assert.equal(site.facts('en').text('phone'), '+41 1');
+  // A block of a type the schema does not list in `shared` says no facts, roles or not.
+  const off = content({ ...files(), '/jtk/schema.json': { ...schema, shared: [] } }, { now });
+  assert.equal(off.facts().text('name'), '');
+  assert.deepEqual(off.facts().roles, []);
+});
+
 test('an entry in a language: its translation\'s fields laid over, its body the translation\'s whole, its address in that language', () => {
   const oak = site.entry('works', 'eiche', 'en');
   assert.equal(oak.file, '/jtk/entries/works/eiche.en.json');

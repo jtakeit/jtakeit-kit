@@ -119,8 +119,9 @@ route:
    the file — the door finds it by that, as the platform does, wherever the
    file sits — but keep the file where the platform writes it, so the diff of
    its next save is the content and not a move.
-4. **`PAGES`** in `src/data/site.ts`: the German addresses, so they are in the
-   sitemap.
+4. **The sitemap** lists the German pages by their documents
+   (`src/lib/pages.ts`); a German page with no document of its own is a line
+   in `PAGES` (`src/data/site.ts`).
 
 The routes are `src/pages/[...lang]/…`: `index.astro` and `privacy.astro` are
 there already and build at `/` and `/de`, `/privacy` and `/de/privacy`. A page

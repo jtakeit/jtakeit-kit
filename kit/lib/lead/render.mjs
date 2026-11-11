@@ -65,12 +65,47 @@
  * @property {LeadPaths} [paths]
  * @property {string} [tag]        the element's name around the form, `jtk-lead`; `''` for none
  * @property {number} [photos]     how many photographs the form takes, 1 to 7 — what the collecting block declares as `photos`; absent is none
- * @property {string} [lang]       the page's language, for the photo control's words when `copy` does not carry them
+ * @property {string} [lang]       the page's language, for the photo control's words when `copy` does not carry them, and the labels and the button where it leaves them empty
  */
 
 import { PHOTOS_MAX, PHOTO_TYPES, photoWords } from './photos.mjs';
 
 export { photoWords, PHOTOS_MAX } from './photos.mjs';
+
+/**
+ * The form's own labels and its button, in the kit's eight languages: what a
+ * control says while the collecting block's own words (`name_label`,
+ * `contact_label`, `message_label`, `cta_label`) are empty — a fresh
+ * scaffold's are, and the form went out with three bare asterisks and a
+ * button with nothing on it (the contract-3 rehearsal, 11 November 2026). A
+ * control with no name is one a screen reader cannot say (WCAG 4.1.2).
+ *
+ * The owner's words replace them: where the page annotates the field, the
+ * stand-in carries its path, so a tap on it opens the field it stands for.
+ *
+ * @typedef {{ name: string; contact: string; message: string; submit: string }} LeadWords
+ * @type {Record<string, LeadWords>}
+ */
+export const LEAD_WORDS = {
+  en: { name: 'Name', contact: 'Phone or email', message: 'Message', submit: 'Send' },
+  de: { name: 'Name', contact: 'Telefon oder E-Mail', message: 'Nachricht', submit: 'Senden' },
+  fr: { name: 'Nom', contact: 'Téléphone ou e-mail', message: 'Message', submit: 'Envoyer' },
+  it: { name: 'Nome', contact: 'Telefono o email', message: 'Messaggio', submit: 'Invia' },
+  es: { name: 'Nombre', contact: 'Teléfono o correo electrónico', message: 'Mensaje', submit: 'Enviar' },
+  pt: { name: 'Nome', contact: 'Telefone ou e-mail', message: 'Mensagem', submit: 'Enviar' },
+  uk: { name: 'Імʼя', contact: 'Телефон або пошта', message: 'Повідомлення', submit: 'Надіслати' },
+  ru: { name: 'Имя', contact: 'Телефон или почта', message: 'Сообщение', submit: 'Отправить' },
+};
+
+/**
+ * The words for a language — `de-CH` reads `de`, an unknown one English.
+ * @param {string} [lang]
+ * @returns {LeadWords}
+ */
+export function leadWords(lang = 'en') {
+  const base = String(lang).toLowerCase().split(/[-_]/)[0] ?? 'en';
+  return LEAD_WORDS[base] ?? LEAD_WORDS.en;
+}
 
 const ESCAPE = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 /** @param {unknown} value */
@@ -130,6 +165,11 @@ export function renderLeadForm(props) {
     throw new TypeError(`renderLeadForm: photos is how many the form takes, 0 to ${PHOTOS_MAX}`);
   }
 
+  // A label the block leaves empty says the kit's word, tappable where the page annotates the field, fixed where it does not.
+  const words = leadWords(lang);
+  const said = (/** @type {string | undefined} */ own, /** @type {string | undefined} */ path, /** @type {string} */ fallback, extra = '') =>
+    own ? `<span${extra}${at(path)}>${esc(own)}</span>` : `<span${extra}${path ? at(path) : ' data-jtk-fixed'}>${esc(fallback)}</span>`;
+
   const form = `<form class="lead" method="post" action="${esc(action)}" novalidate data-lead-form${attr('data-success', copy.success)}${attr('data-error', copy.error)}${attr('data-sending', copy.sending)}>
   <div class="lead__head">
     ${copy.title ? `<h2 class="lead__title"${at(paths.title)}>${esc(copy.title)}</h2>` : ''}
@@ -137,19 +177,19 @@ export function renderLeadForm(props) {
   </div>
 
   <div class="field">
-    <label class="field__label" for="lead-name">${copy.name ? `<span${at(paths.name_label)}>${esc(copy.name)}</span>` : ''} <span aria-hidden="true">*</span></label>
+    <label class="field__label" for="lead-name">${said(copy.name, paths.name_label, words.name)} <span aria-hidden="true">*</span></label>
     <input class="field__input" id="lead-name" name="name" type="text" autocomplete="name" required maxlength="120"${attr('data-message', copy.invalidName)}>
     <p class="field__error" data-error-for="name" hidden></p>
   </div>
 
   <div class="field">
-    <label class="field__label" for="lead-contact">${copy.contact ? `<span${at(paths.contact_label)}>${esc(copy.contact)}</span>` : ''} <span aria-hidden="true">*</span></label>
+    <label class="field__label" for="lead-contact">${said(copy.contact, paths.contact_label, words.contact)} <span aria-hidden="true">*</span></label>
     <input class="field__input" id="lead-contact" name="contact" type="text" inputmode="tel" autocomplete="tel" required maxlength="120"${attr('data-message', copy.invalidContact)}>
     <p class="field__error" data-error-for="contact" hidden></p>
   </div>
 
   <div class="field">
-    <label class="field__label" for="lead-message">${copy.message ? `<span${at(paths.message_label)}>${esc(copy.message)}</span>` : ''}</label>
+    <label class="field__label" for="lead-message">${said(copy.message, paths.message_label, words.message)}</label>
     <textarea class="field__input field__input--area" id="lead-message" name="message" rows="4" maxlength="2000"></textarea>
   </div>
 
@@ -168,7 +208,7 @@ ${photos > 0 ? photoControl(photos, copy, lang) : ''}
   ${copy.requiredNote ? `<p class="lead__legal"${at(paths.required_note)}>${esc(copy.requiredNote)}</p>` : ''}
 
   <div class="lead__foot">
-    <button class="btn" type="submit" data-submit>${copy.submit ? `<span data-submit-label${at(paths.cta_label)}>${esc(copy.submit)}</span>` : ''}</button>
+    <button class="btn" type="submit" data-submit>${said(copy.submit, paths.cta_label, words.submit, ' data-submit-label')}</button>
     <p class="lead__status" role="status" data-status></p>
   </div>
 </form>`;
