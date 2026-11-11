@@ -329,10 +329,11 @@ export interface Site {
   /**
    * Every page and entry document as its file holds it — for the kit's own
    * checks. Contract 3: each in every language it is in, with its `id`, an
-   * entry's `fields` apart from its body `blocks`, and no `path` for an entry
-   * shown only on another page.
+   * entry's `fields` apart from its body `blocks`, no `path` for an entry
+   * shown only on another page, and an entry's `anchor` where its collection
+   * says `shown_on`.
    */
-  documents(): { file: string; id?: string; path?: string; locale: string; collection?: string; slug?: string; seo: Record<string, unknown>; fields?: Record<string, unknown>; blocks: Record<string, unknown>[]; visible?: unknown; shown: boolean }[];
+  documents(): { file: string; id?: string; path?: string; anchor?: string; locale: string; collection?: string; slug?: string; seo: Record<string, unknown>; fields?: Record<string, unknown>; blocks: Record<string, unknown>[]; visible?: unknown; shown: boolean }[];
   sharedDocuments(): { file: string; locale: string; blocks: Record<string, unknown>[] }[];
 }
 

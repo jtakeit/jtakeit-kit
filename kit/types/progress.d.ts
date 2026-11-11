@@ -26,10 +26,13 @@ export interface PageProgress {
 
 export interface Progress {
   version: 1;
+  /** Present on a contract-3 tree (`jtk/schema.json` says `contract: 3`); a contract-2 tree has none. */
+  contract?: 3;
   /** `exact` with a catalogue, `has-text` without one — a weaker rule, said as such. */
   rule: 'exact' | 'has-text';
   kit: { kind: string; version: string } | null;
   brief: BriefRead | null;
+  /** Whether the declaration is written: `jtk/catalogue.json` on contract 2, `jtk/schema.json` on contract 3. */
   catalogue: boolean;
   pages: PageProgress[];
   collections: Record<string, { entries: number; expected: number }>;

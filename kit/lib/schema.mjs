@@ -58,10 +58,11 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { isAdvice, isPlatformCode, LOCAL } from './codes.mjs';
 import { unnamed } from './content/identity.mjs';
-import { content, TAPPABLE } from './content/index.mjs';
+import { content } from './content/index.mjs';
 import { contractOf, mintJtk, readJtk } from './content/node.mjs';
 import { canonicalTag, judgeSchema } from './judge3.mjs';
 import { filesBeside, judgeRequest } from './judgeFiles.mjs';
+import { BY_INDEX, DOCUMENT_ID, ID, placesIn } from './places3.mjs';
 import { builtPages, prefixBuild, servedFaults, unboundedHeights, unowned } from './served.mjs';
 
 export { judgeSchema };
@@ -137,26 +138,11 @@ export function schemaText(schema) {
 //   every annotation names a place the schema declares, in the document it
 //   says — the page's own, `shared:`, `page:<id>:`, `entry:<id>:` — filled or
 //   not: a field outside the rule may be annotated, never one nobody declared.
+//
+// The rules of a place are places3.mjs's, which `jtkit lint` reads too.
 
-/** A `_key` and an id, as the grammar names them (§15 · 16). */
-const KEY = /^[a-z][a-z0-9-]{0,31}$/;
-const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-/** A place by key: the platform's own expression of it (sitebuild/annotation-lint.mjs, `BOUND_KEYED`). */
-const BOUND_KEYED = /^(shared:)?(?:blocks\[([a-z][a-z0-9-]{0,31})\]\.)?([a-z][a-z0-9_]{0,39})(?:\[[a-z][a-z0-9-]{0,31}\]\.([a-z][a-z0-9_]{0,39})(?:\[[a-z][a-z0-9-]{0,31}\]\.([a-z][a-z0-9_]{0,39}))?)?(?:\.(src|alt|focus|poster))?$/;
-/** Another document by its id, then a place in it. */
-const DOCUMENT_ID = /^(page|entry):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}):(.+)$/;
 /** A module's settings by the module's name; its fields are the module's, not the schema's. */
 const MODULE = /^module:([a-z][a-z0-9_]*):([a-z][a-z0-9_]{0,39}(?:\[[a-z][a-z0-9-]{0,31}\]\.[a-z][a-z0-9_]{0,39}){0,2}(?:\.(?:src|alt|focus|poster))?)$/;
-/** Contract 2's place by index, which a contract-3 page does not write. */
-const BY_INDEX = /^(shared:)?blocks\[\d+\]\./;
-const PICTURE = new Set(['src', 'alt', 'focus', 'poster']);
-
-/** Empty is absent (§1, 6; §4.7), spaces included (§15 · 15). */
-const isEmpty = (value) => value === undefined || value === null || (typeof value === 'string' && value.trim() === '') || (Array.isArray(value) && value.length === 0);
-const srcOf = (value) => (typeof value === 'string' ? value.trim() : isObject(value) && typeof value.src === 'string' ? value.src.trim() : '');
-
-/** Absent is false (§3.3): only what says `client_editable: true` is the owner's to tap. */
-const tappable3 = (field) => TAPPABLE.has(field.kind) && field.client_editable === true && field.no_tap_target !== true;
 
 /**
  * Every place the schema and the built pages disagree, as sentences.
@@ -166,16 +152,13 @@ const tappable3 = (field) => TAPPABLE.has(field.kind) && field.client_editable =
  */
 export function pagesAgainst({ files, schema, dist }) {
   const out = [];
-  const types = new Map((Array.isArray(schema.blocks) ? schema.blocks : []).filter(isObject).map((one) => [one.type, one]));
-  const fieldsOfType = (name) => (Array.isArray(types.get(name)?.fields) ? types.get(name).fields.filter(isObject) : []);
-  const collections = new Map((Array.isArray(schema.collections) ? schema.collections : []).filter(isObject).map((one) => [one.name, one]));
-  const fieldsOfEntry = (entry) => fieldsOfType(collections.get(entry.collection)?.type);
   const modules = isObject(schema.modules) ? schema.modules : {};
 
   const site = content({ ...files, '/jtk/schema.json': schema });
   const documents = site.documents();
   const own = documents.filter((one) => one.locale === '');
   const shared = site.sharedDocuments().flatMap((one) => one.blocks);
+  const { types, blockPlaces, entryPlaces, declares } = placesIn(schema, shared);
   const byId = { page: new Map(), entry: new Map() };
   for (const one of own) byId[one.collection === undefined ? 'page' : 'entry'].set(one.id, one);
   // Whose a built page is, in every language: a page's, or an entry's own.
@@ -195,60 +178,6 @@ export function pagesAgainst({ files, schema, dist }) {
   }
   const everywhere = new Set([...built.values()].flatMap((one) => [...one.paths]));
 
-  /** Every place a filled, tappable value under `values` is annotated at (the build's `expected`). */
-  function expected(values, fields, prefix, steps = 0) {
-    const places = [];
-    for (const field of fields) {
-      if (typeof field.key !== 'string') continue;
-      const value = values[field.key];
-      if (isEmpty(value)) continue;
-      const here = prefix + field.key;
-      if (field.kind === 'list') {
-        if (!Array.isArray(value) || steps >= 2) continue;
-        const of = Array.isArray(field.of) ? field.of.filter(isObject) : [];
-        for (const row of value) if (isObject(row) && KEY.test(row._key ?? '')) places.push(...expected(row, of, `${here}[${row._key}].`, steps + 1));
-        continue;
-      }
-      if (!tappable3(field)) continue;
-      if (field.kind === 'media' && field.multiple === true) {
-        if (!Array.isArray(value) || steps >= 2) continue;
-        for (const item of value) if (isObject(item) && KEY.test(item._key ?? '') && srcOf(item) !== '') places.push(`${here}[${item._key}].src`);
-        continue;
-      }
-      if (field.kind === 'media') {
-        if (srcOf(value) !== '') places.push(`${here}.src`);
-        continue;
-      }
-      places.push(here);
-    }
-    return places;
-  }
-  const blockPlaces = (blocks, prefix = '') =>
-    (Array.isArray(blocks) ? blocks : []).filter((one) => isObject(one) && KEY.test(one._key ?? '')).flatMap((one) => expected(one, fieldsOfType(one.type), `${prefix}blocks[${one._key}].`));
-  const entryPlaces = (entry) => [...expected(isObject(entry.fields) ? entry.fields : {}, fieldsOfEntry(entry), ''), ...blockPlaces(entry.blocks)];
-
-  /** Whether a place is declared — filled or not — in a document, by key (the build's `declares3`). */
-  function declares(document, path, entry) {
-    const found = BOUND_KEYED.exec(path);
-    if (found === null) return false;
-    const isShared = found[1] !== undefined;
-    if (found[2] === undefined) return !isShared && entry && document !== undefined && holds(fieldsOfEntry(document), found[3], found[4], found[5], found[6]);
-    const blocks = isShared ? shared : Array.isArray(document?.blocks) ? document.blocks : [];
-    const block = blocks.find((one) => isObject(one) && one._key === found[2]);
-    return block !== undefined && holds(fieldsOfType(block.type), found[3], found[4], found[5], found[6]);
-  }
-  function holds(fields, key, sub, deep, part) {
-    let here = fields.find((one) => one.key === key);
-    if (here === undefined) return false;
-    for (const next of [sub, deep]) {
-      if (next === undefined) break;
-      // A gallery's picture is a row whose fields are a picture's parts.
-      if (here.kind === 'media' && here.multiple === true && PICTURE.has(next)) return next === (deep ?? sub) && part === undefined;
-      here = here.kind === 'list' && Array.isArray(here.of) ? here.of.find((one) => isObject(one) && one.key === next) : undefined;
-      if (here === undefined) return false;
-    }
-    return part === undefined || here.kind === 'media';
-  }
   const undeclared = (path) =>
     BY_INDEX.test(path) ? `${path} names a place by its index — contract 3 names a block and a row by its _key: blocks[hero].title (wiki/98 §5)` : `${path} is on the page and the schema does not declare it`;
 
