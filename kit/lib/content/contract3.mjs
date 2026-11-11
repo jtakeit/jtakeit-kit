@@ -1338,8 +1338,10 @@ export function contract3(byPath, names, { annotate, now }) {
      * Every page and entry, in every language it is in, as the door reads it
      * — `fields` and the body `blocks` of an entry apart, as contract 3 has
      * them. `path` is the address it is reached at; an entry of a
-     * collection without a route has none. The kit's own checks (the lint,
-     * progress, `_meta.json`) still read contract 2's shapes.
+     * collection without a route has none. `anchor` is where an entry is
+     * shown besides its own page, the first its collection's `shown_on`
+     * names. The kit's lint and progress read a contract-3 tree through
+     * this.
      */
     documents() {
       const out = [];
@@ -1351,10 +1353,13 @@ export function contract3(byPath, names, { annotate, now }) {
         for (const file of entryFiles) {
           const doc = entryDoc(file, language);
           if (doc === undefined) continue;
+          const anchor = anchorIn(collections.get(doc.collection), language, doc.slug);
           out.push({
             file: doc.file,
             id: doc.id,
             path: addressIn(collections.get(doc.collection), language, doc.slug),
+            // Where it is shown besides its own page: the first of `shown_on`.
+            ...(anchor === undefined ? {} : { anchor }),
             locale: language,
             collection: doc.collection,
             slug: doc.slug,

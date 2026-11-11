@@ -130,3 +130,117 @@ test('the brief the scaffold writes has no words of its own', async () => {
   assert.equal(b.needsClient, 0);
   assert.equal(b.doneWhen.of, 2);
 });
+
+// ── contract 3 ─────────────────────────────────────────────────────────────
+//
+// The same reading of a contract-3 tree (jtakeit-core wiki/98 §2–§6): the
+// schema is the declaration, pages and entries are where contract 3 keeps
+// them, an entry's words are its `fields`, a picture is `{src}`, the diary's
+// settings are a module's, the currency is site.json's own.
+
+const PAGE_ID = '0193a5c2-7f4e-7c1a-9b2e-5d1f0c3a8e21';
+const SERVICES_ID = '0193a5c2-7f4e-7c1a-9b2e-5d1f0c3a8e22';
+const CUT_ID = '0193a5c3-1b2a-7e44-8a10-6c2f9d3e4b55';
+
+function site3({ settings = true, currency = 'CHF', named = true, schema = {} } = {}) {
+  const root = mkdtempSync(join(tmpdir(), 'jtk-progress3-'));
+  const write = (path, value) => {
+    mkdirSync(join(root, path, '..'), { recursive: true });
+    writeFileSync(join(root, path), typeof value === 'string' ? value : JSON.stringify(value, null, 2));
+  };
+  write('jtk/schema.json', {
+    contract: 3,
+    locale: 'de-CH',
+    blocks: [
+      { type: 'hero', v: 1, label: 'Hero', fields: [
+        { key: 'title', label: 'Title', kind: 'text', required: true, client_editable: true },
+        { key: 'lead', label: 'Lead', kind: 'textarea', client_editable: true },
+        { key: 'image', label: 'Picture', kind: 'media', client_editable: true },
+      ] },
+      { type: 'service', v: 1, label: 'Service', fields: [
+        { key: 'title', label: 'Name', kind: 'text', required: true, client_editable: true },
+        { key: 'cover', label: 'Picture', kind: 'media', client_editable: true },
+        { key: 'costs', label: 'Price', kind: 'money', client_editable: true },
+      ] },
+      { type: 'master', v: 1, label: 'Master', fields: [{ key: 'title', label: 'Name', kind: 'text', required: true, client_editable: true }] },
+    ],
+    collections: [
+      { name: 'services', label: 'Services', type: 'service', route: 'none', shown_on: ['/services#services-{slug}'] },
+      { name: 'masters', label: 'Masters', type: 'master', route: { detail: '/masters/{slug}' } },
+    ],
+    modules: { bookings: { services: 'services', resources: 'masters' } },
+    ...schema,
+  });
+  write('jtk/site.json', { id: 's-1', slug: 'probe', media_base: '', ...(currency === '' ? {} : { currency }) });
+  write('jtk/pages/index.json', {
+    ...(named ? { id: PAGE_ID } : {}),
+    path: '/', name: 'Start',
+    blocks: [{ _key: 'hero', type: 'hero', v: 1, title: 'Willkommen', image: { src: 'media/a.jpg', alt: 'Der Laden' } }],
+  });
+  // The page a route-"none" collection is shown on: nothing of its own to write.
+  write('jtk/pages/services.json', { id: SERVICES_ID, path: '/services', name: 'Leistungen' });
+  write('jtk/entries/services/schnitt.json', { id: CUT_ID, collection: 'services', slug: 'schnitt', visible: true, fields: { title: 'Schnitt', cover: { src: 'media/cut.jpg' }, costs: { minor: 4500 } } });
+  if (settings) write('jtk/modules/bookings.json', { v: 1, settings: { kit: 'salon', kit_version: '1', zone: 'Europe/Zurich', payment: 'on_the_spot' } });
+  return root;
+}
+
+test('contract 3: the schema is the declaration, an entry\'s words are its fields, a picture is {src}, the settings are the module\'s', async () => {
+  const progress = await readProgress(site3());
+  assert.equal(progress.version, 1, 'the panel reads version 1 and nothing else');
+  assert.equal(progress.contract, 3);
+  assert.equal(progress.rule, 'exact');
+  assert.equal(progress.catalogue, true, 'the declaration is written — the field the panel reads as «laid out»');
+  assert.deepEqual(progress.pages, [
+    { path: '/', written: true, filled: 1, of: 2 },
+    { path: '/services', written: true, filled: 0, of: 0 },
+  ]);
+  assert.deepEqual(progress.collections, { services: { entries: 1, expected: 1 }, masters: { entries: 0, expected: 1 } });
+  assert.equal(progress.media, 2, "the hero's picture, and the service's own cover");
+  assert.deepEqual(progress.kit, { kind: 'salon', version: '1' });
+  assert.deepEqual(progress.settings, { hours: false, zone: true, payment: 'on_the_spot' });
+  assert.deepEqual(progress.missing, [
+    'BRIEF.md is not written yet',
+    'masters: no entry yet',
+    'the opening hours are not set (jtk/modules/bookings.json)',
+  ]);
+  assert.match(sayProgress(progress), /^schema: written$/m);
+  assert.doesNotMatch(sayProgress(progress), /catalogue/);
+});
+
+test('contract 3: what only a contract-3 tree can lack is said — a catalogue beside the schema, a name, the settings\' file, a currency', async () => {
+  const root = site3({ settings: false, currency: '', named: false });
+  writeFileSync(join(root, 'jtk', 'catalogue.json'), '{"contract": 2, "blocks": []}');
+  const progress = await readProgress(root);
+  assert.deepEqual(progress.missing, [
+    'BRIEF.md is not written yet',
+    "jtk/catalogue.json is contract 2's and still beside jtk/schema.json — the platform refuses a tree with both (git rm jtk/catalogue.json)",
+    '1 place in jtk/ without the id or the _key the panel taps it by (npx @jtakeit/astro catalogue mints them; jtkit lint names each)',
+    'masters: no entry yet',
+    'jtk/modules/bookings.json is not written yet',
+    "the site has prices and no currency yet — jtk/site.json says none; it is the site's, set in the panel, and every price is drawn without one until then",
+  ]);
+  assert.equal(progress.settings, null);
+  assert.equal(progress.kit, null);
+});
+
+test('contract 3: the currency is site.json\'s top, never business; a schema without a price asks for none', async () => {
+  const root = site3({ currency: '' });
+  writeFileSync(join(root, 'jtk', 'site.json'), JSON.stringify({ slug: 'probe', business: { currency: 'CHF' } }));
+  assert.ok((await readProgress(root)).missing.some((one) => one.startsWith('the site has prices and no currency yet')));
+
+  const unpriced = site3({ currency: '', schema: {} });
+  const schema = JSON.parse((await import('node:fs')).readFileSync(join(unpriced, 'jtk', 'schema.json'), 'utf8'));
+  schema.blocks.find((one) => one.type === 'service').fields.pop();
+  writeFileSync(join(unpriced, 'jtk', 'schema.json'), JSON.stringify(schema));
+  assert.ok(!(await readProgress(unpriced)).missing.some((one) => one.includes('currency')));
+});
+
+test('contract 3: a page not written yet, and a required word missing, in the same sentences as contract 2', async () => {
+  const root = site3();
+  writeFileSync(join(root, 'jtk', 'pages', 'about.json'), JSON.stringify({ id: '0193a5c2-7f4e-7c1a-9b2e-5d1f0c3a8e23', path: '/about', name: 'Über', blocks: [{ _key: 'hero', type: 'hero', v: 1, lead: 'Seit 1990.' }] }));
+  writeFileSync(join(root, 'jtk', 'pages', 'team.json'), JSON.stringify({ id: '0193a5c2-7f4e-7c1a-9b2e-5d1f0c3a8e24', path: '/team', name: 'Team', blocks: [{ _key: 'hero', type: 'hero', v: 1 }] }));
+  const progress = await readProgress(root);
+  assert.deepEqual(progress.pages.map((one) => [one.path, one.written, one.missing]), [['/', true, undefined], ['/about', false, 1], ['/services', true, undefined], ['/team', false, 1]]);
+  assert.ok(progress.missing.includes('/about: 1 of 2 fields, 1 required missing'));
+  assert.ok(progress.missing.includes('/team is not written yet'));
+});
