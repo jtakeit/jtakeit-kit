@@ -153,6 +153,10 @@ if (command === 'bump') {
     console.log(`${kit.name}@${kitNext} is not on npm yet: the template's lockfile names the tarball publish will upload`);
     if (!dry) templateLockNamesKit(kitNext, packedKit().integrity);
   }
+  // The scaffold this release lays out, hashed beside every one before it,
+  // so `jtk upgrade` can tell a site's untouched files from its own
+  // (scripts/scaffold-hashes.mjs; jtakeit-core wiki/98 §7 · 1).
+  run('node', ['scripts/scaffold-hashes.mjs']);
   run('npm', ['test']);
   console.log(`
 Done. What is left is yours:

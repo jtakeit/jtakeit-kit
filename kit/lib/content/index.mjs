@@ -93,7 +93,7 @@ import {
   treeFields,
 } from './groups.mjs';
 import { baseAddressOf, canonicalLocale, inLocale, languagesOf, localeArg, localeOfAddress, segmentOf, sharedLocaleOf } from './locale.mjs';
-import { byRank, labelWords, specimenId, TAPPABLE, tappable } from './rules.mjs';
+import { byRank, labelWords, minorOf, namesIn, specimenId, TAPPABLE, tappable } from './rules.mjs';
 import { contract3 } from './contract3.mjs';
 
 export { shownAt, drawsPagedListing, linksToListing, canonicalLocale, sharedLocaleOf };
@@ -261,9 +261,10 @@ export function content(files, options = {}) {
    * annotation of each.
    *
    * @param {Record<string, unknown>} values
-   * @param {{ at: (field: string, row?: number | string, part?: string) => Record<string, string>; fields: any[]; title?: () => string }} how
+   * @param {{ at: (field: string, row?: number | string, part?: string) => Record<string, string>; fields: any[]; title?: () => string; locale?: string }} how
    *   `at` writes an annotation; `fields` are the declaration of these values; `title` is the alt
-   *   a picture falls back to — an entry's title, as contract 2 has always drawn a cover
+   *   a picture falls back to — an entry's title, as contract 2 has always drawn a cover; `locale`,
+   *   the language of the document they are in, which a reference is resolved in
    */
   function reader(values, how) {
     const field = (key) => how.fields.find((one) => one.key === key);
@@ -297,6 +298,8 @@ export function content(files, options = {}) {
       value,
       field,
       tappable: (key) => tappable(field(key)),
+      minor: (key) => minorOf(values[key]),
+      refs: (key) => resolved(field(key), values[key], how.locale ?? ''),
       // Contract 2 keeps a whole copy of every document per language, so no
       // value on a page in one language is another's (contract3.mjs has the
       // merge where one is).
@@ -310,7 +313,7 @@ export function content(files, options = {}) {
         // gallery has none.
         return list.map((row, j) =>
           Object.assign(
-            reader(isObject(row) ? row : {}, { at: (sub, deeper) => (deeper === undefined ? how.at(key, j, sub) : {}), fields: of }),
+            reader(isObject(row) ? row : {}, { at: (sub, deeper) => (deeper === undefined ? how.at(key, j, sub) : {}), fields: of, locale: how.locale }),
             { key: isObject(row) && typeof row._key === 'string' ? row._key : undefined, index: j },
           ),
         );
@@ -338,8 +341,29 @@ export function content(files, options = {}) {
     };
   }
 
+  /**
+   * The entries a field names, in the order it names them: a reference's
+   * slug, or the one reference in each row of a list of them (`does: [{
+   * service }]`), found in the document's language and else in the site's
+   * own. A slug no entry has is left out.
+   */
+  function resolved(declared, held, locale) {
+    const { to, names } = namesIn(declared, held);
+    const out = [];
+    for (const name of names) {
+      for (const collection of to) {
+        const found = site.entry(collection, name, locale) ?? (locale === '' ? undefined : site.entry(collection, name, ''));
+        if (found !== undefined) {
+          out.push(found);
+          break;
+        }
+      }
+    }
+    return out;
+  }
+
   /** One block of a document, at its place in the document's `blocks`. */
-  function block(values, index, prefix) {
+  function block(values, index, prefix, locale = '') {
     const type = typeof values.type === 'string' ? values.type : '';
     return {
       type,
@@ -348,6 +372,7 @@ export function content(files, options = {}) {
       ...reader(values, {
         at: (field, row, part) => attrs(prefix, index, field, row, part),
         fields: typeOf(type)?.fields ?? [],
+        locale,
       }),
     };
   }
@@ -355,8 +380,8 @@ export function content(files, options = {}) {
   /** A block a document does not have: every value empty, nothing annotated. */
   const missing = (type) => ({ type, key: undefined, view: undefined, ...reader({}, { at: () => ({}), fields: typeOf(type)?.fields ?? [] }) });
 
-  function blocksOf(list, prefix) {
-    const out = list.map((values, index) => block(values, index, prefix));
+  function blocksOf(list, prefix, locale = '') {
+    const out = list.map((values, index) => block(values, index, prefix, locale));
     return { blocks: out, block: (type) => out.find((one) => one.type === type) ?? missing(type) };
   }
 
@@ -373,7 +398,7 @@ export function content(files, options = {}) {
     if (cached !== undefined) return cached[form];
     const make = (which) => {
       const prefix = which === 'here' ? '' : `page:${doc.path}:`;
-      const { blocks, block: find } = blocksOf(doc.blocks, prefix);
+      const { blocks, block: find } = blocksOf(doc.blocks, prefix, doc.locale);
       return {
         kind: 'page',
         id: idOf(doc),
@@ -449,6 +474,7 @@ export function content(files, options = {}) {
           const title = fields.title;
           return typeof title === 'string' ? title : '';
         },
+        locale: doc.locale,
       });
       const entry = {
         kind: 'entry',
@@ -461,7 +487,7 @@ export function content(files, options = {}) {
         file: doc.file,
         specimen: false,
         fields: own,
-        body: doc.blocks.slice(1).map((values, offset) => block(values, offset + 1, prefix)),
+        body: doc.blocks.slice(1).map((values, offset) => block(values, offset + 1, prefix, doc.locale)),
         get here() {
           return entryOf(doc, 'here');
         },
@@ -671,7 +697,7 @@ export function content(files, options = {}) {
     shared(locale) {
       const language = want(locale);
       const found = shared.get(language);
-      const { blocks, block: find } = blocksOf(found?.blocks ?? [], 'shared:');
+      const { blocks, block: find } = blocksOf(found?.blocks ?? [], 'shared:', language);
       return { kind: 'shared', locale: language, file: found?.file, blocks, block: find };
     },
     module(name) {
@@ -704,6 +730,11 @@ export function content(files, options = {}) {
       const collection = collections.get(name);
       const first = inLocale(want(locale), collection?.prefix ?? `/${name}`);
       return page <= 1 ? first : `${first}/page/${page}`;
+    },
+    /** The page a collection without pages is listed on: its prefix, in a language. */
+    shownOn(name, locale) {
+      const collection = collections.get(name);
+      return collection === undefined || collection.pages ? undefined : inLocale(want(locale), collection.prefix);
     },
     /** Which of the site's languages an address is in: `''` for the base. No base path in front. */
     localeOf: (address) => localeOfAddress(address, others),

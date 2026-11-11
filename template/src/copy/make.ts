@@ -67,6 +67,9 @@ export interface Strings {
 export function makeCopy(page: Page, S: Strings) {
   const hero = page.block('hero');
   const cta = page.block('cta_banner');
+  // The photograph and its words through the door: one picture, `{ src, alt }`
+  // in contract 3; in contract 2 the key and the `image_alt` beside it.
+  const picture = hero.picture('image');
   const seo = (key: string): string => (typeof page.seo[key] === 'string' ? (page.seo[key] as string) : '');
 
   const META = { lang: S.lang, ogLocale: S.ogLocale, titleSuffix: S.titleSuffix } as const;
@@ -80,8 +83,8 @@ export function makeCopy(page: Page, S: Strings) {
       lead: hero.text('lead'),
       cta: hero.text('cta_label'),
       ctaHref: hero.text('cta_href') || '#contact',
-      image: hero.text('image'),
-      imageAlt: hero.text('image_alt'),
+      image: picture.src,
+      imageAlt: picture.alt,
     },
   } as const;
 

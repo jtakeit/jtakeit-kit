@@ -5,6 +5,7 @@
  *   jtk create <slug> …     scaffold a site (lib/create.mjs)
  *   jtk catalogue …         write jtk/catalogue.json and check it; on contract 3, the names only (the kit's lib/catalogue.mjs)
  *   jtk schema …            contract 3's: write jtk/schema.json from blocks.ts and check it (the kit's lib/schema.mjs)
+ *   jtk upgrade contract-3  move a contract-2 site to contract 3 in one commit (lib/upgrade.mjs)
  *   jtk a11y …              read the built pages against WCAG 2.1 AA (lib/a11y.mjs)
  *   jtk push|pull <url>     move the site's code to and from jtakeit (lib/code.mjs)
  */
@@ -40,6 +41,11 @@ switch (command) {
     const { main } = await import('@jtakeit/kit/schema');
     process.exit(await main(args));
   }
+  case 'upgrade': {
+    // A contract-2 site moved to contract 3 in one commit (lib/upgrade.mjs).
+    const { main } = await import(pathToFileURL(join(HERE, '..', 'lib', 'upgrade.mjs')).href);
+    process.exit(await main(rest));
+  }
   case 'showroom': {
     const { showroom } = await import(pathToFileURL(join(HERE, '..', 'lib', 'showroom.mjs')).href);
     try {
@@ -70,6 +76,7 @@ switch (command) {
   default: {
     const code = await import(pathToFileURL(join(HERE, '..', 'lib', 'code.mjs')).href);
     const { usage } = await import(pathToFileURL(join(HERE, '..', 'lib', 'create.mjs')).href);
+    const upgrade = await import(pathToFileURL(join(HERE, '..', 'lib', 'upgrade.mjs')).href);
     console.error(`@jtakeit/astro — the scaffold and the catalogue tool for a site on jtakeit
 
   jtk create <slug> [options]     scaffold a site into ./<slug>
@@ -81,6 +88,7 @@ switch (command) {
                                   contract 3's: write jtk/schema.json from a blocks.ts that
                                   says CONTRACT = 3, mint the ids and _keys, and check it
                                   against the built pages in the grammar by key
+  ${upgrade.usage()}
   jtk showroom [--photos <dir>] [--port 4330]
                                   every hero field, ground, edge, entrance and gallery,
                                   live on the dev server — in this project's colours and
