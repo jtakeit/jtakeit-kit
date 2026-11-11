@@ -315,6 +315,8 @@ test('a price says the site\'s currency, from site.json\'s top — the preflight
   assert.equal(LOCAL, 'JTK_LOCAL');
   assert.match(out.findings[0].says, /^\/preise: «€ 5» is a price in €, and the site prices in CHF \(jtk\/site\.json\): draw a price with site\.money\(\)/);
   assert.match(out.findings[1].says, /^\/werke\/eiche: «EUR 120» is a price in EUR, and the site prices in CHF/);
+  // Who sets it (jtakeit-core #212): the agent once, while the site has none; a person after.
+  assert.match(out.findings[0].says, /the currency is the site's, given once \("currency" at the top of jtk\/site\.json while the site has none, or create_site's `currency`\) and changed after by a person, in the panel$/);
   assert.equal(out.line, "2 price(s) in a currency that is not the site's — the platform's preflight refuses them at the launch");
 
   // Contract 3's currency is site.json's top level, never `business` (§6, §15 · 14).

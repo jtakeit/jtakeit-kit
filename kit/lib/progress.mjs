@@ -296,7 +296,7 @@ async function readProgress3(root, dir) {
     }
   }
   if (site !== null && pricePaths(schema?.blocks).size > 0 && site.currency === '') {
-    missing.push("the site has prices and no currency yet — jtk/site.json says none; it is the site's, set in the panel, and every price is drawn without one until then");
+    missing.push("the site has prices and no currency yet — jtk/site.json says none: write it at its top (\"currency\": \"CHF\") and the next import takes it while the site has none (create_site's `currency` for a new site); once set, a person changes it in the panel; every price is drawn without one until then");
   }
   if (facts !== null && facts.placeholders > 0) missing.push(`src/data/site.ts still carries ${facts.placeholders} placeholder${facts.placeholders === 1 ? '' : 's'}`);
   if (pages.length > 0 && media === 0) missing.push('no picture yet');

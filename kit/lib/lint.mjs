@@ -767,8 +767,10 @@ async function metaFaults(distDir) {
 //
 // The platform's preflight check, asked of the built pages before the push
 // (backend/mcp/src/handlers.ts, `currencyCheck`, wiki/98 §11): a site has one
-// currency, set in the panel and written to `site.json` — at its top on
-// contract 3 (§6), never in a value (`{"minor": 4500}`, §3.4) — and a page
+// currency, in `site.json` — at its top on contract 3 (§6), never in a value
+// (`{"minor": 4500}`, §3.4). The agent gives it once, there or as
+// create_site's `currency`, and an import takes it while the site has none;
+// after that a person changes it in the panel (jtakeit-core #212). A page
 // that writes a code or a sign of its own goes on saying francs after the
 // business changed to euros, while the diary and the payment are in euros.
 // What it reads is the preflight's: every element annotated with a money
@@ -776,7 +778,7 @@ async function metaFaults(distDir) {
 // row's own list, included), and the currency codes and signs in its text.
 
 const PRICED = /<([a-z][a-z0-9]*)\b[^>]*\sdata-jtk-path\s*=\s*"([^"]+)"[^>]*>([\s\S]*?)<\/\1>/gi;
-const HOW = "draw a price with site.money(), which says it in the site's currency, and never write a code or a sign into the page; the currency is the site's, set in the panel";
+const HOW = "draw a price with site.money(), which says it in the site's currency, and never write a code or a sign into the page; the currency is the site's, given once (\"currency\" at the top of jtk/site.json while the site has none, or create_site's `currency`) and changed after by a person, in the panel";
 
 /**
  * Every price drawn in another currency than the site's, one finding each.
