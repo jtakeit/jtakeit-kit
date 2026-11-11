@@ -827,8 +827,8 @@ test('§16: jtk catalogue writes no jtk/catalogue.json on a contract-3 tree, say
     const three = run('--declaration', 'declaration.mjs', '--judge');
     assert.equal(three.status, 0, three.stderr);
     assert.match(three.stdout, /jtk\/pages\/index\.json — an id and 1 _key\(s\) minted/);
-    assert.match(three.stdout, /jtk\/schema\.json is a contract-3 site's schema, and this release does not yet write it from src\/content\/blocks\.ts — that is jtk schema, a later step \(jtakeit-core wiki\/98 §7 · 2\); no jtk\/catalogue\.json is written/);
-    assert.match(three.stdout, /--judge sends a catalogue, and a contract-3 tree has none/);
+    assert.match(three.stdout, /jtk\/schema\.json is a contract-3 site's schema, which jtk schema writes from src\/content\/blocks\.ts and checks against the page \(jtakeit-core wiki\/98 §7 · 2\); no jtk\/catalogue\.json is written/);
+    assert.match(three.stdout, /--judge sends a catalogue, and a contract-3 tree has none: jtk schema --judge sends its schema/);
     assert.equal(existsSync(catalogue), false, 'no jtk/catalogue.json beside jtk/schema.json');
 
     // The declaration is not read on contract 3: without one, the same.

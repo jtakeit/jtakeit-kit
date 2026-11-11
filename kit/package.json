@@ -49,6 +49,10 @@
       "default": "./lib/kits.mjs"
     },
     "./catalogue": "./lib/catalogue.mjs",
+    "./schema": {
+      "types": "./types/schema.d.ts",
+      "default": "./lib/schema.mjs"
+    },
     "./devdiary": "./lib/devdiary.mjs",
     "./codes": "./lib/codes.mjs",
     "./elements/booking": {

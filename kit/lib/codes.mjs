@@ -76,6 +76,22 @@ export const E = Object.freeze({
   COLLECTION: 'JTK_E_COLLECTION_INVALID',
   ENTRY_TYPE: 'JTK_E_ENTRY_TYPE_INVALID',
   ORDER: 'JTK_E_ORDER_INVALID',
+
+  // Modules: contract 2's checker never had them, `jtk schema`'s does.
+  MODULE: 'JTK_E_MODULE_UNKNOWN',
+  MODULE_ROLE: 'JTK_E_MODULE_ROLE_INVALID',
+
+  // Contract 3's own (`codesOfContract3`, `Since: 3`), raised by `jtk schema`
+  // alone. SCHEMA where contract 2 says CATALOGUE, the file being
+  // `jtk/schema.json` (jtakeit-core wiki/98 §14 · 6); contract 2's codes keep
+  // their names.
+  SCHEMA_UNREADABLE: 'JTK_E_SCHEMA_UNREADABLE',
+  SCHEMA_EMPTY: 'JTK_E_SCHEMA_EMPTY',
+  SCHEMA_KEY: 'JTK_E_SCHEMA_KEY_UNKNOWN',
+  ROUTE: 'JTK_E_ROUTE_INVALID',
+  REF: 'JTK_E_REF_INVALID',
+  SHARED: 'JTK_E_SHARED_INVALID',
+  ATTRIBUTE: 'JTK_E_ATTRIBUTE_INVALID',
 });
 
 /**
@@ -142,6 +158,23 @@ export const MEANS = Object.freeze({
   [E.COLLECTION]: "A collection's prefix, pagination, entry type or body list is wrong.",
   [E.ENTRY_TYPE]: 'The block type a collection names cannot be used for entries.',
   [E.ORDER]: 'A collection is ordered by a field that will not order it.',
+
+  [E.MODULE]: 'The catalogue turns on a module this service does not have.',
+  [E.MODULE_ROLE]: 'A module is pointed at nothing, or at something that is not a collection of this catalogue.',
+
+  [E.SCHEMA_UNREADABLE]:
+    '`jtk/schema.json` is not JSON, or a value in it has the wrong shape — words where a number goes, a list where an object does. Nothing else in the file is read until it is.',
+  [E.SCHEMA_EMPTY]: 'The schema declares no block types.',
+  [E.SCHEMA_KEY]:
+    "The schema says a key contract 3 does not have, at any depth: a typo, or a word of contract 2's that contract 3 replaced — `business_facts`, `deprecated`, a collection's `prefix` or `body`, `option_labels`, a view's `sample`. Every one is said at once, each at its place.",
+  [E.ROUTE]:
+    'A collection says nowhere, or somewhere that cannot be, where its entries are: no `route`, a `detail` without `{slug}` or that is no address, a listing with a slug in it, `"none"` with no `shown_on`, a pattern for a language the site does not have, or two collections whose entries would share addresses.',
+  [E.REF]:
+    'A reference points nowhere, or where no reader follows it: a `ref` with no `to`, a collection named twice, an `on_delete` other than `restrict` and `nullify`, a ref written as contract 2 wrote it — or a group or a tree through a reference to several collections or several entries, which nothing groups by yet.',
+  [E.SHARED]:
+    '`shared` names a block type the schema does not declare, or names one twice; or a field says a `role` that is not one of the list, sits outside the shared text, or says a role another field says already.',
+  [E.ATTRIBUTE]:
+    'A field says an attribute its kind does not take, or a value the attribute does not have: `localized` on a kind with no language, `integer` on anything but a number, `qualifiers` on anything but money or besides `from` and `on_request`, an `untranslated` that is neither `base` nor `hide`.',
 });
 
 /**

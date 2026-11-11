@@ -9,6 +9,9 @@
  *   jtkit catalogue [--declaration src/content/blocks.ts] [--emit-only] [--dist ./dist] [--judge]
  *       write jtk/catalogue.json from a declaration and check it against the built pages;
  *       on a contract-3 tree, mint the ids and _keys and write no catalogue
+ *   jtkit schema [--declaration src/content/blocks.ts] [--emit-only] [--dist ./dist] [--judge]
+ *       write jtk/schema.json from a declaration that says CONTRACT = 3, mint the ids and
+ *       _keys, and check it against the built pages in the grammar by key
  *   jtkit lint [--dist dist] [--root .] [--site-url https://…]
  *       the annotation lint the platform's build runs, on this working tree
  *   jtkit progress [--root .] [--json]
@@ -113,11 +116,17 @@ switch (command) {
     await import(pathToFileURL(join(HERE, '..', 'lib', 'catalogue.mjs')).href);
     break;
   }
+  case 'schema': {
+    // Contract 3's file, from a declaration that says it is contract 3's.
+    const { main } = await import(pathToFileURL(join(HERE, '..', 'lib', 'schema.mjs')).href);
+    process.exit(await main(rest));
+  }
   default: {
     console.error(`@jtakeit/kit — the framework-free half of a site on jtakeit
 
   jtkit apply --kit <kind>|<file> [--locale uk] [--api <url>] [--root <dir>]
   jtkit catalogue [--declaration src/content/blocks.ts] [--emit-only] [--dist ./dist] [--judge]
+  jtkit schema [--declaration src/content/blocks.ts] [--emit-only] [--dist ./dist] [--judge]
 
 The contract the platform holds a repository to: jtakeit:///guides/connecting-a-site.md
 (the platform's MCP server, https://mcp.jtakeit.com/mcp, hands it to your agent)`);

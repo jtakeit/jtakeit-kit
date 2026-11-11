@@ -1,0 +1,345 @@
+{
+  "cases": [
+    {
+      "name": "the least a schema says",
+      "expect": "",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "hero", "v": 1, "label": "Hero", "fields": [{"key": "title", "label": "Titel", "kind": "text"}]}]}
+    },
+    {
+      "name": "everything contract 3 adds, said where it may be said",
+      "expect": "",
+      "catalogue": {
+        "contract": 3, "generator": "test", "locale": "de", "locales": ["en"],
+        "blocks": [
+          {"type": "product", "v": 1, "label": "Produkt", "fields": [
+            {"key": "title", "label": "Name", "kind": "text", "required": true, "max": 80},
+            {"key": "sku", "label": "Artikelnummer", "kind": "sku"},
+            {"key": "price", "label": "Preis", "kind": "money", "qualifiers": ["from", "on_request"], "min": 0},
+            {"key": "weight", "label": "Gewicht", "kind": "number", "integer": true},
+            {"key": "colour", "label": "Farbe", "kind": "select", "options": [{"value": "red", "label": {"de": "Rot", "en": "Red"}}, {"value": "oak"}]},
+            {"key": "category", "label": "Kategorie", "kind": "ref", "ref": {"to": ["categories"], "on_delete": "nullify"}},
+            {"key": "related", "label": "Dazu", "kind": "ref", "ref": {"to": ["categories", "tags"], "many": true}},
+            {"key": "photo", "label": "Bild", "kind": "media", "ratio": "3:2", "localized": true},
+            {"key": "clip", "label": "Film", "kind": "media", "accept": "video"},
+            {"key": "options", "label": "Optionen", "kind": "list", "of": [
+              {"key": "name", "label": "Name", "kind": "text"},
+              {"key": "values", "label": "Werte", "kind": "list", "of": [{"key": "label", "label": "Wert", "kind": "text"}]}
+            ]}
+          ]},
+          {"type": "category", "v": 1, "label": "Kategorie", "fields": [
+            {"key": "title", "label": "Name", "kind": "text", "required": true},
+            {"key": "parent", "label": "Oben", "kind": "ref", "ref": {"to": ["categories"]}}
+          ]},
+          {"type": "tag", "v": 1, "label": "Schlagwort", "fields": [{"key": "title", "label": "Name", "kind": "text", "required": true}]},
+          {"type": "contacts", "v": 1, "label": "Kontakt", "fields": [
+            {"key": "name", "label": "Name", "kind": "text", "role": "name"},
+            {"key": "phone", "label": "Telefon", "kind": "tel", "role": "phone"},
+            {"key": "social", "label": "Profile", "kind": "list", "role": "social", "of": [{"key": "url", "label": "Adresse", "kind": "url"}]}
+          ]}
+        ],
+        "page_seo": [{"key": "title", "label": "Titel", "kind": "text", "localized": true}],
+        "shared": ["contacts"],
+        "collections": [
+          {"name": "products", "label": "Produkte", "type": "product", "route": {"detail": {"de": "/produkte/{slug}", "en": "/products/{slug}"}, "listing": "/produkte", "per_page": 12}, "order": {"by": "title"}, "group": "category", "untranslated": "hide"},
+          {"name": "categories", "label": "Kategorien", "type": "category", "route": {"detail": "/kategorien/{slug}"}, "order": "manual"},
+          {"name": "tags", "label": "Schlagworte", "type": "tag", "route": "none", "shown_on": ["/schlagworte#tag-{slug}", {"de": "/start#{slug}", "en": "/home#{slug}"}]}
+        ]
+      }
+    },
+
+    {
+      "name": "a diary whose resources do services by one reference to several",
+      "expect": "",
+      "catalogue": {
+        "contract": 3, "locale": "de",
+        "blocks": [
+          {"type": "service", "v": 1, "label": "Leistung", "fields": [
+            {"key": "title", "label": "Name", "kind": "text", "required": true},
+            {"key": "takes", "label": "Dauer", "kind": "duration"},
+            {"key": "costs", "label": "Preis", "kind": "money", "qualifiers": ["from"]}
+          ]},
+          {"type": "master", "v": 1, "label": "Meisterin", "fields": [
+            {"key": "title", "label": "Name", "kind": "text", "required": true},
+            {"key": "does", "label": "Macht", "kind": "ref", "ref": {"to": ["services"], "many": true}},
+            {"key": "seats", "label": "Plätze", "kind": "number", "integer": true}
+          ]}
+        ],
+        "collections": [
+          {"name": "services", "label": "Leistungen", "type": "service", "route": "none", "shown_on": ["/preise#{slug}"]},
+          {"name": "masters", "label": "Team", "type": "master", "route": {"detail": "/team/{slug}", "listing": "/team"}}
+        ],
+        "modules": {"bookings": {"services": "services", "resources": "masters"}}
+      }
+    },
+    {
+      "name": "a resource that does what is not a service",
+      "expect": "JTK_E_MODULE_ROLE_INVALID", "at": "blocks.master.does",
+      "catalogue": {
+        "contract": 3, "locale": "de",
+        "blocks": [
+          {"type": "service", "v": 1, "label": "Leistung", "fields": [
+            {"key": "title", "label": "Name", "kind": "text", "required": true},
+            {"key": "takes", "label": "Dauer", "kind": "duration"}
+          ]},
+          {"type": "master", "v": 1, "label": "Meisterin", "fields": [
+            {"key": "title", "label": "Name", "kind": "text", "required": true},
+            {"key": "does", "label": "Macht", "kind": "ref", "ref": {"to": ["masters"], "many": true}}
+          ]}
+        ],
+        "collections": [
+          {"name": "services", "label": "Leistungen", "type": "service", "route": "none", "shown_on": ["/preise#{slug}"]},
+          {"name": "masters", "label": "Team", "type": "master", "route": {"detail": "/team/{slug}"}}
+        ],
+        "modules": {"bookings": {"services": "services", "resources": "masters"}}
+      }
+    },
+
+    {
+      "name": "a value of the wrong shape",
+      "expect": "JTK_E_SCHEMA_UNREADABLE",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": "hero"}
+    },
+    {
+      "name": "a module's role written as an object",
+      "expect": "JTK_E_SCHEMA_UNREADABLE",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "hero", "v": 1, "label": "Hero", "fields": [{"key": "title", "label": "Titel", "kind": "text"}]}], "modules": {"bookings": {"services": {"collection": "services"}}}}
+    },
+    {
+      "name": "no blocks",
+      "expect": "JTK_E_SCHEMA_EMPTY",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": []}
+    },
+
+    {
+      "name": "an unknown key at the top: contract 2's business facts",
+      "expect": "JTK_E_SCHEMA_KEY_UNKNOWN", "at": "business_facts",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "hero", "v": 1, "label": "Hero", "fields": [{"key": "title", "label": "Titel", "kind": "text"}]}], "business_facts": []}
+    },
+    {
+      "name": "an unknown key at the top: a platform fact",
+      "expect": "JTK_E_SCHEMA_KEY_UNKNOWN", "at": "currency",
+      "catalogue": {"contract": 3, "locale": "de", "currency": "CHF", "blocks": [{"type": "hero", "v": 1, "label": "Hero", "fields": [{"key": "title", "label": "Titel", "kind": "text"}]}]}
+    },
+    {
+      "name": "an unknown key in a block type",
+      "expect": "JTK_E_SCHEMA_KEY_UNKNOWN", "at": "blocks.hero.colour",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "hero", "v": 1, "label": "Hero", "colour": "red", "fields": [{"key": "title", "label": "Titel", "kind": "text"}]}]}
+    },
+    {
+      "name": "an unknown key in a field: contract 2's deprecated",
+      "expect": "JTK_E_SCHEMA_KEY_UNKNOWN", "at": "blocks.hero.title.deprecated",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "hero", "v": 1, "label": "Hero", "fields": [{"key": "title", "label": "Titel", "kind": "text", "deprecated": true}]}]}
+    },
+    {
+      "name": "an unknown key in a row's field",
+      "expect": "JTK_E_SCHEMA_KEY_UNKNOWN", "at": "blocks.prices.items.title.Kind",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "prices", "v": 1, "label": "Preise", "fields": [{"key": "items", "label": "Zeilen", "kind": "list", "of": [{"key": "title", "label": "Name", "kind": "text", "Kind": "text"}]}]}]}
+    },
+    {
+      "name": "an unknown key in a form's ask",
+      "expect": "JTK_E_SCHEMA_KEY_UNKNOWN", "at": "blocks.form.asks.date.placeholder",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "form", "v": 1, "label": "Formular", "collects": "enquiry", "fields": [{"key": "title", "label": "Titel", "kind": "text"}], "asks": [{"key": "date", "label": "Datum", "kind": "date", "placeholder": "heute"}]}]}
+    },
+    {
+      "name": "an unknown key in the page's SEO",
+      "expect": "JTK_E_SCHEMA_KEY_UNKNOWN", "at": "page_seo.title.sample",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "hero", "v": 1, "label": "Hero", "fields": [{"key": "title", "label": "Titel", "kind": "text"}]}], "page_seo": [{"key": "title", "label": "Titel", "kind": "text", "sample": "x"}]}
+    },
+    {
+      "name": "an unknown key in a view: contract 2's sample",
+      "expect": "JTK_E_SCHEMA_KEY_UNKNOWN", "at": "blocks.gallery.views.grid.sample",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "gallery", "v": 1, "label": "Galerie", "views": [{"key": "grid", "label": "Raster", "sample": "/"}], "fields": [{"key": "items", "label": "Bilder", "kind": "media", "multiple": true}]}]}
+    },
+    {
+      "name": "an unknown key in an option: contract 2's option_labels beside it",
+      "expect": "JTK_E_SCHEMA_KEY_UNKNOWN", "at": "blocks.hero.tone.option_labels",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "hero", "v": 1, "label": "Hero", "fields": [{"key": "tone", "label": "Ton", "kind": "select", "options": [{"value": "dark"}], "option_labels": {"dark": "Dunkel"}}]}]}
+    },
+    {
+      "name": "an unknown key in an option",
+      "expect": "JTK_E_SCHEMA_KEY_UNKNOWN", "at": "blocks.hero.tone.options[0].colour",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "hero", "v": 1, "label": "Hero", "fields": [{"key": "tone", "label": "Ton", "kind": "select", "options": [{"value": "dark", "colour": "black"}]}]}]}
+    },
+    {
+      "name": "an unknown key in a reference",
+      "expect": "JTK_E_SCHEMA_KEY_UNKNOWN", "at": "blocks.work.category.ref.collection",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "work", "v": 1, "label": "Werk", "fields": [{"key": "title", "label": "Titel", "kind": "text", "required": true}, {"key": "category", "label": "Kategorie", "kind": "ref", "ref": {"to": ["works"], "collection": "works"}}]}], "collections": [{"name": "works", "label": "Werke", "type": "work", "route": {"detail": "/werke/{slug}"}}]}
+    },
+    {
+      "name": "an unknown key in a collection: contract 2's prefix",
+      "expect": "JTK_E_SCHEMA_KEY_UNKNOWN", "at": "collections.works.prefix",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "work", "v": 1, "label": "Werk", "fields": [{"key": "title", "label": "Titel", "kind": "text", "required": true}]}], "collections": [{"name": "works", "label": "Werke", "type": "work", "prefix": "/werke", "route": {"detail": "/werke/{slug}"}}]}
+    },
+    {
+      "name": "an unknown key in a collection: contract 2's body",
+      "expect": "JTK_E_SCHEMA_KEY_UNKNOWN", "at": "collections.works.body",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "work", "v": 1, "label": "Werk", "fields": [{"key": "title", "label": "Titel", "kind": "text", "required": true}]}], "collections": [{"name": "works", "label": "Werke", "type": "work", "body": [], "route": {"detail": "/werke/{slug}"}}]}
+    },
+    {
+      "name": "an unknown key in a route",
+      "expect": "JTK_E_SCHEMA_KEY_UNKNOWN", "at": "collections.works.route.listings",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "work", "v": 1, "label": "Werk", "fields": [{"key": "title", "label": "Titel", "kind": "text", "required": true}]}], "collections": [{"name": "works", "label": "Werke", "type": "work", "route": {"detail": "/werke/{slug}", "listings": "/werke"}}]}
+    },
+    {
+      "name": "an unknown key in an order",
+      "expect": "JTK_E_SCHEMA_KEY_UNKNOWN", "at": "collections.works.order.direction",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "work", "v": 1, "label": "Werk", "fields": [{"key": "title", "label": "Titel", "kind": "text", "required": true}]}], "collections": [{"name": "works", "label": "Werke", "type": "work", "route": {"detail": "/werke/{slug}"}, "order": {"by": "title", "direction": "up"}}]}
+    },
+    {
+      "name": "a module that is not one",
+      "expect": "JTK_E_MODULE_UNKNOWN", "at": "modules.deliveries",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "hero", "v": 1, "label": "Hero", "fields": [{"key": "title", "label": "Titel", "kind": "text"}]}], "modules": {"deliveries": {}}}
+    },
+    {
+      "name": "a module's role that it has not got",
+      "expect": "JTK_E_MODULE_ROLE_INVALID", "at": "modules.bookings.couriers",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "service", "v": 1, "label": "Leistung", "fields": [{"key": "title", "label": "Name", "kind": "text", "required": true}, {"key": "takes", "label": "Dauer", "kind": "duration"}]}], "collections": [{"name": "services", "label": "Leistungen", "type": "service", "route": "none", "shown_on": ["/preise#{slug}"]}], "modules": {"bookings": {"services": "services", "resources": "services", "couriers": "services"}}}
+    },
+
+    {
+      "name": "§15 · 5: a collection without a route",
+      "expect": "JTK_E_ROUTE_INVALID", "at": "collections.works.route",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "work", "v": 1, "label": "Werk", "fields": [{"key": "title", "label": "Titel", "kind": "text", "required": true}]}], "collections": [{"name": "works", "label": "Werke", "type": "work"}]}
+    },
+    {
+      "name": "a collection shown nowhere",
+      "expect": "JTK_E_ROUTE_INVALID", "at": "collections.rates.shown_on",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "rate", "v": 1, "label": "Tarif", "fields": [{"key": "title", "label": "Name", "kind": "text", "required": true}]}], "collections": [{"name": "rates", "label": "Tarife", "type": "rate", "route": "none"}]}
+    },
+    {
+      "name": "a detail with no slug",
+      "expect": "JTK_E_ROUTE_INVALID", "at": "collections.works.route.detail",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "work", "v": 1, "label": "Werk", "fields": [{"key": "title", "label": "Titel", "kind": "text", "required": true}]}], "collections": [{"name": "works", "label": "Werke", "type": "work", "route": {"detail": "/werke"}}]}
+    },
+    {
+      "name": "a pattern for a language the site has not got",
+      "expect": "JTK_E_ROUTE_INVALID", "at": "collections.works.route.detail.fr",
+      "catalogue": {"contract": 3, "locale": "de", "locales": ["en"], "blocks": [{"type": "work", "v": 1, "label": "Werk", "fields": [{"key": "title", "label": "Titel", "kind": "text", "required": true}]}], "collections": [{"name": "works", "label": "Werke", "type": "work", "route": {"detail": {"de": "/werke/{slug}", "fr": "/oeuvres/{slug}"}}}]}
+    },
+    {
+      "name": "two collections under one address",
+      "expect": "JTK_E_ROUTE_INVALID", "at": "collections.notes.route",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "work", "v": 1, "label": "Werk", "fields": [{"key": "title", "label": "Titel", "kind": "text", "required": true}]}], "collections": [{"name": "works", "label": "Werke", "type": "work", "route": {"detail": "/werke/{slug}"}}, {"name": "notes", "label": "Notizen", "type": "work", "route": {"detail": "/werke/notizen/{slug}"}}]}
+    },
+
+    {
+      "name": "§15 · 10: grouped by a reference to several collections",
+      "expect": "JTK_E_REF_INVALID", "at": "collections.works.group",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "work", "v": 1, "label": "Werk", "fields": [{"key": "title", "label": "Titel", "kind": "text", "required": true}, {"key": "kind", "label": "Art", "kind": "ref", "ref": {"to": ["tags", "categories"]}}]}, {"type": "tag", "v": 1, "label": "Schlagwort", "fields": [{"key": "title", "label": "Name", "kind": "text", "required": true}]}], "collections": [{"name": "works", "label": "Werke", "type": "work", "group": "kind", "route": {"detail": "/werke/{slug}"}}, {"name": "tags", "label": "Schlagworte", "type": "tag", "route": {"detail": "/schlagworte/{slug}"}}, {"name": "categories", "label": "Kategorien", "type": "tag", "route": {"detail": "/kategorien/{slug}"}}]}
+    },
+    {
+      "name": "§15 · 10: grouped by a reference to several entries",
+      "expect": "JTK_E_REF_INVALID", "at": "collections.works.group",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "work", "v": 1, "label": "Werk", "fields": [{"key": "title", "label": "Titel", "kind": "text", "required": true}, {"key": "tags", "label": "Schlagworte", "kind": "ref", "ref": {"to": ["tags"], "many": true}}]}, {"type": "tag", "v": 1, "label": "Schlagwort", "fields": [{"key": "title", "label": "Name", "kind": "text", "required": true}]}], "collections": [{"name": "works", "label": "Werke", "type": "work", "group": "tags", "route": {"detail": "/werke/{slug}"}}, {"name": "tags", "label": "Schlagworte", "type": "tag", "route": {"detail": "/schlagworte/{slug}"}}]}
+    },
+    {
+      "name": "§15 · 10: a tree through a reference to several entries",
+      "expect": "JTK_E_REF_INVALID", "at": "blocks.category.parents.ref",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "category", "v": 1, "label": "Kategorie", "fields": [{"key": "title", "label": "Name", "kind": "text", "required": true}, {"key": "parents", "label": "Oben", "kind": "ref", "ref": {"to": ["categories"], "many": true}}]}], "collections": [{"name": "categories", "label": "Kategorien", "type": "category", "route": {"detail": "/kategorien/{slug}"}}]}
+    },
+    {
+      "name": "§15 · 10: a tree through a reference to several collections",
+      "expect": "JTK_E_REF_INVALID", "at": "blocks.category.parent.ref",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "category", "v": 1, "label": "Kategorie", "fields": [{"key": "title", "label": "Name", "kind": "text", "required": true}, {"key": "parent", "label": "Oben", "kind": "ref", "ref": {"to": ["categories", "sections"]}}]}], "collections": [{"name": "categories", "label": "Kategorien", "type": "category", "route": {"detail": "/kategorien/{slug}"}}, {"name": "sections", "label": "Bereiche", "type": "category", "route": {"detail": "/bereiche/{slug}"}}]}
+    },
+    {
+      "name": "§15 · 13: a collection named media",
+      "expect": "JTK_E_NAME_INVALID", "at": "collections.media",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "work", "v": 1, "label": "Werk", "fields": [{"key": "title", "label": "Titel", "kind": "text", "required": true}]}], "collections": [{"name": "media", "label": "Medien", "type": "work", "route": {"detail": "/medien/{slug}"}}]}
+    },
+
+    {
+      "name": "a reference written as contract 2 wrote it",
+      "expect": "JTK_E_REF_INVALID", "at": "blocks.work.category.ref",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "work", "v": 1, "label": "Werk", "fields": [{"key": "title", "label": "Titel", "kind": "text", "required": true}, {"key": "category", "label": "Kategorie", "kind": "ref", "ref": "works"}]}], "collections": [{"name": "works", "label": "Werke", "type": "work", "route": {"detail": "/werke/{slug}"}}]}
+    },
+    {
+      "name": "a reference to no collection",
+      "expect": "JTK_E_REF_INVALID", "at": "blocks.work.category.ref",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "work", "v": 1, "label": "Werk", "fields": [{"key": "title", "label": "Titel", "kind": "text", "required": true}, {"key": "category", "label": "Kategorie", "kind": "ref", "ref": {"to": []}}]}], "collections": [{"name": "works", "label": "Werke", "type": "work", "route": {"detail": "/werke/{slug}"}}]}
+    },
+    {
+      "name": "a reference into a collection the schema has not got",
+      "expect": "JTK_E_REF_INVALID", "at": "blocks[0].category.ref",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "work", "v": 1, "label": "Werk", "fields": [{"key": "title", "label": "Titel", "kind": "text", "required": true}, {"key": "category", "label": "Kategorie", "kind": "ref", "ref": {"to": ["categories"]}}]}], "collections": [{"name": "works", "label": "Werke", "type": "work", "route": {"detail": "/werke/{slug}"}}]}
+    },
+    {
+      "name": "a reference that cascades",
+      "expect": "JTK_E_REF_INVALID", "at": "blocks.work.category.ref.on_delete",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "work", "v": 1, "label": "Werk", "fields": [{"key": "title", "label": "Titel", "kind": "text", "required": true}, {"key": "category", "label": "Kategorie", "kind": "ref", "ref": {"to": ["works"], "on_delete": "cascade"}}]}], "collections": [{"name": "works", "label": "Werke", "type": "work", "route": {"detail": "/werke/{slug}"}}]}
+    },
+
+    {
+      "name": "shared text of a type the schema has not got",
+      "expect": "JTK_E_SHARED_INVALID", "at": "shared[0]",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "hero", "v": 1, "label": "Hero", "fields": [{"key": "title", "label": "Titel", "kind": "text"}]}], "shared": ["contacts"]}
+    },
+    {
+      "name": "a role that is none of the list",
+      "expect": "JTK_E_SHARED_INVALID", "at": "blocks.contacts.fax.role",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "contacts", "v": 1, "label": "Kontakt", "fields": [{"key": "fax", "label": "Fax", "kind": "tel", "role": "fax"}]}], "shared": ["contacts"]}
+    },
+    {
+      "name": "a role outside the shared text",
+      "expect": "JTK_E_SHARED_INVALID", "at": "blocks.hero.title.role",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "hero", "v": 1, "label": "Hero", "fields": [{"key": "title", "label": "Titel", "kind": "text", "role": "name"}]}]}
+    },
+    {
+      "name": "a role said twice",
+      "expect": "JTK_E_SHARED_INVALID", "at": "blocks.contacts.mobile.role",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "contacts", "v": 1, "label": "Kontakt", "fields": [{"key": "phone", "label": "Telefon", "kind": "tel", "role": "phone"}, {"key": "mobile", "label": "Mobil", "kind": "tel", "role": "phone"}]}], "shared": ["contacts"]}
+    },
+
+    {
+      "name": "localized on a kind with no words",
+      "expect": "JTK_E_ATTRIBUTE_INVALID", "at": "blocks.hero.count.localized",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "hero", "v": 1, "label": "Hero", "fields": [{"key": "count", "label": "Anzahl", "kind": "number", "localized": true}]}]}
+    },
+    {
+      "name": "integer on text",
+      "expect": "JTK_E_ATTRIBUTE_INVALID", "at": "blocks.hero.title.integer",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "hero", "v": 1, "label": "Hero", "fields": [{"key": "title", "label": "Titel", "kind": "text", "integer": true}]}]}
+    },
+    {
+      "name": "a qualifier a price has not got",
+      "expect": "JTK_E_ATTRIBUTE_INVALID", "at": "blocks.hero.price.qualifiers",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "hero", "v": 1, "label": "Hero", "fields": [{"key": "price", "label": "Preis", "kind": "money", "qualifiers": ["about"]}]}]}
+    },
+    {
+      "name": "qualifiers on a number",
+      "expect": "JTK_E_ATTRIBUTE_INVALID", "at": "blocks.hero.count.qualifiers",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "hero", "v": 1, "label": "Hero", "fields": [{"key": "count", "label": "Anzahl", "kind": "number", "qualifiers": ["from"]}]}]}
+    },
+    {
+      "name": "untranslated that is neither base nor hide",
+      "expect": "JTK_E_ATTRIBUTE_INVALID", "at": "collections.works.untranslated",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "work", "v": 1, "label": "Werk", "fields": [{"key": "title", "label": "Titel", "kind": "text", "required": true}]}], "collections": [{"name": "works", "label": "Werke", "type": "work", "route": {"detail": "/werke/{slug}"}, "untranslated": "fallback"}]}
+    },
+
+    {
+      "name": "no language of its own",
+      "expect": "JTK_E_LOCALE_INVALID", "at": "locale",
+      "catalogue": {"contract": 3, "blocks": [{"type": "hero", "v": 1, "label": "Hero", "fields": [{"key": "title", "label": "Titel", "kind": "text"}]}]}
+    },
+    {
+      "name": "an option written as contract 2 wrote it",
+      "expect": "JTK_E_SELECT_NO_OPTIONS", "at": "blocks.hero.tone.options[0]",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "hero", "v": 1, "label": "Hero", "fields": [{"key": "tone", "label": "Ton", "kind": "select", "options": ["dark"]}]}]}
+    },
+    {
+      "name": "a list in a row of a row",
+      "expect": "JTK_E_LIST_INVALID", "at": "blocks.menu.a.b.c",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "menu", "v": 1, "label": "Karte", "fields": [{"key": "a", "label": "A", "kind": "list", "of": [{"key": "b", "label": "B", "kind": "list", "of": [{"key": "c", "label": "C", "kind": "list", "of": [{"key": "d", "label": "D", "kind": "text"}]}]}]}]}]}
+    },
+    {
+      "name": "a link with a length",
+      "expect": "JTK_E_BOUNDS_INVALID", "at": "blocks.hero.link",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "hero", "v": 1, "label": "Hero", "fields": [{"key": "link", "label": "Link", "kind": "url", "max": 200}]}]}
+    },
+    {
+      "name": "an order that is neither manual nor a field",
+      "expect": "JTK_E_ORDER_INVALID", "at": "collections.works.order",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "work", "v": 1, "label": "Werk", "fields": [{"key": "title", "label": "Titel", "kind": "text", "required": true}]}], "collections": [{"name": "works", "label": "Werke", "type": "work", "route": {"detail": "/werke/{slug}"}, "order": "alphabetical"}]}
+    }
+  ]
+}
