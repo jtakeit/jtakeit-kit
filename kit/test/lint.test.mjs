@@ -117,35 +117,39 @@ test('withheldIn finds what the platform will not publish', async () => {
 
 // A contract-3 tree names a page or an entry by its id and a block, a row or
 // a picture by its key, and the door annotates nowhere what has none — so the
-// lint refuses such a file before it looks at a single page, each place with
-// its file and its fix (jtakeit-core wiki/98 §15 · 12).
+// lint refuses such a file, each place with its file and its fix
+// (jtakeit-core wiki/98 §15 · 12), with the build's own code for it, and goes
+// on reading the rest as the build does. The rest of contract 3's lint is
+// lint3.test.mjs's.
 test('a contract-3 document without its id, or a block or a row without its _key, is refused with the file and the fix', async () => {
   const root = mkdtempSync(join(tmpdir(), 'jtk-lint-'));
   const write = (path, value) => {
     mkdirSync(join(root, path, '..'), { recursive: true });
     writeFileSync(join(root, path), JSON.stringify(value));
   };
-  write('jtk/schema.json', { contract: 3, locale: 'de', locales: ['en'], blocks: [{ type: 'hero', v: 1, fields: [{ key: 'title', kind: 'text' }, { key: 'items', kind: 'list', of: [{ key: 'title', kind: 'text' }] }] }] });
+  write('jtk/schema.json', { contract: 3, locale: 'de', blocks: [{ type: 'hero', v: 1, fields: [{ key: 'title', kind: 'text' }, { key: 'items', kind: 'list', of: [{ key: 'title', kind: 'text' }] }] }] });
   write('jtk/pages/index.json', { path: '/', blocks: [{ type: 'hero', v: 1, title: 'Hallo', items: [{ _key: 'r1', title: 'Eins' }, { title: 'Zwei' }] }] });
-  write('jtk/pages/index.en.json', { locale: 'en', blocks: [{ title: 'Hello' }] });
   write('dist/index.html', '<h1>Hallo</h1>');
   const out = await lint({ root });
   assert.equal(out.ok, false);
-  assert.deepEqual(out.findings.map((one) => one.code), [CODES.CONTENT_FILE_INVALID, CODES.CONTENT_FILE_INVALID, CODES.CONTENT_FILE_INVALID, CODES.CONTENT_FILE_INVALID]);
+  assert.deepEqual(out.findings.map((one) => one.code), [CODES.UNNAMED, CODES.UNNAMED, CODES.UNNAMED]);
+  assert.equal(CODES.UNNAMED, 'JTK_E_UNNAMED', "the build's code for it (jtakeit-core #186)");
   assert.deepEqual(out.findings.map((one) => one.says.split(' — ')[0]), [
     'jtk/pages/index.json: no "id"',
     'jtk/pages/index.json: blocks[0] has no "_key"',
     'jtk/pages/index.json: blocks[0].items[1] has no "_key"',
-    'jtk/pages/index.en.json: blocks[0] has no "_key"',
   ]);
   assert.match(out.findings[0].says, /npx @jtakeit\/astro catalogue mints it/);
-  assert.match(out.findings[3].says, /copy it from jtk\/pages\/index\.json$/);
-  assert.match(out.line, /4 place\(s\) in jtk\/ without the id or the _key/);
+  assert.equal(out.line, '3 unannotated field(s) — the visual editor would silently stop working on them', "the build's line");
 
-  // Named, it goes on to what the lint reads of contract 3 — which is not
-  // yet the annotations, whose move is the lint's own (kit #55, "left for later").
+  // Named, it goes on to the annotations, by key.
   write('jtk/pages/index.json', { id: '0193a5c2-7f4e-7c1a-9b2e-5d1f0c3a8e21', path: '/', blocks: [{ _key: 'hero', type: 'hero', v: 1, title: 'Hallo', items: [{ _key: 'r1', title: 'Eins' }, { _key: 'r2', title: 'Zwei' }] }] });
-  write('jtk/pages/index.en.json', { locale: 'en', blocks: [{ _key: 'hero', title: 'Hello' }] });
   const named = await lint({ root });
-  assert.ok(!named.findings.some((one) => one.code === CODES.CONTENT_FILE_INVALID));
+  assert.deepEqual(named.findings, [], 'nothing the owner taps: no field says client_editable');
+  assert.equal(named.ok, true);
+
+  // A translation stops it before anything, as it stops the build's
+  // collection of the content until M3 (wiki/98 §16).
+  write('jtk/pages/index.en.json', { locale: 'en', blocks: [{ title: 'Hello' }] });
+  await assert.rejects(lint({ root }), /^Error: jtk\/pages\/index\.en\.json is a translation\. Before M3 a contract-3 site has one language/);
 });

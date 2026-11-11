@@ -17,17 +17,22 @@ export const CODES = Object.freeze({
   NOINDEX: 'JTK_E_NOINDEX',
   SHARED_NOT_RENDERED: 'JTK_E_SHARED_NOT_RENDERED',
   ANNOTATION_UNKNOWN: 'JTK_E_ANNOTATION_UNKNOWN',
+  // The build says it of a lint run over a variant of the content
+  // (pipeline.sh, variants.mjs); this lint runs over the content as written,
+  // and never says it. Here so the table is the platform's, line for line.
+  CONTENT_VARIANT: 'JTK_E_CONTENT_VARIANT',
   CATALOGUE_MISSING: 'JTK_E_CATALOGUE_MISSING',
   FORM_INCOMPLETE: 'JTK_E_FORM_INCOMPLETE',
   FORM_FIELD_UNDECLARED: 'JTK_E_FORM_FIELD_UNDECLARED',
   FORM_UNDECLARED: 'JTK_E_FORM_UNDECLARED',
-  // Not the build's: the platform's code for a content file it cannot read as
-  // a document (sites/judgeFiles.go, `From: platform`), which its import says
-  // of a file. The lint says it of a contract-3 file without the names its
-  // annotations are written with — an `id`, a `_key` (jtakeit-core wiki/98
-  // §15 · 12) — because the fix is in the file, and the platform's judge is
-  // the one that refuses such a file there.
-  CONTENT_FILE_INVALID: 'JTK_E_CONTENT_FILE_INVALID',
+  // Contract 3's (`Since: 3`): a page or an entry without an `id`, a block,
+  // a row or a picture without a `_key` (jtakeit-core wiki/98 §15 · 12) —
+  // which this lint said as JTK_E_CONTENT_FILE_INVALID, the platform's
+  // import's code, until the build declared its own (jtakeit-core #186).
+  UNNAMED: 'JTK_E_UNNAMED',
+  // `dist/_meta.json` in a shape the platform does not read, `drafts` among
+  // them, on a contract-3 site (§6).
+  META_INVALID: 'JTK_E_META_INVALID',
 });
 
 /** One line of the lint's output, with its code in front of it. */

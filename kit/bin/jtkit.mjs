@@ -13,9 +13,11 @@
  *       write jtk/schema.json from a declaration that says CONTRACT = 3, mint the ids and
  *       _keys, and check it against the built pages in the grammar by key
  *   jtkit lint [--dist dist] [--root .] [--site-url https://…]
- *       the annotation lint the platform's build runs, on this working tree
+ *       the annotation lint the platform's build runs, on this working tree; on a contract-3 tree,
+ *       by key and by id against jtk/schema.json, and every price in the site's currency
  *   jtkit progress [--root .] [--json]
- *       where the site is, read off the files: the brief, the pages, the entries, what is missing
+ *       where the site is, read off the files: the brief, the pages, the entries, what is missing —
+ *       contract 2's tree or contract 3's
  *   jtkit session <session_id> <watch_key> [--api <url>] [--root .]   |   jtkit session --forget
  *       let the page the dev server serves read the platform's half through the dev session
  */
@@ -97,8 +99,8 @@ switch (command) {
   }
   case 'lint': {
     // The annotation lint the platform's build runs, on this working tree:
-    // `dist/` against `jtk/` and the catalogue, every finding at once,
-    // before any push.
+    // `dist/` against `jtk/` and the catalogue — or, on contract 3, the
+    // schema — every finding at once, before any push.
     const { lintCommand } = await import(pathToFileURL(join(HERE, '..', 'lib', 'lint.mjs')).href);
     const root = resolve(flag('root', process.cwd()));
     const dist = resolve(root, flag('dist', 'dist'));
