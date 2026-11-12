@@ -22,16 +22,26 @@ page of this site, not a subpage of a template. On a site in more than one
 language it is `src/pages/[...lang]/prices.astro` and builds at `/prices` and
 `/de/prices` both — see languages.md, «What you write».
 
-**Its blocks in the catalogue.** `src/content/blocks.ts` describes every block
+**Its blocks in the schema.** `src/content/blocks.ts` describes every block
 on every page of the site; a new page usually brings one or two new types with
 it. Reusing a type across pages is fine and common — a `questions` block belongs
 on more than one page.
 
-**A content document** — `jtk/content/prices.json`, committed with the
-fields in it and a `path` of `/prices`. Empty strings are fine and are what the
-scaffold ships for the home page. A page whose document does not exist builds
-empty — every value blank, nothing annotated — which looks finished and is
-not, so commit the document with the page.
+**A content document** — `jtk/pages/prices.json`, committed with its `path`
+(`/prices`), its `name` and its blocks, each with its `_key`:
+
+```json
+{ "path": "/prices", "name": "Preise",
+  "blocks": [{ "_key": "rates", "type": "rates", "v": 1, "title": "Preise" }] }
+```
+
+`npx @jtakeit/astro schema` gives it its `id` and a block or a row its `_key`
+where the file has none — the names the platform matches it by on every
+import. A value nobody has written yet is left out, as the scaffold ships the
+home page's. A page whose document does not exist builds empty — every value
+blank, nothing annotated — which looks finished and is not, so commit the
+document with the page. (A site still on contract 2 keeps it as
+`jtk/content/prices.json`.)
 
 **In the sitemap and `llms.txt`** by itself, once its document is committed:
 `src/lib/pages.ts` lists every page of the content in every language, every
@@ -74,19 +84,22 @@ const rates = prices.block('rates');
 
 `site.page(path, locale)` finds the document by the `path` written inside it,
 not by the file's name, because that is what publish writes and what the admin
-reads back — and the home page is found the same way, `site.page('/')`. A page
+reads back — and the home page is found the same way, `site.page('/')`; in
+another language, with its translation laid over it. A page
 hands out `blocks` (every block in order) and `block(type)` (the first of a
 type); a block hands out each value with its annotation:
 
 - `text(field)` — the value as words, `''` for none;
 - `value(field)` — the value as stored, `undefined` for none;
 - `rows(field)` — a list's rows, each read the same way;
-- `picture(field)` — `{ src, alt, data-jtk-path }`: the alt is `<field>_alt`
-  beside it;
+- `picture(field)` — `{ src, alt, data-jtk-path }`: the alt is the
+  picture's own words, `{ "src": …, "alt": … }` (contract 2 kept them in
+  `<field>_alt` beside it);
 - `gallery(field)` — the pictures of a gallery, each annotated by its place in
   that field;
 - `at(field)` — `{ 'data-jtk-path': … }`, spread onto the element that draws
-  the value: `at('items', 3, 'title')` for a cell of a list. It is `{}` on a
+  the value: `blocks[rates].title`, the block by its `_key`; `row.at('title')`
+  for a cell of a list, `blocks[rates].items[r7k2].title`. It is `{}` on a
   build with `PUBLIC_JTK_ANNOTATE=false`.
 
 The home page's copy, `src/copy/<locale>.ts`, is the same reading shaped into
@@ -95,16 +108,16 @@ that page's own vocabulary — `HOME.hero.title` — and hands the page itself o
 
 **Every field rendered carries its annotation.** The annotation lint fails the
 build without one, per page — and it is per page for a reason worth knowing:
-two pages both rendering `blocks[0].title` are two different fields of two
+two pages both rendering `blocks[hero].title` are two different fields of two
 different documents, and the check knows which is which. `at()` writes the
 path; nothing in a template writes one by hand.
 
 ## What the admin does with it
 
-Nothing, until the branch is imported. Import walks `jtk/content/`, creates
-a page for every document it does not already have, and the page appears in the
-site's list with its own drafts, versions and search fields. Publishing writes
-every page back out again.
+Nothing, until the branch is imported. Import walks `jtk/pages/`, creates
+a page for every document it does not already have — by its `id` — and the
+page appears in the site's list with its own drafts, versions and search
+fields. Publishing writes every page back out again.
 
 A page in the admin that the branch no longer has is **reported and never
 deleted** — the branch may simply be an older ref, and a page may hold a draft
@@ -124,16 +137,17 @@ It goes in `jtk/shared.json`, once:
 
 ```json
 {
-  "schema_version": 1,
   "blocks": [
-    { "_key": "chrome-1", "type": "chrome", "v": 1, "note": "Bookings go through the form." }
+    { "_key": "chrome", "type": "chrome", "v": 1, "note": "Bookings go through the form." }
   ]
 }
 ```
 
-Its blocks are ordinary types from `blocks.ts` — nothing new to declare. What
-makes them shared is where they live. A second language's is beside it:
-`jtk/shared.de.json`, `jtk/shared.de-CH.json`.
+Its blocks are ordinary types from `blocks.ts`, named in `SHARED` — the types
+the shared text holds, beside the business's `contacts` — and that is all
+there is to declare. A second language's words are a translation beside it,
+`jtk/shared.de.json` (`jtk/shared.de-CH.json`), its blocks by the original's
+`_key` ([languages.md](languages.md)).
 
 Read it with `site.shared(locale)`, and **annotate it on every page that renders it**:
 
@@ -146,14 +160,14 @@ const chrome = site.shared(localeOf(Astro.url.pathname)).block('chrome');
 <p {...chrome.at('note')}>{chrome.text('note')}</p>
 ```
 
-`at` writes `shared:blocks[0].note` — the prefix says which document the
+`at` writes `shared:blocks[chrome].note` — the prefix says which document the
 field is in. Unlike a page's own field, **the same annotation on five pages is
 correct**, and it is what makes the sentence editable wherever the owner happens
 to be looking. The admin resolves it against the site's shared document rather
 than the page in front of it, and tells them the line is on every page before
 they change it.
 
-A shared field is checked from the other side too: `jtk catalogue` refuses one
+A shared field is checked from the other side too: `jtk schema` refuses one
 that no page renders — a control that edits nothing — and refuses a `shared:`
 annotation for a field the document does not have.
 
@@ -227,7 +241,7 @@ of writing every address one way.
 `/api/…` is the exception: a form posts to the host it is served from, which is
 the real site and is not part of the build.
 
-`jtk catalogue` fails a repository that gets either half wrong, and proves the
+`jtk schema` fails a repository that gets either half wrong, and proves the
 second by building the site again under a path and holding every address it
 emitted to it — so this is a rule that is checked rather than one to remember.
 
@@ -236,7 +250,7 @@ emitted to it — so this is a rule that is checked rather than one to remember.
 **Not a place for a link the owner edits.** A cross-page link's address is the
 repository's: it points at a route somebody wrote, and an owner who could retype
 it could break it with no way to know. Declare `cta_href` with
-`client_editable: false`, or leave it out of the catalogue entirely.
+`client_editable: false`, or leave it out of the schema entirely.
 
 **Not a blog post.** A page is a file. Anything the owner will keep adding to
 over time — posts, works, prices that come and go — is a collection, and it

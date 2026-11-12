@@ -91,3 +91,52 @@ test('a person who does other things is not offered; the rows are read as rows',
   assert.deepEqual((await asked('dye')).body.slots[0].free, ['ben']);
   assert.deepEqual((await asked('cut')).body.services.map((one) => one.slug), ['cut', 'dye']);
 });
+
+// Contract 3, every new site's: a price is `{ minor }` and what a person does
+// one reference to many services by id — read as no price and as everything
+// until 12 November 2026. Its settings are jtk/modules/bookings.json, and a
+// diary nobody has set up says that file.
+test('on contract 3 a price is its minor units and what a person does is the services they name by id', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'devdiary-3-'));
+  const put = (file, value) => {
+    mkdirSync(join(root, file, '..'), { recursive: true });
+    writeFileSync(join(root, file), JSON.stringify(value));
+  };
+  const ids = { cut: '0193a5c3-1b2a-7e44-8a10-6c2f9d3e4b51', dye: '0193a5c3-1b2a-7e44-8a10-6c2f9d3e4b52', anna: '0193a5c3-1b2a-7e44-8a10-6c2f9d3e4b53', ben: '0193a5c3-1b2a-7e44-8a10-6c2f9d3e4b54' };
+  put('jtk/schema.json', {
+    contract: 3,
+    locale: 'de',
+    blocks: [
+      { type: 'service', v: 1, label: 'Service', fields: [{ key: 'title', label: 'Title', kind: 'text', required: true }, { key: 'takes', label: 'Takes', kind: 'duration' }, { key: 'costs', label: 'Costs', kind: 'money' }] },
+      { type: 'master', v: 1, label: 'Master', fields: [{ key: 'title', label: 'Name', kind: 'text', required: true }, { key: 'does', label: 'Does', kind: 'ref', ref: { to: ['services'], many: true } }] },
+    ],
+    collections: [
+      { name: 'services', label: 'Services', type: 'service', route: 'none', shown_on: ['/services#services-{slug}'] },
+      { name: 'masters', label: 'Masters', type: 'master', route: { detail: '/masters/{slug}' } },
+    ],
+    modules: { bookings: { services: 'services', resources: 'masters' } },
+  });
+  put('jtk/modules/bookings.json', { v: 1, settings: { hours: [] } });
+  put('jtk/entries/services/cut.json', { id: ids.cut, collection: 'services', slug: 'cut', rank: 'V', visible: true, fields: { title: 'Schnitt', takes: 45, costs: { minor: 4800 } } });
+  put('jtk/entries/services/dye.json', { id: ids.dye, collection: 'services', slug: 'dye', rank: 'W', visible: true, fields: { title: 'Farbe', takes: 60, costs: { minor: 9000 } } });
+  put('jtk/entries/masters/anna.json', { id: ids.anna, collection: 'masters', slug: 'anna', rank: 'V', visible: true, fields: { title: 'Anna', does: [ids.cut] } });
+  put('jtk/entries/masters/ben.json', { id: ids.ben, collection: 'masters', slug: 'ben', rank: 'W', visible: true, fields: { title: 'Ben', does: [ids.dye] } });
+
+  const unset = await ask(devDiary(root), 'GET', '/availability?service=cut');
+  assert.equal(unset.status, 412);
+  assert.equal(unset.body.details.means, 'jtk/modules/bookings.json needs `zone` and `hours`.');
+
+  const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  put('jtk/modules/bookings.json', { v: 1, settings: { zone: 'Europe/Zurich', slot_every: 15, hours: days.map((day) => ({ _key: `h${day.slice(0, 3)}`, day, opens: 540, closes: 1080 })) } });
+  const handler = devDiary(root);
+  const from = new Date(Date.now() + 2 * 86400000);
+  from.setUTCHours(0, 0, 0, 0);
+  const to = new Date(from.getTime() + 86400000);
+  const asked = (service) => ask(handler, 'GET', `/availability?service=${service}&from=${from.toISOString()}&to=${to.toISOString()}`);
+  const cut = (await asked('cut')).body.slots[0];
+  assert.deepEqual(cut.free, ['anna']);
+  assert.equal(cut.costs_minor, 4800);
+  const dye = (await asked('dye')).body.slots[0];
+  assert.deepEqual(dye.free, ['ben']);
+  assert.equal(dye.costs_minor, 9000);
+});

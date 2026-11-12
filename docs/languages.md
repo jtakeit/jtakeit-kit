@@ -14,7 +14,9 @@ page](#contract-3-one-document-its-translations-beside-it) says how it is
 written. A site made before that is on contract 2: a full copy of every
 document per language, under `jtk/content/`, its schema `jtk/catalogue.json`;
 such a site moves with `jtk upgrade contract-3`, and a new one is never laid
-out on it.
+out on it. What is said below of the address, `hreflang`, the switcher and
+the labels holds on both; the sections marked *contract 2* are that
+contract's copies, which contract 3's part replaces.
 
 ---
 
@@ -63,7 +65,7 @@ For an entry the admin builds the address from this pattern, so it is not a
 convention you can drift from. For a page you write the route yourself, and
 `jt-check` holds you to it.
 
-## The shape
+## The shape (contract 2)
 
 A language version of a page is **a page**. It has its own route and its own
 content document, and it says one thing about itself:
@@ -108,17 +110,25 @@ route:
 
 1. **Declare it.** `export const LOCALES: string[] = ['de'];` in
    `src/content/blocks.ts`. The pages read the languages from
-   `jtk/catalogue.json`, as the platform does: the dev server writes it again
-   when `blocks.ts` is saved, and `npx @jtakeit/astro catalogue` writes it
-   before a commit.
-2. **The words that are not content.** Copy `src/copy/<your locale>.ts` to
-   `src/copy/de.ts`, point it at the German home page —
-   `makeCopy(site.page('/', 'de'), STRINGS)` — set `lang: 'de'` and translate
-   the strings. Register it in `src/copy/index.ts`:
+   `jtk/schema.json`, as the platform does: the dev server writes it again
+   when `blocks.ts` is saved, and `npx @jtakeit/astro schema` writes it
+   before a commit (on contract 2, `jtk/catalogue.json` and
+   `npx @jtakeit/astro catalogue`).
+2. **The words that are not content.** `npx @jtakeit/astro copy de` writes
+   `src/copy/de.ts` in the kit's words for German, found by its name; read
+   it and change what this site says otherwise. On contract 2, copy
+   `src/copy/<your locale>.ts` to `src/copy/de.ts`, point it at the German
+   home page — `makeCopy(site.page('/', 'de'), STRINGS)` — set `lang: 'de'`,
+   translate the strings and register it in `src/copy/index.ts`:
    `import { COPY as de } from './de';` and `{ '': own, de }`. A language
-   declared and not registered renders with the site's own words — untranslated,
-   not broken.
-3. **The documents.** The German home page is **`jtk/content/de.json`**
+   without its copy renders with the site's own words — untranslated, not
+   broken.
+3. **The documents.** On contract 3, a translation beside each original —
+   `jtk/pages/index.de.json`, `{ "of": <the home page's id>, "locale": "de", … }`
+   — holding only its words, as [its part](#contract-3-one-document-its-translations-beside-it)
+   says; a page nobody has translated yet is built in German all the same, in
+   the original's words, marked. On contract 2, a full copy of each: the
+   German home page is **`jtk/content/de.json`**
    (`"path": "/de"`, `"locale": "de"`) — not `jtk/content/de/index.json`: the
    platform keeps the page at `/de` in the file named for it, as it keeps
    `/prices` in `prices.json`. Every other German page is
@@ -129,8 +139,8 @@ route:
    file sits — but keep the file where the platform writes it, so the diff of
    its next save is the content and not a move.
 4. **The sitemap** lists the German pages by their documents
-   (`src/lib/pages.ts`); a German page with no document of its own is a line
-   in `PAGES` (`src/data/site.ts`).
+   (`src/lib/pages.ts`) — on contract 3, those with a translation; a German
+   page with no document of its own is a line in `PAGES` (`src/data/site.ts`).
 
 The routes are `src/pages/[...lang]/…`: `index.astro` and `privacy.astro` are
 there already and build at `/` and `/de`, `/privacy` and `/de/privacy`. A page
@@ -183,7 +193,7 @@ The switcher on the page is the same list, rendered:
 {alternates.map((other) => <a href={under(other.address)}>{other.locale || META.lang}</a>)}
 ```
 
-## The text that is on every page
+## The text that is on every page (contract 2)
 
 Per language, because it is text: `jtk/shared.json` for the site's own and
 `jtk/shared.de.json` beside it — `jtk/shared.de-CH.json` for a regional one,
@@ -199,7 +209,7 @@ document is already one language. The admin resolves it against the shared
 document of **the page's** language, so a footer edited under a German page is
 the German footer.
 
-## Entries of a collection
+## Entries of a collection (contract 2)
 
 Two languages of one post are **two entries at the same address**, one with the
 language in front of it. They are separate on purpose: different words, of
@@ -238,7 +248,7 @@ Never by swapping a prefix into the current URL. That is the shape that gives
 somebody a 404 the first time a page has no translation — and on a blog, where
 most posts will only ever be written once, that is most of them.
 
-## The catalogue is not translated
+## The schema is not translated
 
 A field's label is what the person *editing* reads, and it has never been a
 property of the site's language — that was a coincidence, because a site had one
@@ -247,12 +257,14 @@ language and the owner spoke it.
 **Write the labels in the owner's language, not the site's.** For a bilingual
 site they stay in one language, which is correct: the owner is one person.
 
-## What does not change
+## What does not change (contract 2)
 
 Annotations, the bridge, the build, the edge, the catalogue's block types,
 drafts, versions and publishing. A page is already one language, so
 `blocks[0].title` is unambiguous and everything that reads it is untouched. Two
-languages is one repository and one `astro build`.
+languages is one repository and one `astro build`. (On contract 3 too the path
+is the same in every language — `blocks[hero].title` — and the page's language
+says which words the owner is editing.)
 
 ---
 

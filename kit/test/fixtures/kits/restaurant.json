@@ -1,0 +1,235 @@
+{
+  "kind": "restaurant",
+  "version": 2,
+  "sum": "8fe7e0c113cf",
+  "about": "A restaurant: a table for the length of a sitting; a visitor says how many they are, and the smallest table that seats them is theirs.",
+  "ask": [
+    "zone: the business's time zone — from its address; say it back rather than asking",
+    "hours: when it is open — the kit does not guess them",
+    "the tables: each one's seats",
+    "how long a sitting takes, if not two hours"
+  ],
+  "catalogue": {
+    "blocks": [
+      {
+        "type": "seating",
+        "v": 1,
+        "label": {
+          "uk": "Бронювання столу",
+          "en": "Table booking",
+          "de": "Tischreservierung",
+          "ru": "Бронь столика",
+          "es": "Reserva de mesa",
+          "it": "Prenotazione del tavolo",
+          "pt": "Reserva de mesa",
+          "fr": "Réservation de table"
+        },
+        "fields": [
+          {
+            "key": "title",
+            "label": {
+              "uk": "Назва",
+              "en": "Name",
+              "de": "Name",
+              "ru": "Название",
+              "es": "Nombre",
+              "it": "Nome",
+              "pt": "Nome",
+              "fr": "Nom"
+            },
+            "kind": "text",
+            "required": true,
+            "max": 80,
+            "client_editable": true
+          },
+          {
+            "key": "takes",
+            "label": {
+              "uk": "Триває",
+              "en": "Takes",
+              "de": "Dauer",
+              "ru": "Длится",
+              "es": "Duración",
+              "it": "Durata",
+              "pt": "Duração",
+              "fr": "Durée"
+            },
+            "kind": "duration",
+            "required": true,
+            "min": 30,
+            "max": 360,
+            "client_editable": true
+          }
+        ]
+      },
+      {
+        "type": "table",
+        "v": 1,
+        "label": {
+          "uk": "Стіл",
+          "en": "Table",
+          "de": "Tisch",
+          "ru": "Стол",
+          "es": "Mesa",
+          "it": "Tavolo",
+          "pt": "Mesa",
+          "fr": "Table"
+        },
+        "fields": [
+          {
+            "key": "title",
+            "label": {
+              "uk": "Назва",
+              "en": "Name",
+              "de": "Name",
+              "ru": "Название",
+              "es": "Nombre",
+              "it": "Nome",
+              "pt": "Nome",
+              "fr": "Nom"
+            },
+            "kind": "text",
+            "required": true,
+            "max": 80,
+            "client_editable": true
+          },
+          {
+            "key": "seats",
+            "label": {
+              "uk": "Місць",
+              "en": "Seats",
+              "de": "Plätze",
+              "ru": "Мест",
+              "es": "Plazas",
+              "it": "Posti",
+              "pt": "Lugares",
+              "fr": "Places"
+            },
+            "kind": "number",
+            "min": 1,
+            "max": 30,
+            "client_editable": true,
+            "no_tap_target": true,
+            "required": true
+          },
+          {
+            "key": "marks",
+            "label": {
+              "uk": "Відмітні ознаки",
+              "en": "Distinguishing marks",
+              "de": "Merkmale"
+            },
+            "kind": "text",
+            "max": 80,
+            "hint": {
+              "uk": "Що відрізняє від схожих: колір і номер, поверх, серійний номер.",
+              "en": "What tells it from its twins: colour and plate, floor, serial number.",
+              "de": "Was es von gleichen unterscheidet: Farbe und Kennzeichen, Stockwerk, Seriennummer."
+            },
+            "client_editable": true,
+            "no_tap_target": true
+          }
+        ]
+      }
+    ],
+    "collections": [
+      {
+        "name": "services",
+        "label": {
+          "uk": "Посадки",
+          "en": "Sittings",
+          "de": "Reservierungsarten",
+          "ru": "Посадки",
+          "es": "Turnos",
+          "it": "Turni",
+          "pt": "Turnos",
+          "fr": "Services"
+        },
+        "one": {
+          "uk": "посадка",
+          "en": "sitting",
+          "de": "Reservierungsart",
+          "ru": "посадка",
+          "es": "turno",
+          "it": "turno",
+          "pt": "turno",
+          "fr": "service"
+        },
+        "icon": "lucide:utensils",
+        "prefix": "/reserve",
+        "type": "seating",
+        "pages": false
+      },
+      {
+        "name": "tables",
+        "label": {
+          "uk": "Столи",
+          "en": "Tables",
+          "de": "Tische",
+          "ru": "Столы",
+          "es": "Mesas",
+          "it": "Tavoli",
+          "pt": "Mesas",
+          "fr": "Tables"
+        },
+        "one": {
+          "uk": "стіл",
+          "en": "table",
+          "de": "Tisch",
+          "ru": "стол",
+          "es": "mesa",
+          "it": "tavolo",
+          "pt": "mesa",
+          "fr": "table"
+        },
+        "icon": "lucide:armchair",
+        "prefix": "/tables",
+        "type": "table",
+        "pages": false
+      }
+    ],
+    "modules": {
+      "bookings": {
+        "services": "services",
+        "resources": "tables"
+      }
+    }
+  },
+  "settings": {
+    "kind": "restaurant",
+    "scale": "hourly",
+    "slot_every": 15,
+    "lead": 60,
+    "horizon": 60,
+    "party": 8,
+    "confirm": "auto",
+    "cancel_until": 120,
+    "payment": "no",
+    "combine": false
+  },
+  "entries": [
+    {
+      "collection": "services",
+      "slug": "table",
+      "fields": {
+        "title": {
+          "uk": "Стіл",
+          "en": "Table",
+          "de": "Tisch",
+          "ru": "Стол",
+          "es": "Mesa",
+          "it": "Tavolo",
+          "pt": "Mesa",
+          "fr": "Table"
+        },
+        "takes": 120
+      }
+    }
+  ],
+  "changes": [
+    {
+      "from": "1",
+      "says": "Five more languages: every label, collection name and rate of the kit now says ru, es, it, pt and fr beside uk, en and de (7 October 2026)."
+    }
+  ]
+}

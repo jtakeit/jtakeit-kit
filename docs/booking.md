@@ -94,7 +94,8 @@ and `kit`/`kit_version` saying which kit they came from, and
 that listing — `src/pages/[...listing].astro` — as the booking page, the rates
 above the form. What follows is what a kit is made of, and how to do it by hand.
 
-The site's catalogue declares the module and binds two collections:
+The site's schema declares the module and binds two collections (`MODULES` in
+`src/content/blocks.ts`, `modules` in `jtk/schema.json`):
 
 ```jsonc
 "modules": {
@@ -108,9 +109,11 @@ The site's catalogue declares the module and binds two collections:
 Both are ordinary collections the owner edits in the admin — the team page and
 the diary's masters are the **same entries**. A service entry carries `takes`
 as a `duration` field; a master entry may carry its own weekly `hours`. The
-business's hours, days off and confirmation mode are the module's settings
-document, which the owner edits under the diary; publish writes it to
-`jtk/bookings.json`, and a first commit may seed it there (below).
+business's hours, days off and confirmation mode are the module's settings,
+which the owner edits under the diary; publish writes them to
+`jtk/modules/bookings.json` as `{ "v": 1, "settings": { … } }`, and a first
+commit may seed them there — `jtk create --kit` writes the kit's, and `jtk
+schema` an empty one for a module the schema turns on.
 
 ## The page
 
@@ -123,29 +126,31 @@ const all = site.entries('services');
 // each heading the words (a select's label, a category's title), never the stored value.
 const runs = site.groupsOf('services', all) ?? [{ entries: all }];
 const services = runs.flatMap((run) => run.entries.map((e) => ({
-  slug: e.slug, title: String(e.fields.value('title') ?? e.slug),
-  takes: e.fields.value('takes'), costs: e.fields.value('costs'), rates: e.fields.value('rates'), group: run.heading?.text, // for the checklist's total and headings; `rates` says «from …»
+  slug: e.baseSlug,                                   // the original's slug, which the diary books by in every language
+  title: String(e.fields.value('title') ?? e.slug), lang: e.fields.lang('title').lang,   // the original's words, marked, where nobody translated them
+  takes: e.fields.value('takes'), costs: e.fields.minor('costs'), group: run.heading?.text,   // whole minor units, whichever contract stored the price
 })));
 const masters  = site.entries('masters').map((e) => ({
-  slug: e.slug, title: String(e.fields.value('title') ?? e.slug),
-  does: e.fields.rows('does').map((row) => row.value('service') as string),   // rows of { service }; none is everything
+  slug: e.baseSlug, title: String(e.fields.value('title') ?? e.slug), lang: e.fields.lang('title').lang,
+  does: e.fields.refs('does').map((one) => one.baseSlug),   // the services they do, by the slug the form names them by; none is everything
 }));
-const settings = site.module('bookings');                             // jtk/bookings.json's bookings_config block, the owner's settings
+const settings = site.module('bookings');                   // the owner's settings: jtk/modules/bookings.json's `settings`
 const combine  = settings.combine === true;
 const scale    = typeof settings.scale === 'string' ? settings.scale : '';   // 'daily' for a business that lets things by the day
 const kind     = typeof settings.kind === 'string' ? settings.kind : '';     // 'car_rental', 'clinic'… — whose words the form speaks
 ```
 
 An entry is the door's (`@jtakeit/kit/content`): its `slug`, its `locale`, and
-its values read through `fields` — `value`, `text`, `rows` — each with its
-annotation (`fields.at('title')`) for a page that draws it. The settings are
-the block whose type is `bookings_config`, found by its type rather than by
-being first.
+its values read through `fields` — `value`, `text`, `minor`, `rows`, `refs` —
+each with its annotation (`fields.at('title')`) for a page that draws it. The
+settings are the module's `settings` (a site still on contract 2 keeps them as
+the `bookings_config` block of `jtk/bookings.json`, which the door finds by its
+type); the same code reads either.
 
-And `jtk/bookings.json` says **where the form is** — `"page": "/angebote"` in its
-block — because the form is placed by a page template rather than by a block, so
-nothing else can tell the panel which page to open when the owner presses *Try
-booking*. Empty means the front page.
+And the settings say **where the form is** — `"page": "/angebote"` — because
+the form is placed by a page template rather than by a block, so nothing else
+can tell the panel which page to open when the owner presses *Try booking*.
+Empty means the front page.
 
 ```ts
 ---
@@ -197,7 +202,7 @@ the words drawn before it answers.
 By the day the visitor gives two dates, «від» and «до», and the form books
 that many nights: it sends `count` — how many of the service — and never an
 end, because the platform computes the end and the price from the service. How
-many may be taken is the service's, in `jtk/content`: `fewest` and `most`,
+many may be taken is the service's own, in its entry: `fewest` and `most`,
 one to thirty when unsaid. A service taken a fixed number of times — a week
 as `takes` 10080 with `fewest` and `most` both 1 — asks for the first date
 only. The platform's first answer says all of this per service, so a tariff
@@ -205,7 +210,7 @@ changed in the panel needs no rebuild.
 
 Pass `resources` only when the visitor should choose; leave it out for a solo
 business and the platform assigns. The words are the component's, per locale;
-the page's own copy stays in `jtk/content`.
+the page's own copy stays in its page, under `jtk/pages/`.
 
 ## What the form does by default — and the rules behind it
 
@@ -220,7 +225,7 @@ form keeps the rules even where it changes the drawing:
    (what, with whom, when and until when, how long) and a *Change* back. One
    form throughout: with scripts off it is the whole form at once.
 2. **The day is a week of seven**, rolling from today, arrows a week either
-   way, the business's closed days (`open`, from `jtk/bookings.json`'s hours)
+   way, the business's closed days (`open`, from the settings' hours)
    struck out. **Never yesterday**: the input's `min` is written when the site
    is built, and a site built on Friday is read on Saturday — the floor is the
    browser's today, in the browser's own day, not UTC's.
@@ -290,8 +295,8 @@ list, the opening line, the master's photograph — or let it use the width.
 
 `astro dev` answers the form itself: `jtakeit-meta.mjs` mounts
 `@jtakeit/kit/devdiary` at `/api`, which reads the hours, the zone and the slot
-length from `jtk/bookings.json` and the services and people from `jtk/content`,
-and offers times from them — so the form can be walked end to end while the
+length from the settings (`jtk/modules/bookings.json`) and the services and
+people from their entries under `jtk/entries/`, and offers times from them — so the form can be walked end to end while the
 page is being written. A booking is kept in memory until the server stops and
 reaches nothing; the terminal says so. It is not the platform's diary (no
 buffers, no rates by the hour, no people's own hours): `preflight` with
@@ -328,14 +333,14 @@ draws it as a form. Shape the two entry types for that, not for the blog:
   body is the blog's shape copied without a reason.
 
 And a fact lives once. The owner's opening hours are the module's settings,
-which publish writes to `jtk/bookings.json`; the page reads them from there
+which publish writes to `jtk/modules/bookings.json`; the page reads them from there
 (`OpeningHours.astro` below). The prices are the services' `costs`, and the
 price list on the page is the same entries the form reads. **Never type hours
 or prices again as text** on a page block: the copy goes stale the day the
 owner changes the panel's.
 
-`validate_catalogue` says both as advice — `JTK_W_MODULE_POST`,
-`JTK_W_MODULE_TWIN` — under `advice`, refusing nothing; `jtk catalogue --judge`
+`validate_schema` says both as advice — `JTK_W_MODULE_POST`,
+`JTK_W_MODULE_TWIN` — under `advice`, refusing nothing; `jtk schema --judge`
 prints them. Act on them before the first build.
 
 ### Opening hours from the module
@@ -347,14 +352,14 @@ import OpeningHours from '../components/OpeningHours.astro';
 <OpeningHours locale="de" />
 ```
 
-`src/components/OpeningHours.astro` reads `jtk/bookings.json`
-if it is there — a repository nobody has published yet has none, and the
+`src/components/OpeningHours.astro` reads the settings through the door
+if they are there — a repository nobody has published yet has none, and the
 component draws nothing rather than failing the build — and lists the week in
 the site's language, two rows for a day with a break. Restyle it like the rest.
 
 ## What not to do
 
-- Do not compute free times on the page from the hours in `jtk/content` — the
+- Do not compute free times on the page from the hours in the settings — the
   diary's bookings live in the platform and the page cannot see them.
 - Do not put a Turnstile key in the repository.
 - Do not draw your own "your booking" page unless the design needs it; the

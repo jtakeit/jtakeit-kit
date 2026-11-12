@@ -8,7 +8,7 @@
 > `https://mcp.jtakeit.com/mcp` (it signs you in through the browser); the steps that
 > build, preview and launch a site need it. Everything in this repository runs without it.
 
-The scaffold and the catalogue tool for a site on [jtakeit](https://jtakeit.com) —
+The scaffold and the schema tool for a site on [jtakeit](https://jtakeit.com) —
 the platform's contract as a working Astro project, ready to build on.
 
 jtakeit is an agent-driven platform for building and running websites for clients:
@@ -24,7 +24,8 @@ the site is laid out by hand — the platform's guide *connecting a site*
 (`jtakeit:///guides/connecting-a-site.md`), under *On another generator* — and takes the pieces worth not writing twice from
 [`@jtakeit/kit`](https://github.com/jtakeit/jtakeit-kit/tree/main/kit), which this scaffold uses itself: the booking
 form and the enquiry form as markup and as elements, `_meta.json` and the
-specimen rule, a kit laid out, and the catalogue tool.
+specimen rule, a kit laid out on contract 3 (`npx @jtakeit/kit apply --kit
+<kind>`), and the schema tool.
 
 ## Scaffold
 

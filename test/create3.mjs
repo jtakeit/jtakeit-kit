@@ -19,6 +19,9 @@
 //   7  a kit served with contract 3's words on it — a master's name
 //      `"localized": false` (jtakeit-core #223): kept on contract 3, left out
 //      on contract 2, whose files are then the kit's without it, byte for byte
+//   8  `jtkit apply --kit` into an empty tree — a site on another generator —
+//      lays out contract 3, the kit's files and tables the same as `jtk
+//      create --kit` lays them, ids aside: one mapping, two layouts
 //   5  every kit the platform has, laid out, built, judged and linted — when
 //      JTK_KITS_API names a platform (JTK_KITS_API=https://api.stg.jtakeit.com
 //      node test/create3.mjs); not in `npm test`, which asks no platform
@@ -245,7 +248,32 @@ try {
     const title = json(join(dir, 'kit-three-said'), 'jtk/schema.json').blocks.find((one) => one.type === 'master')?.fields?.find((one) => one.key === 'title');
     if (title?.localized !== false) fail(`7 · contract 3 does not keep a master's name the same in every language: ${JSON.stringify(title)}`);
   }
-  console.log('create3: the tree, contract 3\'s words, the same as the move in one language and two, several languages, the refusals, a kit\'s contract-3 words on each contract');
+  // ── 8 · jtkit apply --kit, on another generator ──────────────────────────
+  // No declaration to write into: the kit's tables go into jtk/schema.json,
+  // the rest as jtk create lays it — the same settings, rates and page.
+  {
+    const applied = join(dir, 'applied');
+    run = spawnSync('node', [resolve('kit/bin/jtkit.mjs'), 'apply', '--kit', kitFile, '--root', applied, '--locale', 'de-CH'], { encoding: 'utf8' });
+    if (run.status !== 0 || !run.stdout.includes(', on contract 3:')) fail(`8 · jtkit apply into an empty tree:\n${run.stdout}\n${run.stderr}`);
+    const created = join(dir, 'kit-three');
+    run = create('kit-three', '--locale', 'de-CH', '--kit', kitFile, '--name', 'Salon Probe');
+    if (run.status !== 0) fail(`8 · create --kit:\n${run.stderr}`);
+    const a = settled(applied);
+    const b = settled(created);
+    for (const file of Object.keys(a)) {
+      if (file === 'jtk/schema.json') continue;
+      if (JSON.stringify(a[file]) !== JSON.stringify(b[file])) fail(`8 · jtkit apply's ${file} is not what jtk create --kit lays out:\n  apply  ${JSON.stringify(a[file]).slice(0, 600)}\n  create ${JSON.stringify(b[file]).slice(0, 600)}`);
+    }
+    const mine = json(applied, 'jtk/schema.json');
+    const theirs = json(created, 'jtk/schema.json');
+    const types = new Set(kit.catalogue.blocks.map((one) => one.type));
+    const names = new Set(kit.catalogue.collections.map((one) => one.name));
+    if (mine.contract !== 3 || mine.locale !== theirs.locale) fail(`8 · jtkit apply's schema is not contract 3 in the site's language: ${JSON.stringify({ contract: mine.contract, locale: mine.locale })}`);
+    if (JSON.stringify(mine.blocks) !== JSON.stringify(theirs.blocks.filter((one) => types.has(one.type)))) fail('8 · jtkit apply\'s block types are not jtk create\'s');
+    if (JSON.stringify(mine.collections) !== JSON.stringify(theirs.collections.filter((one) => names.has(one.name)))) fail('8 · jtkit apply\'s collections are not jtk create\'s');
+    if (JSON.stringify(mine.modules) !== JSON.stringify(theirs.modules)) fail('8 · jtkit apply\'s module is not jtk create\'s');
+  }
+  console.log('create3: the tree, contract 3\'s words, the same as the move in one language and two, several languages, the refusals, a kit\'s contract-3 words on each contract, jtkit apply the same as jtk create --kit');
 
   // ── 3 · built, judged, linted ─────────────────────────────────────────────
   const packed = join(dir, execFileSync('npm', ['pack', resolve('kit'), '--pack-destination', dir], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim().split('\n').pop());

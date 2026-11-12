@@ -201,3 +201,23 @@ test('the services with no heading come after every heading, whatever order they
   assert.ok(tea > nails, 'the service with no heading after the last one');
   assert.equal(html.match(/booking__run-title/g).length, 2, 'and under none of its own');
 });
+
+// What people book is in every language, always (M3): where nobody translated
+// a service or a master, the form says the original's words and marks them
+// with the original's language — in the kit's markup as in the scaffold's.
+test('a name in the original\'s words is marked with its lang, and one in the page\'s language is not', () => {
+  const said = [
+    { slug: 'cut', title: 'Haircut', takes: 45, costs: 5500 },
+    { slug: 'faerben', title: 'Färben', takes: 90, costs: 12000, lang: 'de-CH' },
+  ];
+  const team = [{ slug: 'anna', title: 'Anna' }, { slug: 'beat', title: 'Beat Keller', lang: 'de-CH', does: ['cut'] }];
+  const one = renderBookingForm({ services: said, resources: team, locale: 'en', now });
+  assert.ok(one.includes('<option value="cut">Haircut</option>'));
+  assert.ok(one.includes('<option value="faerben" lang="de-CH">Färben</option>'));
+  assert.ok(one.includes('<option value="anna">Anna</option>'));
+  assert.ok(one.includes('<option value="beat" data-does="cut" lang="de-CH">Beat Keller</option>'));
+  const listed = renderBookingForm({ services: said, locale: 'en', combine: true, now });
+  assert.ok(listed.includes('<span class="booking__service-name" data-service-name>Haircut</span>'));
+  assert.ok(listed.includes('<span class="booking__service-name" data-service-name lang="de-CH">Färben</span>'));
+  assert.ok(!renderBookingForm({ services, locale: 'en', now }).includes(' lang='), 'nothing marked where nothing says a lang');
+});

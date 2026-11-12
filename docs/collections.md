@@ -31,8 +31,15 @@ render it. A collection changes exactly one thing: you write the shape and the
 two routes, and the owner writes the posts.
 
 So there is no "blog feature" in the platform. A blog is one collection whose
-prefix is `/blog`, ordered by date. A portfolio, a menu, a vacancy board and a
-price list are the same mechanism with different words.
+entries are at `/blog/{slug}`, ordered by date. A portfolio, a menu, a vacancy
+board and a price list are the same mechanism with different words.
+
+This page is written in contract 3's words, every new site's (`jtk/schema.json`).
+A site made before it and not moved yet says the same in contract 2's: a
+`prefix`, `pages: false` and `listing: true` where contract 3 has a `route`,
+entries under `jtk/content/` known by their `path`, and annotations by index
+(`page:/blog/healing:blocks[0].title`) — [catalogue.md](catalogue.md) is its
+schema; `jtk upgrade contract-3` moves it.
 
 ---
 
@@ -53,9 +60,9 @@ is there (and at `/de/blog` for a site in German) and lists every post on one
 page — a listing of the repository's own, which the scaffold's paged one
 («The listing», below) never draws over; a post's page is
 `[...entry].astro`, the feed `/blog/rss.xml`. Write the first posts as
-`jtk/content/blog/<slug>.json` — a blog launched empty says the business
-stopped caring before it started. What follows is how any other collection is
-made.
+`jtk/entries/blog/<slug>.json` (below, «Writing an entry by hand») — a blog
+launched empty says the business stopped caring before it started. What
+follows is how any other collection is made.
 
 ## What you write
 
@@ -63,10 +70,17 @@ made.
 
 ```ts
 export const COLLECTIONS: Collection[] = [
-  { name: 'blog', label: 'Блог', prefix: '/blog', type: 'post',
-    order: { by: 'date', desc: true }, per_page: 10 },
+  { name: 'blog', label: 'Блог', type: 'post',
+    route: { detail: '/blog/{slug}' },
+    order: { by: 'date', desc: true } },
 ];
 ```
+
+`route` is where its entries are: `detail`, an entry's own page. A collection
+whose entries have no page of their own — a price list's rows, the diary's
+services, a restaurant's tables — says `route: 'none'` and the page they are
+shown on, `shown_on: ['/services#services-{slug}']`, a page of the site and
+the anchor of each row on it.
 
 **And the block type its entries are made of**, in `BLOCKS` like any other:
 
@@ -85,10 +99,12 @@ export const COLLECTIONS: Collection[] = [
 }
 ```
 
-**And, if the site wants one, a listing at the prefix**: `listing: true` on
-the collection and the scaffold draws it (below), or a page of your own —
+**And, if the site wants one, a listing**: `listing` in the route —
+`route: { detail: '/works/{slug}', listing: '/works', per_page: 12 }` — and
+the scaffold draws it (below), or a page of your own at that address —
 `src/pages/works.astro` or `src/pages/[...lang]/works/index.astro` for
-`/works` — designed like every other:
+`/works`, the route declaring it all the same, so the feed and the languages
+know where it is — designed like every other:
 
 ```astro
 ---
@@ -110,54 +126,52 @@ const all = site.entries('works', { locale });
 that enumerates entries, and it does two things you must not do by hand: it
 drops the ones nobody has finished, and it sorts by the collection's own order
 (`{ all: true }` for every one, which only the route that renders an entry
-asks for). An entry drawn on another page annotates as that entry's —
-`page:/works/oak:blocks[0].title` — so a tap opens the entry; on its own page
-`entry.here` annotates as the page's own.
+asks for). An entry drawn on another page annotates as that entry's, by its
+id — `entry:<id>:title` — so a tap opens the entry; on its own page
+`entry.here` annotates as the page's own, `title`.
 
 ## The listing
 
-A collection **without pages** (`pages: false`) is always listed at its
-prefix, in every language (`/services`, `/de/services`), by
+A collection **without pages** (`route: 'none'`) is always listed on the page
+its `shown_on` names, in every language (`/services`, `/de/services`), by
 `src/pages/[...listing].astro`: its entries as rows, every field the owner taps
-annotated `page:<the entry's path>:blocks[0].<field>`. The platform frames that
-page to show an entry and refuses a build without it. One page whatever its
-`per_page` — an entry on page two is one the frame cannot find.
+annotated `entry:<id>:<field>`. The platform frames that page to show an entry
+and refuses a build without it. One page, however many rows — an entry on page
+two is one the frame cannot find.
 
-A collection **with pages** gets a listing at its prefix **only when it asks**:
+A collection **with pages** gets a listing **only when it asks**:
 
 ```ts
-{ name: 'works', label: 'Works', prefix: '/works', type: 'work', per_page: 12, listing: true }
+{ name: 'works', label: 'Works', type: 'work', route: { detail: '/works/{slug}', listing: '/works', per_page: 12 } }
 ```
 
 **Why opt-in.** A page nobody asked for is an address on a client's site that
 nobody designed — it is crawled, linked from search, shared — so a site gains
 one only by its developer's word. Without `listing`, the build has exactly the
-routes it had: the entries' pages, and nothing at `/works`. The platform takes
-the key in `jtk/catalogue.json` (its `CollectionDef.Listing`) and refuses it on
-a collection without pages (`JTK_E_COLLECTION_INVALID`), and so does
-`jtk catalogue`: that prefix is its listing already.
+routes it had: the entries' pages, and nothing at `/works`. A collection
+without pages has no route to put a listing in: the page it is shown on is
+its listing already.
 
-With `listing: true` the scaffold draws its entries as tiles
+With a `listing` the scaffold draws its entries as tiles
 (`EntryCard.astro`, the blog's tile too) linked to their pages — the cover, the
 date, the title and the excerpt where the type has them — `per_page` to a page,
 through Astro's `paginate()`. Grouped under its headings where it has a
 `group`, the page cut out of the grouped list, so a heading's run crossing the
 cut opens the next page under the same heading. Hidden entries are on no page.
 
-**Page two is `<prefix>/page/2`, not `<prefix>/2`.** Everything under a prefix
-is an entry's address, and the platform takes a bare number for a slug: an
+**Page two is `<listing>/page/2`, not `<listing>/2`.** Everything under
+`/works/` is an entry's address, and the platform takes a bare number for a slug: an
 owner who numbers her works would have entry `2` and the listing's second page
 at one address. A slug the platform makes has no `/`, so `/works/page/2` is
 nobody's, and an entry called `page` lives beside it at `/works/page`. The one
 way to collide is an entry written by hand with the path `/works/page/2`,
 and the build refuses it by name rather than drawing one of the two.
 
-**Your own listing wins.** Where `src/pages/<prefix>.astro`,
-`src/pages/<prefix>/index.astro` or the same under `[...lang]/` exists — the
-blog's does — the scaffold builds nothing at that prefix and no pages under
-it, `listing` or not: the page is yours, paging included. Draw
-`EntryListing.astro` in it to keep the scaffold's pages, or delete it and say
-`listing: true` to hand the address back.
+**Your own listing wins.** Where `src/pages/works.astro`,
+`src/pages/works/index.astro` or the same under `[...lang]/` exists — the
+blog's does — the scaffold builds nothing at that address and no pages under
+it: the page is yours, paging included. Draw `EntryListing.astro` in it to
+keep the scaffold's pages, or delete it to hand the address back.
 
 **Annotation** is every listing's: an entry's words with its page-qualified
 path, a category heading as that category's title, and the collection's label,
@@ -169,10 +183,10 @@ a select's label and the way between pages («Previous», «Page 2 of 5»,
 | | |
 | --- | --- |
 | `src/pages/[...entry].astro` | one entry of **any** collection. Ships with the scaffold; a new collection needs no new route |
-| `src/pages/[...listing].astro` | the listing at the prefix of a collection without pages, and of one with `listing: true` — paged by `per_page` at `<prefix>/page/2` (`[...listing]/page/[page].astro`) |
+| `src/pages/[...listing].astro` | the listing of a collection without pages, on the page its `shown_on` names, and of one whose route has a `listing` — paged by `per_page` at `<listing>/page/2` (`[...listing]/page/[page].astro`) |
 | `/blog/rss.xml` | one feed per collection |
 | `sitemap.xml`, `llms.txt` | the entries are in both, the unfinished ones in neither |
-| `dist/_meta.json` | the list of unfinished entries, which is what lets the studio's edge keep them private |
+| `dist/_meta.json` | the redirects and the hashed directory; which entries are unfinished the platform says itself, from each entry's `visible` and its moments, and its edge keeps them private |
 
 The entry route is a **starting point, not a design** — exactly like
 `Blocks.astro`. Replace what is inside `<article>`. What must survive is the
@@ -195,23 +209,23 @@ draws and the admin's own list of entries all read them by name:
 | `body` | markdown. The entry itself. |
 
 Leave out any that make no sense — a set of works has no excerpt. What you may
-not do is give one of those names to something else; `jtk catalogue` refuses it.
+not do is give one of those names to something else; `jtk schema` refuses it.
 
-Four more names belong to the entry's *file* rather than to a field of it, and
-are refused as field keys for the same reason: `collection`, `visible`, `seo`,
-`path`.
+The entry's *file* says the rest — `id`, `collection`, `slug`, `rank`,
+`visible`, `show_at`, `hide_at`, `seo` — beside its values under `fields`
+(«Writing an entry by hand», below).
 
 ## Annotation: two rules
 
-**An entry's document is one block**, so its paths are always
-`blocks[0].<field>` — `blocks[0].title`, `blocks[0].body`.
+**An entry's own values are its `fields`**, so on its own page their paths are
+the field's key — `title`, `body` — and a block of its body is
+`blocks[<its _key>].<field>`.
 
 **A listing page carries no annotations of its own.** The titles on it are
-other pages' words; a bare `blocks[0].title` there would be resolved against the
-listing's own document, which is a different page — and `jtk catalogue` refuses
-a built page that has such annotations and no content document of its own. What
-a listing annotates, it annotates as the entry's, page-qualified
-(«A listing's tiles are the posts' own words», below).
+other documents' words; a bare `title` there would name a field of the
+listing's own page, which has none — and `jtk schema` refuses an annotation the
+page's document does not declare. What a listing annotates, it annotates as the
+entry's, by its id («A listing's tiles are the posts' own words», below).
 
 A field the entry page does not render is `no_tap_target: true` — that is
 usually `date` and `excerpt`, which live on the listing rather than on the post.
@@ -226,41 +240,41 @@ panel the way they add a post. Four patterns, by name — use these, not a
 
 | pattern | what you declare | what the scaffold does with it |
 | --- | --- | --- |
-| **group by a select** | `group: 'course'` on the collection, `course` a `select` with `options` and `option_labels` | the listing's headings are the labels, in the options' order |
-| **category** (group by a ref) | a `categories` collection, and on the grouped one `group: 'category'` with `category: ref categories` | the headings are the categories' titles in the page's language, in the categories' own order, each annotated as that category's title |
-| **tree** | on `category`, `parent: ref categories` — a ref into its own collection | a category's page shows the trail of its parents above the title and its children below |
-| **tags** (many-to-many) | a `tags` collection, and `tags: list of { tag: ref tags }` — a list whose row is one ref, the shape the diary's `does: [{ service }]` has | each tag on a post links to the tag's page; the tag's page lists its posts |
+| **group by a select** | `group: 'course'` on the collection, `course` a `select` with `options` as `{ value, label }` | the listing's headings are the labels, in the options' order |
+| **category** (group by a ref) | a `categories` collection, and on the grouped one `group: 'category'` with `category: ref { to: ['categories'] }` | the headings are the categories' titles in the page's language, in the categories' own order, each annotated as that category's title |
+| **tree** | on `category`, `parent: ref { to: ['categories'] }` — one reference into its own collection | a category's page shows the trail of its parents above the title and its children below |
+| **tags** (many-to-many) | a `tags` collection, and `tags: ref { to: ['tags'], many: true }` — one reference to many, the shape the diary's `does` has | each tag on a post links to the tag's page; the tag's page lists its posts |
 
 ```ts
 // The category pattern, whole — a salon whose owner adds categories herself.
 BLOCKS.push(
   { type: 'category', v: 1, label: 'Category', fields: [
     { key: 'title',  label: 'Name',   kind: 'text', required: true, max: 60, client_editable: true },
-    { key: 'parent', label: 'Inside', kind: 'ref', ref: 'categories', client_editable: true }, // the tree; leave it out for a flat list
+    { key: 'parent', label: 'Inside', kind: 'ref', ref: { to: ['categories'] }, client_editable: true }, // the tree; leave it out for a flat list
   ] },
   { type: 'service', v: 1, label: 'Service', fields: [
     { key: 'title',    label: 'Name',     kind: 'text', required: true, max: 80, client_editable: true },
     { key: 'takes',    label: 'Takes',    kind: 'duration', required: true, client_editable: true },
-    { key: 'category', label: 'Category', kind: 'ref', ref: 'categories', client_editable: true },
+    { key: 'category', label: 'Category', kind: 'ref', ref: { to: ['categories'] }, client_editable: true },
   ] },
 );
 COLLECTIONS.push(
-  { name: 'categories', label: 'Categories', prefix: '/categories', type: 'category' },
-  { name: 'services', label: 'Services', prefix: '/services', type: 'service', pages: false, group: 'category' },
+  { name: 'categories', label: 'Categories', type: 'category', route: { detail: '/categories/{slug}' } },
+  { name: 'services', label: 'Services', type: 'service', route: 'none', shown_on: ['/services#services-{slug}'], group: 'category' },
 );
 
-// The tags pattern: a list of one ref.
-{ key: 'tags', label: 'Tags', kind: 'list', client_editable: true,
-  of: [{ key: 'tag', label: 'Tag', kind: 'ref', ref: 'tags', client_editable: true }] }
+// The tags pattern: one reference to many.
+{ key: 'tags', label: 'Tags', kind: 'ref', ref: { to: ['tags'], many: true }, client_editable: true }
 ```
 
-**What `jtk catalogue` refuses**, as the platform does: a `group` naming a
+**What `jtk schema` refuses**, as the platform does: a `group` naming a
 field the type has not got, a `group` that is neither a select nor a ref, a
-`group` that is a ref into the collection itself (that is a tree — make it a
-`parent` field and group by something else), and a `ref` anywhere — a list's
-row included — naming a collection the catalogue does not declare. A `parent`
-ref into its own collection is accepted: a loop (`a → b → a`) is refused by
-the platform where the value is written, and the scaffold's walks stop at one
+`group` that is a ref to several entries or into the collection itself (that
+is a tree — make it a `parent` field and group by something else), a tree's
+`parent` that may point at several, and a `ref` anywhere — a list's row
+included — naming a collection the schema does not declare. A `parent` ref
+into its own collection is accepted: a loop (`a → b → a`) is refused by the
+platform where the value is written, and the scaffold's walks stop at one
 anyway, and at twelve levels.
 
 **One field, read by three.** `group` decides the listing's headings, the
@@ -275,11 +289,11 @@ under none.
 writes it:
 
 - `[...listing].astro` lists a grouped collection under its headings — one
-  without pages, or one with `listing: true` — and, for the diary's
+  without pages, or one whose route has a `listing` — and, for the diary's
   services, hands the booking form the same headings.
 - `[...entry].astro` is every entry's **archive page**: below the post, the
-  entries of the other collections that point at it — through a top-level
-  `ref` or a `ref` in a list's rows — under each collection's label, in its
+  entries of the other collections that point at it — through a `ref` of
+  its own or one in a list's rows — under each collection's label, in its
   own order, hidden ones left out, each linked to its page (or its row on the
   listing, for a collection without pages). **In a tree, what points at any
   category under it counts**: `beauty`'s page lists the gel manicure filed
@@ -288,9 +302,9 @@ writes it:
   the referencing collection's `per_page` of them, then a line that says how
   many more in the page's language («And 3 more», `LISTING.more` in
   `src/copy`), linked to that collection's listing where it has one by the
-  rule — no pages of its own, or `listing: true` — and plain words otherwise;
-  not pages of their own:
-  `/tags/red/page/2` would be an address under the tags' prefix no entry
+  rule — no pages of its own, or a `listing` in its route — and plain words
+  otherwise; not pages of their own:
+  `/tags/red/page/2` would be an address under the tags' entries no entry
   owns. A ref's value on an entry links to the entry it names.
 - The door has the reading for your own pages: `site.groupsOf(name, entries,
   locale)` (the runs, each with its `heading` — `text`, `at` and `fixed`),
@@ -303,11 +317,11 @@ writes it:
   the kit's (`lib/content/groups.mjs`), tested there.
 
 **Annotation.** A heading that is a category's title is that category's words:
-it carries `page:/categories/<slug>:blocks[0].title`, as a listing's row does,
-and a tap opens the category. A select's label, a collection's label and the
-«And 3 more» line are the repository's — `data-jtk-fixed`. A `ref`, a `select` and a list of refs
-are edited in the panel beside the page, never by tapping, and neither the
-platform's build nor `jtk catalogue` asks an element of them.
+it carries `entry:<the category's id>:title`, as a listing's row does, and a
+tap opens the category. A select's label, a collection's label and the
+«And 3 more» line are the repository's — `data-jtk-fixed`. A `ref` and a
+`select` are edited in the panel beside the page, never by tapping, and
+neither the platform's build nor `jtk schema` asks an element of them.
 
 ## Pictures in a body
 
@@ -368,7 +382,7 @@ one body picture comes out as six webp variants with a `srcset`.
 **On a laptop it does not build.** A clone has downloaded no media, and a
 markdown image with no file is `ImageNotFound` — a hard failure, not the
 labelled placeholder a missing `<Shot>` slot draws. Check against a build made
-by the studio: `npx @jtakeit/astro catalogue --dist ./dist`.
+by the studio: `npx @jtakeit/astro schema --dist ./dist`.
 
 ## A listing's tiles are the posts' own words
 
@@ -378,8 +392,8 @@ way they would name a field the listing page has not got — so for a long time
 they carried no annotation at all, and the words an owner most wants to fix
 were the one place on the site they could not tap.
 
-An entry the door hands out annotates as drawn on another page: the address
-of its document is in every path it writes.
+An entry the door hands out annotates as drawn on another page: the id of its
+document is in every path it writes.
 
 ```astro
 ---
@@ -392,12 +406,12 @@ const post = site.entry('blog', 'healing')!;
 ```
 
 ```html
-data-jtk-path="page:/blog/healing:blocks[0].title"
+data-jtk-path="entry:0193a5c2-7f4e-7c1a-9b2e-5d1f0c3a8e21:title"
 ```
 
 A page's words drawn on another page are the same: `site.page('/prices').elsewhere`
-annotates `page:/prices:…`. And the other way round, `entry.here` is the entry
-annotated as the page it is on — what its own route draws.
+annotates `page:<the page's id>:…`. And the other way round, `entry.here` is
+the entry annotated as the page it is on — what its own route draws.
 
 The admin resolves it against that page, writes it there, and the post's own
 page updates with it. `jt-check` holds the claim from the other end: an address
@@ -405,7 +419,7 @@ this site did not build, or a field that page does not offer, fails.
 
 **Annotate only what the owner taps.** On a tile that is the title and the
 cover. The date and the excerpt are `no_tap_target` on the post type — edited
-in the panel beside the post — and a `page:` path to one is refused by the
+in the panel beside the post — and an `entry:` path to one is refused by the
 platform's build (`JTK_E_ANNOTATION_UNKNOWN … has no field for`). Draw them
 with `data-jtk-fixed`, which says the words are not this page's to edit, and
 the check is satisfied both ways. The scaffold's blog listing does exactly
@@ -417,33 +431,31 @@ this.
 ## Writing an entry by hand
 
 Legitimate, and sometimes the fastest way to write one. The file is
-`jtk/content/<prefix>/<slug>.json` — `jtk/content/de/<prefix>/<slug>.json` for
-one in German — the shape the platform writes, and the next import takes it
-as the draft:
+`jtk/entries/<collection>/<slug>.json` — the shape the platform writes, and
+the next import takes it as the draft:
 
 ```json
 {
-  "path": "/blog/aftercare",
+  "id": "0193a5c2-7f4e-7c1a-9b2e-5d1f0c3a8e21",
   "collection": "blog",
+  "slug": "aftercare",
   "visible": false,
-  "seo": {},
-  "blocks": [
-    { "_key": "post-1", "type": "post", "v": 1,
-      "title": "Догляд після сеансу", "date": "2026-08-26",
-      "excerpt": "Що робити перші два тижні.",
-      "body": "## Перший тиждень\n\nНе мочити, не терти рушником." }
-  ]
+  "fields": {
+    "title": "Догляд після сеансу", "date": "2026-08-26",
+    "excerpt": "Що робити перші два тижні.",
+    "body": "## Перший тиждень\n\nНе мочити, не терти рушником."
+  }
 }
 ```
 
-**The entry is its `path`**, not the file's name or place: the platform imports
-it by the path, and the door reads it the same way — its slug is the path
-without the language and the collection's prefix, its language the `locale`
-key or the language the path starts with. Its own values are the first block;
-what follows is its body. `visible: false` means the site builds it and lists
-it nowhere; the studio's edge serves it only to a session that is editing the
-site. A file under `jtk/content` with no `path` is refused by the build, as
-the platform refuses it.
+**The entry is its `id`**, which the platform matches it by on every import;
+leave it out and `npx @jtakeit/astro schema` mints one, as it mints a `_key`
+on every block and row that has none. Its address is the route's `detail`
+with its `slug`; its own values are `fields`, and `blocks` beside them, where
+the collection allows a body, are its body. `visible: false` means the site
+builds it and lists it nowhere; the studio's edge serves it only to a session
+that is editing the site. Another language is a translation beside it,
+`aftercare.de.json` ([languages.md](languages.md)).
 
 ## Scheduled entries
 
@@ -468,7 +480,7 @@ changes appears on the next read. A value that is not a time is no schedule;
 the platform refuses one where it is written.
 
 **A local `astro build` reads them the same way**, by the build's clock: the
-kit (`@jtakeit/kit`'s `lib/schedule.mjs`, which the door asks) lists a
-scheduled entry among the drafts in `dist/_meta.json`, and `jtk catalogue
---dist` treats it as hidden — an entry without a page that is not out yet is
-owed no annotation on its listing, exactly as one with `visible: false` is not.
+kit (`@jtakeit/kit`'s `lib/schedule.mjs`, which the door asks) leaves a
+scheduled entry out of the listings, and `jtk schema --dist` treats it as
+hidden — an entry without a page that is not out yet is owed no annotation on
+its listing, exactly as one with `visible: false` is not.

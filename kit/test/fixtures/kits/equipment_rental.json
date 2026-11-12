@@ -1,0 +1,313 @@
+{
+  "kind": "equipment_rental",
+  "version": 2,
+  "sum": "eda15f0503ff",
+  "about": "Equipment for hire: items by the day, each told from its twins by a serial number.",
+  "ask": [
+    "zone: the business's time zone — from its address; say it back rather than asking",
+    "costs: the price of each rate, a day and a week — the kit's rates are units, never prices",
+    "the equipment: each item, and what tells it from its twins — a serial number, a colour. The marks are shown to visitors beside the name when they choose an item"
+  ],
+  "catalogue": {
+    "blocks": [
+      {
+        "type": "tariff",
+        "v": 1,
+        "label": {
+          "uk": "Тариф",
+          "en": "Rate",
+          "de": "Tarif"
+        },
+        "fields": [
+          {
+            "key": "title",
+            "label": {
+              "uk": "Назва",
+              "en": "Name",
+              "de": "Name"
+            },
+            "kind": "text",
+            "required": true,
+            "max": 80,
+            "client_editable": true
+          },
+          {
+            "key": "takes",
+            "label": {
+              "uk": "Триває",
+              "en": "Takes",
+              "de": "Dauer"
+            },
+            "kind": "duration",
+            "required": true,
+            "min": 30,
+            "max": 43200,
+            "client_editable": true
+          },
+          {
+            "key": "costs",
+            "label": {
+              "uk": "Ціна",
+              "en": "Price",
+              "de": "Preis"
+            },
+            "kind": "money",
+            "client_editable": true
+          },
+          {
+            "key": "scale",
+            "label": {
+              "uk": "Одиниця",
+              "en": "Sold in",
+              "de": "Einheit"
+            },
+            "kind": "select",
+            "options": [
+              "hourly",
+              "daily"
+            ],
+            "option_labels": {
+              "hourly": {
+                "uk": "години",
+                "en": "hours",
+                "de": "Stunden"
+              },
+              "daily": {
+                "uk": "доби",
+                "en": "days",
+                "de": "Tage"
+              }
+            },
+            "hint": {
+              "uk": "Години — у робочий час; доби — цілими днями.",
+              "en": "Hours — inside opening hours; days — whole days.",
+              "de": "Stunden — innerhalb der Öffnungszeiten; Tage — ganze Tage."
+            },
+            "client_editable": true,
+            "no_tap_target": true
+          },
+          {
+            "key": "fewest",
+            "label": {
+              "uk": "Щонайменше",
+              "en": "At least",
+              "de": "Mindestens"
+            },
+            "kind": "number",
+            "min": 1,
+            "max": 365,
+            "hint": {
+              "uk": "Скільки одиниць тарифу щонайменше за раз.",
+              "en": "The fewest units of this rate at once.",
+              "de": "Die wenigsten Einheiten dieses Tarifs auf einmal."
+            },
+            "client_editable": true,
+            "no_tap_target": true
+          },
+          {
+            "key": "most",
+            "label": {
+              "uk": "Щонайбільше",
+              "en": "At most",
+              "de": "Höchstens"
+            },
+            "kind": "number",
+            "min": 1,
+            "max": 365,
+            "hint": {
+              "uk": "Скільки одиниць тарифу щонайбільше за раз.",
+              "en": "The most units of this rate at once.",
+              "de": "Die meisten Einheiten dieses Tarifs auf einmal."
+            },
+            "client_editable": true,
+            "no_tap_target": true
+          }
+        ]
+      },
+      {
+        "type": "item",
+        "v": 1,
+        "label": {
+          "uk": "Обладнання",
+          "en": "Item",
+          "de": "Gerät",
+          "ru": "Оборудование",
+          "es": "Equipo",
+          "it": "Attrezzatura",
+          "pt": "Equipamento",
+          "fr": "Matériel"
+        },
+        "fields": [
+          {
+            "key": "title",
+            "label": {
+              "uk": "Назва",
+              "en": "Name",
+              "de": "Name",
+              "ru": "Название",
+              "es": "Nombre",
+              "it": "Nome",
+              "pt": "Nome",
+              "fr": "Nom"
+            },
+            "kind": "text",
+            "required": true,
+            "max": 80,
+            "client_editable": true
+          },
+          {
+            "key": "cover",
+            "label": {
+              "uk": "Фото",
+              "en": "Photo",
+              "de": "Foto"
+            },
+            "kind": "media",
+            "accept": "image",
+            "client_editable": true
+          },
+          {
+            "key": "marks",
+            "label": {
+              "uk": "Відмітні ознаки",
+              "en": "Distinguishing marks",
+              "de": "Merkmale"
+            },
+            "kind": "text",
+            "max": 80,
+            "hint": {
+              "uk": "Що відрізняє від схожих: колір і номер, поверх, серійний номер.",
+              "en": "What tells it from its twins: colour and plate, floor, serial number.",
+              "de": "Was es von gleichen unterscheidet: Farbe und Kennzeichen, Stockwerk, Seriennummer."
+            },
+            "client_editable": true,
+            "no_tap_target": true
+          }
+        ]
+      }
+    ],
+    "collections": [
+      {
+        "name": "services",
+        "label": {
+          "uk": "Тарифи",
+          "en": "Rates",
+          "de": "Tarife",
+          "ru": "Тарифы",
+          "es": "Tarifas",
+          "it": "Tariffe",
+          "pt": "Tarifas",
+          "fr": "Tarifs"
+        },
+        "one": {
+          "uk": "тариф",
+          "en": "rate",
+          "de": "Tarif",
+          "ru": "тариф",
+          "es": "tarifa",
+          "it": "tariffa",
+          "pt": "tarifa",
+          "fr": "tarif"
+        },
+        "icon": "lucide:tag",
+        "prefix": "/rates",
+        "type": "tariff",
+        "pages": false
+      },
+      {
+        "name": "equipment",
+        "label": {
+          "uk": "Обладнання",
+          "en": "Equipment",
+          "de": "Geräte",
+          "ru": "Оборудование",
+          "es": "Equipos",
+          "it": "Attrezzature",
+          "pt": "Equipamentos",
+          "fr": "Matériel"
+        },
+        "one": {
+          "uk": "обладнання",
+          "en": "item",
+          "de": "Gerät",
+          "ru": "оборудование",
+          "es": "equipo",
+          "it": "attrezzatura",
+          "pt": "equipamento",
+          "fr": "matériel"
+        },
+        "icon": "lucide:wrench",
+        "prefix": "/equipment",
+        "type": "item"
+      }
+    ],
+    "modules": {
+      "bookings": {
+        "services": "services",
+        "resources": "equipment"
+      }
+    }
+  },
+  "settings": {
+    "kind": "equipment_rental",
+    "scale": "daily",
+    "hand_out": 600,
+    "hand_back": 600,
+    "hands_over": true,
+    "lead": 0,
+    "horizon": 90,
+    "confirm": "by_hand",
+    "hold": 1440,
+    "cancel_until": 1440,
+    "payment": "no",
+    "combine": false
+  },
+  "entries": [
+    {
+      "collection": "services",
+      "slug": "day",
+      "fields": {
+        "title": {
+          "uk": "Доба",
+          "en": "Day",
+          "de": "Tag",
+          "ru": "Сутки",
+          "es": "Día",
+          "it": "Giorno",
+          "pt": "Dia",
+          "fr": "Jour"
+        },
+        "takes": 1440,
+        "scale": "daily",
+        "fewest": 1,
+        "most": 30
+      }
+    },
+    {
+      "collection": "services",
+      "slug": "week",
+      "fields": {
+        "title": {
+          "uk": "Тиждень",
+          "en": "Week",
+          "de": "Woche",
+          "ru": "Неделя",
+          "es": "Semana",
+          "it": "Settimana",
+          "pt": "Semana",
+          "fr": "Semaine"
+        },
+        "takes": 10080,
+        "scale": "daily",
+        "fewest": 1,
+        "most": 1
+      }
+    }
+  ],
+  "changes": [
+    {
+      "from": "1",
+      "says": "Five more languages: every label, collection name and rate of the kit now says ru, es, it, pt and fr beside uk, en and de (7 October 2026)."
+    }
+  ]
+}

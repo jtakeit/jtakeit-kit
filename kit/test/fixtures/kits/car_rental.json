@@ -1,0 +1,437 @@
+{
+  "kind": "car_rental",
+  "version": 2,
+  "sum": "8b524b8d88f3",
+  "about": "A car rental: cars by the day, grouped in classes that carry the price of a day; a visitor takes a class or a named car.",
+  "ask": [
+    "zone: the business's time zone — from its address; say it back rather than asking",
+    "the classes the fleet is sold in, each with its price of a day. A letting in a class costs that price times its days, whichever rate the visitor took — the week is seven of them, and a weekly discount cannot be set beside class prices; if the client has one, it is an open question, not a number to adjust",
+    "the rates' own prices (`costs`) only if some cars are in no class: those are charged the rate",
+    "the cars: each one's class, and what tells it from its twins — a colour, a trim. The marks are shown to visitors beside the name when they choose a car: a plate goes there only if the client wants it printed"
+  ],
+  "catalogue": {
+    "blocks": [
+      {
+        "type": "tariff",
+        "v": 1,
+        "label": {
+          "uk": "Тариф",
+          "en": "Rate",
+          "de": "Tarif"
+        },
+        "fields": [
+          {
+            "key": "title",
+            "label": {
+              "uk": "Назва",
+              "en": "Name",
+              "de": "Name"
+            },
+            "kind": "text",
+            "required": true,
+            "max": 80,
+            "client_editable": true
+          },
+          {
+            "key": "takes",
+            "label": {
+              "uk": "Триває",
+              "en": "Takes",
+              "de": "Dauer"
+            },
+            "kind": "duration",
+            "required": true,
+            "min": 30,
+            "max": 43200,
+            "client_editable": true
+          },
+          {
+            "key": "costs",
+            "label": {
+              "uk": "Ціна",
+              "en": "Price",
+              "de": "Preis"
+            },
+            "kind": "money",
+            "client_editable": true
+          },
+          {
+            "key": "scale",
+            "label": {
+              "uk": "Одиниця",
+              "en": "Sold in",
+              "de": "Einheit"
+            },
+            "kind": "select",
+            "options": [
+              "hourly",
+              "daily"
+            ],
+            "option_labels": {
+              "hourly": {
+                "uk": "години",
+                "en": "hours",
+                "de": "Stunden"
+              },
+              "daily": {
+                "uk": "доби",
+                "en": "days",
+                "de": "Tage"
+              }
+            },
+            "hint": {
+              "uk": "Години — у робочий час; доби — цілими днями.",
+              "en": "Hours — inside opening hours; days — whole days.",
+              "de": "Stunden — innerhalb der Öffnungszeiten; Tage — ganze Tage."
+            },
+            "client_editable": true,
+            "no_tap_target": true
+          },
+          {
+            "key": "fewest",
+            "label": {
+              "uk": "Щонайменше",
+              "en": "At least",
+              "de": "Mindestens"
+            },
+            "kind": "number",
+            "min": 1,
+            "max": 365,
+            "hint": {
+              "uk": "Скільки одиниць тарифу щонайменше за раз.",
+              "en": "The fewest units of this rate at once.",
+              "de": "Die wenigsten Einheiten dieses Tarifs auf einmal."
+            },
+            "client_editable": true,
+            "no_tap_target": true
+          },
+          {
+            "key": "most",
+            "label": {
+              "uk": "Щонайбільше",
+              "en": "At most",
+              "de": "Höchstens"
+            },
+            "kind": "number",
+            "min": 1,
+            "max": 365,
+            "hint": {
+              "uk": "Скільки одиниць тарифу щонайбільше за раз.",
+              "en": "The most units of this rate at once.",
+              "de": "Die meisten Einheiten dieses Tarifs auf einmal."
+            },
+            "client_editable": true,
+            "no_tap_target": true
+          }
+        ]
+      },
+      {
+        "type": "car",
+        "v": 1,
+        "label": {
+          "uk": "Авто",
+          "en": "Car",
+          "de": "Fahrzeug",
+          "ru": "Авто",
+          "es": "Coche",
+          "it": "Auto",
+          "pt": "Carro",
+          "fr": "Voiture"
+        },
+        "fields": [
+          {
+            "key": "title",
+            "label": {
+              "uk": "Назва",
+              "en": "Name",
+              "de": "Name",
+              "ru": "Название",
+              "es": "Nombre",
+              "it": "Nome",
+              "pt": "Nome",
+              "fr": "Nom"
+            },
+            "kind": "text",
+            "required": true,
+            "max": 80,
+            "client_editable": true
+          },
+          {
+            "key": "cover",
+            "label": {
+              "uk": "Фото",
+              "en": "Photo",
+              "de": "Foto"
+            },
+            "kind": "media",
+            "accept": "image",
+            "client_editable": true
+          },
+          {
+            "key": "seats",
+            "label": {
+              "uk": "Місць",
+              "en": "Seats",
+              "de": "Sitze",
+              "ru": "Мест",
+              "es": "Plazas",
+              "it": "Posti",
+              "pt": "Lugares",
+              "fr": "Places"
+            },
+            "kind": "number",
+            "min": 1,
+            "max": 60,
+            "client_editable": true,
+            "no_tap_target": true
+          },
+          {
+            "key": "class",
+            "label": {
+              "uk": "Клас",
+              "en": "Class",
+              "de": "Klasse",
+              "ru": "Класс",
+              "es": "Clase",
+              "it": "Classe",
+              "pt": "Classe",
+              "fr": "Catégorie"
+            },
+            "kind": "ref",
+            "ref": "classes",
+            "client_editable": true,
+            "no_tap_target": true
+          },
+          {
+            "key": "marks",
+            "label": {
+              "uk": "Відмітні ознаки",
+              "en": "Distinguishing marks",
+              "de": "Merkmale"
+            },
+            "kind": "text",
+            "max": 80,
+            "hint": {
+              "uk": "Що відрізняє від схожих: колір і номер, поверх, серійний номер.",
+              "en": "What tells it from its twins: colour and plate, floor, serial number.",
+              "de": "Was es von gleichen unterscheidet: Farbe und Kennzeichen, Stockwerk, Seriennummer."
+            },
+            "client_editable": true,
+            "no_tap_target": true
+          }
+        ]
+      },
+      {
+        "type": "car_class",
+        "v": 1,
+        "label": {
+          "uk": "Клас",
+          "en": "Class",
+          "de": "Klasse",
+          "ru": "Класс",
+          "es": "Clase",
+          "it": "Classe",
+          "pt": "Classe",
+          "fr": "Catégorie"
+        },
+        "fields": [
+          {
+            "key": "title",
+            "label": {
+              "uk": "Назва",
+              "en": "Name",
+              "de": "Name",
+              "ru": "Название",
+              "es": "Nombre",
+              "it": "Nome",
+              "pt": "Nome",
+              "fr": "Nom"
+            },
+            "kind": "text",
+            "required": true,
+            "max": 80,
+            "client_editable": true
+          },
+          {
+            "key": "cover",
+            "label": {
+              "uk": "Фото",
+              "en": "Photo",
+              "de": "Foto"
+            },
+            "kind": "media",
+            "accept": "image",
+            "client_editable": true
+          },
+          {
+            "key": "costs",
+            "label": {
+              "uk": "Ціна за добу",
+              "en": "Price a day",
+              "de": "Preis pro Tag",
+              "ru": "Цена за сутки",
+              "es": "Precio por día",
+              "it": "Prezzo al giorno",
+              "pt": "Preço por dia",
+              "fr": "Prix par jour"
+            },
+            "kind": "money",
+            "client_editable": true
+          }
+        ]
+      }
+    ],
+    "collections": [
+      {
+        "name": "services",
+        "label": {
+          "uk": "Тарифи",
+          "en": "Rates",
+          "de": "Tarife",
+          "ru": "Тарифы",
+          "es": "Tarifas",
+          "it": "Tariffe",
+          "pt": "Tarifas",
+          "fr": "Tarifs"
+        },
+        "one": {
+          "uk": "тариф",
+          "en": "rate",
+          "de": "Tarif",
+          "ru": "тариф",
+          "es": "tarifa",
+          "it": "tariffa",
+          "pt": "tarifa",
+          "fr": "tarif"
+        },
+        "icon": "lucide:tag",
+        "prefix": "/rates",
+        "type": "tariff",
+        "pages": false
+      },
+      {
+        "name": "cars",
+        "label": {
+          "uk": "Авто",
+          "en": "Cars",
+          "de": "Fahrzeuge",
+          "ru": "Авто",
+          "es": "Coches",
+          "it": "Auto",
+          "pt": "Carros",
+          "fr": "Voitures"
+        },
+        "one": {
+          "uk": "авто",
+          "en": "car",
+          "de": "Fahrzeug",
+          "ru": "авто",
+          "es": "coche",
+          "it": "auto",
+          "pt": "carro",
+          "fr": "voiture"
+        },
+        "icon": "lucide:car",
+        "prefix": "/cars",
+        "type": "car"
+      },
+      {
+        "name": "classes",
+        "label": {
+          "uk": "Класи",
+          "en": "Classes",
+          "de": "Klassen",
+          "ru": "Классы",
+          "es": "Clases",
+          "it": "Classi",
+          "pt": "Classes",
+          "fr": "Catégories"
+        },
+        "one": {
+          "uk": "клас",
+          "en": "class",
+          "de": "Klasse",
+          "ru": "класс",
+          "es": "clase",
+          "it": "classe",
+          "pt": "classe",
+          "fr": "catégorie"
+        },
+        "icon": "lucide:layers",
+        "prefix": "/classes",
+        "type": "car_class",
+        "pages": false
+      }
+    ],
+    "modules": {
+      "bookings": {
+        "services": "services",
+        "resources": "cars",
+        "classes": "classes"
+      }
+    }
+  },
+  "settings": {
+    "kind": "car_rental",
+    "scale": "daily",
+    "hand_out": 600,
+    "hand_back": 600,
+    "hands_over": true,
+    "buffer_stay": 0,
+    "lead": 0,
+    "horizon": 180,
+    "confirm": "by_hand",
+    "hold": 1440,
+    "cancel_until": 1440,
+    "payment": "no",
+    "combine": false
+  },
+  "entries": [
+    {
+      "collection": "services",
+      "slug": "day",
+      "fields": {
+        "title": {
+          "uk": "Доба",
+          "en": "Day",
+          "de": "Tag",
+          "ru": "Сутки",
+          "es": "Día",
+          "it": "Giorno",
+          "pt": "Dia",
+          "fr": "Jour"
+        },
+        "takes": 1440,
+        "scale": "daily",
+        "fewest": 1,
+        "most": 30
+      }
+    },
+    {
+      "collection": "services",
+      "slug": "week",
+      "fields": {
+        "title": {
+          "uk": "Тиждень",
+          "en": "Week",
+          "de": "Woche",
+          "ru": "Неделя",
+          "es": "Semana",
+          "it": "Settimana",
+          "pt": "Semana",
+          "fr": "Semaine"
+        },
+        "takes": 10080,
+        "scale": "daily",
+        "fewest": 1,
+        "most": 1
+      }
+    }
+  ],
+  "changes": [
+    {
+      "from": "1",
+      "says": "Five more languages: every label, collection name and rate of the kit now says ru, es, it, pt and fr beside uk, en and de (7 October 2026)."
+    }
+  ]
+}

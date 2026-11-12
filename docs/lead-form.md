@@ -4,13 +4,13 @@ One form, one endpoint: `/api/lead`, which the platform serves beside the site o
 every host it answers on, and under the preview at `/p/<slug>/api/lead`. Where an
 enquiry goes — a Telegram chat, an address, the panel's inbox — is the owner's
 setting in the panel, never the repository's; what the form collects is the
-site's, declared in the catalogue (`collects: enquiry`, and the block's `asks`).
+site's, declared in the schema (`collects: enquiry`, and the block's `asks`).
 
 Template: `src/components/LeadForm.astro` — a wrapper over
 [`@jtakeit/kit`](https://github.com/jtakeit/jtakeit-kit/tree/main/kit): the markup
 from `renderLeadForm`, the in-place submission from the `<jtk-lead>` element,
 the legible minimum from `@jtakeit/kit/lead.css`. The component reads the
-block's words and the catalogue's `asks` and says where `/api/lead` is from
+block's words and the schema's `asks` and says where `/api/lead` is from
 the page; a site on another generator calls the same two pieces without
 Astro. Restyle the markup; keep the control names, the honeypot and the
 `data-*` hooks.
@@ -157,7 +157,7 @@ one by one to `/api/upload` when the form is sent, and puts the tokens in the
 enquiry. The privacy page adds its sentence about them by itself.
 
 The platform holds the rest, and none of it is the site's to change: it takes
-uploads only for a site whose catalogue declares `photos`, never more than
+uploads only for a site whose schema declares `photos`, never more than
 declared on one enquiry; it decodes and writes every picture again, so the
 location a phone wrote into it is gone; keeps it privately in the EU; shows it
 only to the people who may read the enquiry; and deletes it with the enquiry.
