@@ -8,9 +8,10 @@
  * one thing the page is for.
  *
  * This answers the same requests, in the same shape, from the site's own files:
- * the hours, the zone and the slot length in `jtk/bookings.json`, the services
- * and the people in `jtk/content` (the collections `jtk/catalogue.json` names
- * for the bookings module). A booking is kept in memory until the server
+ * the hours, the zone and the slot length in the diary's settings
+ * (`jtk/modules/bookings.json`; `jtk/bookings.json` on contract 2), the
+ * services and the people in the entries of the collections the schema names
+ * for the bookings module. A booking is kept in memory until the server
  * stops — so the time it took is taken — and nothing ever leaves the machine.
  * It is not the platform's diary: no buffers between visits, no resource's own
  * hours, no rates by the hour of the week. Close enough to walk; `preflight`
@@ -42,11 +43,15 @@ function offsetOf(zone, at) {
  *
  * The services and the people are the entries the site lists in its own
  * language, as the platform's diary takes them: a German copy of a service
- * is the same service, and one nobody shows is no choice. What a person does
- * is the rows `[{ service }]` the kit and the panel write, read as the
- * scaffold's form reads them — it used to be taken for a list of slugs here,
- * so with the rows the kit lays out nobody could do anything (wiki/98 §13);
- * and none, as on the form, is everything.
+ * is the same service, and one nobody shows is no choice. What a service
+ * costs is the door's `minor('costs')`, in either contract — a number on
+ * contract 2, `{ minor }` on contract 3, which was read as no price at all
+ * here (12 November 2026). What a person does is read as the scaffold's form
+ * reads it: on contract 3 one reference to many services by id, resolved by
+ * the door (`refs`); on contract 2 the rows `[{ service }]` the kit and the
+ * panel write — it used to be taken for a list of slugs here, so with the
+ * rows the kit lays out nobody could do anything (wiki/98 §13). None, as on
+ * the form, is everything.
  */
 async function read(root) {
   const site = content(await readJtk(root));
@@ -55,17 +60,17 @@ async function read(root) {
   const services = site.entries(roles.services ?? 'services').map((e) => ({
     slug: e.slug,
     takes: Number(e.fields.value('takes')) || 0,
-    costs: Number(e.fields.value('costs')) || 0,
+    costs: e.fields.minor('costs') ?? 0,
     title: e.fields.value('title') ?? e.slug,
   }));
   const people = site.entries(roles.resources ?? 'masters').map((e) => {
-    const does = e.fields
-      .rows('does')
-      .map((row) => row.value('service'))
-      .filter((slug) => typeof slug === 'string');
+    const does = (site.contract === 3 ? e.fields.refs('does').map((one) => one.baseSlug) : e.fields.rows('does').map((row) => row.value('service')))
+      .filter((slug) => typeof slug === 'string' && slug !== '');
     return { slug: e.slug, does: does.length > 0 ? does : null };
   });
-  return { settings, services, people, currency: site.currency };
+  // Where the settings are, for a diary nobody has set up yet.
+  const file = site.contract === 3 ? 'jtk/modules/bookings.json' : 'jtk/bookings.json';
+  return { settings, services, people, currency: site.currency, file };
 }
 
 const send = (res, status, body) => {
@@ -108,12 +113,12 @@ export function devDiary(root) {
     }
 
     if (path === '/availability') {
-      const { settings, services, people, currency } = await read(root);
+      const { settings, services, people, currency, file } = await read(root);
       if (!settings.zone || !Array.isArray(settings.hours) || settings.hours.length === 0) {
         return send(res, 412, {
           code: 'failed_precondition',
           message: !settings.zone ? 'nobody has said which timezone this business keeps' : 'nobody has said when this business is open',
-          details: { code: 'JTK_E_DIARY_NOT_READY', means: 'jtk/bookings.json needs `zone` and `hours`.' },
+          details: { code: 'JTK_E_DIARY_NOT_READY', means: `${file} needs \`zone\` and \`hours\`.` },
         });
       }
       const asked = (url.searchParams.get('service') ?? '').split(',').concat(url.searchParams.getAll('services')).filter(Boolean);
