@@ -1,0 +1,331 @@
+{
+  "name": "The original has no SEO and the translation gives it: those words are the translation's own, made from nothing — no record (a record with an empty `from`, as an earlier save wrote, is read as none and refuses nothing), neither missing nor outdated; served in that language",
+  "schema": {
+    "contract": 3,
+    "locale": "de",
+    "locales": [
+      "en",
+      "fr-CH"
+    ],
+    "blocks": [
+      {
+        "type": "hero",
+        "v": 1,
+        "label": "Hero",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Title",
+            "kind": "text",
+            "client_editable": true
+          },
+          {
+            "key": "lead",
+            "label": "Lead",
+            "kind": "textarea",
+            "client_editable": true
+          },
+          {
+            "key": "image",
+            "label": "Photo",
+            "kind": "media",
+            "client_editable": true
+          },
+          {
+            "key": "link",
+            "label": "Link",
+            "kind": "url"
+          }
+        ]
+      },
+      {
+        "type": "prices",
+        "v": 1,
+        "label": "Prices",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Title",
+            "kind": "text",
+            "client_editable": true
+          },
+          {
+            "key": "items",
+            "label": "Rows",
+            "kind": "list",
+            "of": [
+              {
+                "key": "title",
+                "label": "Name",
+                "kind": "text",
+                "client_editable": true
+              },
+              {
+                "key": "price",
+                "label": "Price",
+                "kind": "money",
+                "client_editable": true
+              },
+              {
+                "key": "options",
+                "label": "Options",
+                "kind": "list",
+                "of": [
+                  {
+                    "key": "label",
+                    "label": "Label",
+                    "kind": "text",
+                    "client_editable": true
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "gallery",
+        "v": 1,
+        "label": "Gallery",
+        "fields": [
+          {
+            "key": "pictures",
+            "label": "Pictures",
+            "kind": "media",
+            "multiple": true,
+            "client_editable": true
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "v": 1,
+        "label": "Text",
+        "fields": [
+          {
+            "key": "body",
+            "label": "Text",
+            "kind": "markdown",
+            "client_editable": true
+          }
+        ]
+      },
+      {
+        "type": "poster",
+        "v": 1,
+        "label": "Poster",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Title",
+            "kind": "text",
+            "client_editable": true
+          },
+          {
+            "key": "brand",
+            "label": "Brand",
+            "kind": "text",
+            "localized": false,
+            "client_editable": true
+          },
+          {
+            "key": "picture",
+            "label": "Picture with words on it",
+            "kind": "media",
+            "localized": true,
+            "client_editable": true
+          },
+          {
+            "key": "link",
+            "label": "Link in this language",
+            "kind": "url",
+            "localized": true
+          }
+        ]
+      },
+      {
+        "type": "contacts",
+        "v": 1,
+        "label": "Contacts",
+        "fields": [
+          {
+            "key": "name",
+            "label": "Name",
+            "kind": "text",
+            "role": "name",
+            "client_editable": true
+          },
+          {
+            "key": "phone",
+            "label": "Phone",
+            "kind": "tel",
+            "role": "phone",
+            "client_editable": true
+          }
+        ]
+      },
+      {
+        "type": "work",
+        "v": 1,
+        "label": "Work",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Title",
+            "kind": "text",
+            "required": true,
+            "client_editable": true
+          },
+          {
+            "key": "date",
+            "label": "Date",
+            "kind": "date"
+          },
+          {
+            "key": "cover",
+            "label": "Cover",
+            "kind": "media",
+            "client_editable": true
+          },
+          {
+            "key": "pictures",
+            "label": "Pictures",
+            "kind": "media",
+            "multiple": true,
+            "client_editable": true
+          },
+          {
+            "key": "price",
+            "label": "Price",
+            "kind": "money",
+            "client_editable": true
+          },
+          {
+            "key": "excerpt",
+            "label": "Excerpt",
+            "kind": "textarea",
+            "client_editable": true
+          }
+        ]
+      },
+      {
+        "type": "category",
+        "v": 1,
+        "label": "Category",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Name",
+            "kind": "text",
+            "required": true,
+            "client_editable": true
+          }
+        ]
+      }
+    ],
+    "page_seo": [
+      {
+        "key": "title",
+        "label": "Title",
+        "kind": "text"
+      },
+      {
+        "key": "description",
+        "label": "Description",
+        "kind": "textarea"
+      }
+    ],
+    "shared": [
+      "contacts"
+    ],
+    "collections": [
+      {
+        "name": "works",
+        "label": "Works",
+        "type": "work",
+        "route": {
+          "detail": {
+            "de": "/werke/{slug}",
+            "en": "/works/{slug}"
+          },
+          "listing": "/werke"
+        },
+        "blocks": [
+          "text",
+          "gallery"
+        ]
+      },
+      {
+        "name": "categories",
+        "label": "Categories",
+        "type": "category",
+        "route": {
+          "detail": "/kategorien/{slug}"
+        },
+        "untranslated": "hide"
+      }
+    ]
+  },
+  "base": {
+    "id": "0193a5c2-7f4e-7c1a-9b2e-5d1f0c3a8e21",
+    "path": "/leistungen",
+    "name": "Leistungen",
+    "blocks": [
+      {
+        "_key": "hero",
+        "type": "hero",
+        "v": 1,
+        "title": "Leistungen"
+      }
+    ]
+  },
+  "translation": {
+    "of": "0193a5c2-7f4e-7c1a-9b2e-5d1f0c3a8e21",
+    "locale": "en",
+    "name": "Services",
+    "seo": {
+      "title": "Services",
+      "description": "What we do"
+    },
+    "blocks": [
+      {
+        "_key": "hero",
+        "title": "Services"
+      }
+    ],
+    "translated": {
+      "seo.title": {
+        "from": "",
+        "by": "agent",
+        "at": "2026-11-12T09:00:00Z"
+      },
+      "seo.description": {
+        "from": "",
+        "by": "agent",
+        "at": "2026-11-12T09:00:00Z"
+      }
+    }
+  },
+  "locale": "en",
+  "merged": {
+    "id": "0193a5c2-7f4e-7c1a-9b2e-5d1f0c3a8e21",
+    "path": "/leistungen",
+    "name": "Services",
+    "blocks": [
+      {
+        "_key": "hero",
+        "type": "hero",
+        "v": 1,
+        "title": "Services"
+      }
+    ],
+    "seo": {
+      "title": "Services",
+      "description": "What we do"
+    }
+  },
+  "fromBase": [],
+  "outdated": [],
+  "advice": [],
+  "refused": null
+}

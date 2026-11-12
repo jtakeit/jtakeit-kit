@@ -46,6 +46,11 @@ switch (command) {
     const { main } = await import(pathToFileURL(join(HERE, '..', 'lib', 'upgrade.mjs')).href);
     process.exit(await main(rest));
   }
+  case 'copy': {
+    // A language's words that are not content, in the kit's words (lib/copies.mjs).
+    const { main } = await import(pathToFileURL(join(HERE, '..', 'lib', 'copies.mjs')).href);
+    process.exit(await main(rest));
+  }
   case 'showroom': {
     const { showroom } = await import(pathToFileURL(join(HERE, '..', 'lib', 'showroom.mjs')).href);
     try {
@@ -77,10 +82,12 @@ switch (command) {
     const code = await import(pathToFileURL(join(HERE, '..', 'lib', 'code.mjs')).href);
     const { usage } = await import(pathToFileURL(join(HERE, '..', 'lib', 'create.mjs')).href);
     const upgrade = await import(pathToFileURL(join(HERE, '..', 'lib', 'upgrade.mjs')).href);
+    const copies = await import(pathToFileURL(join(HERE, '..', 'lib', 'copies.mjs')).href);
     console.error(`@jtakeit/astro — the scaffold and the catalogue tool for a site on jtakeit
 
   jtk create <slug> [options]     scaffold a site into ./<slug>, on contract 3: jtk/schema.json
-                                  (--contract 2 for one in several languages until M3)
+                                  (--locales en,fr for its other languages; --contract 2
+                                  for contract 2's files, in one language)
   jtk catalogue [--emit-only] [--dist ./dist] [--judge]
                                   write jtk/catalogue.json from src/content/blocks.ts and
                                   check it against the built pages; on a contract-3 tree,
@@ -90,6 +97,7 @@ switch (command) {
                                   says CONTRACT = 3, mint the ids and _keys, and check it
                                   against the built pages in the grammar by key
   ${upgrade.usage()}
+  ${copies.usage()}
   jtk showroom [--photos <dir>] [--port 4330]
                                   every hero field, ground, edge, entrance and gallery,
                                   live on the dev server — in this project's colours and

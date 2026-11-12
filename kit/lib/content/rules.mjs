@@ -89,6 +89,36 @@ export function labelWords(base, others, want) {
 }
 
 /**
+ * Which language a label's words are in, where they are not the page's: the
+ * same search `labelWords` makes, and the tag of the words it found — `''`
+ * where they are the page's language's (or its language's, `en` for
+ * `en-NL`), the site's own for words written once, as a declaration writes
+ * them in the site's language. For a page to mark the words it falls back on
+ * with their `lang`.
+ *
+ * @param {string} base @param {string[]} others @param {(locale: unknown) => string} want
+ */
+export function labelLang(base, others, want) {
+  const langOf = (locale) => (locale === '' ? base : locale);
+  const sameLanguage = (a, b) => a.split('-')[0].toLowerCase() === b.split('-')[0].toLowerCase();
+  return function wordsLang(text, locale) {
+    if (text === undefined || text === null) return '';
+    const tag = locale === undefined ? base : langOf(want(locale)) || base;
+    if (typeof text === 'string') return sameLanguage(text === '' ? tag : base, tag) ? '' : base;
+    if (!isObject(text)) return '';
+    const said = (key) => typeof text[key] === 'string' && text[key] !== '';
+    if (said(tag) || said(tag.split('-')[0])) return '';
+    for (const other of others) {
+      if (said(other)) return sameLanguage(other, tag) ? '' : other;
+      if (said(other.split('-')[0])) return sameLanguage(other, tag) ? '' : other.split('-')[0];
+    }
+    if (said('en')) return sameLanguage('en', tag) ? '' : 'en';
+    const first = Object.keys(text).find(said);
+    return first === undefined || sameLanguage(first, tag) ? '' : first;
+  };
+}
+
+/**
  * A collection the owner orders by hand, in their order: each entry's
  * `rank`, written by their moves in the panel (jtakeit-core wiki/94 · M4),
  * compared as bytes. An entry with none comes after the ranked ones, in the

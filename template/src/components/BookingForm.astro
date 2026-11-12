@@ -56,6 +56,8 @@ interface Named {
   group?: string;
   /** For a resource: the services they perform, by slug — the form greys the others out once they are chosen. */
   does?: string[];
+  /** The language of `title` where it is not the page's: the original's words, nobody having translated them (`entry.fields.lang('title')`). */
+  lang?: string;
 }
 
 interface Props {
@@ -107,7 +109,7 @@ const w = form.words;
                 {run.items.map((one) => (
                   <label class="service" data-service-row>
                     <input type="checkbox" name="service" value={one.slug} data-takes={one.takes ?? 0} data-costs={one.costs ?? 0} data-per={one.per === 'person' ? 'person' : undefined} />
-                    <span class="service-name" data-service-name>{one.title}</span>
+                    <span class="service-name" data-service-name lang={one.lang}>{one.title}</span>
                     <span class="service-meta">{one.meta}</span>
                   </label>
                 ))}
@@ -119,7 +121,7 @@ const w = form.words;
           <>
             <label class="label" for="booking-service" data-say="service">{w.service}</label>
             <select class="input" id="booking-service" name="service" required>
-              {form.services.map((one) => <option value={one.slug}>{one.title}</option>)}
+              {form.services.map((one) => <option value={one.slug} lang={one.lang}>{one.title}</option>)}
             </select>
           </>
         )
@@ -132,7 +134,7 @@ const w = form.words;
           <label class="label" for="booking-resource" data-say="resource">{w.resource}</label>
           <select class="input" id="booking-resource" name="resource" data-say-wait>
             <option value="" data-say="any">{w.any}</option>
-            {form.resources.map((one) => <option value={one.slug} data-does={one.does || undefined}>{one.title}</option>)}
+            {form.resources.map((one) => <option value={one.slug} data-does={one.does || undefined} lang={one.lang}>{one.title}</option>)}
           </select>
         </div>
       )

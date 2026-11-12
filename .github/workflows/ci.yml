@@ -32,8 +32,8 @@ jobs:
         # A slug and a directory, the kit asked of the platform's public
         # kits endpoint, no git — and the kit from this checkout rather
         # than from npm, so the scaffold is tried against the kit it ships with.
-        # Contract 2's: the next step seeds it in two languages, which
-        # contract 3 refuses until the platform's M3.
+        # Contract 2's: the next step (test/a11y.mjs) seeds it in two
+        # languages contract 2's way, a document per language under jtk/content.
         run: |
           node bin/jtk.mjs create probe --out /tmp/probe --kit salon --locale en --no-git --contract 2
           cd /tmp/probe && npm install --no-audit --no-fund "$GITHUB_WORKSPACE/kit" && npm run build

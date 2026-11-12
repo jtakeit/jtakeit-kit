@@ -39,6 +39,15 @@ export interface Progress {
   settings: { hours: boolean; zone: boolean; payment: string } | null;
   facts: { placeholders: number } | null;
   media: number;
+  /**
+   * Contract 3: each language besides the site's own, where it stands (wiki/95 §2). `missing`: each
+   * localized value the original has and the translation has not, which the page shows in the
+   * original's words; `outdated`: each the translation made from an original that has changed since
+   * (`translated[place].from` is not the digest of the original's value now); each as `<file> <place>`,
+   * the place as the platform's merge says it (`blocks[hero].title`, an entry's `fields.title`, `name`,
+   * `seo.title`, an entry's body `blocks`). `held`: the entries held back in that language.
+   */
+  languages?: { locale: string; missing: string[]; outdated: string[]; held: number }[];
   /** What is still to do, as sentences — the same list the panel shows. */
   missing: string[];
   /** The newest change among the files read, ISO 8601; null when none exist. */

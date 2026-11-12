@@ -37,14 +37,20 @@ interface Props {
 }
 
 const { collection, locale, entries, current, last, alternates } = Astro.props;
-const { LISTING } = copyFor(locale);
+const { LISTING, WORDS_LANG } = copyFor(locale);
 const heading = site.words(collection.label, langOf(locale));
 const groups = site.groupsOf(collection.name, entries, locale) ?? [{ entries }];
 const isGrouped = groups.some((one) => one.heading !== undefined);
-const title = current > 1 ? `${heading} — ${LISTING.pageOf(current, last)}` : heading;
+// The page the listing is, where the content has one: its SEO and its name,
+// in this language (the door lays the translation over the original).
+const listedAtBase = site.listingOf(collection.name, '');
+const ownPage = listedAtBase === undefined ? undefined : site.page(listedAtBase, locale);
+const seoWords = (key: string): string => (typeof ownPage?.seo[key] === 'string' ? (ownPage.seo[key] as string).trim() : '');
+const named = seoWords('title') || ownPage?.name?.trim() || heading;
+const title = current > 1 ? `${named} — ${LISTING.pageOf(current, last)}` : named;
 ---
 
-<Layout title={title} description="" alternates={alternates}>
+<Layout title={title} description={seoWords('description')} alternates={alternates}>
   <main id="content">
     <section class="listing listing--posts" data-collection={collection.name}>
       {/* The collection's own name, from the catalogue: fixed. */}
@@ -53,7 +59,7 @@ const title = current > 1 ? `${heading} — ${LISTING.pageOf(current, last)}` : 
         groups.map((run) => (
           <Fragment>
             {run.heading && (
-              <h2 class="listing-group" {...run.heading.at} data-jtk-fixed={run.heading.fixed ? true : undefined}>{run.heading.text}</h2>
+              <h2 class="listing-group" {...run.heading.at} {...(run.heading.entry?.fields.lang('title') ?? {})} data-jtk-fixed={run.heading.fixed ? true : undefined}>{run.heading.text}</h2>
             )}
             <ul class="posts">
               {run.entries.map((entry) => <EntryCard entry={entry} locale={locale} level={isGrouped ? 'h3' : 'h2'} />)}
@@ -63,7 +69,7 @@ const title = current > 1 ? `${heading} — ${LISTING.pageOf(current, last)}` : 
       }
       {
         last > 1 && (
-          <nav class="listing-pager">
+          <nav class="listing-pager" lang={WORDS_LANG || undefined}>
             {current > 1 ? <a href={listingHref(collection.name, locale, current - 1)} rel="prev" data-jtk-fixed>{LISTING.previous}</a> : <span />}
             <span data-jtk-fixed>{LISTING.pageOf(current, last)}</span>
             {current < last ? <a href={listingHref(collection.name, locale, current + 1)} rel="next" data-jtk-fixed>{LISTING.next}</a> : <span />}

@@ -28,7 +28,7 @@ export interface LintOptions {
  * The annotation lint the platform's build runs: the built pages against the content and the catalogue —
  * on a contract-3 tree, against `jtk/schema.json` in the grammar by key and by id, and every price in the
  * site's currency (`JTK_LOCAL`, the platform's preflight check). What stops the build's collection of a
- * contract-3 tree (a catalogue beside the schema, a translation before M3, …) rejects with its sentence.
+ * contract-3 tree (a catalogue beside the schema, contract 2's jtk/content/, …) rejects with its sentence.
  */
 export function lint(options?: LintOptions): Promise<Verdict>;
 /** Print the findings the way the build does; 0 when clean, 1 otherwise. */

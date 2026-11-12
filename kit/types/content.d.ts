@@ -96,7 +96,7 @@ export interface Collection {
   route?: 'none' | { detail: string | Record<string, string>; listing?: string | Record<string, string>; per_page?: number };
   /** Contract 3: where its entries are shown besides their own pages, `['/prices#{slug}']`. */
   shown_on?: (string | Record<string, string>)[];
-  /** Contract 3: what a language without a translation does with an entry: shows the original, or leaves it out. */
+  /** Contract 3: what a language without a translation does with an entry: shows the original, or hides it there (built, listed nowhere, as a language held back is). */
   untranslated?: 'base' | 'hide';
 }
 
@@ -112,6 +112,12 @@ export interface Picture extends At {
   focus?: string;
   /** A clip's poster. */
   poster?: string;
+  /**
+   * Contract 3: the original's language (`de-CH`), where the picture's words are the original's on a
+   * page in another language — nobody translated its `alt` (wiki/95 §2). Put it on the `<img>`. Absent
+   * where the words are the page's own language's, and always under contract 2.
+   */
+  lang?: string;
 }
 
 /** The values of one object — a block, a row, an entry's own — with the annotation of each. */
@@ -161,6 +167,16 @@ export interface Values {
    * document whole per language.
    */
   fromBase(field: string): boolean;
+  /**
+   * The original's language as an attribute, `{ lang: 'de-CH' }`, for a value that is the original's
+   * words on a page in another language (`fromBase`), and `{}` for any other — spread it beside the
+   * annotation, onto the element that draws the value:
+   *
+   *   <h1 {...hero.at('title')} {...hero.lang('title')}>{hero.text('title')}</h1>
+   *
+   * Always `{}` under contract 2, and in the site's own language.
+   */
+  lang(field: string): { lang?: string };
   /** The field's declaration, where the schema has one. */
   field(field: string): Field | undefined;
   /** Whether the field, filled, must carry a tap target (`TAPPABLE`, `client_editable`, `no_tap_target`). */
@@ -185,6 +201,8 @@ export interface Page {
   kind: 'page';
   /** The page's own id, kept when its file moves; `''` before the platform's first save. */
   id: string;
+  /** Contract 3: its name for a person (`Preise`, `Prices`), in its language; `''` under contract 2. */
+  name?: string;
   /** Its address: `/prices`, `/de/prices`. */
   address: string;
   /** `''` for the base language, the tag of any other. */
@@ -195,6 +213,19 @@ export interface Page {
   blocks: Block[];
   /** The first block of a type; an empty one, annotated nowhere, where the page has none. */
   block(type: string): Block;
+  /**
+   * Contract 3: every place whose value is the original's words in this language, because nobody
+   * translated it — `name`, `seo.title`, `blocks[hero].title`, `blocks[hero].image.alt`,
+   * `blocks[faq].items[r1].answer` — the merge's own record (`mergeDocument`'s `fromBase`). Empty in
+   * the site's own language, and under contract 2.
+   */
+  fromBase?: string[];
+  /**
+   * Whether the page is in this language's own words: the original, or a language with a
+   * translation of it (contract 3). A page nobody translated is built in every language, in the
+   * original's words — and named neither in `hreflang` nor in the sitemap. Always true on contract 2.
+   */
+  translated: boolean;
   /** Annotated as the page it is drawn on (no document named). The default for a page. */
   here: Page;
   /** Annotated as another page's words: `page:<address>:…` (contract 2), `page:<id>:…` (contract 3). */
@@ -208,6 +239,8 @@ export interface Shared {
   file?: string;
   blocks: Block[];
   block(type: string): Block;
+  /** Contract 3: the places of the shared text whose words are the original's in this language (`blocks[contacts].name`). */
+  fromBase?: string[];
 }
 
 /**
@@ -241,6 +274,12 @@ export interface Entry {
   collection: string;
   /** Its path without the language and the collection's prefix (contract 2); its `slug` in its language (contract 3). */
   slug: string;
+  /**
+   * The original's slug, whatever this language calls the entry: what the booking protocol names a
+   * service and a resource by, in every language (a form in English posts the slug the diary knows).
+   * The same as `slug` on contract 2, and in the site's own language.
+   */
+  baseSlug: string;
   /** `''` for the base language, the tag of any other. */
   locale: string;
   /** Whether a listing shows it now: `visible`, `show_at`, `hide_at`. */
@@ -257,6 +296,15 @@ export interface Entry {
   address?: string;
   /** Where it is shown, for a collection without pages: `/services#services-cut`. */
   anchor?: string;
+  /**
+   * Contract 3: the places whose values are the original's words in this language — `seo.title`,
+   * its own values under `fields` (`fields.title`, `fields.cover.alt`), and `blocks` where its body
+   * is the original's whole (an entry's body is whole per language). A slug left as the original's
+   * is not counted: an address has no language.
+   */
+  fromBase?: string[];
+  /** Whether the entry is in this language's own words: the original, or one with a translation (contract 3); true on contract 2. */
+  translated: boolean;
   /** Annotated as its own page, where the entry is the document. */
   here: Entry;
   /** Annotated as drawn on another page — a tile, a row, a heading: `page:<address>:…`. The default for an entry. */
@@ -329,8 +377,20 @@ export interface Site {
   localeOf(address: string): string;
   /** An address in a language: `/about` → `/de/about`, `/` → `/de`. */
   inLocale(locale: string, address: string): string;
-  /** Every language a page or an entry exists in, for `hreflang`; empty for one in a single language. */
+  /**
+   * The languages a page or an entry is in, for `hreflang`, base first; empty for one in a single
+   * language. Contract 3: the original's, and each language a translation of it is in (jtakeit-core
+   * wiki/94 · M3) — a page is built in every language the site has, and where nobody translated it,
+   * it is no alternate; an entry where it is out (not held back, not hidden) and has a page.
+   */
   alternatesOf(document: Page | Entry): { locale: string; address: string }[];
+  /**
+   * Every language a page or an entry can be read in, with its address there, base first — for the
+   * language switch, which goes to the page in another language whether or not anybody translated
+   * it. Contract 3: a page in every language the site has, an entry where it is out and has a page;
+   * contract 2: `alternatesOf`. Empty for one in a single language.
+   */
+  languagesOf(document: Page | Entry): { locale: string; address: string }[];
 
   /** Entries under their headings, or `undefined` for a collection with no `group`. */
   groupsOf(name: string, entries: Entry[], locale?: string): { heading?: Heading; entries: Entry[] }[] | undefined;
@@ -349,6 +409,12 @@ export interface Site {
   money(value: unknown, locale?: string, own?: { from?: string; on_request?: string }): string;
   /** A label's words in a language. */
   words(text: Text | undefined, locale?: string): string;
+  /**
+   * The language `words(text, locale)` found its words in, where it is not the page's — the site's
+   * own for words written once, another language's where a map lacks this one — and `''` where they
+   * are the page's: put it on the element as `lang`. Always `''` on contract 2.
+   */
+  wordsLang(text: Text | undefined, locale?: string): string;
   tappable(field: Field | undefined): boolean;
 
   /**
@@ -378,6 +444,36 @@ export function canonicalLocale(tag: unknown): string | null;
 export function sharedLocaleOf(name: string): string | null;
 export function drawsPagedListing(collection: { pages?: boolean; listing?: boolean }, ownPage: boolean): boolean;
 export function linksToListing(collection: { pages?: boolean; listing?: boolean; prefix?: string }): boolean;
+
+/** A contract-3 document's kind, by its keys: an entry names its collection, the shared text is `blocks` alone. */
+export type DocumentKind = 'page' | 'entry' | 'shared';
+
+/**
+ * The merge of an original and its translation (wiki/98 §4.4) — the one rule the door serves a
+ * contract-3 document in another language by, and that the platform's `Content.Served` is held
+ * equal to by one fixture corpus (§1, 3). `merged` is the document served in that language, in the
+ * original's shape — `visible: false` where the translation holds the language back, or where
+ * nobody translated an entry its collection hides untranslated. `fromBase` is every place whose
+ * value is the original's words, because nobody translated it: `name`, `seo.title`,
+ * `blocks[hero].image.alt`, an entry's `fields.title`, its body `blocks`.
+ */
+export function mergeDocument(
+  schema: unknown,
+  base: Record<string, unknown>,
+  translation: Record<string, unknown> | null | undefined,
+  options?: { kind?: DocumentKind },
+): { merged: Record<string, unknown> | null; fromBase: string[] };
+/** The merge read for one schema, asked once per document and language. */
+export function overlay(schema: unknown): {
+  merge(base: Record<string, unknown>, translation: Record<string, unknown> | null | undefined, options?: { kind?: DocumentKind }): { merged: Record<string, unknown> | null; fromBase: string[] };
+};
+/** How a field is laid over by a translation: by its kind, unless it says `localized` (wiki/98 §3.3). */
+export function layOf(field: Partial<Field>): 'whole' | 'shared' | 'media' | 'gallery' | 'rows';
+export function kindOf(document: unknown): DocumentKind;
+/** Every localized value a document holds, by its place: what a translation of it may say. */
+export function localizedIn(schema: unknown, document: Record<string, unknown>, kind: DocumentKind): { place: string; value: unknown }[];
+/** The value at a place of a document (`blocks[hero].image.alt`, an entry's `title`), or `undefined`. */
+export function valueAt(document: Record<string, unknown>, place: string, kind: DocumentKind): unknown;
 
 /** The content as one document, read off a disk — `@jtakeit/kit/content/node`'s, kept here too. */
 export { collectContent } from './content-node';

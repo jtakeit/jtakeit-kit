@@ -95,11 +95,12 @@ test('the tables: §3 field by field, and a schema the platform\'s judge accepts
   assert.deepEqual(tables.SHARED, ['contacts']);
   const contacts = tables.BLOCKS.at(-1);
   assert.equal(contacts.type, 'contacts');
-  assert.deepEqual(contacts.fields.map((one) => [one.key, one.kind, one.role]), [
-    ['name', 'text', 'name'],
-    ['phone', 'tel', 'phone'],
-    ['social', 'list', 'social'],
-    ['parking', 'text', undefined],
+  assert.deepEqual(contacts.fields.map((one) => [one.key, one.kind, one.role, one.localized]), [
+    // The business's name is the same in every language: nothing to translate.
+    ['name', 'text', 'name', false],
+    ['phone', 'tel', 'phone', undefined],
+    ['social', 'list', 'social', undefined],
+    ['parking', 'text', undefined, undefined],
   ]);
   assert.ok(notes.some((one) => /BUSINESS_FACTS currency is not content/.test(one)));
   assert.ok(notes.some((one) => /hero.old was deprecated/.test(one)));
@@ -115,8 +116,10 @@ test('the tables: a listing the repository draws itself is declared, so the feed
   assert.deepEqual(collection3(blog).order, { by: 'date', desc: true });
 });
 
-test('the tables: refused for a site in two languages, and where a contacts type is declared already', () => {
-  assert.match(tablesOf({ ...DECLARED, LOCALES: ['en'] }).refused, /before M3 the platform keeps a contract-3 site in one language .*JTK_E_TRANSLATION_BEFORE_M_THREE/);
+test('the tables: a site in two languages keeps them (M3); refused where a contacts type is declared already', () => {
+  const two = tablesOf({ ...DECLARED, LOCALES: ['en'] });
+  assert.equal(two.refused, undefined);
+  assert.deepEqual(two.tables.LOCALES, ['en']);
   const taken = { ...DECLARED, BLOCKS: [...DECLARED.BLOCKS, { type: 'contacts', v: 1, label: 'C', fields: [] }] };
   assert.match(tablesOf(taken).refused, /a shared block type called `contacts`/);
 });
@@ -380,4 +383,94 @@ test('documents: a price kept as words in a text field stays words, and is asked
   const asked = questions.filter((one) => one.what === 'a price written as text');
   assert.equal(asked.length, 1);
   assert.match(asked[0].ask, /«ab 45.–», a price in words .*\{ "minor": 4500, "from": true \}\? The field stays text/);
+});
+
+// ── the other languages: a copy becomes a translation beside its original (M3) ──
+
+test('a copy in another language: its words into a translation by the original\'s keys, a gallery\'s words by picture, a body whole — and every shared value that differs listed, a row more, a picture, a price', () => {
+  const from = {
+    contract: 2, locale: 'de', locales: ['en'],
+    blocks: [
+      { type: 'show', v: 1, label: 'Show', fields: [
+        { key: 'title', label: 'Title', kind: 'text' },
+        { key: 'pictures', label: 'Pictures', kind: 'media', multiple: true },
+        { key: 'rows', label: 'Rows', kind: 'list', of: [{ key: 'name', label: 'Name', kind: 'text' }, { key: 'price', label: 'Price', kind: 'money' }] },
+      ] },
+      { type: 'post', v: 1, label: 'Post', fields: [{ key: 'title', label: 'Title', kind: 'text' }, { key: 'date', label: 'Date', kind: 'date' }] },
+      { type: 'text', v: 1, label: 'Text', fields: [{ key: 'body', label: 'Text', kind: 'markdown' }] },
+    ],
+    collections: [{ name: 'blog', label: 'Blog', prefix: '/blog', type: 'post', body: ['text'] }],
+  };
+  const { tables } = tablesOf({ LOCALE: 'de', LOCALES: ['en'], BLOCKS: from.blocks, COLLECTIONS: from.collections });
+  const to = schemaOf(tables, { generator: 'test' });
+  const page = { id: '0193a5c2-7f4e-7c1a-9b2e-5d1f0c3a8e21', path: '/', blocks: [{ _key: 'show', type: 'show', v: 1, title: 'Hallo', pictures: [{ src: 'a.jpg', alt: 'Eins' }, { src: 'b.jpg', alt: 'Zwei' }], rows: [{ name: 'Schnitt', price: 4500 }] }] };
+  const post = { id: '0193a5c3-1b2a-7e44-8a10-6c2f9d3e4b55', path: '/blog/erster', collection: 'blog', visible: true, blocks: [{ type: 'post', v: 1, title: 'Erster', date: '2026-11-01' }, { type: 'text', v: 1, body: 'Hallo.' }] };
+  const files = {
+    '/jtk/content/index.json': page,
+    '/jtk/content/en.json': { path: '/en', locale: 'en', blocks: [{ _key: 'show', type: 'show', v: 1, title: 'Hello', pictures: [{ src: 'a.jpg', alt: 'One' }, { src: 'b.jpg' }], rows: [{ name: 'Cut', price: 4500 }] }] },
+    '/jtk/content/blog/erster.json': post,
+    // Held back in English, its own body, the same date.
+    '/jtk/content/en/blog/erster.json': { path: '/en/blog/erster', collection: 'blog', locale: 'en', visible: false, blocks: [{ type: 'post', v: 1, title: 'First', date: '2026-11-01' }, { type: 'text', v: 1, body: 'Hello.' }, { type: 'text', v: 1, body: 'More.' }] },
+    '/jtk/shared.json': { blocks: [] },
+  };
+  const mint = { id: () => 'never', key: (taken) => { const key = `k${taken.size + 1}`; taken.add(key); return key; } };
+  const moved = documentsOf(files, { from, to, order: { blog: ['/jtk/content/blog/erster.json'] }, mint });
+  assert.deepEqual(moved.differing, []);
+  assert.deepEqual(moved.write['/jtk/pages/index.en.json'].blocks, [{ _key: 'show', title: 'Hello', pictures: [{ _key: 'k1', alt: 'One' }], rows: [{ _key: 'k1', name: 'Cut' }] }]);
+  const english = moved.write['/jtk/entries/blog/erster.en.json'];
+  assert.deepEqual(Object.keys(english), ['of', 'locale', 'slug', 'visible', 'fields', 'blocks', 'translated']);
+  assert.deepEqual([english.of, english.slug, english.visible, english.fields], [post.id, 'erster', false, { title: 'First' }]);
+  assert.deepEqual(english.blocks.map((one) => one.body), ['Hello.', 'More.'], 'the body whole, as the copy has it');
+  assert.ok(english.translated.blocks.from.length === 8);
+  assert.ok(moved.remove.includes('/jtk/content/en/blog/erster.json') && moved.remove.includes('/jtk/content/en.json'));
+
+  // The English copy with a row more, another picture and another price.
+  const changed = structuredClone(files);
+  changed['/jtk/content/en.json'].blocks[0].pictures[1].src = 'c.jpg';
+  changed['/jtk/content/en.json'].blocks[0].rows = [{ name: 'Cut', price: 5000 }, { name: 'Colour', price: 9000 }];
+  const parted = documentsOf(changed, { from, to, order: { blog: ['/jtk/content/blog/erster.json'] }, mint });
+  assert.deepEqual(parted.differing.map((one) => [one.place, one.field]), [
+    ['blocks[show].pictures', 'show.pictures'],
+    ['blocks[show].rows', 'show.rows'],
+    ['blocks[show].rows[k1].price', 'show.rows.price'],
+  ]);
+  assert.deepEqual(parted.differing[2].base, { minor: 4500 });
+  assert.deepEqual(parted.differing[2].theirs, { minor: 5000 });
+  const taken = documentsOf(changed, { from, to, order: { blog: ['/jtk/content/blog/erster.json'] }, mint, takeBase: () => true });
+  assert.deepEqual(taken.differing, []);
+  assert.equal(taken.notes.filter((one) => one.includes('stands for every language')).length, 3);
+});
+
+test('a copy with no original is not moved, and listed; a copy contract 2 hid of what people book is shown in its language from now on', () => {
+  const from = {
+    contract: 2, locale: 'de', locales: ['en'],
+    blocks: [
+      { type: 'service', v: 1, label: 'Service', fields: [{ key: 'title', label: 'Name', kind: 'text' }, { key: 'takes', label: 'Length', kind: 'duration' }] },
+      { type: 'master', v: 1, label: 'Master', fields: [{ key: 'title', label: 'Name', kind: 'text' }] },
+    ],
+    collections: [
+      { name: 'services', label: 'Services', prefix: '/services', type: 'service', pages: false },
+      { name: 'masters', label: 'Team', prefix: '/team', type: 'master' },
+    ],
+    modules: { bookings: { services: 'services', resources: 'masters' } },
+  };
+  const { tables } = tablesOf({ LOCALE: 'de', LOCALES: ['en'], BLOCKS: from.blocks, COLLECTIONS: from.collections, MODULES: from.modules });
+  const to = schemaOf(tables, { generator: 'test' });
+  const files = {
+    '/jtk/content/team/anna.json': { id: '0193a5c3-0a11-7d02-9f3c-1e2d3c4b5a72', path: '/team/anna', collection: 'masters', visible: true, blocks: [{ type: 'master', v: 1, title: 'Anna Meier' }] },
+    // Hidden in English, in contract 2.
+    '/jtk/content/en/team/anna.json': { path: '/en/team/anna', collection: 'masters', locale: 'en', visible: false, blocks: [{ type: 'master', v: 1, title: 'Anna Meier' }] },
+    // Only in English: nothing to be a translation of.
+    '/jtk/content/en/team/beat.json': { path: '/en/team/beat', collection: 'masters', locale: 'en', visible: true, blocks: [{ type: 'master', v: 1, title: 'Beat Keller' }] },
+    '/jtk/content/en/about.json': { path: '/en/about', locale: 'en', blocks: [] },
+  };
+  const moved = documentsOf(files, { from, to, order: { masters: ['/jtk/content/team/anna.json'] } });
+  assert.deepEqual(moved.alone, [
+    { file: 'jtk/content/en/about.json', locale: 'en', kind: 'page', path: '/about' },
+    { file: 'jtk/content/en/team/beat.json', locale: 'en', kind: 'entry', collection: 'masters', slug: 'beat' },
+  ]);
+  assert.equal(moved.write['/jtk/entries/masters/beat.json'], undefined, 'no original made up');
+  const english = moved.write['/jtk/entries/masters/anna.en.json'];
+  assert.equal(english.visible, undefined, 'what people book is not held back');
+  assert.ok(moved.notes.some((one) => /the en copy of masters «anna» was hidden, and what people book is in every language/.test(one)));
 });

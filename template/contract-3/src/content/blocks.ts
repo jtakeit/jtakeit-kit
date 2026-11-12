@@ -356,7 +356,10 @@ export const BLOCKS: Block[] = [
  * social, price_range, business_type, hours. Add the ones this business has —
  * the street and the postcode, the map, its profiles — and draw each where the
  * page says it (`site.facts(locale)`), or as `no_tap_target` where it is only
- * told. The currency is not one of them: it is the site's setting, given once
+ * told. The name, the street, the postcode, the schema.org type and the price
+ * range are the same in every language: say `localized: false` on each, or
+ * every other language counts them as words to translate. The city stays per
+ * language («Zürich», «Zurich»). The currency is not one of them: it is the site's setting, given once
  * to `create_site`.
  */
 export const CONTACTS: Block = {
@@ -383,6 +386,8 @@ export const CONTACTS: Block = {
       no_tap_target: true,
       role: 'name',
       hint: 'The business\'s name, as search engines and assistants are told it.',
+      // The same in every language: nobody translates the business's name.
+      localized: false,
     },
     {
       key: 'city',
@@ -626,15 +631,15 @@ export const PROCESSING_URL = 'https://jtakeit.com/processing';
 export const LOCALE = '{{LANG}}';
 
 /**
- * The languages this site has **besides** the one above: none, on contract 3,
- * until the platform's M3.
+ * The languages this site has **besides** the one above, as the platform
+ * spells them: `['en', 'fr-CH']`.
  *
- * Contract 3 keeps a site in one language until M3 brings translations as
- * overlays beside their originals (`jtk/pages/prices.de.json`): before it, the
- * platform's import refuses a schema with other languages and every
- * translation (JTK_E_TRANSLATION_BEFORE_M_THREE, jtakeit-core wiki/98 §16).
- * A site that needs a second language now is laid out on contract 2 —
- * `jtk create --contract 2` — and moves when M3 comes.
+ * Each is a translation beside every page and entry, holding only its words
+ * (`jtk/pages/index.en.json`, jtakeit-core wiki/95, wiki/98 §4.4); a value
+ * nobody translated is the original's, shown and marked with its `lang`. Each
+ * language's words that are not content are `src/copy/<locale>.ts` —
+ * `jtk create --locales en` and `npx @jtakeit/astro copy en` write them in the
+ * kit's words. docs/languages.md says the rest.
  */
 export const LOCALES: string[] = [];
 

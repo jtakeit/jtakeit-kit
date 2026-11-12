@@ -40,6 +40,11 @@ const LANG = langOf(locale);
 const blog = site.collection('blog')!;
 const posts = site.entries('blog', { locale });
 const heading = site.words(blog.label, LANG);
+// The page the blog is, where the content has one: its SEO and its name, in
+// this language.
+const listedAtBase = site.listingOf('blog', '');
+const ownPage = listedAtBase === undefined ? undefined : site.page(listedAtBase, locale);
+const seoWords = (key: string): string => (typeof ownPage?.seo[key] === 'string' ? (ownPage.seo[key] as string).trim() : '');
 // A listing exists in every language the site has.
 const alternates = EVERY_LOCALE.flatMap((one) => {
   const address = site.listingOf('blog', one);
@@ -47,7 +52,7 @@ const alternates = EVERY_LOCALE.flatMap((one) => {
 });
 ---
 
-<Layout title={heading} description="" alternates={alternates}>
+<Layout title={seoWords('title') || ownPage?.name?.trim() || heading} description={seoWords('description')} alternates={alternates}>
   <main id="content">
     <section class="listing listing--posts">
       <h1 data-jtk-fixed>{heading}</h1>

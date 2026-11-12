@@ -101,6 +101,10 @@ export { DEEPEST, ancestors, capped, descendants, grouped, groupField, pointersI
 // The platform's tappable kinds and where a specimen lives: rules.mjs, which
 // both contracts' readers ask.
 export { TAPPABLE, tappable, specimenId };
+// The merge of an original and its translation (wiki/98 §4.4): the one rule
+// the door serves a contract-3 page in another language by, for a tool or a
+// test that has one document to merge, and the fixture corpus it is held to.
+export { mergeDocument, overlay, layOf, kindOf, localizedIn, valueAt } from './overlay.mjs';
 
 /** Empty is absent: what a value that says nothing is spelt as, folded. */
 function isEmpty(value) {
@@ -304,6 +308,7 @@ export function content(files, options = {}) {
       // value on a page in one language is another's (contract3.mjs has the
       // merge where one is).
       fromBase: () => false,
+      lang: () => ({}),
       rows(key) {
         const list = values[key];
         if (!Array.isArray(list)) return [];
@@ -408,6 +413,8 @@ export function content(files, options = {}) {
         file: doc.file,
         blocks,
         block: find,
+        // Contract 2 keeps a file per language: a page is in its language's own words.
+        translated: true,
         get here() {
           return pageOf(doc, 'here');
         },
@@ -441,6 +448,7 @@ export function content(files, options = {}) {
       file: undefined,
       blocks: [],
       block: missing,
+      translated: false,
       get here() {
         return self;
       },
@@ -481,6 +489,9 @@ export function content(files, options = {}) {
         id: idOf(doc),
         collection: doc.collection,
         slug: doc.slug,
+        // A slug is the same in every language on contract 2.
+        baseSlug: doc.slug,
+        translated: true,
         locale: doc.locale,
         visible: doc.shown,
         seo: doc.seo,
@@ -751,6 +762,8 @@ export function content(files, options = {}) {
     /** An address in a language: `/about` → `/de/about`, `/` → `/de`. */
     inLocale: (locale, address) => inLocale(want(locale), address),
 
+    /** The language switch's languages: on contract 2 the alternates, the files a document has in each language. */
+    languagesOf: (document) => site.alternatesOf(document),
     alternatesOf(document) {
       if (document?.kind === 'page') {
         const self = documents.find((doc) => doc.file === document.file && doc.file !== undefined);
@@ -872,6 +885,8 @@ export function content(files, options = {}) {
     },
 
     words,
+    // Contract 2's words are said as they always were, unmarked.
+    wordsLang: () => '',
     tappable,
 
     /**

@@ -99,25 +99,25 @@ const contactAt = withForm !== -1 ? withForm : PAGE.blocks.length - 1;
       >
         <div class="band__inner">
           {block.text('eyebrow') && (
-            <p class="eyebrow" {...block.at('eyebrow')}>{block.text('eyebrow')}</p>
+            <p class="eyebrow" {...block.at('eyebrow')} {...block.lang('eyebrow')}>{block.text('eyebrow')}</p>
           )}
           {!carriesForm && block.text('title') && (
-            <h2 {...block.at('title')}>{block.text('title')}</h2>
+            <h2 {...block.at('title')} {...block.lang('title')}>{block.text('title')}</h2>
           )}
           {block.text('name') && (
-            <h2 {...block.at('name')}>{block.text('name')}</h2>
+            <h2 {...block.at('name')} {...block.lang('name')}>{block.text('name')}</h2>
           )}
           {block.text('role') && (
-            <p class="quiet" {...block.at('role')}>{block.text('role')}</p>
+            <p class="quiet" {...block.at('role')} {...block.lang('role')}>{block.text('role')}</p>
           )}
           {!carriesForm && block.text('lead') && (
-            <p class="lead" {...block.at('lead')}>{block.text('lead')}</p>
+            <p class="lead" {...block.at('lead')} {...block.lang('lead')}>{block.text('lead')}</p>
           )}
           {block.text('body') && (
-            <div class="prose" {...block.at('body')} set:html={block.text('body')} />
+            <div class="prose" {...block.at('body')} {...block.lang('body')} set:html={block.text('body')} />
           )}
           {block.text('bio') && (
-            <p class="prose" {...block.at('bio')}>{block.text('bio')}</p>
+            <p class="prose" {...block.at('bio')} {...block.lang('bio')}>{block.text('bio')}</p>
           )}
 
           {block.rows('items').length > 0 && (
@@ -125,19 +125,19 @@ const contactAt = withForm !== -1 ? withForm : PAGE.blocks.length - 1;
               {block.rows('items').map((row) => (
                 <li class="item" data-edge={edge}>
                   {row.text('title') && (
-                    <h3 {...row.at('title')}>{row.text('title')}</h3>
+                    <h3 {...row.at('title')} {...row.lang('title')}>{row.text('title')}</h3>
                   )}
                   {row.text('question') && (
-                    <h3 {...row.at('question')}>{row.text('question')}</h3>
+                    <h3 {...row.at('question')} {...row.lang('question')}>{row.text('question')}</h3>
                   )}
                   {row.text('text') && (
-                    <p {...row.at('text')}>{row.text('text')}</p>
+                    <p {...row.at('text')} {...row.lang('text')}>{row.text('text')}</p>
                   )}
                   {row.text('answer') && (
-                    <p {...row.at('answer')}>{row.text('answer')}</p>
+                    <p {...row.at('answer')} {...row.lang('answer')}>{row.text('answer')}</p>
                   )}
                   {row.text('label') && (
-                    <p {...row.at('label')}>{row.text('label')}</p>
+                    <p {...row.at('label')} {...row.lang('label')}>{row.text('label')}</p>
                   )}
                 </li>
               ))}
@@ -149,7 +149,7 @@ const contactAt = withForm !== -1 ? withForm : PAGE.blocks.length - 1;
               <a
                 class="btn"
                 href={linkTo(block.text('cta_href') || '#contact')}
-                {...block.at('cta_label')}
+                {...block.at('cta_label')} {...block.lang('cta_label')}
               >
                 {block.text('cta_label')}
               </a>

@@ -428,10 +428,11 @@ export async function lint(options = {}) {
  *
  *   - what stops the build before it builds, when it collects the content
  *     (`collect-content.mjs`, `collect3`): a `jtk/catalogue.json` beside
- *     `jtk/schema.json`, a translation (before M3 a contract-3 site has one
- *     language, §16), contract 2's `jtk/content/`, a document that is not
+ *     `jtk/schema.json`, contract 2's `jtk/content/`, a document that is not
  *     an object, an entry of a collection the schema does not declare — in
- *     the build's words and with no code, as the build says them;
+ *     the build's words and with no code, as the build says them. A
+ *     translation stops nothing since M3: it is laid over its original by
+ *     the door, and `jtk schema` judges what it holds;
  *   - the promises to search engines, as on contract 2;
  *   - `dist/_meta.json` in the shape the platform reads, `drafts` gone (§6):
  *     JTK_E_META_INVALID, which stops it;
@@ -439,7 +440,8 @@ export async function lint(options = {}) {
  *     a `_key` (§15 · 12): JTK_E_UNNAMED, each with its file and its fix;
  *   - the enquiry form, where only `collects: "enquiry"` collects (§3.2);
  *   - every filled value the owner taps (`client_editable: true`, §3.3)
- *     annotated where it is drawn, by key: a page's on the page; an entry's
+ *     annotated where it is drawn, by key, in every language the site has
+ *     (an annotation names no language, §5): a page's on the page; an entry's
  *     on its own page, or — with none — as `entry:<id>:…` wherever it is
  *     shown, and the page its collection's `shown_on` names built; a shared
  *     one somewhere;
@@ -472,13 +474,6 @@ async function lint3({ root, distDir, siteURL, now }) {
   }
   const files = await readJtk(root);
   {
-    const translations = Object.keys(files).filter((name) => isTranslation(name, files[name]));
-    if (translations.length > 0) {
-      throw new Error(
-        `${translations.map((name) => `${name.slice(1)} is a translation.`).join(' ')} Before M3 a contract-3 site has one language: the platform keeps one full copy per language until ` +
-          'its merge reads a translation laid over its original (wiki/98 §16). Take the translations out — they wait for M3 — or keep the site on contract 2 until then',
-      );
-    }
     const strays = Object.keys(files).filter((name) => name.startsWith('/jtk/content/'));
     if (strays.length > 0) {
       throw new Error(
@@ -525,15 +520,22 @@ async function lint3({ root, distDir, siteURL, now }) {
   for (const one of unnamed(files)) fault(CODES.UNNAMED, one.says);
 
   // In the build's order: the home first, then by address; entries by
-  // collection, then by slug.
-  const pages = own
+  // collection, then by slug. Every language's (M3): a page and an entry are
+  // built at their address in each language they are in, and annotated
+  // there by the same places — an annotation names no language (§5), and a
+  // translated page that drops one is a page the owner cannot tap in that
+  // language. The site's own language first, each language in the schema's
+  // order, as the door hands them.
+  const languages = ['', ...site.locales.slice(1)];
+  const byLanguage = (a, b) => languages.indexOf(a.locale) - languages.indexOf(b.locale);
+  const pages = documents
     .filter((one) => one.collection === undefined)
-    .sort((a, b) => (a.path === '/' ? -1 : b.path === '/' ? 1 : a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
-  const entries = own
+    .sort((a, b) => byLanguage(a, b) || (a.path === '/' ? -1 : b.path === '/' ? 1 : a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  const entries = documents
     .filter((one) => one.collection !== undefined)
-    .sort((a, b) => (a.collection !== b.collection ? (a.collection < b.collection ? -1 : 1) : a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0));
-  const pagesById = new Map(pages.filter((one) => one.id !== '').map((one) => [one.id, one]));
-  const entriesById = new Map(entries.filter((one) => one.id !== '').map((one) => [one.id, one]));
+    .sort((a, b) => byLanguage(a, b) || (a.collection !== b.collection ? (a.collection < b.collection ? -1 : 1) : a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0));
+  const pagesById = new Map(own.filter((one) => one.collection === undefined && one.id !== '').map((one) => [one.id, one]));
+  const entriesById = new Map(own.filter((one) => one.collection !== undefined && one.id !== '').map((one) => [one.id, one]));
 
   const htmlByPath = await builtHTML(distDir);
   const everywhere = [...htmlByPath.values()].join('\n');
@@ -692,17 +694,6 @@ async function lint3({ root, distDir, siteURL, now }) {
   out.entries = entries.length;
   out.shared = sharedBlocks.length > 0;
   return out;
-}
-
-/**
- * A translation's file, as the build finds one (`filesOf`): a page's or an
- * entry's `<name>.<locale>.json` beside its original, or one that says `of`
- * (§4.4); the shared text's `shared.<locale>.json`.
- */
-function isTranslation(name, body) {
-  if (/^\/jtk\/shared\.[A-Za-z]{2,3}(?:[-_][A-Za-z]{2})?\.json$/.test(name)) return true;
-  if (!/^\/jtk\/(?:pages\/.+|entries\/[^/]+\/[^/]+)\.json$/.test(name)) return false;
-  return /\.[A-Za-z]{2}(?:-[A-Za-z]{2})?\.json$/.test(name) || (isObject(body) && typeof body.of === 'string');
 }
 
 /**

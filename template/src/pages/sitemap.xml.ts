@@ -33,7 +33,10 @@ export const GET: APIRoute = async () => {
       for (const collection of site.collections.filter((one) => one.pages)) {
         for (const entry of site.entries(collection.name, { locale })) {
           // Below every page of the site and above nothing: an entry is worth
-          // crawling and is not what the site is for.
+          // crawling and is not what the site is for. In a language only
+          // where it is translated, as hreflang names it: an untranslated
+          // post at /en/ is the original's words at a second address.
+          if (!entry.translated) continue;
           if (entry.address !== undefined) urls.push({ loc: canonicalFor(slashed(entry.address)), priority: 0.5 });
         }
       }

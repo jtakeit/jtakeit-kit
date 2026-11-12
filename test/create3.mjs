@@ -6,10 +6,12 @@
 //      rates under jtk/entries — no jtk/catalogue.json, no jtk/content — and the
 //      words it is given are contract 3's
 //   2  the tree `--contract 2` and then `jtk upgrade contract-3` make, ids
-//      aside: one mapping, two roads to it
+//      aside: one mapping, two roads to it — in one language and in two
 //   3  built, `jtk schema` agrees with the page and `jtkit lint` finds nothing:
 //      a plain site, and a salon from the kit's fixture with rates and a blog
-//   4  what it refuses: a second language before M3, a site already there
+//   4  several languages on contract 3 (M3): the others in LOCALES, each one's
+//      copy in the kit's words; what it refuses: several at once on contract 2,
+//      a site already there
 //   5  every kit the platform has, laid out, built, judged and linted — when
 //      JTK_KITS_API names a platform (JTK_KITS_API=https://api.stg.jtakeit.com
 //      node test/create3.mjs); not in `npm test`, which asks no platform
@@ -120,10 +122,19 @@ try {
   if (existsSync(join(salon, 'jtk/bookings.json')) || existsSync(join(salon, 'jtk/content'))) fail('a kit left contract 2\'s files');
 
   // ── 2 · the same tree as contract 2, moved ────────────────────────────────
-  for (const [out, flags] of [['plain', ['--locale', 'de-CH']], ['salon', ['--locale', 'de-CH', '--kit', kitFile, '--blog', '--name', 'Salon Probe']]]) {
+  // Two languages: contract 3 lays them out at once; contract 2 in one, the
+  // other said in LOCALES by hand, as docs/languages.md says, then moved.
+  const twoRun = create('two', '--locale', 'de-CH', '--locales', 'en', '--name', 'Salon Probe');
+  if (twoRun.status !== 0) fail(`create in two languages failed:\n${twoRun.stderr}`);
+  for (const [out, flags, other] of [['plain', ['--locale', 'de-CH']], ['salon', ['--locale', 'de-CH', '--kit', kitFile, '--blog', '--name', 'Salon Probe']], ['two', ['--locale', 'de-CH', '--name', 'Salon Probe'], 'en']]) {
     const moved = join(dir, `${out}-moved`);
     run = create(`${out}-moved`, '--contract', '2', ...flags);
     if (run.status !== 0 || !existsSync(join(moved, 'jtk/catalogue.json'))) fail(`--contract 2 did not lay out contract 2:\n${run.stderr}`);
+    if (other !== undefined) {
+      const blocks = join(moved, 'src/content/blocks.ts');
+      writeFileSync(blocks, text(moved, 'src/content/blocks.ts').replace('export const LOCALES: string[] = [];', `export const LOCALES: string[] = ['${other}'];`));
+      execFileSync('node', [bin, 'catalogue', '--emit-only', '--root', moved], { stdio: 'pipe' });
+    }
     const up = spawnSync('node', [bin, 'upgrade', 'contract-3', '--root', moved, '--mint-ids', '--no-install'], { encoding: 'utf8' });
     if (up.status !== 0) fail(`jtk upgrade contract-3 on --contract 2:\n${up.stdout}\n${up.stderr}`);
     const a = settled(join(dir, out));
@@ -132,32 +143,41 @@ try {
     for (const file of Object.keys(a)) {
       if (JSON.stringify(a[file]) !== JSON.stringify(b[file])) fail(`${out}: ${file} is not what --contract 2 and jtk upgrade contract-3 make:\n  create ${JSON.stringify(a[file]).slice(0, 600)}\n  moved  ${JSON.stringify(b[file]).slice(0, 600)}`);
     }
+    // The other language's words, in the kit's, written alike on both roads.
+    if (other !== undefined && text(join(dir, out), `src/copy/${other}.ts`) !== text(moved, `src/copy/${other}.ts`)) fail(`${out}: src/copy/${other}.ts is not what the move writes`);
   }
 
-  // ── 4 · what it refuses ───────────────────────────────────────────────────
-  run = create('two', '--locale', 'de-CH,fr-CH');
-  if (run.status === 0 || !run.stderr.includes('JTK_E_TRANSLATION_BEFORE_M_THREE') || !run.stderr.includes('--contract 2') || existsSync(join(dir, 'two'))) fail(`two languages on contract 3 were not refused with the code: ${run.stderr}`);
-  run = create('two-more', '--locale', 'de', '--locales', 'en');
-  if (run.status === 0 || !run.stderr.includes('JTK_E_TRANSLATION_BEFORE_M_THREE')) fail('--locales on contract 3 was not refused');
+  // ── 4 · several languages on contract 3, and what it refuses ─────────────
+  const two = join(dir, 'two');
+  if (JSON.stringify(json(two, 'jtk/schema.json').locales) !== '["en"]') fail(`the schema does not say English: ${JSON.stringify(json(two, 'jtk/schema.json').locales)}`);
+  if (!/^export const LOCALES: string\[\] = \['en'\];$/m.test(text(two, 'src/content/blocks.ts'))) fail('LOCALES does not say English');
+  if (!/skipToContent: 'Skip to content'/.test(text(two, 'src/copy/en.ts')) || !/makeCopy\(site\.page\('\/', 'en'\), STRINGS\)/.test(text(two, 'src/copy/en.ts'))) fail('src/copy/en.ts is not English\'s words, reading English\'s home');
+  if (!twoRun.stdout.includes('en: a translation beside each page and entry')) fail(`the next steps do not say English:\n${twoRun.stdout}`);
+  run = create('three', '--locale', 'de-CH,fr-ch', '--locales', 'en');
+  if (run.status !== 0 || JSON.stringify(json(join(dir, 'three'), 'jtk/schema.json').locales) !== '["fr-CH","en"]' || !existsSync(join(dir, 'three', 'src/copy/fr-CH.ts'))) fail(`--locale with a comma and --locales together:\n${run.stderr}`);
+  run = create('nobody', '--locale', 'de', '--locales', 'xx-yy-zz');
+  if (run.status === 0 || !run.stderr.includes('is not a language')) fail(`a language that is none was not refused: ${run.stderr}`);
   run = create('two-old', '--contract', '2', '--locale', 'de,en');
   if (run.status === 0 || !run.stderr.includes('docs/languages.md')) fail('two languages at once on contract 2 were not sent to docs/languages.md');
   run = create('four', '--contract', '4');
   if (run.status === 0 || !run.stderr.includes('--contract takes 3')) fail('--contract 4 was not refused');
   run = spawnSync('node', [bin, 'create', '--help'], { encoding: 'utf8' });
-  if (run.status !== 0 || !run.stdout.includes('--contract') || !run.stdout.includes('JTK_E_TRANSLATION_BEFORE_M_THREE') || !run.stdout.includes('M3')) fail(`--help does not say which contract:\n${run.stdout}`);
+  if (run.status !== 0 || !run.stdout.includes('--contract') || !run.stdout.includes('--locales') || run.stdout.includes('M3')) fail(`--help does not say which contract and which languages:\n${run.stdout}`);
   // A site already there, not even with --force: contract 3 over contract 2's files, either over contract 3's.
   run = create('plain-moved', '--force');
   if (run.status === 0 || !run.stderr.includes('says contract 3')) fail(`a contract-3 tree was scaffolded over: ${run.stderr}`);
   run = create('salon-old', '--contract', '2', '--locale', 'en');
   run = create('salon-old', '--force');
   if (run.status === 0 || !run.stderr.includes('holds a contract-2 site') || existsSync(join(dir, 'salon-old', 'jtk/schema.json'))) fail(`a contract-2 tree was scaffolded over on contract 3: ${run.stderr}`);
-  console.log('create3: the tree, contract 3\'s words, the same as the move, the refusals');
+  console.log('create3: the tree, contract 3\'s words, the same as the move in one language and two, several languages, the refusals');
 
   // ── 3 · built, judged, linted ─────────────────────────────────────────────
   const packed = join(dir, execFileSync('npm', ['pack', resolve('kit'), '--pack-destination', dir], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim().split('\n').pop());
   judged(plain, packed, 'the plain scaffold');
   judged(salon, packed, 'the salon with a blog');
-  console.log('create3: built, jtk schema agrees with the page and jtkit lint finds nothing — plain, and a salon with a blog');
+  judged(two, packed, 'a site in two languages');
+  if (!text(two, 'dist/en/index.html').includes('<html lang="en"')) fail('a site in two languages has no English home');
+  console.log('create3: built, jtk schema agrees with the page and jtkit lint finds nothing — plain, a salon with a blog, and a site in two languages');
 
   // ── 5 · every kit the platform has ────────────────────────────────────────
   const api = process.env.JTK_KITS_API;

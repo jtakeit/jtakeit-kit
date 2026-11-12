@@ -49,6 +49,10 @@ export function everyPage(): Listed[] {
   for (const locale of EVERY_LOCALE) {
     const LANG = langOf(locale);
     for (const page of site.pages(locale)) {
+      // A page nobody translated is built in every language, in the
+      // original's words, and listed only in its own: the sitemap's rule is
+      // hreflang's (always translated on contract 2, a file per language).
+      if (!page.translated) continue;
       const home = page.address === withLocale(locale, '/');
       add(page.address, home ? 1.0 : 0.8, typeof page.seo.description === 'string' ? page.seo.description : '');
     }

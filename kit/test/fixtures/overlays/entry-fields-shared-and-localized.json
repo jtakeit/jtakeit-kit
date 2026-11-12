@@ -1,0 +1,372 @@
+{
+  "name": "entry-fields-shared-and-localized",
+  "schema": {
+    "contract": 3,
+    "locale": "de-CH",
+    "locales": [
+      "en",
+      "fr"
+    ],
+    "blocks": [
+      {
+        "type": "hero",
+        "v": 1,
+        "label": "Hero",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Title",
+            "kind": "text",
+            "client_editable": true
+          },
+          {
+            "key": "lead",
+            "label": "Lead",
+            "kind": "textarea",
+            "client_editable": true
+          },
+          {
+            "key": "image",
+            "label": "Photo",
+            "kind": "media",
+            "client_editable": true
+          },
+          {
+            "key": "poster",
+            "label": "Poster with words on it",
+            "kind": "media",
+            "localized": true,
+            "client_editable": true
+          },
+          {
+            "key": "link",
+            "label": "Link",
+            "kind": "url",
+            "client_editable": true
+          }
+        ]
+      },
+      {
+        "type": "prices",
+        "v": 1,
+        "label": "Prices",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Title",
+            "kind": "text",
+            "client_editable": true
+          },
+          {
+            "key": "items",
+            "label": "Rows",
+            "kind": "list",
+            "of": [
+              {
+                "key": "title",
+                "label": "Name",
+                "kind": "text",
+                "client_editable": true
+              },
+              {
+                "key": "price",
+                "label": "Price",
+                "kind": "money",
+                "qualifiers": [
+                  "from"
+                ],
+                "client_editable": true
+              },
+              {
+                "key": "extras",
+                "label": "Extras",
+                "kind": "list",
+                "of": [
+                  {
+                    "key": "label",
+                    "label": "Label",
+                    "kind": "text",
+                    "client_editable": true
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "gallery",
+        "v": 1,
+        "label": "Gallery",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Title",
+            "kind": "text",
+            "client_editable": true
+          },
+          {
+            "key": "pictures",
+            "label": "Pictures",
+            "kind": "media",
+            "multiple": true,
+            "client_editable": true
+          }
+        ]
+      },
+      {
+        "type": "contacts",
+        "v": 1,
+        "label": "Contacts",
+        "fields": [
+          {
+            "key": "name",
+            "label": "Name",
+            "kind": "text",
+            "role": "name",
+            "client_editable": true
+          },
+          {
+            "key": "phone",
+            "label": "Phone",
+            "kind": "tel",
+            "role": "phone",
+            "client_editable": true
+          },
+          {
+            "key": "hours_note",
+            "label": "Hours",
+            "kind": "textarea",
+            "client_editable": true
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "v": 1,
+        "label": "Text",
+        "fields": [
+          {
+            "key": "body",
+            "label": "Text",
+            "kind": "markdown",
+            "client_editable": true
+          }
+        ]
+      },
+      {
+        "type": "work",
+        "v": 1,
+        "label": "Work",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Title",
+            "kind": "text",
+            "required": true,
+            "client_editable": true
+          },
+          {
+            "key": "date",
+            "label": "Date",
+            "kind": "date"
+          },
+          {
+            "key": "price",
+            "label": "Price",
+            "kind": "money",
+            "client_editable": true
+          },
+          {
+            "key": "cover",
+            "label": "Cover",
+            "kind": "media",
+            "client_editable": true
+          },
+          {
+            "key": "category",
+            "label": "Category",
+            "kind": "ref",
+            "ref": {
+              "to": [
+                "categories"
+              ]
+            }
+          },
+          {
+            "key": "excerpt",
+            "label": "Excerpt",
+            "kind": "textarea",
+            "client_editable": true
+          },
+          {
+            "key": "brand",
+            "label": "Brand",
+            "kind": "text",
+            "localized": false,
+            "client_editable": true
+          }
+        ]
+      },
+      {
+        "type": "category",
+        "v": 1,
+        "label": "Category",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Name",
+            "kind": "text",
+            "required": true,
+            "client_editable": true
+          }
+        ]
+      }
+    ],
+    "page_seo": [
+      {
+        "key": "title",
+        "label": "Title",
+        "kind": "text"
+      },
+      {
+        "key": "description",
+        "label": "Description",
+        "kind": "textarea"
+      }
+    ],
+    "shared": [
+      "contacts"
+    ],
+    "collections": [
+      {
+        "name": "works",
+        "label": "Works",
+        "type": "work",
+        "route": {
+          "detail": "/werke/{slug}",
+          "listing": "/werke"
+        },
+        "blocks": [
+          "text",
+          "gallery"
+        ]
+      },
+      {
+        "name": "categories",
+        "label": "Categories",
+        "type": "category",
+        "route": {
+          "detail": "/kategorien/{slug}"
+        },
+        "untranslated": "hide"
+      }
+    ]
+  },
+  "base": {
+    "id": "0193a5c3-1b2a-7e44-8a10-6c2f9d3e4b55",
+    "collection": "works",
+    "slug": "eiche",
+    "rank": "a1",
+    "visible": true,
+    "seo": {
+      "title": "Eiche"
+    },
+    "fields": {
+      "title": "Eichentisch",
+      "date": "2026-03-01",
+      "price": {
+        "minor": 120000
+      },
+      "cover": {
+        "src": "media/s/c1.jpg",
+        "alt": "Ein Tisch aus Eiche"
+      },
+      "category": "0193a5c3-0a11-7d02-9f3c-1e2d3c4b5a61",
+      "excerpt": "Massiv.",
+      "brand": "Holzwerk"
+    },
+    "blocks": [
+      {
+        "_key": "b1",
+        "type": "text",
+        "v": 1,
+        "body": "Aus einem Stamm."
+      },
+      {
+        "_key": "g1",
+        "type": "gallery",
+        "v": 1,
+        "title": "Bilder",
+        "pictures": [
+          {
+            "_key": "p1",
+            "src": "media/s/p1.jpg",
+            "alt": "Kante"
+          }
+        ]
+      }
+    ]
+  },
+  "translation": {
+    "of": "0193a5c3-1b2a-7e44-8a10-6c2f9d3e4b55",
+    "locale": "en",
+    "slug": "oak",
+    "seo": {
+      "title": "Oak"
+    },
+    "fields": {
+      "title": "Oak table",
+      "cover": {
+        "alt": "A table of oak"
+      }
+    },
+    "blocks": [
+      {
+        "_key": "b1",
+        "type": "text",
+        "v": 1,
+        "body": "From one trunk."
+      }
+    ]
+  },
+  "locale": "en",
+  "merged": {
+    "id": "0193a5c3-1b2a-7e44-8a10-6c2f9d3e4b55",
+    "collection": "works",
+    "slug": "oak",
+    "rank": "a1",
+    "visible": true,
+    "seo": {
+      "title": "Oak"
+    },
+    "fields": {
+      "title": "Oak table",
+      "date": "2026-03-01",
+      "price": {
+        "minor": 120000
+      },
+      "cover": {
+        "src": "media/s/c1.jpg",
+        "alt": "A table of oak"
+      },
+      "category": "0193a5c3-0a11-7d02-9f3c-1e2d3c4b5a61",
+      "excerpt": "Massiv.",
+      "brand": "Holzwerk"
+    },
+    "blocks": [
+      {
+        "_key": "b1",
+        "type": "text",
+        "v": 1,
+        "body": "From one trunk."
+      }
+    ]
+  },
+  "fromBase": [
+    "fields.excerpt"
+  ],
+  "outdated": [],
+  "advice": [],
+  "refused": null
+}

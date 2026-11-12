@@ -52,11 +52,11 @@ jtk/shared.json          the text on every page: the business's contacts, by rol
 jtk/design.json          the design document the panel reads for the editor's chrome
 ```
 
-Contract 3 keeps a site in one language until the platform's M3 brings translations;
-before it, the platform refuses a second (`JTK_E_TRANSLATION_BEFORE_M_THREE`). A site
-that needs several now is laid out on contract 2 — `--contract 2`: `jtk/catalogue.json`
-and the documents under `jtk/content/` ([docs/languages.md](docs/languages.md)) — and
-moves with `npx @jtakeit/astro upgrade contract-3` once M3 is there.
+Another language is a translation beside each original, holding only its words
+(`jtk/pages/index.en.json`): `--locale de-CH --locales en` lays a site out in both, its
+English words that are not content in `src/copy/en.ts`
+([docs/languages.md](docs/languages.md)). A contract-2 site in several languages moves
+with `npx @jtakeit/astro upgrade contract-3`.
 
 A business that takes bookings starts from its **kit**, asked of the platform
 by its kind (`GET /v1/kits/<kind>`; the kinds are at `/v1/kits`):

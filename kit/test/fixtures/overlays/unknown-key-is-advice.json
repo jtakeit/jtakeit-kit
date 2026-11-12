@@ -1,0 +1,422 @@
+{
+  "name": "unknown-key-is-advice",
+  "schema": {
+    "contract": 3,
+    "locale": "de-CH",
+    "locales": [
+      "en",
+      "fr"
+    ],
+    "blocks": [
+      {
+        "type": "hero",
+        "v": 1,
+        "label": "Hero",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Title",
+            "kind": "text",
+            "client_editable": true
+          },
+          {
+            "key": "lead",
+            "label": "Lead",
+            "kind": "textarea",
+            "client_editable": true
+          },
+          {
+            "key": "image",
+            "label": "Photo",
+            "kind": "media",
+            "client_editable": true
+          },
+          {
+            "key": "poster",
+            "label": "Poster with words on it",
+            "kind": "media",
+            "localized": true,
+            "client_editable": true
+          },
+          {
+            "key": "link",
+            "label": "Link",
+            "kind": "url",
+            "client_editable": true
+          }
+        ]
+      },
+      {
+        "type": "prices",
+        "v": 1,
+        "label": "Prices",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Title",
+            "kind": "text",
+            "client_editable": true
+          },
+          {
+            "key": "items",
+            "label": "Rows",
+            "kind": "list",
+            "of": [
+              {
+                "key": "title",
+                "label": "Name",
+                "kind": "text",
+                "client_editable": true
+              },
+              {
+                "key": "price",
+                "label": "Price",
+                "kind": "money",
+                "qualifiers": [
+                  "from"
+                ],
+                "client_editable": true
+              },
+              {
+                "key": "extras",
+                "label": "Extras",
+                "kind": "list",
+                "of": [
+                  {
+                    "key": "label",
+                    "label": "Label",
+                    "kind": "text",
+                    "client_editable": true
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "gallery",
+        "v": 1,
+        "label": "Gallery",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Title",
+            "kind": "text",
+            "client_editable": true
+          },
+          {
+            "key": "pictures",
+            "label": "Pictures",
+            "kind": "media",
+            "multiple": true,
+            "client_editable": true
+          }
+        ]
+      },
+      {
+        "type": "contacts",
+        "v": 1,
+        "label": "Contacts",
+        "fields": [
+          {
+            "key": "name",
+            "label": "Name",
+            "kind": "text",
+            "role": "name",
+            "client_editable": true
+          },
+          {
+            "key": "phone",
+            "label": "Phone",
+            "kind": "tel",
+            "role": "phone",
+            "client_editable": true
+          },
+          {
+            "key": "hours_note",
+            "label": "Hours",
+            "kind": "textarea",
+            "client_editable": true
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "v": 1,
+        "label": "Text",
+        "fields": [
+          {
+            "key": "body",
+            "label": "Text",
+            "kind": "markdown",
+            "client_editable": true
+          }
+        ]
+      },
+      {
+        "type": "work",
+        "v": 1,
+        "label": "Work",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Title",
+            "kind": "text",
+            "required": true,
+            "client_editable": true
+          },
+          {
+            "key": "date",
+            "label": "Date",
+            "kind": "date"
+          },
+          {
+            "key": "price",
+            "label": "Price",
+            "kind": "money",
+            "client_editable": true
+          },
+          {
+            "key": "cover",
+            "label": "Cover",
+            "kind": "media",
+            "client_editable": true
+          },
+          {
+            "key": "category",
+            "label": "Category",
+            "kind": "ref",
+            "ref": {
+              "to": [
+                "categories"
+              ]
+            }
+          },
+          {
+            "key": "excerpt",
+            "label": "Excerpt",
+            "kind": "textarea",
+            "client_editable": true
+          },
+          {
+            "key": "brand",
+            "label": "Brand",
+            "kind": "text",
+            "localized": false,
+            "client_editable": true
+          }
+        ]
+      },
+      {
+        "type": "category",
+        "v": 1,
+        "label": "Category",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Name",
+            "kind": "text",
+            "required": true,
+            "client_editable": true
+          }
+        ]
+      }
+    ],
+    "page_seo": [
+      {
+        "key": "title",
+        "label": "Title",
+        "kind": "text"
+      },
+      {
+        "key": "description",
+        "label": "Description",
+        "kind": "textarea"
+      }
+    ],
+    "shared": [
+      "contacts"
+    ],
+    "collections": [
+      {
+        "name": "works",
+        "label": "Works",
+        "type": "work",
+        "route": {
+          "detail": "/werke/{slug}",
+          "listing": "/werke"
+        },
+        "blocks": [
+          "text",
+          "gallery"
+        ]
+      },
+      {
+        "name": "categories",
+        "label": "Categories",
+        "type": "category",
+        "route": {
+          "detail": "/kategorien/{slug}"
+        },
+        "untranslated": "hide"
+      }
+    ]
+  },
+  "base": {
+    "id": "0193a5c2-7f4e-7c1a-9b2e-5d1f0c3a8e21",
+    "path": "/preise",
+    "name": "Preise",
+    "seo": {
+      "title": "Preise",
+      "description": "Was es kostet"
+    },
+    "blocks": [
+      {
+        "_key": "hero",
+        "type": "hero",
+        "v": 1,
+        "title": "Unsere Preise",
+        "lead": "Fair und klar",
+        "image": {
+          "src": "media/s/a1.jpg",
+          "alt": "Der Salon",
+          "focus": "50% 30%"
+        },
+        "link": "https://example.ch/termin"
+      },
+      {
+        "_key": "list",
+        "type": "prices",
+        "v": 1,
+        "title": "Schnitte",
+        "items": [
+          {
+            "_key": "r1",
+            "title": "Haarschnitt",
+            "price": {
+              "minor": 4500,
+              "from": true
+            },
+            "extras": [
+              {
+                "_key": "x1",
+                "label": "Waschen"
+              },
+              {
+                "_key": "x2",
+                "label": "Föhnen"
+              }
+            ]
+          },
+          {
+            "_key": "r2",
+            "title": "Färben",
+            "price": {
+              "minor": 9000
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "translation": {
+    "of": "0193a5c2-7f4e-7c1a-9b2e-5d1f0c3a8e21",
+    "locale": "en",
+    "name": "Prices",
+    "blocks": [
+      {
+        "_key": "list",
+        "title": "Cuts",
+        "items": [
+          {
+            "_key": "gone",
+            "title": "Perm"
+          },
+          {
+            "_key": "r2",
+            "title": "Colour"
+          }
+        ]
+      },
+      {
+        "_key": "old",
+        "title": "A block removed"
+      }
+    ]
+  },
+  "locale": "en",
+  "merged": {
+    "id": "0193a5c2-7f4e-7c1a-9b2e-5d1f0c3a8e21",
+    "path": "/preise",
+    "name": "Prices",
+    "seo": {
+      "title": "Preise",
+      "description": "Was es kostet"
+    },
+    "blocks": [
+      {
+        "_key": "hero",
+        "type": "hero",
+        "v": 1,
+        "title": "Unsere Preise",
+        "lead": "Fair und klar",
+        "image": {
+          "src": "media/s/a1.jpg",
+          "alt": "Der Salon",
+          "focus": "50% 30%"
+        },
+        "link": "https://example.ch/termin"
+      },
+      {
+        "_key": "list",
+        "type": "prices",
+        "v": 1,
+        "title": "Cuts",
+        "items": [
+          {
+            "_key": "r1",
+            "title": "Haarschnitt",
+            "price": {
+              "minor": 4500,
+              "from": true
+            },
+            "extras": [
+              {
+                "_key": "x1",
+                "label": "Waschen"
+              },
+              {
+                "_key": "x2",
+                "label": "Föhnen"
+              }
+            ]
+          },
+          {
+            "_key": "r2",
+            "title": "Colour",
+            "price": {
+              "minor": 9000
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "fromBase": [
+    "seo.title",
+    "seo.description",
+    "blocks[hero].title",
+    "blocks[hero].lead",
+    "blocks[hero].image.alt",
+    "blocks[list].items[r1].title",
+    "blocks[list].items[r1].extras[x1].label",
+    "blocks[list].items[r1].extras[x2].label"
+  ],
+  "outdated": [],
+  "advice": [
+    "JTK_W_TRANSLATION_ORPHAN",
+    "JTK_W_TRANSLATION_ORPHAN"
+  ],
+  "refused": null
+}

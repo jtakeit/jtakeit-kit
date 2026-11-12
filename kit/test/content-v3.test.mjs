@@ -100,7 +100,9 @@ const schema = {
     { name: 'rates', label: 'Rates', type: 'rate', route: 'none', shown_on: ['/preise#{slug}'], order: 'manual', group: 'category' },
     { name: 'tags', label: 'Tags', type: 'tag', route: { detail: '/tags/{slug}' } },
   ],
-  modules: { bookings: { services: 'rates', resources: 'works' } },
+  // What people book is in every language, always (the owner, 12 November
+  // 2026): the rates and the tags, neither of them held back or hidden here.
+  modules: { bookings: { services: 'rates', resources: 'tags' } },
 };
 
 const work = (id, slug, fields, extra = {}, blocks) => ({
@@ -192,7 +194,7 @@ test('a schema.json saying contract 3 is read as contract 3; its languages are t
   assert.equal(site.locale, 'de');
   assert.deepEqual(site.locales, ['de', 'en', 'fr-CH']);
   assert.equal(site.currency, 'CHF');
-  assert.deepEqual(site.rolesOf('bookings'), { services: 'rates', resources: 'works' });
+  assert.deepEqual(site.rolesOf('bookings'), { services: 'rates', resources: 'tags' });
   // A schema.json that is not contract 3 is no catalogue: contract 2 reads catalogue.json.
   const two = content({ '/jtk/schema.json': { ...schema, contract: 2 }, '/jtk/catalogue.json': { locale: 'uk' } });
   assert.equal(two.contract, 2);
@@ -259,10 +261,11 @@ test('a translation beside its original is laid over it by key: its words, the o
   assert.equal(swiss.address, '/fr-ch');
   assert.equal(swiss.block('hero').text('title'), 'Hallo');
   assert.equal(swiss.block('hero').fromBase('title'), true);
+  // hreflang only where a translation is (jtakeit-core wiki/94 · M3): the
+  // Swiss French home is built, in the original's words, and is no alternate.
   assert.deepEqual(site.alternatesOf(site.page('/')), [
     { locale: '', address: '/' },
     { locale: 'en', address: '/en' },
-    { locale: 'fr-CH', address: '/fr-ch' },
   ]);
 });
 
@@ -322,14 +325,16 @@ test('an entry in a language: its translation\'s fields laid over, its body the 
   assert.deepEqual(site.alternatesOf(site.entry('works', 'eiche')), [
     { locale: '', address: '/werke/eiche' },
     { locale: 'en', address: '/en/works/oak' },
-    { locale: 'fr-CH', address: '/fr-ch/werke/eiche' },
-  ]);
-  assert.deepEqual(site.alternatesOf(site.entry('works', 'fenster')).map((one) => one.locale), ['', 'fr-CH'], 'not where it is held back');
+  ], 'only where a translation is: the Swiss French page is the original\'s words');
+  assert.deepEqual(site.alternatesOf(site.entry('works', 'fenster')), [], 'not where it is held back, nor where nobody translated it');
 });
 
 test('untranslated and visible: a hidden collection\'s entry is not in a language without its translation; a translation holds its language back', () => {
   assert.deepEqual(site.entries('categories', { locale: 'en' }).map((one) => one.slug), ['nails', 'beauty'], 'gel has no English and its collection hides it');
-  assert.equal(site.entry('categories', 'gel', 'en'), undefined);
+  // Hidden where nobody translated it, as a language held back is: built for
+  // the panel's preview, listed nowhere, no alternate (the platform's corpus).
+  assert.equal(site.entry('categories', 'gel', 'en').visible, false);
+  assert.deepEqual(site.entries('categories', { locale: 'en', all: true }).map((one) => [one.slug, one.visible]), [['nails', true], ['beauty', true], ['gel', false]]);
   assert.deepEqual(site.entries('works').map((one) => one.slug), ['granit', 'fenster', 'eiche']);
   assert.deepEqual(site.entries('works', { locale: 'en' }).map((one) => one.slug), ['granit', 'oak'], 'the pane is held back in English');
   assert.deepEqual(site.entries('works', { all: true }).map((one) => [one.slug, one.visible]), [['glas', false], ['granit', true], ['fenster', true], ['eiche', true]]);
@@ -552,7 +557,7 @@ test('documents(): every page and entry in each language it is in, with its id a
   const docs = site.documents();
   assert.ok(docs.some((one) => one.path === '/en/works/oak' && one.id === OAK && one.fields.title === 'Oak'));
   assert.ok(docs.some((one) => one.path === '/fr-ch/preise' && one.id === PRICES));
-  assert.ok(!docs.some((one) => one.locale === 'en' && one.slug === 'gel'));
+  assert.equal(docs.find((one) => one.locale === 'en' && one.slug === 'gel').shown, false, 'hidden in English, where nobody translated it and its collection hides the untranslated');
   assert.equal(docs.find((one) => one.slug === 'schnitt' && one.locale === '').path, undefined, 'shown only on another page: no address of its own');
 });
 

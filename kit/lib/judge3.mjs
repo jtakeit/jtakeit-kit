@@ -33,13 +33,16 @@
  * sentences are this kit's, in the platform's words where it has them.
  *
  * What is not here, on purpose: the judge of the files beside the schema —
- * pages, entries, a module's settings, a translation before M3 — which the
+ * pages, entries, a module's settings, a translation (lib/translations.mjs) — which the
  * platform's import applies and `--judge` asks it for; and `JTK_W_` advice,
  * the bookings module's, which `--judge` prints.
  *
- * Imports nothing but the codes: the dev server runs it on every save.
+ * Imports nothing but the codes and the merge's notion of what a module books
+ * (content/overlay.mjs, which imports nothing): the dev server runs it on
+ * every save.
  */
 import { E } from './codes.mjs';
+import { bookedIn } from './content/overlay.mjs';
 
 // ── the platform's constants, by their Go names ────────────────────────────
 
@@ -1019,6 +1022,16 @@ function validateCollection(j, reg, c, names, prefixes) {
   });
   if (c.untranslated !== '' && c.untranslated !== 'base' && c.untranslated !== 'hide') {
     say(E.ATTRIBUTE, `${path}.untranslated`, `collection ${q(c.name)} says untranslated ${q(c.untranslated)} — it is "base", the original shown, or "hide", the entry left out`);
+  } else if (c.untranslated === 'hide' && bookedIn({ modules: reg.modules }).has(c.name)) {
+    // An entry a module books is in every language, always (the owner, 12
+    // November 2026; `registry.Booked`): a language without its translation
+    // shows the original's words, never nothing.
+    const { module, role } = bookedIn({ modules: reg.modules }).get(c.name);
+    say(
+      E.ATTRIBUTE,
+      `${path}.untranslated`,
+      `collection ${q(c.name)} is the ${module} module's ${role}, and says untranslated "hide" — what a visitor books is in every language, always: a language without its translation shows the original's words, or the entry would be bookable in one language's form and missing from another's; leave untranslated out, or say "base"`,
+    );
   }
   return prefixes;
 }

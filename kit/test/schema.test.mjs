@@ -170,8 +170,8 @@ test('jtk schema refuses what the platform refuses, writes what it reads, and th
     const written = run(root, '--emit-only');
     assert.equal(written.status, 0, written.stderr);
     assert.match(written.stdout, /jtk\/schema\.json — 9 block type\(s\), 26 field\(s\)/);
-    // The languages are said as the platform holds them before M3.
-    assert.match(written.stderr, /names languages besides its own \(en, fr-CH\).*JTK_E_TRANSLATION_BEFORE_M_THREE/);
+    // Other languages are contract 3's since M3: nothing said of them.
+    assert.doesNotMatch(written.stderr, /JTK_E_TRANSLATION_BEFORE_M_THREE|before M3/);
     const expected = JSON.parse(fixture('kit-schema.json'));
     expected.blocks.find((one) => one.type === 'rate').fields.push({ key: 'takes', label: 'Dauer', kind: 'duration' });
     const text = readFileSync(join(root, 'jtk', 'schema.json'), 'utf8');
@@ -468,6 +468,33 @@ export const BLOCKS = [{ type: 'hero', v: 1, label: 'Hero', fields: [{ key: 'tit
     assert.equal(said.status, 2);
   } finally {
     behind.close();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('jtk schema judges the translations beside their originals as the platform will: a shared value refused, of resolved, an unknown _key advice', () => {
+  const HOME = '0193a5c2-7f4e-7c1a-9b2e-5d1f0c3a8e21';
+  const page = { id: HOME, path: '/', name: 'Start', blocks: [{ _key: 'list', type: 'prices', v: 1, title: 'Preise', items: [{ _key: 'r1', title: 'Schnitt', price: { minor: 4500 } }] }] };
+  const good = { of: HOME, locale: 'en', name: 'Home', blocks: [{ _key: 'list', title: 'Prices', items: [{ _key: 'r1', title: 'Cut' }, { _key: 'gone', title: 'Perm' }] }] };
+  const root = tree({
+    'src/content/blocks.ts': declaration(ORDER, withTakes),
+    'jtk/pages/index.json': page,
+    'jtk/pages/index.en.json': good,
+  });
+  try {
+    const fine = run(root, '--emit-only');
+    assert.equal(fine.status, 0, fine.stderr);
+    assert.match(fine.stderr, /· JTK_W_TRANSLATION_ORPHAN {2}jtk\/pages\/index\.en\.json blocks\[list\]\.items\[gone\]: /, 'advice, said and counting nothing');
+
+    writeFileSync(join(root, 'jtk/pages/index.en.json'), JSON.stringify({ ...good, blocks: [{ _key: 'list', items: [{ _key: 'r1', price: { minor: 5000 } }] }] }));
+    writeFileSync(join(root, 'jtk/pages/index.fr-CH.json'), JSON.stringify({ of: '0193a5c2-7f4e-7c1a-9b2e-5d1f0c3a8e99', locale: 'fr-CH', name: 'Accueil' }));
+    const refused = run(root, '--emit-only');
+    assert.equal(refused.status, 2, refused.stderr);
+    assert.match(refused.stderr, /2 thing\(s\) in the translations the platform will refuse/);
+    assert.match(refused.stderr, /✗ JTK_E_TRANSLATION_SHARED {2}jtk\/pages\/index\.en\.json blocks\[list\]\.items\[r1\]\.price: .*the base, everywhere/);
+    assert.match(refused.stderr, /✗ JTK_E_DOCUMENT_INVALID {2}jtk\/pages\/index\.fr-CH\.json of: /);
+    assert.equal(existsSync(join(root, 'jtk', 'schema.json')), true, 'the schema is written all the same: the translations are the files\' fault');
+  } finally {
     rmSync(root, { recursive: true, force: true });
   }
 });

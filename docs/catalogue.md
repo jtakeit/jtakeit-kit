@@ -7,9 +7,8 @@
 > `jtk/schema.json`, written and checked against the page by
 > `npx @jtakeit/astro schema` (jtakeit-core wiki/98; the declaration's own
 > header says the contract-3 words). This page is the catalogue of a site laid
-> out with `jtk create --contract 2` — one in several languages until the
-> platform's M3 — and what it says of declaring a field, annotating it and
-> checking it against the build holds on both.
+> out with `jtk create --contract 2`, and what it says of declaring a field,
+> annotating it and checking it against the build holds on both.
 
 The studio's admin edits a site by tapping the text on it. It can do that for a
 site built any way at all — any markup, any components, any layout — because it

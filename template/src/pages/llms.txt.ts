@@ -25,7 +25,8 @@ export const GET: APIRoute = async () => {
   // lands here is looking for what this business has said, and a title with an
   // address is the shortest honest form of it.
   const collections = EVERY_LOCALE.flatMap((locale) =>
-    site.collections.filter((one) => one.pages).map((collection) => ({ collection, locale, entries: site.entries(collection.name, { locale }) })),
+    // In a language only where translated, as the sitemap lists them.
+    site.collections.filter((one) => one.pages).map((collection) => ({ collection, locale, entries: site.entries(collection.name, { locale }).filter((entry) => entry.translated) })),
   );
 
   // The site's own language's: what the owner keeps in the panel's contacts,

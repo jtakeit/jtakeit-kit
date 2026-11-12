@@ -106,7 +106,7 @@ try {
   const declaration = read('src/content/blocks.ts');
   const city = /\{\s*"?key"?: ['"]city['"],[^{}]*?"?role"?: ['"]city['"][^{}]*\}/.exec(declaration)?.[0];
   if (city === undefined) fail('the moved declaration has no contacts city with its role');
-  write('src/content/blocks.ts', declaration.replace(city, `${city},\n      { key: 'street', label: 'Street', kind: 'text', max: 80, client_editable: true, no_tap_target: true, role: 'street', hint: 'The street and the number.' },\n      { key: 'postal_code', label: 'Postal code', kind: 'text', max: 10, client_editable: true, no_tap_target: true, role: 'postal_code', hint: 'The postcode.' }`));
+  write('src/content/blocks.ts', declaration.replace(city, `${city},\n      { key: 'street', label: 'Street', kind: 'text', max: 80, client_editable: true, no_tap_target: true, role: 'street', localized: false, hint: 'The street and the number.' },\n      { key: 'postal_code', label: 'Postal code', kind: 'text', max: 10, client_editable: true, no_tap_target: true, role: 'postal_code', localized: false, hint: 'The postcode.' }`));
   const schema = spawnSync('node', [bin, 'schema', '--emit-only', '--root', site], { encoding: 'utf8' });
   if (schema.status !== 0) fail(`jtk schema --emit-only:\n${schema.stdout}\n${schema.stderr}`);
   const shared = json('jtk/shared.json');
@@ -147,7 +147,153 @@ try {
     check(said.includes('the schema and the page agree'), `1 · contract 3: jtk schema and the page disagree:\n${said}`);
   }
   settle('contract 3, moved by jtk upgrade contract-3');
-  console.log('built: the scaffold, on contract 2 and contract 3, says what its content says');
+
+  // ── contract 3, in two languages (M3) ────────────────────────────────────
+  //
+  //  10  a translated page: its words in its language, the original's marked
+  //      with the original's lang; <html lang> the page's
+  //  11  a picture shared by both languages, changed once in the original
+  //  12  an entry held back in a language: built, listed nowhere, no alternate
+  //  13  hreflang, the sitemap and llms.txt in every language with a translation
+  //  14  jtk schema and jtkit lint and progress read the two languages
+  //  15  what people book is in every language: a master nobody translated
+  //      is in the English booking form, in German words marked de-CH
+  {
+    const photos = resolve('lib/showroom/photos');
+    mkdirSync(join(site, 'src/assets/media/probe'), { recursive: true });
+    writeFileSync(join(site, 'src/assets/media/probe/eins.jpg'), readFileSync(join(photos, 'pexels-11169551.jpg')));
+    writeFileSync(join(site, 'src/assets/media/probe/zwei.jpg'), readFileSync(join(photos, 'pexels-13058812.jpg')));
+    write('src/content/blocks.ts', read('src/content/blocks.ts').replace('export const LOCALES: string[] = [];', "export const LOCALES: string[] = ['en'];"));
+    // The one thing it says: English has no copy of its own yet (17, 22).
+    const emitted = spawnSync('node', [bin, 'schema', '--emit-only', '--root', site], { encoding: 'utf8' });
+    if (emitted.status !== 1 || !emitted.stderr.includes('src/copy/en.ts is not written')) fail(`jtk schema --emit-only in two languages:\n${emitted.stdout}\n${emitted.stderr}`);
+    if (JSON.stringify(json('jtk/schema.json').locales) !== '["en"]') fail('the schema does not say its second language');
+
+    const home3 = json('jtk/pages/index.json');
+    const hero = home3.blocks.find((one) => one.type === 'hero');
+    Object.assign(hero, { title: 'Schöne Haare', lead: 'Seit 1998 an der Langstrasse', image: { src: 'media/probe/eins.jpg', alt: 'Der Salon' } });
+    write('jtk/pages/index.json', home3);
+    write('jtk/pages/index.en.json', { of: home3.id, locale: 'en', name: 'Home', seo: { title: 'Beautiful hair' }, blocks: [{ _key: hero._key, title: 'Beautiful hair', image: { alt: 'The salon' } }] });
+    const post = json('jtk/entries/blog/erster.json');
+    write('jtk/entries/blog/erster.en.json', { of: post.id, locale: 'en', slug: 'first', visible: false, fields: { title: 'First post' } });
+    const anna = json('jtk/entries/masters/anna.json');
+    write('jtk/entries/masters/anna.en.json', { of: anna.id, locale: 'en', slug: 'anna', fields: { title: 'Anna Meier' } });
+    // A second master nobody has translated: what people book is in every
+    // language, always (the owner, 12 November 2026) — in the English form,
+    // in German words marked as German.
+    const cut = json('jtk/entries/services/cut.json');
+    write('jtk/entries/masters/beat.json', { id: '0193a5c3-0000-7000-8000-0000000000b1', collection: 'masters', slug: 'beat', rank: 'z', visible: true, fields: { title: 'Beat Keller', does: [cut.id] } });
+    // The city is per language; the business's name, street and postcode are
+    // the same in every language (localized: false), nothing to translate.
+    const shared3 = json('jtk/shared.json');
+    write('jtk/shared.en.json', { locale: 'en', blocks: [{ _key: shared3.blocks[0]._key, city: 'Zurich' }] });
+    // The page the services are listed on: its SEO, in both languages.
+    const services3 = json('jtk/pages/services.json');
+    write('jtk/pages/services.json', { ...services3, seo: { title: 'Preise und Termine', description: 'Was es kostet.' } });
+    write('jtk/pages/services.en.json', { of: services3.id, locale: 'en', name: 'Prices', seo: { title: 'Prices and times' } });
+
+    // The picture, changed once, in the original only.
+    build('https://salon-probe.example/');
+    const before = page('en');
+    check(/<img[^>]*src="\/_astro\/eins\.[^"]*"/.test(before), '11 · the English home does not draw the original\'s picture');
+    const changed = json('jtk/pages/index.json');
+    changed.blocks.find((one) => one.type === 'hero').image = { src: 'media/probe/zwei.jpg', alt: 'Der Salon' };
+    write('jtk/pages/index.json', changed);
+    build('https://salon-probe.example/');
+
+    const de = page('');
+    const en = page('en');
+    check(/<html lang="en"/.test(en), `10 · /en is not <html lang="en">: ${en.match(/<html[^>]*>/)?.[0]}`);
+    check(/<html lang="de-CH"/.test(de), '10 · / is not <html lang="de-CH">');
+    check(new RegExp(`<h1 data-jtk-path="blocks\\[${hero._key}\\]\\.title">Beautiful hair</h1>`).test(en), `10 · the English title is not drawn, annotated by key: ${en.match(/<h1[^>]*>[^<]*<\/h1>/)?.[0]}`);
+    check(new RegExp(`<p class="lead" data-jtk-path="blocks\\[${hero._key}\\]\\.lead" lang="de-CH">Seit 1998 an der Langstrasse</p>`).test(en), `10 · the untranslated lead is not the original's, marked lang="de-CH": ${en.match(/<p class="lead"[^>]*>[^<]*<\/p>/)?.[0]}`);
+    check(/<img[^>]*alt="The salon"/.test(en) && !/<img[^>]*alt="The salon"[^>]*lang=/.test(en), '10 · the English picture does not say its own words');
+    check(!/data-jtk-path="[^"]*"[^>]* lang="/.test(de), '10 · the original marks its own words with a lang');
+    for (const [where, html] of [['/', de], ['/en', en]]) {
+      check(/<img[^>]*src="\/_astro\/zwei\.[^"]*"/.test(html) && !/\/_astro\/eins\./.test(html), `11 · ${where} does not draw the picture changed once in the original`);
+    }
+    check(existsSync(join(site, 'dist/en/blog/first/index.html')), '12 · the held-back English post is not built (the panel previews it)');
+    check(!page('en/blog').includes('First post'), '12 · the held-back English post is listed at /en/blog');
+    check(!page('blog/erster').includes('hreflang="en"'), '12 · the post has an English alternate while it is held back');
+    check(page('masters/anna').includes('hreflang="en"') && page('en/masters/anna').includes('hreflang="de-CH"'), '13 · a translated entry has no alternates in both languages');
+    // 15 · what people book, in every language: the master nobody translated
+    // is in the English booking form, in German marked as German, named by
+    // the slug the diary books by; the translated one in English, unmarked.
+    const form = page('en/services');
+    check(/<option value="beat" data-does="cut" lang="de-CH"[^>]*>Beat Keller<\/option>/.test(form), `15 · the untranslated master is not in /en's booking form, marked de-CH: ${form.match(/<select[^>]*name="resource"[\s\S]*?<\/select>/)?.[0]}`);
+    check(/<option value="anna" data-does="cut"(?![^>]*\blang=)[^>]*>Anna Meier<\/option>/.test(form), '15 · the translated master is not in /en\'s booking form in its own words');
+    check(/value="cut"[^>]*>[\s\S]{0,200}?lang="de-CH"[^>]*>Haarschnitt</.test(form) || /<option value="cut" lang="de-CH"[^>]*>Haarschnitt<\/option>/.test(form), '15 · the untranslated service is not in /en\'s booking form, marked de-CH');
+    check(/<option value="beat" data-does="cut"(?![^>]*\blang=)[^>]*>Beat Keller<\/option>/.test(page('services')), '15 · the original\'s form marks its own words');
+    check(de.includes('hreflang="en"') && en.includes('hreflang="de-CH"') && de.includes('hreflang="x-default"'), '13 · the home pages do not name each other');
+    const sitemap = read('dist/sitemap.xml');
+    for (const address of ['en/', 'en/blog/', 'en/privacy/', 'en/masters/anna/', 'en/services/']) {
+      check(sitemap.includes(`<loc>https://salon-probe.example/${address}</loc>`), `13 · the sitemap has no /${address}`);
+    }
+    check(!sitemap.includes('/en/blog/first/'), '13 · the sitemap lists the held-back English post');
+    const llms = read('dist/llms.txt');
+    check(llms.split('\n').includes('- /en: '), `13 · llms.txt does not list the English home:\n${llms}`);
+    check(llms.includes('- /en/masters/anna/: Anna Meier') && !llms.includes('First post'), `13 · llms.txt does not list the English entries as they are out:\n${llms}`);
+
+    // 16 · hreflang names each alternate by its own language, once: on /en/ the
+    // original's said `en` (the rehearsal on staging, 12 November 2026).
+    for (const [where, html] of [['/en', en], ['/en/services', page('en/services')], ['/', de]]) {
+      const named = [...html.matchAll(/<link rel="alternate" hreflang="([^"]+)"/g)].map((one) => one[1]).sort();
+      check(JSON.stringify(named) === JSON.stringify(['de-CH', 'en', 'x-default']), `16 · ${where} names its alternates ${JSON.stringify(named)}`);
+    }
+
+    // 17 · with no English copy, what is not content is the original's words, marked.
+    check(/<a class="skip-link"[^>]*lang="de-CH"[^>]*>Zum Inhalt springen<\/a>/.test(en), `17 · /en's skip link is not marked de-CH: ${en.match(/<a class="skip-link"[^>]*>[^<]*<\/a>/)?.[0]}`);
+    check(/<p class="lead__status" role="status" data-status lang="de-CH">/.test(en), '17 · /en\'s form messages are not marked de-CH');
+    check(/<label class="field__label" for="lead-topic"[^>]*lang="de-CH"[^>]*>Worum es geht/.test(en) || !en.includes('Worum es geht'), `17 · /en's ask label is not marked de-CH: ${en.match(/<label[^>]*>Worum es geht/)?.[0]}`);
+    check(/<main id="content" class="prose" data-jtk-fixed lang="de-CH"/.test(page('en/privacy')), '17 · /en/privacy is not marked de-CH');
+    check(!/(?<![a-z])lang="de-CH"/.test(page('privacy').replace(/<html[^>]*>/, '').replace(/<a [^>]*hreflang[^>]*>/g, '')), '17 · the original\'s privacy page marks its own words');
+    const missingCopy = JSON.parse(spawnSync('node', [join(site, 'node_modules/@jtakeit/kit/bin/jtkit.mjs'), 'progress', '--root', site, '--json'], { encoding: 'utf8' }).stdout || '{}').missing ?? [];
+    check(missingCopy.some((one) => one.startsWith('src/copy/en.ts is not written')), `17 · jtkit progress does not name the English copy: ${JSON.stringify(missingCopy)}`);
+    const schemaSays = spawnSync('node', [bin, 'schema', '--root', site, '--emit-only'], { encoding: 'utf8' });
+    check(schemaSays.status === 1 && schemaSays.stderr.includes('src/copy/en.ts is not written') && schemaSays.stderr.includes('npx @jtakeit/astro copy en'), `17 · jtk schema does not name the English copy:\n${schemaSays.stderr}`);
+
+    // 18 · the listing's rows: the untranslated service in German, marked.
+    check(/<h[23][^>]*lang="de-CH"[^>]*>Haarschnitt<\/h[23]>/.test(page('en/services')), `18 · /en/services lists the untranslated service unmarked: ${page('en/services').match(/<h[23][^>]*>Haarschnitt<\/h[23]>/)?.[0]}`);
+
+    // 19 · a listing page reads its page's SEO, in its language, and names the business as its shared text does.
+    check(page('en/services').includes('<title>Prices and times — Coiffure Langstrasse</title>'), `19 · /en/services' title: ${page('en/services').match(/<title>[^<]*<\/title>/)?.[0]}`);
+    check(page('services').includes('<title>Preise und Termine — Coiffure Langstrasse</title>'), `19 · /services' title: ${page('services').match(/<title>[^<]*<\/title>/)?.[0]}`);
+    check(page('en/services').includes('<meta name="description" content="Was es kostet.">'), `19 · /en/services' description: ${page('en/services').match(/<meta name="description"[^>]*>/)?.[0]}`);
+    check(en.includes('<title>Beautiful hair</title>') || /<title>Beautiful hair[^<]*<\/title>/.test(en), '19 · the English home\'s title');
+
+    // 20 · an entry nobody translated: the switch goes to its English page; no hreflang, no sitemap line.
+    const beat = page('masters/beat');
+    check(/<a [^>]*href="\/en\/masters\/beat\/?"/.test(beat), `20 · /masters/beat has no switch to English: ${beat.match(/<nav[^>]*languages[\s\S]*?<\/nav>/)?.[0]}`);
+    check(!/<link rel="alternate" hreflang="en"/.test(beat), '20 · /masters/beat names an English alternate nobody translated');
+    check(/<link rel="alternate" hreflang="en"/.test(page('masters/anna')), '20 · /masters/anna has no English alternate');
+    const sitemap3 = read('dist/sitemap.xml');
+    check(!sitemap3.includes('/en/masters/beat/') && sitemap3.includes('/en/masters/anna/'), '20 · the sitemap lists an untranslated entry at its English address, or not a translated one');
+
+    // 21 · the privacy page says who «we» are under its last heading.
+    check(/<address>Coiffure Langstrasse<br>Langstrasse 12<br>8004 Zürich<br>\+41 44 123 45 67 · hallo@salon-probe\.example<\/address>/.test(page('privacy')), `21 · /privacy says nobody under «Über uns»: ${page('privacy').match(/<h2>[^<]*<\/h2>\s*(<address>[\s\S]*?<\/address>)?\s*<\/main>/)?.[0]}`);
+
+    // 22 · English's copy, written by the kit, and nothing of it falls back.
+    const copied = spawnSync('node', [bin, 'copy', 'en', '--root', site], { encoding: 'utf8' });
+    check(copied.status === 0 && existsSync(join(site, 'src/copy/en.ts')), `22 · jtk copy en:\n${copied.stdout}\n${copied.stderr}`);
+    build('https://salon-probe.example/');
+    const en2 = page('en');
+    check(/<a class="skip-link" href="#content" data-jtk-fixed>Skip to content<\/a>/.test(en2), `22 · /en's skip link after jtk copy: ${en2.match(/<a class="skip-link"[^>]*>[^<]*<\/a>/)?.[0]}`);
+    check(/<p class="lead__status" role="status" data-status>/.test(en2), '22 · /en\'s form messages are still marked after jtk copy');
+    check(/<main id="content" class="prose" data-jtk-fixed>/.test(page('en/privacy')) && !page('en/privacy').includes('Datenschutz'), '22 · /en/privacy is not in English after jtk copy');
+    check(/<p class="lead" [^>]*lang="de-CH">Seit 1998 an der Langstrasse<\/p>/.test(en2), '22 · the untranslated lead lost its mark');
+
+    const judged = spawnSync('node', [bin, 'schema', '--root', site, '--dist', join(site, 'dist')], { encoding: 'utf8' });
+    const said = `${judged.stdout}\n${judged.stderr}`;
+    check(judged.status === 0 && said.includes('the schema and the page agree') && !said.includes('JTK_E_DOCUMENT_INVALID'), `14 · jtk schema on two languages:\n${said}`);
+    const jtkit = join(site, 'node_modules/@jtakeit/kit/bin/jtkit.mjs');
+    const linted = spawnSync('node', [jtkit, 'lint', '--root', site, '--dist', join(site, 'dist'), '--site-url', 'https://salon-probe.example/'], { encoding: 'utf8' });
+    check(linted.status === 0, `14 · jtkit lint on two languages:\n${linted.stdout}\n${linted.stderr}`);
+    const progress = spawnSync('node', [jtkit, 'progress', '--root', site, '--json'], { encoding: 'utf8' });
+    const english = JSON.parse(progress.stdout || '{}').languages?.find((one) => one.locale === 'en');
+    check(english !== undefined && english.held === 1 && english.missing.includes('jtk/pages/index.en.json blocks[' + hero._key + '].lead'), `14 · jtkit progress does not say what English lacks: ${JSON.stringify(english)}`);
+  }
+  settle('contract 3, in two languages');
+  console.log('built: the scaffold, on contract 2 and contract 3, in one language and two, says what its content says');
 } finally {
   if (!process.env.KEEP_BUILT) rmSync(dir, { recursive: true, force: true });
   else console.log(`built: kept ${dir}`);

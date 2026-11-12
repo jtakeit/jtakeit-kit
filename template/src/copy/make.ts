@@ -64,7 +64,7 @@ export interface Strings {
  * the admin can remove one, and a build that threw for it would make
  * removing a section a deploy incident.
  */
-export function makeCopy(page: Page, S: Strings) {
+export function makeCopy(page: Page, S: Strings, wordsLang = '') {
   const hero = page.block('hero');
   const cta = page.block('cta_banner');
   // The photograph and its words through the door: one picture, `{ src, alt }`
@@ -126,6 +126,14 @@ export function makeCopy(page: Page, S: Strings) {
     LISTING,
     A11Y: S.a11y,
     PAGE: page,
+    /**
+     * The language of the words above that are not content — the form's
+     * messages, the privacy page, the skip link, a listing's pager — where it
+     * is not the page's: the site's own, on a page in a language this site
+     * has no copy of (src/copy/index.ts). `''` where they are the page's. Put
+     * it on what says them, as `lang`.
+     */
+    WORDS_LANG: wordsLang,
   };
 }
 

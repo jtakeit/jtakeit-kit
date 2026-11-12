@@ -75,10 +75,12 @@ once, to `create_site` (or as `currency` at the top of `jtk/site.json`, which an
 import takes while the site has none), and a person changes it in the panel
 after that.
 
-A contract-3 site is in one language until the platform's M3 brings
-translations: before it, the platform refuses a second
-(`JTK_E_TRANSLATION_BEFORE_M_THREE`). A site in several languages now is laid
-out with `jtk create --contract 2`, contract 2's files exactly as they were:
+A contract-3 site in several languages is laid out with `--locales`
+(`jtk create probe --locale de-CH --locales en`): each other language a
+translation beside every original, its words that are not content in
+`src/copy/<locale>.ts` ([languages.md](languages.md)). `jtk create
+--contract 2` lays out contract 2's files exactly as they were, in one
+language:
 
 ```
 jtk/catalogue.json    what the owner may edit — derived from src/content/blocks.ts by `jtk catalogue`;

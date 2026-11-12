@@ -57,6 +57,8 @@ const { HOME } = copyFor(locale);
 // The home page of this language, by its address, as the door finds every
 // page — and the languages it exists in, for hreflang.
 const alternates = site.alternatesOf(site.page('/', locale));
+// And every language it can be read in, for the switch.
+const languages = site.languagesOf(site.page('/', locale));
 import design from '../../../jtk/design.json';
 
 const painted =
@@ -66,7 +68,7 @@ const surface = design.surface ?? {};
 const grounded = Boolean(surface.pattern);
 ---
 
-<Layout title={HOME.title} description={HOME.description} suffix={false} alternates={alternates}>
+<Layout title={HOME.title} description={HOME.description} suffix={false} alternates={alternates} languages={languages}>
   {
     grounded && (
       <Pattern

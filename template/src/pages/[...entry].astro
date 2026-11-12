@@ -84,6 +84,9 @@ const locale = entry.locale;
 const LANG = langOf(locale);
 const { LISTING } = copyFor(locale);
 const alternates = site.alternatesOf(entry);
+// Every language it can be read in, for the switch — in the original's words
+// where nobody translated it; hreflang names only the translated.
+const languages = site.languagesOf(entry);
 
 /*
  * Whether this entry's type has a body at all. A post has; a car, a doctor, an
@@ -337,7 +340,7 @@ const schema = hasBody
   : undefined;
 ---
 
-<Layout title={said('title') || title} description={said('description') || excerpt} schema={schema} alternates={alternates}>
+<Layout title={said('title') || title} description={said('description') || excerpt} schema={schema} alternates={alternates} languages={languages}>
   <main id="content">
     <article class="entry">
       {
@@ -352,7 +355,7 @@ const schema = hasBody
           </nav>
         )
       }
-      <h1 {...fields.at('title')}>{title}</h1>
+      <h1 {...fields.at('title')} {...fields.lang('title')}>{title}</h1>
 
       {
         cover && (
@@ -405,7 +408,7 @@ const schema = hasBody
         editor opens it full screen — nine hundred words is not a popover — and
         what is inside is markdown Astro rendered, pictures and all.
       */}
-      {hasBody && <div class="entry-body" {...fields.at('body')}><Content /></div>}
+      {hasBody && <div class="entry-body" {...fields.at('body')} {...fields.lang('body')}><Content /></div>}
 
       {/*
         And the rest of the post, in the order the owner put it in.
@@ -437,7 +440,7 @@ const schema = hasBody
             return (
               <div
                 class="entry-body"
-                {...block.at('body')}
+                {...block.at('body')} {...block.lang('body')}
                 set:html={texts[at] ?? ''}
               />
             );

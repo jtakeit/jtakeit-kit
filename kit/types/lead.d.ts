@@ -13,6 +13,8 @@ export interface Ask {
   max?: number;
   min?: number;
   options?: { value: string; label: string }[];
+  /** The label's language where it is not the page's (`site.wordsLang`): words the declaration wrote once, in the site's own. */
+  lang?: string;
 }
 
 export interface LeadCopy {
@@ -61,6 +63,11 @@ export interface LeadFormProps {
   photos?: number;
   /** The page's language, for the photo control's words, and for the labels and the button where `copy` leaves them empty (`leadWords`). */
   lang?: string;
+  /**
+   * The language of `copy`'s messages where it is not the page's — the site's own, for a language
+   * that has no copy of its own: the status line and the field errors, which say only them, carry it.
+   */
+  wordsLang?: string;
 }
 
 /** The form's own labels and its button, said where the collecting block leaves its words empty. */

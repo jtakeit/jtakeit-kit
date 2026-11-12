@@ -33,7 +33,7 @@ const shot = hero.picture('image');
 
 <div class="hero__inner">
   {HOME.hero.eyebrow && (
-    <p class="eyebrow" {...hero.at('eyebrow')}>{HOME.hero.eyebrow}</p>
+    <p class="eyebrow" {...hero.at('eyebrow')} {...hero.lang('eyebrow')}>{HOME.hero.eyebrow}</p>
   )}
   {/* Guarded like everything else around it, and it is the one that was not.
       `title` is `required: true` in the catalogue, so a real page always has
@@ -41,14 +41,14 @@ const shot = hero.picture('image');
       where an empty <h1> is worth nothing to a reader and made `jtk catalogue`
       fail on a project nobody had edited yet. */}
   {HOME.hero.heading && (
-    <h1 {...hero.at('title')}>{HOME.hero.heading}</h1>
+    <h1 {...hero.at('title')} {...hero.lang('title')}>{HOME.hero.heading}</h1>
   )}
   {HOME.hero.lead && (
-    <p class="lead" {...hero.at('lead')}>{HOME.hero.lead}</p>
+    <p class="lead" {...hero.at('lead')} {...hero.lang('lead')}>{HOME.hero.lead}</p>
   )}
   {HOME.hero.cta && (
     <p class="actions">
-      <a class="btn" href={linkTo(HOME.hero.ctaHref)} {...hero.at('cta_label')}>
+      <a class="btn" href={linkTo(HOME.hero.ctaHref)} {...hero.at('cta_label')} {...hero.lang('cta_label')}>
         {HOME.hero.cta}
       </a>
     </p>
@@ -60,6 +60,7 @@ const shot = hero.picture('image');
     <Shot
       name={shot.src}
       alt={shot.alt}
+      lang={shot.lang}
       path={shot['data-jtk-path']}
       class="hero__shot"
       eager

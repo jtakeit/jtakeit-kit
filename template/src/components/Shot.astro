@@ -37,6 +37,12 @@ interface Props {
   /** Overrides the alt text registered in photos.ts. */
   alt?: string;
   /**
+   * The language of `alt`, where it is not the page's: a picture's words the
+   * door hands out as the original's on a page in another language
+   * (`picture('image').lang`, contract 3). Put on the `<img>`.
+   */
+  lang?: string;
+  /**
    * CSS aspect-ratio for the frame, e.g. '4 / 5'. Omit it to let the photograph
    * keep its own proportions — client photos are shot in every orientation and
    * a square crop takes the subject out of half of them.
@@ -119,6 +125,7 @@ const {
   sizes = '(min-width: 900px) 50vw, 92vw',
   caption,
   path,
+  lang,
   decorative = false,
   treatment = (design.photos?.treatment || 'none') as Treatment,
   /* 0 in the document means unchosen, the same as everywhere else in it — a
@@ -196,6 +203,7 @@ const placement = `--shot-fit:${fit};--shot-focus:${focus}`;
         <Image
           src={src}
           alt={text}
+          lang={lang}
           data-jtk-path={path}
           widths={[Math.round(width / 2), width, width * 2]}
           sizes={sizes}
