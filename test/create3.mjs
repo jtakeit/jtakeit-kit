@@ -16,6 +16,9 @@
 //      question's words and the button, in the site's language on the home
 //      page and in each other language's translation, in the kit's words —
 //      and on /en the question is English, tappable and annotated
+//   7  a kit served with contract 3's words on it — a master's name
+//      `"localized": false` (jtakeit-core #223): kept on contract 3, left out
+//      on contract 2, whose files are then the kit's without it, byte for byte
 //   5  every kit the platform has, laid out, built, judged and linted — when
 //      JTK_KITS_API names a platform (JTK_KITS_API=https://api.stg.jtakeit.com
 //      node test/create3.mjs); not in `npm test`, which asks no platform
@@ -200,15 +203,49 @@ try {
   if (run.status === 0 || !run.stderr.includes('docs/languages.md')) fail('two languages at once on contract 2 were not sent to docs/languages.md');
   run = create('four', '--contract', '4');
   if (run.status === 0 || !run.stderr.includes('--contract takes 3')) fail('--contract 4 was not refused');
+  // A new site is on the latest contract, always: --help says which, and
+  // offers no other — `--contract 2` is the kit's tests' and a move's
+  // rehearsal's, not a new site's (the owner, 12 November 2026).
   run = spawnSync('node', [bin, 'create', '--help'], { encoding: 'utf8' });
-  if (run.status !== 0 || !run.stdout.includes('--contract') || !run.stdout.includes('--locales') || run.stdout.includes('M3')) fail(`--help does not say which contract and which languages:\n${run.stdout}`);
+  if (run.status !== 0 || !run.stdout.includes('contract 3') || run.stdout.includes('--contract') || !run.stdout.includes('--locales') || run.stdout.includes('M3')) fail(`--help does not say which contract and which languages, or offers --contract:\n${run.stdout}`);
+  run = spawnSync('node', [bin], { encoding: 'utf8' });
+  if (run.stderr.includes('--contract')) fail(`jtk's usage offers --contract:\n${run.stderr}`);
   // A site already there, not even with --force: contract 3 over contract 2's files, either over contract 3's.
   run = create('plain-moved', '--force');
   if (run.status === 0 || !run.stderr.includes('says contract 3')) fail(`a contract-3 tree was scaffolded over: ${run.stderr}`);
   run = create('salon-old', '--contract', '2', '--locale', 'en');
   run = create('salon-old', '--force');
   if (run.status === 0 || !run.stderr.includes('holds a contract-2 site') || existsSync(join(dir, 'salon-old', 'jtk/schema.json'))) fail(`a contract-2 tree was scaffolded over on contract 3: ${run.stderr}`);
-  console.log('create3: the tree, contract 3\'s words, the same as the move in one language and two, several languages, the refusals');
+
+  // ── 7 · a kit served with contract 3's words on it ───────────────────────
+  // A person's name is the same in every language: the platform says
+  // `"localized": false` on the salon's masters' title (jtakeit-core #223)
+  // and serves the kit in contract 2's words with it on. Contract 3 keeps
+  // it; contract 2 leaves it out — its schema has no such key, and the
+  // platform refuses one that writes it — and lays out byte for byte what
+  // the kit without it does.
+  {
+    const said = structuredClone(kit);
+    said.catalogue.blocks.find((one) => one.type === 'master').fields.find((one) => one.key === 'title').localized = false;
+    const saidFile = join(dir, 'salon-localized.json');
+    writeFileSync(saidFile, JSON.stringify(said));
+    for (const [out, file] of [['kit-two', kitFile], ['kit-two-said', saidFile]]) {
+      run = create(out, '--contract', '2', '--locale', 'de-CH', '--kit', file, '--name', 'Salon Probe');
+      if (run.status !== 0 || !existsSync(join(dir, out, 'jtk/catalogue.json'))) fail(`7 · --contract 2 --kit ${file}:\n${run.stderr}`);
+    }
+    for (const file of ['jtk/catalogue.json', 'src/content/blocks.ts']) {
+      const two = text(join(dir, 'kit-two-said'), file);
+      if (/"localized"/.test(two)) fail(`7 · contract 2's ${file} says localized, which its schema has no key for`);
+      if (two !== text(join(dir, 'kit-two'), file)) fail(`7 · contract 2's ${file} is not what the kit without contract 3's words lays out`);
+    }
+    run = spawnSync('node', [bin, 'catalogue', '--emit-only', '--root', join(dir, 'kit-two-said')], { encoding: 'utf8' });
+    if (run.status !== 0) fail(`7 · jtk catalogue refuses the kit laid out on contract 2:\n${run.stdout}\n${run.stderr}`);
+    run = create('kit-three-said', '--locale', 'de-CH', '--kit', saidFile, '--name', 'Salon Probe');
+    if (run.status !== 0) fail(`7 · --kit on contract 3:\n${run.stderr}`);
+    const title = json(join(dir, 'kit-three-said'), 'jtk/schema.json').blocks.find((one) => one.type === 'master')?.fields?.find((one) => one.key === 'title');
+    if (title?.localized !== false) fail(`7 · contract 3 does not keep a master's name the same in every language: ${JSON.stringify(title)}`);
+  }
+  console.log('create3: the tree, contract 3\'s words, the same as the move in one language and two, several languages, the refusals, a kit\'s contract-3 words on each contract');
 
   // ── 3 · built, judged, linted ─────────────────────────────────────────────
   const packed = join(dir, execFileSync('npm', ['pack', resolve('kit'), '--pack-destination', dir], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim().split('\n').pop());

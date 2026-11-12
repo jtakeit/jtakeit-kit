@@ -5,7 +5,8 @@
  *   jtkit apply --kit <kind>|<file> [--locale uk] [--api <url>] [--root <dir>]
  *       lay a booking kit out: jtk/bookings.json, the rates as entries, and the
  *       kit's types, collections and module into jtk/catalogue.json — contract 2's
- *       files, so a contract-3 tree is refused
+ *       files, so a contract-3 tree is refused, and the kit's types without the
+ *       keys only contract 3 has (a person's name said "localized": false)
  *   jtkit catalogue [--declaration src/content/blocks.ts] [--emit-only] [--dist ./dist] [--judge]
  *       write jtk/catalogue.json from a declaration and check it against the built pages;
  *       on a contract-3 tree, mint the ids and _keys and write no catalogue
