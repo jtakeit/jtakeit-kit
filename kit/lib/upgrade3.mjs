@@ -35,7 +35,9 @@
  */
 import { ID, KEY } from './content/contract3.mjs';
 import { uuid7, newKey } from './content/identity.mjs';
-import { canonicalLocale } from './content/locale.mjs';
+import { baseAddressOf, canonicalLocale, localeOfAddress } from './content/locale.mjs';
+import { layOf } from './content/overlay.mjs';
+import { canonicalJSON, digest } from './translations.mjs';
 
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const clone = (value) => structuredClone(value);
@@ -476,15 +478,9 @@ export function tablesOf(declared, ctx = {}) {
   const questions = [];
   const notes = [];
   const locale = canonicalLocale(declared.LOCALE) ?? declared.LOCALE;
+  // Its other languages, as declared: each document in one of them becomes
+  // a translation beside its original (M3, wiki/95 §6), in documentsOf.
   const locales = Array.isArray(declared.LOCALES) ? declared.LOCALES : [];
-  if (locales.length > 0) {
-    return {
-      tables: {},
-      questions,
-      notes,
-      refused: `the site is in ${[locale, ...locales].join(', ')}, and before M3 the platform keeps a contract-3 site in one language — its import refuses a schema with others (JTK_E_TRANSLATION_BEFORE_M_THREE, wiki/98 §16). Keep the site on contract 2 until M3 brings translations; nothing was written.`,
-    };
-  }
   const modules = isObject(declared.MODULES) ? declared.MODULES : {};
   const collections = Array.isArray(declared.COLLECTIONS) ? declared.COLLECTIONS : [];
   const whole = wholeOf(declared);
@@ -516,7 +512,7 @@ export function tablesOf(declared, ctx = {}) {
   const tables = {
     CONTRACT: 3,
     LOCALE: locale,
-    LOCALES: [],
+    LOCALES: locales,
     BLOCKS: blocks,
     PAGE_SEO: fields3(Array.isArray(declared.PAGE_SEO) ? declared.PAGE_SEO : []),
     SHARED: shared,
@@ -628,6 +624,15 @@ export function documentsOf(files, how) {
   const minted = { ids: [], ranks: [], keys: 0, rekeyed: 0 };
   /** The text fields already asked about as prices, one question a field. */
   const priced = new Set();
+  /**
+   * A question about a value, asked while the originals are read; a copy in
+   * another language is read quietly — its shared values are judged against
+   * the original's, and its words stay words — so nothing is asked twice.
+   */
+  let quiet = false;
+  const ask = (question) => {
+    if (!quiet) questions.push(question);
+  };
 
   const typesFrom = new Map((Array.isArray(from.blocks) ? from.blocks : []).filter(isObject).map((one) => [one.type, one]));
   const typesTo = new Map((Array.isArray(to.blocks) ? to.blocks : []).filter(isObject).map((one) => [one.type, one]));
@@ -636,18 +641,45 @@ export function documentsOf(files, how) {
   const locale = to.locale ?? '';
 
   // ── the documents, as contract 2 holds them ──────────────────────────────
+  //
+  // One full copy per language (wiki/95 §0): the original in the site's own
+  // language, and each other language's copy at its own path (`/en/prices`),
+  // saying its `locale`. The originals move as they are; each copy becomes a
+  // translation beside its original (M3, wiki/95 §6), below.
+  const others = (Array.isArray(to.locales) ? to.locales : []).map(canonicalLocale).filter((one) => one !== null);
   const documents = [];
+  /** The copies in another language, each to be laid beside its original. */
+  const copies = [];
   for (const [file, raw] of Object.entries(files)) {
     if (!file.startsWith('/jtk/content/') || !isObject(raw)) continue;
-    const path = typeof raw.path === 'string' && raw.path.length > 1 ? raw.path.replace(/\/+$/, '') : raw.path;
+    const said = typeof raw.path === 'string' && raw.path.length > 1 ? raw.path.replace(/\/+$/, '') : raw.path;
+    const language = languageOfDocument(raw, others, to.locale);
+    const path = typeof said === 'string' ? baseAddressOf(said, language) : said;
     const collection = typeof raw.collection === 'string' && raw.collection !== '' ? raw.collection : undefined;
     let slug;
     if (collection !== undefined) {
       const prefix = (collectionsFrom.get(collection)?.prefix ?? '').replace(/\/+$/, '');
       slug = prefix !== '' && path.startsWith(`${prefix}/`) ? path.slice(prefix.length + 1) : path.split('/').filter(Boolean).pop() ?? '';
     }
-    documents.push({ file, raw, path, collection, slug });
+    (language === '' ? documents : copies).push({ file, raw, path, collection, slug, language });
   }
+  // A copy with no original: a page or an entry written only in another
+  // language. It moves as the original — in that language's words — and a
+  // person is asked, since contract 3 has every document in the site's own
+  // language first.
+  for (const copy of copies) {
+    copy.original = documents.find((doc) => doc.collection === copy.collection && (copy.collection === undefined ? doc.path === copy.path : doc.slug === copy.slug));
+  }
+  for (const copy of copies.filter((one) => one.original === undefined)) {
+    if (documents.some((doc) => doc.collection === copy.collection && (copy.collection === undefined ? doc.path === copy.path : doc.slug === copy.slug))) continue;
+    documents.push({ ...copy, language: '' });
+    questions.push({
+      what: 'a document only in another language',
+      where: copy.file.slice(1),
+      ask: `${copy.file.slice(1)} is in ${copy.language}, and the site's own language (${to.locale}) has no such ${copy.collection === undefined ? 'page' : 'entry'}: it was moved as the original, in ${copy.language}'s words — translate it into ${to.locale} in the original's file, and write ${copy.language}'s beside it.`,
+    });
+  }
+  const translationCopies = copies.filter((one) => one.original !== undefined);
 
   // ── the ids (§4.3): the file's, the platform's, or a new one ─────────────
   const platformId = (doc) =>
@@ -744,9 +776,9 @@ export function documentsOf(files, how) {
   function value3(held, was, now, where, orphans, key) {
     switch (now.kind) {
       case 'money': {
-        if (typeof held === 'number') return Number.isInteger(held) ? { minor: held } : (questions.push({ what: 'a price that is not whole minor units', where, ask: `${where} is ${held}, and a price is whole minor units (4500 is 45.00) — what is the amount? It is kept as it was.` }), held);
+        if (typeof held === 'number') return Number.isInteger(held) ? { minor: held } : (ask({ what: 'a price that is not whole minor units', where, ask: `${where} is ${held}, and a price is whole minor units (4500 is 45.00) — what is the amount? It is kept as it was.` }), held);
         if (isObject(held)) return held;
-        questions.push({
+        ask({
           what: 'a price written as text',
           where,
           ask: `${where} says «${String(held)}» in a price — the amount and whether it is «from» or «on request» have to be read by someone: ${guessPrice(held)}? It stays as it is until then, and the platform refuses the tree while a price holds words (JTK_E_CONTENT_FILE_INVALID).`,
@@ -783,7 +815,7 @@ export function documentsOf(files, how) {
       }
       case 'number': {
         if (now.integer === true && typeof held === 'number' && !Number.isInteger(held)) {
-          questions.push({ what: 'a count that is not whole', where, ask: `${where} is ${held}, and contract 3 reads it as a whole number — which? It is kept as it was.` });
+          ask({ what: 'a count that is not whole', where, ask: `${where} is ${held}, and contract 3 reads it as a whole number — which? It is kept as it was.` });
         }
         return held;
       }
@@ -794,7 +826,7 @@ export function documentsOf(files, how) {
           const field = where.replace(/^\S+ /, '').replace(/\[[^\]]*\]/g, '[…]');
           if (!priced.has(field)) {
             priced.add(field);
-            questions.push({
+            ask({
               what: 'a price written as text',
               where,
               ask: `${where} says «${held}», a price in words — the amount and whether it is «from» or «on request» have to be read by someone: ${guessPrice(held)}? The field stays text, as it was; a price the panel and a booking can read is a money field (kind "money", qualifiers ["from", "on_request"]), and moving to one is a change of the declaration and of every value in it.`,
@@ -826,7 +858,7 @@ export function documentsOf(files, how) {
     }
     if (lost.length > 0) {
       orphans[key] = many ? lost : lost[0];
-      questions.push({
+      ask({
         what: 'a reference to no entry',
         where,
         ask: `${where} names ${lost.map((one) => `«${one}»`).join(', ')}, which no entry of ${targets.join(' or ')} is — renamed or deleted outside the panel? Which entry, or none? Kept in _orphans until somebody says.`,
@@ -938,6 +970,8 @@ export function documentsOf(files, how) {
       const blocks = (Array.isArray(doc.raw.blocks) ? doc.raw.blocks : []).filter(isObject).map((one, i) => block3Values(one, where(`blocks[${typeof one._key === 'string' ? one._key : i}]`)));
       if (blocks.length > 0) out.blocks = keyed(blocks);
       write.set(pageFile3(doc.path), out);
+      doc.out = out;
+      doc.target = pageFile3(doc.path);
       pagesAt.add(doc.path);
       remove.add(doc.file);
       continue;
@@ -973,6 +1007,8 @@ export function documentsOf(files, how) {
       continue;
     }
     write.set(entryFile3(doc.collection, doc.slug), out);
+    doc.out = out;
+    doc.target = entryFile3(doc.collection, doc.slug);
     remove.add(doc.file);
   }
 
@@ -1018,6 +1054,240 @@ export function documentsOf(files, how) {
   }
   if (sharedBlocks.length > 0 || sharedRaw !== undefined) {
     write.set('/jtk/shared.json', sharedBlocks.length > 0 ? { blocks: keyed(sharedBlocks) } : {});
+  }
+
+  // ── the other languages: a translation beside each original (M3) ───────
+  //
+  // wiki/95 §6, wiki/98 §7 · 3: each copy in another language is read as
+  // the original is — money typed, pictures folded, references by id — and
+  // then split, field by field, by what the schema says is per language:
+  //
+  //   a localized value     the translation's, recorded as made from the
+  //                         original as it stands (`translated[place].from`)
+  //   a shared value equal  kept once, on the original
+  //   a shared value that   not decided here: listed in `differing`, and the
+  //   differs               command stops, unless it was told to take the
+  //                         original's (`takeBase`) — or the developer marks
+  //                         the field `localized` and runs it again
+  //
+  // A shared value the copy leaves empty differs from nothing: the
+  // original's fills it, as the merge would.
+  const differing = [];
+  const takeBase = typeof how.takeBase === 'function' ? how.takeBase : () => false;
+  const typesOfTo = (type) => typesTo.get(type)?.fields ?? [];
+  const pageSeo = Array.isArray(to.page_seo) ? to.page_seo.filter(isObject) : [];
+  const same = (a, b) => canonicalJSON(a ?? null) === canonicalJSON(b ?? null);
+  const pictureFile = (picture) => (isObject(picture) ? { src: picture.src, focus: picture.focus, poster: picture.poster } : picture);
+
+  /**
+   * One object of a copy against the original's, its words into `out`.
+   * @param {Record<string, any>} base the original's, as written
+   * @param {Record<string, any>} theirs the copy's, read the same way
+   * @param {any[]} fields
+   * @param {string} trail the place, `blocks[hero].`, `fields.` for an entry's own
+   * @param {Record<string, any>} out
+   * @param {{ field: string; record: (place: string, value: unknown) => void; differ: (place: string, field: string, base: unknown, theirs: unknown) => void }} ctx
+   *   `field`: what a field is called for the flag that answers it, `hero` → `hero.image`
+   */
+  function split(base, theirs, fields, trail, out, ctx) {
+    for (const field of fields) {
+      if (!isObject(field) || typeof field.key !== 'string') continue;
+      const key = field.key;
+      const mine = base[key];
+      const their = theirs[key];
+      if (isEmpty(their)) continue;
+      const place = `${trail}${key}`;
+      const id = `${ctx.field}.${key}`;
+      const how = layOf(field);
+      if (how === 'whole') {
+        out[key] = their;
+        ctx.record(place, mine);
+      } else if (how === 'shared') {
+        if (!same(mine, their)) ctx.differ(place, id, mine, their);
+      } else if (how === 'media') {
+        if (!isObject(their) || !same(pictureFile(mine), pictureFile(their))) ctx.differ(place, id, pictureFile(mine), pictureFile(their));
+        if (isObject(mine) && isObject(their) && !isEmpty(their.alt)) {
+          out[key] = { alt: their.alt };
+          ctx.record(`${place}.alt`, mine.alt);
+        }
+      } else if (how === 'gallery' || how === 'rows') {
+        if (!Array.isArray(their)) continue;
+        const list = Array.isArray(mine) ? mine.filter(isObject) : [];
+        const rows = their.filter(isObject);
+        const pairs = paired(list, rows);
+        const files = (items) => items.map(pictureFile);
+        if (how === 'gallery' ? !same(files(list), files(rows)) : pairs.length !== rows.length || rows.length !== list.length) {
+          ctx.differ(place, id, how === 'gallery' ? files(list) : `${list.length} row(s)`, how === 'gallery' ? files(rows) : `${rows.length} row(s)`);
+        }
+        const kept = [];
+        for (const [one, other] of pairs) {
+          if (typeof one._key !== 'string') continue;
+          if (how === 'gallery') {
+            if (!isEmpty(other.alt)) {
+              kept.push({ _key: one._key, alt: other.alt });
+              ctx.record(`${place}[${one._key}].alt`, one.alt);
+            }
+            continue;
+          }
+          const row = { _key: one._key };
+          split(one, other, Array.isArray(field.of) ? field.of.filter(isObject) : [], `${place}[${one._key}].`, row, { ...ctx, field: id });
+          if (Object.keys(row).length > 1) kept.push(row);
+        }
+        if (kept.length > 0) out[key] = kept;
+      }
+    }
+  }
+
+  /**
+   * The original's objects and the copy's, paired: by `_key` where the copy
+   * kept the original's, else by place. A copy holds the original's rows in
+   * the original's order unless somebody changed one language alone.
+   */
+  function paired(list, rows) {
+    const out = [];
+    const used = new Set();
+    rows.forEach((row, i) => {
+      let match = typeof row._key === 'string' ? list.find((one) => one._key === row._key) : undefined;
+      if (match === undefined && i < list.length && !used.has(list[i]) && (row.type === undefined || row.type === list[i].type)) match = list[i];
+      if (match !== undefined && !used.has(match)) {
+        used.add(match);
+        out.push([match, row]);
+      }
+    });
+    return out;
+  }
+
+  /** Blocks of a copy against the original's, as `split` does a list's rows; the page's structure is the original's. */
+  function splitBlocks(base, theirs, ctx, rawBase) {
+    const out = [];
+    // Paired on what the files said, so a key the original kept pairs, then
+    // named by the key the original has now.
+    const pairs = paired(rawBase, theirs);
+    if (pairs.length !== theirs.length || theirs.length !== base.length || pairs.some(([one, other]) => other.type !== undefined && one.type !== other.type)) {
+      ctx.differ('blocks', ctx.field, base.map((one) => one.type), theirs.map((one) => one.type));
+    }
+    for (const [one, other] of pairs) {
+      const written = base[rawBase.indexOf(one)];
+      if (!isObject(written) || typeof written._key !== 'string' || written.type !== other.type) continue;
+      const block = { _key: written._key };
+      split(written, other, typesOfTo(written.type), `blocks[${written._key}].`, block, { ...ctx, field: written.type });
+      if (Object.keys(block).length > 1) out.push(block);
+    }
+    return out;
+  }
+
+  /** What one copy's file becomes: the translation and where it goes. */
+  function translationOf(copy) {
+    const doc = copy.original;
+    const locale = copy.language;
+    const target = doc.target.replace(/\.json$/, `.${locale}.json`);
+    const translated = {};
+    const ctx = {
+      field: '',
+      record: (place, value) => {
+        // Made from the original as it stands; from nothing, no record.
+        const from = digest(value);
+        if (from !== '') translated[place] = { from };
+      },
+      differ: (place, field, base, theirs) => {
+        const answered = takeBase(field) || takeBase(`${locale}:${field}`);
+        const one = { file: target.slice(1), from: copy.file.slice(1), locale, place, field, base, theirs };
+        if (answered) notes.push(`${target.slice(1)} ${place}: ${locale}'s ${JSON.stringify(theirs)} dropped — the original's ${JSON.stringify(base)} stands for every language (--take-base ${field})`);
+        else differing.push(one);
+      },
+    };
+    quiet = true;
+    let out;
+    if (doc.collection === undefined) {
+      const raw = (Array.isArray(copy.raw.blocks) ? copy.raw.blocks : []).filter(isObject);
+      const theirs = raw.map((one, i) => ({ ...block3Values(one, `${copy.file} blocks[${i}]`), ...(typeof one._key === 'string' ? { _key: one._key } : {}) }));
+      out = { of: doc.out.id, locale, name: nameOfPage(copy.raw, doc.path, locale) };
+      ctx.record('name', doc.out.name);
+      const seo = {};
+      split(isObject(doc.out.seo) ? doc.out.seo : {}, foldedSeo(copy.raw.seo) ?? {}, pageSeo, 'seo.', seo, { ...ctx, field: 'seo' });
+      if (Object.keys(seo).length > 0) out.seo = seo;
+      const rawBase = (Array.isArray(doc.raw.blocks) ? doc.raw.blocks : []).filter(isObject);
+      const blocks = splitBlocks(Array.isArray(doc.out.blocks) ? doc.out.blocks : [], theirs, { ...ctx, field: `page:${doc.path}` }, rawBase);
+      if (blocks.length > 0) out.blocks = blocks;
+    } else {
+      const collection = collectionsTo.get(doc.collection);
+      const type = collection?.type ?? collectionsFrom.get(doc.collection)?.type;
+      const raw = (Array.isArray(copy.raw.blocks) ? copy.raw.blocks : []).filter(isObject);
+      let own = {};
+      let body = raw;
+      if (raw.length > 0 && raw[0].type === type) {
+        const { _key, type: _t, v: _v, view: _view, ...rest } = values3(raw[0], typesFrom.get(type)?.fields ?? [], typesTo.get(type)?.fields ?? [], `${copy.file} fields`);
+        own = rest;
+        body = raw.slice(1);
+      }
+      out = { of: doc.out.id, locale, slug: copy.slug };
+      ctx.record('slug', doc.out.slug);
+      // Held back in this language; or shown where the original is hidden, which a translation cannot say.
+      if (doc.out.visible !== false && copy.raw.visible === false) out.visible = false;
+      if (doc.out.visible === false && copy.raw.visible !== false) {
+        questions.push({ what: 'a language shown where the original is hidden', where: copy.file.slice(1), ask: `${copy.file.slice(1)} is out in ${locale}, and the original is hidden — a language is out only where the original is (wiki/98 §4.4): show the original, or the entry stays hidden in every language.` });
+      }
+      if (collection?.route !== 'none') {
+        const seo = {};
+        split(isObject(doc.out.seo) ? doc.out.seo : {}, foldedSeo(copy.raw.seo) ?? {}, pageSeo, 'seo.', seo, { ...ctx, field: 'seo' });
+        if (Object.keys(seo).length > 0) out.seo = seo;
+      }
+      const fields = {};
+      split(isObject(doc.out.fields) ? doc.out.fields : {}, own, typesOfTo(type), 'fields.', fields, { ...ctx, field: type });
+      if (Object.keys(fields).length > 0) out.fields = fields;
+      // The body, whole per language: the copy's own, keyed as its own.
+      const own3 = body.map((one, i) => block3Values(one, `${copy.file} blocks[${i}]`));
+      if (own3.length > 0) {
+        out.blocks = keyed(own3);
+        ctx.record('blocks', doc.out.blocks);
+      }
+    }
+    quiet = false;
+    if (Object.keys(translated).length > 0) out.translated = translated;
+    return { target, out };
+  }
+
+  for (const copy of translationCopies) {
+    if (copy.original.out === undefined) continue;
+    const { target, out } = translationOf(copy);
+    write.set(target, out);
+    remove.add(copy.file);
+  }
+
+  // The shared text in another language: `shared.<locale>.json`, its blocks
+  // laid over the original's by key.
+  for (const [file, raw] of Object.entries(files)) {
+    const found = /^\/jtk\/shared\.([^/]+)\.json$/.exec(file);
+    const locale = found === null ? null : canonicalLocale(found[1]);
+    if (locale === null || !isObject(raw) || !others.includes(locale)) continue;
+    const written = write.get('/jtk/shared.json');
+    const target = `/jtk/shared.${locale}.json`;
+    const translated = {};
+    const theirs = (Array.isArray(raw.blocks) ? raw.blocks : []).filter(isObject);
+    quiet = true;
+    const read = theirs.map((one, i) => ({ ...block3Values(one, `${file} blocks[${i}]`), ...(typeof one._key === 'string' ? { _key: one._key } : {}) }));
+    quiet = false;
+    const rawBase = (Array.isArray(sharedRaw?.blocks) ? sharedRaw.blocks : []).filter(isObject);
+    const base = (Array.isArray(written?.blocks) ? written.blocks : []).slice(0, rawBase.length);
+    const blocks = splitBlocks(base, read, {
+      field: 'shared',
+      record: (place, value) => {
+        // Made from the original as it stands; from nothing, no record.
+        const from = digest(value);
+        if (from !== '') translated[place] = { from };
+      },
+      differ: (place, field, mine, other) => {
+        if (takeBase(field) || takeBase(`${locale}:${field}`)) notes.push(`${target.slice(1)} ${place}: ${locale}'s ${JSON.stringify(other)} dropped — the original's ${JSON.stringify(mine)} stands for every language (--take-base ${field})`);
+        else differing.push({ file: target.slice(1), from: file.slice(1), locale, place, field, base: mine, theirs: other });
+      },
+    }, rawBase);
+    const out = { locale };
+    if (blocks.length > 0) out.blocks = blocks;
+    if (Object.keys(translated).length > 0) out.translated = translated;
+    write.set(target, out);
+    // A name in another spelling (`shared.de-ch.json`) is the same file on a
+    // disk that folds case: removed only where it is another file.
+    if (file.toLowerCase() !== target.toLowerCase()) remove.add(file);
   }
 
   // ── module settings (§4.6) ───────────────────────────────────────────────
@@ -1104,7 +1374,24 @@ export function documentsOf(files, how) {
     questions,
     notes,
     minted,
+    differing,
   };
+}
+
+/**
+ * Which language a contract-2 document is in: `''` for the site's own, else
+ * the canonical tag — its `locale`, or the language its path starts with, as
+ * contract 2's door reads it.
+ *
+ * @param {Record<string, any>} raw
+ * @param {string[]} others the site's other languages, canonical
+ * @param {string} [base] the site's own
+ */
+export function languageOfDocument(raw, others, base) {
+  const said = canonicalLocale(raw?.locale);
+  const own = canonicalLocale(base);
+  if (said !== null) return said === own ? '' : said;
+  return typeof raw?.path === 'string' ? localeOfAddress(raw.path, others) : '';
 }
 
 /** Whether a schema declares a price anywhere. */

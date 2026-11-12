@@ -85,26 +85,17 @@ test('a scaffold moves: the declaration in contract 3\'s words, every file at it
   }
 });
 
-test('refused, with nothing written: two languages, a half-moved tree, a catalogue the declaration left, work not committed', () => {
+test('refused, with nothing written: a language nothing declares, a half-moved tree, a catalogue the declaration left, work not committed', () => {
   const site = scaffold();
   try {
-    // A site in two languages: the platform keeps a contract-3 site in one until M3.
     const declared = readFileSync(join(site, 'src/content/blocks.ts'), 'utf8');
-    write(site, 'src/content/blocks.ts', declared.replace("export const LOCALES: string[] = [];", "export const LOCALES: string[] = ['en'];"));
-    execFileSync('node', [bin, 'catalogue', '--emit-only', '--root', site], { stdio: 'pipe' });
+    // A copy in a language LOCALES does not name: no translation the platform would read.
+    write(site, 'jtk/shared.en.json', { blocks: [] });
     let before = snapshot(site);
     let run = upgrade(site);
     assert.equal(run.status, 1);
-    assert.match(run.stderr, /more than one language \(de-CH, en\).*JTK_E_TRANSLATION_BEFORE_M_THREE.*nothing was written/s);
+    assert.match(run.stderr, /jtk\/ holds documents in en, and src\/content\/blocks\.ts does not declare it in LOCALES.*nothing was written/s);
     assert.deepEqual(snapshot(site), before);
-
-    // A translation alone says so too.
-    write(site, 'src/content/blocks.ts', declared);
-    execFileSync('node', [bin, 'catalogue', '--emit-only', '--root', site], { stdio: 'pipe' });
-    write(site, 'jtk/shared.en.json', { blocks: [] });
-    run = upgrade(site);
-    assert.equal(run.status, 1);
-    assert.match(run.stderr, /more than one language/);
     rmSync(join(site, 'jtk/shared.en.json'));
 
     // The catalogue is the platform's; the declaration moved on without it.
@@ -334,5 +325,88 @@ test('refused, with nothing written: a schema contract 3\'s judge would refuse �
     assert.deepEqual(snapshot(site), before);
   } finally {
     rmSync(join(site, '..'), { recursive: true, force: true });
+  }
+});
+
+// ── two languages (M3, wiki/95 §6, wiki/98 §7 · 3) ─────────────────────────
+
+/** A scaffold in de-CH and English, its home page written in both, as contract 2 keeps them: a full copy per language. */
+function twoLanguages({ image = 'media/x/a.jpg', localized = false } = {}) {
+  const site = scaffold();
+  let declared = readFileSync(join(site, 'src/content/blocks.ts'), 'utf8').replace("export const LOCALES: string[] = [];", "export const LOCALES: string[] = ['en'];");
+  if (localized) declared = declared.replace("{ key: 'image', label: 'Photograph', kind: 'media', client_editable: true },", "{ key: 'image', label: 'Photograph', kind: 'media', client_editable: true, localized: true },");
+  write(site, 'src/content/blocks.ts', declared);
+  execFileSync('node', [bin, 'catalogue', '--emit-only', '--root', site], { stdio: 'pipe' });
+  const home = read(site, 'jtk/content/index.json');
+  Object.assign(home.blocks[0], { title: 'Willkommen', image: 'media/x/a.jpg', image_alt: 'Der Laden' });
+  home.blocks[2].items = [{ question: 'Termin?', answer: 'Ja.' }];
+  write(site, 'jtk/content/index.json', home);
+  const english = structuredClone(home);
+  Object.assign(english, { path: '/en', locale: 'en', seo: { title: 'Welcome', description: '' } });
+  Object.assign(english.blocks[0], { title: 'Welcome', image, image_alt: 'The shop' });
+  english.blocks[2].items = [{ question: 'An appointment?', answer: 'Yes.' }];
+  write(site, 'jtk/content/en.json', english);
+  return site;
+}
+
+test('two languages, the shared values equal: one original, its translation beside it holding only words, each recorded as made from the original as it stands', async () => {
+  const { digest } = await import('../kit/lib/translations.mjs');
+  const site = twoLanguages();
+  try {
+    const run = upgrade(site, '--mint-ids');
+    assert.equal(run.status, 0, said(run));
+    assert.deepEqual(read(site, 'jtk/schema.json').locales, ['en']);
+    assert.equal(existsSync(join(site, 'jtk/content')), false);
+    const page = read(site, 'jtk/pages/index.json');
+    assert.deepEqual(page.blocks[0].image, { src: 'media/x/a.jpg', alt: 'Der Laden' }, 'the photograph once, on the original');
+    const row = page.blocks[2].items[0]._key;
+    const english = read(site, 'jtk/pages/index.en.json');
+    assert.deepEqual(Object.keys(english), ['of', 'locale', 'name', 'seo', 'blocks', 'translated']);
+    assert.equal(english.of, page.id);
+    assert.equal(english.locale, 'en');
+    assert.equal(english.name, 'Welcome');
+    assert.deepEqual(english.seo, { title: 'Welcome' });
+    assert.deepEqual(english.blocks, [
+      { _key: 'hero0001', title: 'Welcome', image: { alt: 'The shop' } },
+      { _key: 'ques0001', items: [{ _key: row, question: 'An appointment?', answer: 'Yes.' }] },
+    ], 'the words by the original\'s keys — the rows by the key the move gave the original\'s; no file, no cta link');
+    assert.deepEqual(english.translated['blocks[hero0001].title'], { from: digest('Willkommen') });
+    assert.deepEqual(english.translated['blocks[hero0001].image.alt'], { from: digest('Der Laden') });
+    assert.deepEqual(english.translated[`blocks[ques0001].items[${row}].answer`], { from: digest('Ja.') });
+    assert.match(run.stdout, /4 · the judge[\s\S]*jtk\/schema\.json — /);
+    assert.doesNotMatch(run.stdout, /JTK_E_DOCUMENT_INVALID/);
+  } finally {
+    rmSync(join(site, '..'), { recursive: true, force: true });
+  }
+});
+
+test('two languages, a shared value that differs: the move stops and lists it; --take-base keeps the original\'s, or the field marked localized keeps both', () => {
+  const site = twoLanguages({ image: 'media/x/b.jpg' });
+  try {
+    const before = snapshot(site);
+    const stopped = upgrade(site, '--mint-ids');
+    assert.equal(stopped.status, 1, said(stopped));
+    assert.match(stopped.stderr, /1 value\(s\) the schema says are the same in every language differ between the languages' copies/);
+    assert.match(stopped.stderr, /✗ jtk\/pages\/index\.en\.json blocks\[hero0001\]\.image \(hero\.image\): the original says \{"src":"media\/x\/a\.jpg"\}, jtk\/content\/en\.json says \{"src":"media\/x\/b\.jpg"\}/);
+    assert.match(stopped.stderr, /--take-base=hero\.image/);
+    assert.match(stopped.stderr, /localized: true/);
+    assert.deepEqual(snapshot(site), before, 'nothing written');
+
+    const taken = upgrade(site, '--mint-ids', '--take-base=hero.image');
+    assert.equal(taken.status, 0, said(taken));
+    assert.match(taken.stdout, /blocks\[hero0001\]\.image: en's \{"src":"media\/x\/b\.jpg"\} dropped — the original's \{"src":"media\/x\/a\.jpg"\} stands for every language/);
+    assert.deepEqual(read(site, 'jtk/pages/index.en.json').blocks[0], { _key: 'hero0001', title: 'Welcome', image: { alt: 'The shop' } });
+  } finally {
+    rmSync(join(site, '..'), { recursive: true, force: true });
+  }
+  const marked = twoLanguages({ image: 'media/x/b.jpg', localized: true });
+  try {
+    const run = upgrade(marked, '--mint-ids');
+    assert.equal(run.status, 0, said(run));
+    assert.match(readFileSync(join(marked, 'src/content/blocks.ts'), 'utf8'), /key: 'image', label: 'Photograph', kind: 'media', client_editable: true, localized: true/);
+    assert.deepEqual(read(marked, 'jtk/pages/index.json').blocks[0].image, { src: 'media/x/a.jpg', alt: 'Der Laden' });
+    assert.deepEqual(read(marked, 'jtk/pages/index.en.json').blocks[0].image, { src: 'media/x/b.jpg', alt: 'The shop' }, 'a picture per language: each keeps its own');
+  } finally {
+    rmSync(join(marked, '..'), { recursive: true, force: true });
   }
 });

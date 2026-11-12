@@ -34,6 +34,7 @@ import { content } from './content/index.mjs';
 import { unnamed } from './content/identity.mjs';
 import { contractOf, readJtk } from './content/node.mjs';
 import { isObject, pricePaths, srcOf } from './places3.mjs';
+import { statesOf } from './translations.mjs';
 
 /** Under the weaker rule, a key named like one of these is not words. */
 const NOT_WORDS = /(^|_)(image|picture|photo|media|video|url|href|link|icon|src)(_|$)|_href$|_url$/;
@@ -170,10 +171,16 @@ export async function readProgress(root, options = {}) {
  *     the rule is exact; `catalogue` says it is written, the field the panel
  *     reads as «laid out», and `contract: 3` says whose file that is;
  *   - a page is `jtk/pages/…` and an entry `jtk/entries/<collection>/…`, in
- *     the site's own language — an entry is one whatever its languages, and
- *     before M3 a contract-3 site has one (wiki/98 §16); an entry's own
- *     values are its `fields`, by its collection's type, and its pictures
- *     count with its body's;
+ *     the site's own language — a page or an entry is one whatever its
+ *     languages; an entry's own values are its `fields`, by its collection's
+ *     type, and its pictures count with its body's;
+ *   - each other language the schema has, where it stands (wiki/95 §2,
+ *     lib/translations.mjs): what is **missing** — a localized value the
+ *     original has and the translation does not, which the page shows in the
+ *     original's words — and what is **outdated** — a value made from an
+ *     original that has changed since, its `translated[place].from` not the
+ *     digest of the original as it is now; each by its file and its place,
+ *     in `languages`, and counted in `missing`;
  *   - a picture is `{src}` (§3.4), and a gallery's are rows of it;
  *   - the diary's settings are `jtk/modules/bookings.json`'s `settings`
  *     (§4.6), and the collections the bookings module needs are the ones its
@@ -301,6 +308,17 @@ async function readProgress3(root, dir) {
   if (facts !== null && facts.placeholders > 0) missing.push(`src/data/site.ts still carries ${facts.placeholders} placeholder${facts.placeholders === 1 ? '' : 's'}`);
   if (pages.length > 0 && media === 0) missing.push('no picture yet');
 
+  // Each other language: what is left to translate, and what is outdated.
+  const languages = site === null ? [] : statesOf(files).map((one) => ({ locale: one.locale, missing: one.missing, outdated: one.outdated, held: one.held }));
+  const some = (list) => `${list.slice(0, 3).join(', ')}${list.length > 3 ? `, and ${list.length - 3} more` : ''}`;
+  for (const one of languages) {
+    if (one.missing.length === 0 && one.outdated.length === 0) continue;
+    const said = [];
+    if (one.missing.length > 0) said.push(`${one.missing.length} to translate (${some(one.missing)})`);
+    if (one.outdated.length > 0) said.push(`${one.outdated.length} outdated, made from an original that has changed since (${some(one.outdated)})`);
+    missing.push(`${one.locale}: ${said.join('; ')}`);
+  }
+
   const changedAt = seen.length > 0 ? new Date(Math.max(...seen.map((d) => d.getTime()))).toISOString() : null;
   return {
     version: 1,
@@ -314,6 +332,7 @@ async function readProgress3(root, dir) {
     settings: settingsRead === null ? null : { hours: settingsRead.hours, zone: settingsRead.zone, payment: settingsRead.payment },
     facts,
     media,
+    languages,
     missing,
     changedAt,
   };
@@ -524,6 +543,10 @@ export function sayProgress(progress) {
   }
   if (progress.settings) lines.push(`settings: hours ${progress.settings.hours ? 'set' : 'not set'}, zone ${progress.settings.zone ? 'set' : 'not set'}`);
   lines.push(`pictures: ${progress.media}`);
+  for (const one of progress.languages ?? []) {
+    const complete = one.missing.length === 0 && one.outdated.length === 0;
+    lines.push(`${complete ? 'ok   ' : 'todo '}${one.locale}: ${complete ? 'complete' : `${one.missing.length} to translate, ${one.outdated.length} outdated`}${one.held > 0 ? `, ${one.held} held back` : ''}`);
+  }
   lines.push('');
   if (progress.missing.length === 0) lines.push('nothing missing — judge it, push, attach, build');
   else {

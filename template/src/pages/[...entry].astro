@@ -352,7 +352,7 @@ const schema = hasBody
           </nav>
         )
       }
-      <h1 {...fields.at('title')}>{title}</h1>
+      <h1 {...fields.at('title')} {...fields.lang('title')}>{title}</h1>
 
       {
         cover && (
@@ -405,7 +405,7 @@ const schema = hasBody
         editor opens it full screen — nine hundred words is not a popover — and
         what is inside is markdown Astro rendered, pictures and all.
       */}
-      {hasBody && <div class="entry-body" {...fields.at('body')}><Content /></div>}
+      {hasBody && <div class="entry-body" {...fields.at('body')} {...fields.lang('body')}><Content /></div>}
 
       {/*
         And the rest of the post, in the order the owner put it in.
@@ -437,7 +437,7 @@ const schema = hasBody
             return (
               <div
                 class="entry-body"
-                {...block.at('body')}
+                {...block.at('body')} {...block.lang('body')}
                 set:html={texts[at] ?? ''}
               />
             );

@@ -62,6 +62,7 @@ import { content } from './content/index.mjs';
 import { contractOf, mintJtk, readJtk } from './content/node.mjs';
 import { canonicalTag, judgeSchema } from './judge3.mjs';
 import { filesBeside, judgeRequest } from './judgeFiles.mjs';
+import { judgeTranslations } from './translations.mjs';
 import { BY_INDEX, DOCUMENT_ID, ID, isEmpty, KEY, placesIn, tappable3 } from './places3.mjs';
 import { builtPages, prefixBuild, servedFaults, unboundedHeights, unowned } from './served.mjs';
 
@@ -482,17 +483,6 @@ A JTK_E_… code is the platform's own name for that fault, the one POST
 /v1/registry/validate returns for this text. ${LOCAL} is the kit's own — the
 studio's preview arrangement, which the schema has nothing to say about.`);
   }
-  // Before M3 the platform keeps a contract-3 site in one language, and its
-  // import refuses a schema with others (wiki/98 §16). Said, not counted: it
-  // is the import's rule about the tree for now, not the schema's, and
-  // --judge counts it with the files'.
-  if (Array.isArray(schema.locales) && schema.locales.length > 0) {
-    console.error(
-      `jtk schema: note — the schema names languages besides its own (${schema.locales.join(', ')}), and the platform keeps a contract-3 site ` +
-        'in one language until M3: its import refuses the tree until then (JTK_E_TRANSLATION_BEFORE_M_THREE)',
-    );
-  }
-
   const exam = has('judge') ? await sitTheExam(root, text, problems) : { divergences: 0, ofFiles: 0 };
   if (exam.failed) return 1;
 
@@ -519,6 +509,7 @@ studio's preview arrangement, which the schema has nothing to say about.`);
   // minted where they are missing, as `jtk catalogue` mints them — against
   // the schema on disk, the one just written or, refused, the last one.
   let nameless = [];
+  let translations = 0;
   if (contractOf(root) === 3) {
     const byFile = new Map();
     for (const one of await mintJtk(root)) {
@@ -530,8 +521,18 @@ studio's preview arrangement, which the schema has nothing to say about.`);
       const said = [count.id > 0 ? 'an id' : '', count.key > 0 ? `${count.key} _key(s)` : ''].filter(Boolean).join(' and ');
       console.log(`${named.slice(1)} — ${said} minted`);
     }
-    nameless = unnamed(await readJtk(root));
+    const tree = await readJtk(root);
+    nameless = unnamed(tree);
     for (const one of nameless) console.error(`  ${one.says}`);
+
+    // The translations beside their originals (M3, wiki/98 §4.4), judged as
+    // the platform's import will judge them: placed, in a language the
+    // schema has, holding only words. Advice is said and counts nothing.
+    const judged = judgeTranslations({ ...tree, '/jtk/schema.json': problems.length === 0 ? schema : tree['/jtk/schema.json'] });
+    const refused = judged.filter((one) => !isAdvice(one.code));
+    if (refused.length > 0) console.error(`\njtk schema: ${refused.length} thing(s) in the translations the platform will refuse\n`);
+    for (const one of judged) console.error(`  ${isAdvice(one.code) ? '·' : '✗'} ${one.code}  ${one.path}: ${one.says}`);
+    translations = refused.length;
   }
 
   // A module the schema turns on has its settings, `{ v, settings }` at
@@ -549,7 +550,7 @@ studio's preview arrangement, which the schema has nothing to say about.`);
     }
   }
 
-  const before = nameless.length + (stray ? 1 : 0) + exam.ofFiles;
+  const before = nameless.length + (stray ? 1 : 0) + exam.ofFiles + translations;
   if (problems.length > 0) return capped(problems.length + before);
   // A divergence is the copy's failure and not the site's, so the schema is
   // written and then the run goes red.

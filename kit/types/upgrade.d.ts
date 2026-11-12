@@ -55,7 +55,30 @@ export function pageFile3(path: string): string;
 export function entryFile3(collection: string, slug: string): string;
 export function nameOfPage(raw: Record<string, any>, path: string, locale: string): string;
 
-/** The contract-3 tree of a contract-2 one: the files to write and to remove, and what goes to a person. */
+/** A shared value that differs between an original and its copy in another language (wiki/95 §6). */
+export interface Differing {
+  /** The translation's file, as it will be written: `jtk/pages/index.en.json`. */
+  file: string;
+  /** The contract-2 copy it came from: `jtk/content/en/index.json`. */
+  from: string;
+  locale: string;
+  /** The place, as the annotation grammar says it: `blocks[hero].image`. */
+  place: string;
+  /** The field, as `--take-base` names it: `hero.image`, `service.costs`, `prices.items.price`, `seo.title`, `page:/prices` for a page's blocks. */
+  field: string;
+  base: unknown;
+  theirs: unknown;
+}
+
+/**
+ * The contract-3 tree of a contract-2 one: the files to write and to remove, and what goes to a person.
+ *
+ * A copy in another language (`jtk/content/en/…`, or one that says its `locale`) becomes a
+ * translation beside its original (`index.en.json`): its localized values, recorded as made from
+ * the original as it stands (`translated[place].from`); a shared value equal to the original's
+ * kept once, on the original; one that differs listed in `differing`, unless `takeBase` says the
+ * original's stands — a field marked `localized` in `to` is per language and differs from nothing.
+ */
 export function documentsOf(
   files: Record<string, any>,
   how: {
@@ -65,6 +88,8 @@ export function documentsOf(
     state?: ReturnType<typeof stateOf>;
     contacts?: any;
     mint?: { id?: () => string; key?: (taken: Set<string>) => string };
+    /** Whether the original's value stands for a field that differs, by `Differing.field` (or `<locale>:<field>`). */
+    takeBase?: (field: string) => boolean;
   },
 ): {
   write: Record<string, any>;
@@ -72,5 +97,9 @@ export function documentsOf(
   questions: Question[];
   notes: string[];
   minted: { ids: string[]; ranks: string[]; keys: number; rekeyed: number };
+  differing: Differing[];
 };
+
+/** Which language a contract-2 document is in: `''` for the site's own, else the canonical tag. */
+export function languageOfDocument(raw: Record<string, any>, others: string[], base?: string): string;
 export function wholeOf(declared: Record<string, any>): Map<string, string[]>;

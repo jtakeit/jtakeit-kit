@@ -259,10 +259,11 @@ test('a translation beside its original is laid over it by key: its words, the o
   assert.equal(swiss.address, '/fr-ch');
   assert.equal(swiss.block('hero').text('title'), 'Hallo');
   assert.equal(swiss.block('hero').fromBase('title'), true);
+  // hreflang only where a translation is (jtakeit-core wiki/94 · M3): the
+  // Swiss French home is built, in the original's words, and is no alternate.
   assert.deepEqual(site.alternatesOf(site.page('/')), [
     { locale: '', address: '/' },
     { locale: 'en', address: '/en' },
-    { locale: 'fr-CH', address: '/fr-ch' },
   ]);
 });
 
@@ -322,14 +323,16 @@ test('an entry in a language: its translation\'s fields laid over, its body the 
   assert.deepEqual(site.alternatesOf(site.entry('works', 'eiche')), [
     { locale: '', address: '/werke/eiche' },
     { locale: 'en', address: '/en/works/oak' },
-    { locale: 'fr-CH', address: '/fr-ch/werke/eiche' },
-  ]);
-  assert.deepEqual(site.alternatesOf(site.entry('works', 'fenster')).map((one) => one.locale), ['', 'fr-CH'], 'not where it is held back');
+  ], 'only where a translation is: the Swiss French page is the original\'s words');
+  assert.deepEqual(site.alternatesOf(site.entry('works', 'fenster')), [], 'not where it is held back, nor where nobody translated it');
 });
 
 test('untranslated and visible: a hidden collection\'s entry is not in a language without its translation; a translation holds its language back', () => {
   assert.deepEqual(site.entries('categories', { locale: 'en' }).map((one) => one.slug), ['nails', 'beauty'], 'gel has no English and its collection hides it');
-  assert.equal(site.entry('categories', 'gel', 'en'), undefined);
+  // Hidden where nobody translated it, as a language held back is: built for
+  // the panel's preview, listed nowhere, no alternate (the platform's corpus).
+  assert.equal(site.entry('categories', 'gel', 'en').visible, false);
+  assert.deepEqual(site.entries('categories', { locale: 'en', all: true }).map((one) => [one.slug, one.visible]), [['nails', true], ['beauty', true], ['gel', false]]);
   assert.deepEqual(site.entries('works').map((one) => one.slug), ['granit', 'fenster', 'eiche']);
   assert.deepEqual(site.entries('works', { locale: 'en' }).map((one) => one.slug), ['granit', 'oak'], 'the pane is held back in English');
   assert.deepEqual(site.entries('works', { all: true }).map((one) => [one.slug, one.visible]), [['glas', false], ['granit', true], ['fenster', true], ['eiche', true]]);
@@ -552,7 +555,7 @@ test('documents(): every page and entry in each language it is in, with its id a
   const docs = site.documents();
   assert.ok(docs.some((one) => one.path === '/en/works/oak' && one.id === OAK && one.fields.title === 'Oak'));
   assert.ok(docs.some((one) => one.path === '/fr-ch/preise' && one.id === PRICES));
-  assert.ok(!docs.some((one) => one.locale === 'en' && one.slug === 'gel'));
+  assert.equal(docs.find((one) => one.locale === 'en' && one.slug === 'gel').shown, false, 'hidden in English, where nobody translated it and its collection hides the untranslated');
   assert.equal(docs.find((one) => one.slug === 'schnitt' && one.locale === '').path, undefined, 'shown only on another page: no address of its own');
 });
 

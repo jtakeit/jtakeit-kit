@@ -282,12 +282,9 @@ test('the enquiry form: only collects: "enquiry" collects, and a form fault stop
   assert.deepEqual(said(undeclared), [`${CODES.FORM_UNDECLARED} /: a form posts to /api/lead and no block says collects: "enquiry"`]);
 });
 
-test('what stops the build before it builds stops the lint, in the build\'s words: a catalogue beside the schema, a translation before M3, contract 2\'s jtk/content/, an entry of no collection', async () => {
+test('what stops the build before it builds stops the lint, in the build\'s words: a catalogue beside the schema, contract 2\'s jtk/content/, an entry of no collection — and a translation no longer does (M3)', async () => {
   await assert.rejects(lint({ root: tree({ files: { 'jtk/catalogue.json': { contract: 2, blocks: [] } } }) }), /jtk\/ holds both schema\.json and catalogue\.json.*git rm jtk\/catalogue\.json/);
-  await assert.rejects(
-    lint({ root: tree({ files: { 'jtk/pages/index.en.json': { of: HOME, locale: 'en', blocks: [{ _key: 'hero', title: 'Welcome' }] }, 'jtk/shared.en.json': { blocks: [] } } }) }),
-    /^Error: jtk\/pages\/index\.en\.json is a translation\. jtk\/shared\.en\.json is a translation\. Before M3 a contract-3 site has one language/,
-  );
+  await assert.doesNotReject(lint({ root: tree({ files: { 'jtk/pages/index.en.json': { of: HOME, locale: 'en', blocks: [{ _key: 'hero', title: 'Welcome' }] }, 'jtk/shared.en.json': { blocks: [] } } }) }));
   await assert.rejects(lint({ root: tree({ files: { 'jtk/content/index.json': { path: '/', blocks: [] } } }) }), /jtk\/content\/index\.json: jtk\/content\/ is contract 2's, and this tree says contract 3/);
   await assert.rejects(lint({ root: tree({ files: { 'jtk/modules/bookings.json': [] } }) }), /jtk\/modules\/bookings\.json is not a document — a JSON object is/);
   await assert.rejects(

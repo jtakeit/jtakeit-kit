@@ -37,6 +37,8 @@
  * is the exception: it is whole per language (a
  * German post may have a paragraph the English one lacks), so a translation
  * with a body of its own replaces the original's, and one without shows it.
+ * The merge is overlay.mjs's — the one rule, held to the platform's fixture
+ * corpus with its Go twin (`content.Lay`) — and this file only asks it.
  *
  * **An entry's own values are under `fields`** (§4.2), its body in `blocks`.
  * The entry is no longer `blocks[0]` of its document, so on its own page its
@@ -82,6 +84,11 @@ import { shownAt } from '../schedule.mjs';
 import { ancestors, capped, descendants, grouped, groupField, selectHeadings } from './groups.mjs';
 import { canonicalLocale, baseAddressOf, inLocale, languagesOf, localeArg, localeOfAddress, sharedLocaleOf } from './locale.mjs';
 import { byRank, factsOf, labelWords, minorOf, namesIn, specimenId, tappable } from './rules.mjs';
+import { altGiven, given, laid, layOf, overlay } from './overlay.mjs';
+
+// The merge's rule of which field is laid how, read by identity.mjs and the
+// lint from here as before; the rule itself is overlay.mjs's alone.
+export { layOf };
 
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 
@@ -130,9 +137,6 @@ const PARTS = new Set(['src', 'alt', 'focus', 'poster']);
 /** How many `[KEY].FIELD` steps a value may take: a row, and a row inside a row's list (M5). */
 const DEEPEST_STEP = 2;
 
-/** The kinds whose words are per language unless a field says `localized: false` (§3.3). */
-const WORDS = new Set(['text', 'textarea', 'richtext_lite', 'markdown']);
-
 /** A translation's file name: `prices.en.json`, `vase.de-CH.json`. A path never has a dot (`[a-z0-9-]`), so the dot is the language's. */
 export const TRANSLATION = /^(.+)\.([A-Za-z]{2}(?:-[A-Za-z]{2})?)$/;
 
@@ -179,121 +183,8 @@ function typeDeclared(type) {
   return out;
 }
 
-/**
- * How a translation is laid over the original for one field (§3.3 `localized`, §3.4):
- *
- *   'whole'   the translation's value, where it has one: the text kinds, and
- *             a picture, a link or a list that says `localized: true`;
- *   'shared'  always the original's: a number, a price, a date, a reference —
- *             "the translation of a shared value is the base, everywhere";
- *   'media'   one picture: the original's file, its focus and poster, the
- *             translation's words (`alt`);
- *   'gallery' the original's pictures, each with the translation's words, by `_key`;
- *   'rows'    the original's rows, each laid over by the row of the same `_key`.
- *
- * 'whole' is also what has a language: the value a page shows "from the
- * base", where nobody translated it (`fromBase`, §15 · 3).
- */
-export function layOf(field) {
-  const said = typeof field.localized === 'boolean' ? field.localized : undefined;
-  if (field.kind === 'media') {
-    if (said === true) return 'whole';
-    return field.multiple === true ? 'gallery' : 'media';
-  }
-  if (field.kind === 'list') return said === true ? 'whole' : 'rows';
-  if (WORDS.has(field.kind)) return said === false ? 'shared' : 'whole';
-  if (field.kind === 'url') return said === true ? 'whole' : 'shared';
-  return 'shared';
-}
-
-/**
- * Which keys of a laid object the translation gave: the one record of "came
- * from the base" (§4.4), kept beside the values rather than inside them so
- * that a value reads exactly as its file wrote it.
- * @type {WeakMap<object, Set<string>>}
- */
-const GIVEN = new WeakMap();
-
-/**
- * One object — a block, a row, an entry's `fields` — with a translation laid
- * over it, by the declaration of its fields. The original's keys are kept
- * whatever the translation says; the translation's words replace the
- * original's where it has them (an empty one is none, and leaves the
- * original's).
- *
- * A key the schema does not declare is the original's alone: a translation
- * holds only the localized values the schema declares (§4.4), the judge
- * refuses any other, and the door ignores it (§15 · 17). Until 10 November
- * 2026 the door showed what the translation wrote there, which let a word
- * nobody declared reach a page the panel could not edit it on.
- *
- * @param {Record<string, unknown>} base
- * @param {unknown} over the translation's object at the same place, or nothing
- * @param {any[]} fields
- */
-function lay(base, over, fields) {
-  const out = { ...base };
-  const given = new Set();
-  const theirs = isObject(over) ? over : {};
-  for (const field of fields) {
-    if (!isObject(field) || typeof field.key !== 'string') continue;
-    const key = field.key;
-    const mine = theirs[key];
-    const how = layOf(field);
-    if (how === 'whole') {
-      if (!isEmpty(mine)) {
-        out[key] = mine;
-        given.add(key);
-      }
-    } else if (how === 'media') {
-      const own = base[key];
-      if (isObject(own) && isObject(mine) && !isEmpty(mine.alt)) {
-        out[key] = { ...own, alt: mine.alt };
-        given.add(key);
-      }
-    } else if (how === 'gallery' || how === 'rows') {
-      const list = base[key];
-      if (!Array.isArray(list)) continue;
-      const byKey = new Map();
-      for (const one of Array.isArray(mine) ? mine : []) {
-        if (isObject(one) && typeof one._key === 'string' && !byKey.has(one._key)) byKey.set(one._key, one);
-      }
-      let any = false;
-      out[key] = list.map((row) => {
-        if (!isObject(row)) return row;
-        const match = typeof row._key === 'string' ? byKey.get(row._key) : undefined;
-        if (how === 'gallery') {
-          if (match === undefined || isEmpty(match.alt)) return row;
-          any = true;
-          return { ...row, alt: match.alt };
-        }
-        if (match !== undefined) any = true;
-        return lay(row, match, Array.isArray(field.of) ? field.of : []);
-      });
-      if (any) given.add(key);
-    }
-  }
-  GIVEN.set(out, given);
-  return out;
-}
-
 /** The blocks of a document's file, each kept where it is: a block that is not an object reads as empty. */
 const blocksIn = (raw) => (Array.isArray(raw?.blocks) ? raw.blocks.map((one) => (isObject(one) ? one : {})) : []);
-
-/**
- * The SEO of a document in a language: the original's, the translation's
- * words over it — for the keys the schema's `page_seo` declares, as for any
- * value of a translation (§15 · 17).
- *
- * @param {Set<string>} declared the keys `page_seo` declares
- */
-function seoOf(raw, over, declared) {
-  const out = { ...(isObject(raw?.seo) ? raw.seo : {}) };
-  if (isObject(over?.seo)) {
-    for (const [key, value] of Object.entries(over.seo)) if (declared.has(key) && !isEmpty(value)) out[key] = value;
-  }
-  return out;
-}
 
 /** An address with its language put before it, the anchor after: `/prices#{slug}` → `/de/prices#{slug}`. */
 function inLocaleKeepingAnchor(language, address) {
@@ -350,8 +241,12 @@ export function contract3(byPath, names, { annotate, now }) {
 
   const types = Array.isArray(schema.blocks) ? schema.blocks.filter(isObject).map(typeDeclared) : [];
   const typeOf = (name) => types.find((one) => one.type === name);
-  /** The SEO keys the schema declares, the only ones a translation's `seo` is read for (§15 · 17). */
-  const seoKeys = new Set((Array.isArray(schema.page_seo) ? schema.page_seo : []).filter(isObject).map((one) => one.key).filter((key) => typeof key === 'string'));
+  /**
+   * The merge of an original and its translation — overlay.mjs, the one rule
+   * the platform's `Content.Served` is held equal to by the fixture corpus
+   * (wiki/98 §1, 3; §4.4) — read for this schema once.
+   */
+  const merger = overlay(schema);
 
   // ── the schema's collections ─────────────────────────────────────────────
 
@@ -515,24 +410,17 @@ export function contract3(byPath, names, { annotate, now }) {
   }
 
   /**
-   * A document's blocks in a language: the original's, each laid over by the
-   * translation's block of the same `_key`. A page's blocks are the
-   * developer's structure, shared, with their words per language (§4.4): a
-   * block only the translation has is not on the page, and a block without
-   * a `_key` cannot be matched and keeps the original's words.
+   * A page in a language: the original, and its translation laid over it by
+   * the merge (overlay.mjs) — its name, its SEO and its blocks' words, each
+   * block and row by its `_key`. In every language the site has: a page is
+   * the developer's structure, and where nobody translated it, it is the
+   * original's words, each marked (`fromBase`).
    */
-  function laidBlocks(blocks, over) {
-    const theirs = new Map();
-    for (const one of Array.isArray(over?.blocks) ? over.blocks : []) {
-      if (isObject(one) && typeof one._key === 'string' && !theirs.has(one._key)) theirs.set(one._key, one);
-    }
-    return blocks.map((one) => lay(one, typeof one._key === 'string' ? theirs.get(one._key) : undefined, typeOf(one.type)?.fields ?? []));
-  }
-
-  /** A page in a language: the original, and its translation laid over it. In every language the site has — a page is the developer's structure. */
   function pageDoc(file, language) {
     if (file.docs.has(language)) return file.docs.get(language);
     const over = language === '' ? undefined : file.overlays.get(language);
+    const original = { ...file.raw, blocks: blocksIn(file.raw) };
+    const { merged, fromBase } = language === '' ? { merged: original, fromBase: [] } : merger.merge(original, over?.raw, { kind: 'page' });
     const doc = {
       kind: 'page',
       file: over?.file ?? file.file,
@@ -540,10 +428,13 @@ export function contract3(byPath, names, { annotate, now }) {
       language,
       id: file.id,
       path: file.path,
+      name: typeof merged.name === 'string' ? merged.name : '',
       address: inLocale(language, file.path),
-      seo: seoOf(file.raw, over?.raw, seoKeys),
-      blocks: language === '' ? blocksIn(file.raw) : laidBlocks(blocksIn(file.raw), over?.raw),
+      seo: isObject(merged.seo) ? { ...merged.seo } : {},
+      blocks: merged.blocks,
       origin: language === '' ? 'own' : 'laid',
+      fromBase,
+      translated: over !== undefined,
     };
     file.docs.set(language, doc);
     return doc;
@@ -552,23 +443,29 @@ export function contract3(byPath, names, { annotate, now }) {
   /**
    * An entry in a language, or nothing where it is not in that language.
    *
-   * The original, with the translation laid over its `fields`; its body the
-   * translation's own where it has one, whole, and the original's where not.
-   * A language with no translation shows the original — every value marked
-   * as the original's — unless its collection says `untranslated: "hide"`.
-   * It is out in a language when the original is (`visible`, `show_at`,
-   * `hide_at`, which only the original carries) and the translation does not
-   * hold the language back (`visible: false`, §4.4).
+   * The original, with the translation laid over its `fields` by the merge
+   * (overlay.mjs); its body the translation's own where it has one, whole,
+   * and the original's where not. A language with no translation shows the
+   * original — every word marked as the original's — and where its
+   * collection says `untranslated: "hide"` the entry is hidden there: built,
+   * as a language held back is, so the panel can preview it, and listed
+   * nowhere. It is out in a language when the original is (`visible`,
+   * `show_at`, `hide_at`, which only the original carries) and the
+   * translation does not hold the language back (`visible: false`, §4.4).
    */
   function entryDoc(file, language) {
     if (file.docs.has(language)) return file.docs.get(language);
     let doc;
-    const collection = collections.get(file.collection);
     const over = language === '' ? undefined : file.overlays.get(language);
-    if (served(language) && (language === '' || over !== undefined || collection?.untranslated !== 'hide')) {
-      const own = isObject(file.raw.fields) ? file.raw.fields : {};
+    const original = { ...file.raw, collection: file.collection, slug: file.slug };
+    const { merged, fromBase } = !served(language)
+      ? { merged: null, fromBase: [] }
+      : language === ''
+        ? { merged: original, fromBase: [] }
+        : merger.merge(original, over?.raw, { kind: 'entry' });
+    if (merged !== null) {
       const theirBody = over !== undefined && Array.isArray(over.raw.blocks) && over.raw.blocks.length > 0;
-      const held = over?.raw.visible === false;
+      const held = merged.visible === false && file.raw.visible !== false;
       const shownBy = (at) => shownAt(file.raw, at) && !held;
       doc = {
         kind: 'entry',
@@ -579,15 +476,17 @@ export function contract3(byPath, names, { annotate, now }) {
         language,
         id: file.id,
         collection: file.collection,
-        slug: over !== undefined && typeof over.raw.slug === 'string' && !isEmpty(over.raw.slug) ? over.raw.slug : file.slug,
-        seo: seoOf(file.raw, over?.raw, seoKeys),
-        fields: language === '' ? own : lay(own, over?.raw.fields, collection?.fields ?? []),
+        slug: typeof merged.slug === 'string' && !isEmpty(merged.slug) ? merged.slug : file.slug,
+        seo: isObject(merged.seo) ? { ...merged.seo } : {},
+        fields: isObject(merged.fields) ? merged.fields : {},
         body: theirBody ? blocksIn(over.raw) : blocksIn(file.raw),
         fieldsOrigin: language === '' ? 'own' : 'laid',
         bodyOrigin: language === '' || theirBody ? 'own' : 'base',
         specimen: false,
         shownBy,
         shown: shownBy(now),
+        fromBase,
+        translated: over !== undefined,
       };
     }
     file.docs.set(language, doc);
@@ -635,8 +534,26 @@ export function contract3(byPath, names, { annotate, now }) {
       const declared = field(key);
       if (declared === undefined || layOf(declared) !== 'whole') return false;
       if (how.origin === 'base') return true;
-      return !(GIVEN.get(values)?.has(key) ?? false);
+      return !(given(values, key) ?? false);
     };
+    /**
+     * Whether a picture's words (`alt`) are the original's on a page in
+     * another language: a picture's file has no language, its words have
+     * (wiki/95 §2), and where nobody translated them the `<img>` says the
+     * original's `lang`. A picture laid whole (`localized: true`) is the
+     * original's words where the whole of it is.
+     */
+    const altFromBase = (declared, picture, item) => {
+      if (how.origin === 'own' || declared === undefined || isEmpty(picture?.alt)) return false;
+      const lay = layOf(declared);
+      if (lay === 'whole') return fromBase(declared.key);
+      if (how.origin === 'base') return lay === 'media' || lay === 'gallery';
+      if (lay === 'media') return !(given(values, declared.key) ?? false);
+      if (lay === 'gallery') return !altGiven(item);
+      return false;
+    };
+    /** The original's language, for a value that is the original's words: `{ lang: 'de' }`, or nothing. */
+    const langAttr = (yes) => (yes && base !== '' ? { lang: base } : {});
     /** Whether a field holds one picture: declared so, or, undeclared, holding a picture's shape. */
     const onePicture = (declared, held) =>
       declared !== undefined ? declared.kind === 'media' && declared.multiple !== true : isObject(held) && typeof held.src === 'string';
@@ -693,6 +610,7 @@ export function contract3(byPath, names, { annotate, now }) {
       minor: (key) => minorOf(values[key]),
       refs: (key) => resolved(field(key), values[key], how.locale ?? ''),
       fromBase,
+      lang: (key) => langAttr(fromBase(key)),
       rows(key) {
         const list = values[key];
         if (!Array.isArray(list)) return [];
@@ -704,7 +622,7 @@ export function contract3(byPath, names, { annotate, now }) {
           const rowKey = typeof own._key === 'string' ? own._key : undefined;
           // A row laid over by its translation answers for itself; a row of
           // a list that is whole per language is all one side's.
-          const origin = how.origin !== 'laid' ? how.origin : GIVEN.has(own) ? 'laid' : fromBase(key) ? 'base' : 'own';
+          const origin = how.origin !== 'laid' ? how.origin : laid(own) ? 'laid' : fromBase(key) ? 'base' : 'own';
           return Object.assign(
             reader(own, {
               prefix: how.prefix,
@@ -728,7 +646,7 @@ export function contract3(byPath, names, { annotate, now }) {
         const picture = { src: wordsIn(media.src), alt: wordsIn(media.alt) };
         if (!isEmpty(media.focus) && typeof media.focus === 'string') picture.focus = media.focus;
         if (!isEmpty(media.poster) && typeof media.poster === 'string') picture.poster = media.poster;
-        return { ...picture, ...at(key) };
+        return { ...picture, ...langAttr(altFromBase(field(key), media)), ...at(key) };
       },
       gallery(key) {
         const list = values[key];
@@ -740,7 +658,7 @@ export function contract3(byPath, names, { annotate, now }) {
           if (!isEmpty(item.poster) && typeof item.poster === 'string') picture.poster = item.poster;
           const keyed = typeof item._key === 'string' && KEY.test(item._key);
           const place = keyed && writable() && FIELD.test(key) && how.depth < DEEPEST_STEP ? path(`${how.trail}${key}[${item._key}].src`) : {};
-          return [{ ...picture, ...place }];
+          return [{ ...picture, ...langAttr(altFromBase(field(key), item, item)), ...place }];
         });
       },
       at,
@@ -816,12 +734,14 @@ export function contract3(byPath, names, { annotate, now }) {
       const page = {
         kind: 'page',
         id: doc.id,
+        name: doc.name,
         address: doc.address,
         locale: doc.language,
         seo: doc.seo,
         file: doc.file,
         blocks,
         block: find,
+        fromBase: [...doc.fromBase],
         get here() {
           return pageOf(doc, 'here');
         },
@@ -842,12 +762,14 @@ export function contract3(byPath, names, { annotate, now }) {
     const self = {
       kind: 'page',
       id: '',
+      name: '',
       address,
       locale,
       seo: {},
       file: undefined,
       blocks: [],
       block: missing,
+      fromBase: [],
       get here() {
         return self;
       },
@@ -884,6 +806,7 @@ export function contract3(byPath, names, { annotate, now }) {
         specimen: doc.specimen,
         fields: reader(doc.fields, { prefix, trail: '', depth: 0, fields: collection?.fields ?? [], origin: doc.fieldsOrigin, locale: doc.language }),
         body: doc.body.map((values) => block(values, prefix, doc.bodyOrigin, doc.language)),
+        fromBase: [...(doc.fromBase ?? [])],
         get here() {
           return entryOf(doc, 'here');
         },
@@ -1107,9 +1030,11 @@ export function contract3(byPath, names, { annotate, now }) {
       const language = want(locale);
       const original = sharedFiles.get('');
       const over = language === '' ? undefined : sharedFiles.get(language);
-      const list = !served(language) ? [] : language === '' ? blocksIn(original?.raw) : laidBlocks(blocksIn(original?.raw), over?.raw);
+      /** @type {string[]} */
+      const fromBase = [];
+      const list = !served(language) ? [] : language === '' ? blocksIn(original?.raw) : merger.layBlocks(blocksIn(original?.raw), over?.raw?.blocks, fromBase);
       const { blocks, block: find } = blocksOf(list, 'shared:', language === '' ? 'own' : 'laid', language);
-      return { kind: 'shared', locale: language, file: over?.file ?? original?.file, blocks, block: find };
+      return { kind: 'shared', locale: language, file: over?.file ?? original?.file, blocks, block: find, fromBase };
     },
     /**
      * The business's facts in a language, by role (§4.5): the shared text's
@@ -1194,20 +1119,26 @@ export function contract3(byPath, names, { annotate, now }) {
     inLocale: (locale, address) => inLocale(want(locale), address),
 
     /**
-     * Every language a page or an entry is in, for `hreflang`, base first.
-     * A page is in every language the site has (its words laid over the
-     * original's); an entry in each language it is out in, by its
-     * collection's `untranslated`, at its address there.
+     * The languages a page or an entry is in, for `hreflang`, base first —
+     * the original's, and each language a translation of it is in
+     * (jtakeit-core wiki/94 · M3: "`hreflang` is written only for languages
+     * with an overlay"). A page is built in every language the site has, and
+     * where nobody translated it, it is the original's words under another
+     * language's address: no alternate of the original, which a search
+     * engine would take for a translation. An entry is in a language where it
+     * is out there — not held back, not hidden — and has a page of its own.
      */
     alternatesOf(document) {
       const doc = docOf.get(document);
       if (doc === undefined) return [];
       if (doc.kind === 'page') {
-        return every.length > 1 ? every.map((language) => ({ locale: language, address: inLocale(language, doc.path) })) : [];
+        const languages = every.filter((language) => language === '' || doc.original.overlays.has(language));
+        return languages.length > 1 ? languages.map((language) => ({ locale: language, address: inLocale(language, doc.path) })) : [];
       }
       if (doc.specimen || doc.original === undefined) return [];
       const found = [];
       for (const language of every) {
+        if (language !== '' && !doc.original.overlays.has(language)) continue;
         const one = entryDoc(doc.original, language);
         if (one === undefined || !one.shown) continue;
         const address = addressIn(collections.get(one.collection), language, one.slug);
@@ -1381,7 +1312,7 @@ export function contract3(byPath, names, { annotate, now }) {
         .map(([language, one]) => ({
           file: one.file,
           locale: language,
-          blocks: language === '' ? blocksIn(one.raw) : laidBlocks(blocksIn(sharedFiles.get('')?.raw), one.raw),
+          blocks: language === '' ? blocksIn(one.raw) : merger.layBlocks(blocksIn(sharedFiles.get('')?.raw), one.raw.blocks, []),
         })),
   };
   return site;

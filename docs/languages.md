@@ -244,3 +244,95 @@ Annotations, the bridge, the build, the edge, the catalogue's block types,
 drafts, versions and publishing. A page is already one language, so
 `blocks[0].title` is unambiguous and everything that reads it is untouched. Two
 languages is one repository and one `astro build`.
+
+---
+
+## Contract 3: one document, its translations beside it
+
+Everything above is contract 2, where a language is a full copy of every
+document — so a photograph or a price changed in one language stays old in the
+others. A site on contract 3 (`jtk/schema.json` says `"contract": 3`) keeps one
+document in the site's own language and, beside it, a **translation** that holds
+only the words (jtakeit-core wiki/95, wiki/98 §4.4). The addresses are the same:
+`/prices`, `/en/prices`.
+
+```
+jtk/pages/prices.json        the page, in the site's own language
+jtk/pages/prices.en.json     its English: { "of": <the page's id>, "locale": "en", … }
+jtk/entries/blog/erster.json
+jtk/entries/blog/erster.en.json
+jtk/shared.json, jtk/shared.en.json
+```
+
+**What a translation holds.** A page's `name`, its `seo` and the words of its
+blocks; an entry's `slug`, `seo`, the words of its `fields`, its body whole, and
+`visible: false` to hold the language back; the shared text's blocks. A block, a
+row and a gallery's picture are named by the original's `_key`, never by place:
+
+```json
+{
+  "of": "0193a5c2-7f4e-7c1a-9b2e-5d1f0c3a8e21",
+  "locale": "en",
+  "name": "Prices",
+  "blocks": [
+    { "_key": "hero", "title": "Our prices", "image": { "alt": "The salon" } },
+    { "_key": "list", "items": [ { "_key": "r1", "title": "Haircut" } ] }
+  ]
+}
+```
+
+**Which values are per language** is the field's kind, unless the field says
+`localized`: text, a textarea, rich text and markdown are; a picture's `alt` is,
+its file, focus and poster are not; a gallery is the original's pictures, each
+with its words per language; a list is the original's rows, each with its words
+per language. A number, a price, a date, a choice, a reference, a phone number
+and a link are the same in every language. A picture with words on it, a link
+to a page in the language, or a list each language has its own of says
+`localized: true`; a brand name says `localized: false`. **A shared value in a
+translation is refused** (`JTK_E_TRANSLATION_SHARED`): change it in the
+original, and every language has it.
+
+**An entry's body is whole per language**: a translation with `blocks` of its own
+replaces the original's; one without shows the original's.
+
+**What nobody translated is the original's**, and says so. The door hands out,
+for every value, whether it is the original's words on a page in another
+language; give it the original's `lang`:
+
+```astro
+<h1 {...hero.at('title')} {...hero.lang('title')}>{hero.text('title')}</h1>
+<Shot name={shot.src} alt={shot.alt} lang={shot.lang} path={shot['data-jtk-path']} />
+```
+
+`lang()` is `{}` for a translated value, for a value with no language (a price,
+a picture's file) and on contract 2. `page.fromBase` and `entry.fromBase` list
+the places. A collection that says `untranslated: "hide"` hides an entry in a
+language nobody translated it into, as `visible: false` in a translation holds
+one back: built for the panel's preview, listed nowhere, in no sitemap.
+
+**`hreflang` names a language only where a translation is.** A page is built in
+every language the site has; where nobody translated it, it is the original's
+words under another address, and no alternate of the original.
+
+**The copy.** A language with no `src/copy/<locale>.ts` of its own still reads
+its page through the door on contract 3, `<html lang>` its own; only the words
+that are not content — the form's, the privacy page's — are the site's own until
+a copy is registered in `src/copy/index.ts`.
+
+**Checked before the push.** `jtk schema` judges every translation as the
+platform's import will: beside its original, `of` its id, in a language the
+schema names, holding only words; words for a row the original no longer has are
+advice (`JTK_W_TRANSLATION_ORPHAN`). `jtkit lint` checks every language's pages.
+`jtkit progress` says, per language, what is **missing** (a value nobody
+translated) and what is **outdated**: a translation remembers the original it was
+made from, `translated: { "blocks[hero].title": { "from": "e3ea67be" } }`, the
+first eight hex digits of the SHA-256 of the original value's canonical JSON. An
+agent may leave `translated` out; the import records the original as it stands.
+
+**Moving a contract-2 site** with `jtk upgrade contract-3`: each language's copy
+becomes a translation beside its original. A shared value equal in every
+language is kept once; one that differs — two photographs, two prices — stops
+the move and is listed, for the agent or a person to answer: `--take-base` (or
+`--take-base=hero.image,…`) keeps the original's for every language, and
+`localized: true` on the field in `src/content/blocks.ts` keeps each language's
+own.

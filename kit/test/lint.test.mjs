@@ -148,8 +148,10 @@ test('a contract-3 document without its id, or a block or a row without its _key
   assert.deepEqual(named.findings, [], 'nothing the owner taps: no field says client_editable');
   assert.equal(named.ok, true);
 
-  // A translation stops it before anything, as it stops the build's
-  // collection of the content until M3 (wiki/98 §16).
+  // A translation is read since M3, and held to the same names: a block it
+  // lays over is named by the original's key, which it has to copy.
   write('jtk/pages/index.en.json', { locale: 'en', blocks: [{ title: 'Hello' }] });
-  await assert.rejects(lint({ root }), /^Error: jtk\/pages\/index\.en\.json is a translation\. Before M3 a contract-3 site has one language/);
+  const translated = await lint({ root });
+  assert.deepEqual(translated.findings.map((one) => one.code), ['JTK_E_UNNAMED']);
+  assert.match(translated.findings[0].says, /^jtk\/pages\/index\.en\.json: blocks\[0\] has no "_key" — a translation names what it translates by that one's key/);
 });

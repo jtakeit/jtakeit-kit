@@ -101,6 +101,10 @@ export { DEEPEST, ancestors, capped, descendants, grouped, groupField, pointersI
 // The platform's tappable kinds and where a specimen lives: rules.mjs, which
 // both contracts' readers ask.
 export { TAPPABLE, tappable, specimenId };
+// The merge of an original and its translation (wiki/98 §4.4): the one rule
+// the door serves a contract-3 page in another language by, for a tool or a
+// test that has one document to merge, and the fixture corpus it is held to.
+export { mergeDocument, overlay, layOf, kindOf, localizedIn, valueAt } from './overlay.mjs';
 
 /** Empty is absent: what a value that says nothing is spelt as, folded. */
 function isEmpty(value) {
@@ -304,6 +308,7 @@ export function content(files, options = {}) {
       // value on a page in one language is another's (contract3.mjs has the
       // merge where one is).
       fromBase: () => false,
+      lang: () => ({}),
       rows(key) {
         const list = values[key];
         if (!Array.isArray(list)) return [];

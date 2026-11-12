@@ -33,7 +33,7 @@
  * sentences are this kit's, in the platform's words where it has them.
  *
  * What is not here, on purpose: the judge of the files beside the schema —
- * pages, entries, a module's settings, a translation before M3 — which the
+ * pages, entries, a module's settings, a translation (lib/translations.mjs) — which the
  * platform's import applies and `--judge` asks it for; and `JTK_W_` advice,
  * the bookings module's, which `--judge` prints.
  *

@@ -1,0 +1,325 @@
+{
+  "name": "outdated-by-digest",
+  "schema": {
+    "contract": 3,
+    "locale": "de-CH",
+    "locales": [
+      "en",
+      "fr"
+    ],
+    "blocks": [
+      {
+        "type": "hero",
+        "v": 1,
+        "label": "Hero",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Title",
+            "kind": "text",
+            "client_editable": true
+          },
+          {
+            "key": "lead",
+            "label": "Lead",
+            "kind": "textarea",
+            "client_editable": true
+          },
+          {
+            "key": "image",
+            "label": "Photo",
+            "kind": "media",
+            "client_editable": true
+          },
+          {
+            "key": "poster",
+            "label": "Poster with words on it",
+            "kind": "media",
+            "localized": true,
+            "client_editable": true
+          },
+          {
+            "key": "link",
+            "label": "Link",
+            "kind": "url",
+            "client_editable": true
+          }
+        ]
+      },
+      {
+        "type": "prices",
+        "v": 1,
+        "label": "Prices",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Title",
+            "kind": "text",
+            "client_editable": true
+          },
+          {
+            "key": "items",
+            "label": "Rows",
+            "kind": "list",
+            "of": [
+              {
+                "key": "title",
+                "label": "Name",
+                "kind": "text",
+                "client_editable": true
+              },
+              {
+                "key": "price",
+                "label": "Price",
+                "kind": "money",
+                "qualifiers": [
+                  "from"
+                ],
+                "client_editable": true
+              },
+              {
+                "key": "extras",
+                "label": "Extras",
+                "kind": "list",
+                "of": [
+                  {
+                    "key": "label",
+                    "label": "Label",
+                    "kind": "text",
+                    "client_editable": true
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "gallery",
+        "v": 1,
+        "label": "Gallery",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Title",
+            "kind": "text",
+            "client_editable": true
+          },
+          {
+            "key": "pictures",
+            "label": "Pictures",
+            "kind": "media",
+            "multiple": true,
+            "client_editable": true
+          }
+        ]
+      },
+      {
+        "type": "contacts",
+        "v": 1,
+        "label": "Contacts",
+        "fields": [
+          {
+            "key": "name",
+            "label": "Name",
+            "kind": "text",
+            "role": "name",
+            "client_editable": true
+          },
+          {
+            "key": "phone",
+            "label": "Phone",
+            "kind": "tel",
+            "role": "phone",
+            "client_editable": true
+          },
+          {
+            "key": "hours_note",
+            "label": "Hours",
+            "kind": "textarea",
+            "client_editable": true
+          }
+        ]
+      },
+      {
+        "type": "text",
+        "v": 1,
+        "label": "Text",
+        "fields": [
+          {
+            "key": "body",
+            "label": "Text",
+            "kind": "markdown",
+            "client_editable": true
+          }
+        ]
+      },
+      {
+        "type": "work",
+        "v": 1,
+        "label": "Work",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Title",
+            "kind": "text",
+            "required": true,
+            "client_editable": true
+          },
+          {
+            "key": "date",
+            "label": "Date",
+            "kind": "date"
+          },
+          {
+            "key": "price",
+            "label": "Price",
+            "kind": "money",
+            "client_editable": true
+          },
+          {
+            "key": "cover",
+            "label": "Cover",
+            "kind": "media",
+            "client_editable": true
+          },
+          {
+            "key": "category",
+            "label": "Category",
+            "kind": "ref",
+            "ref": {
+              "to": [
+                "categories"
+              ]
+            }
+          },
+          {
+            "key": "excerpt",
+            "label": "Excerpt",
+            "kind": "textarea",
+            "client_editable": true
+          },
+          {
+            "key": "brand",
+            "label": "Brand",
+            "kind": "text",
+            "localized": false,
+            "client_editable": true
+          }
+        ]
+      },
+      {
+        "type": "category",
+        "v": 1,
+        "label": "Category",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Name",
+            "kind": "text",
+            "required": true,
+            "client_editable": true
+          }
+        ]
+      }
+    ],
+    "page_seo": [
+      {
+        "key": "title",
+        "label": "Title",
+        "kind": "text"
+      },
+      {
+        "key": "description",
+        "label": "Description",
+        "kind": "textarea"
+      }
+    ],
+    "shared": [
+      "contacts"
+    ],
+    "collections": [
+      {
+        "name": "works",
+        "label": "Works",
+        "type": "work",
+        "route": {
+          "detail": "/werke/{slug}",
+          "listing": "/werke"
+        },
+        "blocks": [
+          "text",
+          "gallery"
+        ]
+      },
+      {
+        "name": "categories",
+        "label": "Categories",
+        "type": "category",
+        "route": {
+          "detail": "/kategorien/{slug}"
+        },
+        "untranslated": "hide"
+      }
+    ]
+  },
+  "base": {
+    "id": "0193a5c2-7f4e-7c1a-9b2e-5d1f0c3a8e21",
+    "path": "/",
+    "name": "Start",
+    "blocks": [
+      {
+        "_key": "hero",
+        "type": "hero",
+        "v": 1,
+        "title": "Hallo",
+        "lead": "Seit 1998 an der Langstrasse"
+      }
+    ]
+  },
+  "translation": {
+    "of": "0193a5c2-7f4e-7c1a-9b2e-5d1f0c3a8e21",
+    "locale": "en",
+    "name": "Home",
+    "blocks": [
+      {
+        "_key": "hero",
+        "title": "Hello",
+        "lead": "Since 1998"
+      }
+    ],
+    "translated": {
+      "blocks[hero].title": {
+        "from": "09d941a5",
+        "by": "agent",
+        "at": "2026-11-10T09:00:00Z"
+      },
+      "blocks[hero].lead": {
+        "from": "64cba83f",
+        "by": "person",
+        "at": "2026-11-10T09:00:00Z"
+      }
+    }
+  },
+  "locale": "en",
+  "merged": {
+    "id": "0193a5c2-7f4e-7c1a-9b2e-5d1f0c3a8e21",
+    "path": "/",
+    "name": "Home",
+    "blocks": [
+      {
+        "_key": "hero",
+        "type": "hero",
+        "v": 1,
+        "title": "Hello",
+        "lead": "Since 1998"
+      }
+    ]
+  },
+  "fromBase": [],
+  "outdated": [
+    "blocks[hero].lead"
+  ],
+  "advice": [],
+  "refused": null
+}
