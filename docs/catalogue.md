@@ -151,11 +151,11 @@ not something the admin has a control for.
 
 ## Attaching the site
 
-Once `jtk catalogue` passes:
-
-1. Push the repository.
-2. In the admin, create the site and paste the repository's URL.
-3. Import — the admin reads the ref into the draft.
+Once `jtk catalogue` passes, `validate_schema` judges it with the `jtk/` files
+and the `site_id` of the site `create_site` made; then the code goes where the
+copy says — `push_code`, or a GitHub repository and `attach_repo`, which imports
+the branch — and `commit_and_build`. The whole order is in
+[scaffold.md](scaffold.md#what-comes-next).
 
 The import refuses a ref with no catalogue, which is the whole reason this file
 exists rather than being optional.

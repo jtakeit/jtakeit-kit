@@ -101,14 +101,27 @@ checked the same way by `npx @jtakeit/astro catalogue` ([docs/catalogue.md](docs
 
 ## Then, on the platform
 
-1. Push the repository somewhere the platform's GitHub App can reach, and run
-   `validate_catalogue` by site and ref once the site exists.
-2. `create_site`, then `attach_repo` — it imports the branch.
-3. `commit_and_build` — the first build; `get_build` until it settles. Later:
-   commit, `import_branch`, `commit_and_build`. `trigger_build` rebuilds a site
-   that has been built once, and refuses one that has not.
-4. `get_preview_link` to look; the studio hands the owner's link to the client from
-   the panel.
+In the platform's order (`jtakeit:///guides/start.md`), which `jtk create` prints
+at the end and writes into the site's README:
+
+1. `create_site` first, with the brief's currency — then `npx @jtakeit/astro create`.
+2. The dev server, then `open_dev_session` with its address and the `run` command
+   its answer gives — before writing a line.
+3. `src/content/blocks.ts`, then `npx @jtakeit/astro schema` (`catalogue` on
+   contract 2).
+4. `validate_schema` with the schema, the `jtk/` files and the `site_id` — before
+   the push.
+5. The code: no GitHub remote in the copy → `push_code`, then
+   `npx @jtakeit/astro push '<url>'`; a GitHub remote → ask the developer once,
+   then our GitHub App on it (a person installs it) and `attach_repo`.
+6. `commit_and_build` — nothing public; `get_build` until it settles;
+   `get_preview_link` to look (the studio hands the owner's link to the client
+   from the panel).
+7. `preflight` before saying done.
+
+Later: `push_code` again, or `git push` and `import_branch`, then
+`commit_and_build`. `trigger_build` rebuilds a site that has been built once, and
+refuses one that has not.
 
 The whole of it, with the reasons, is in [docs/](docs/): `kit.md` first, then
 `catalogue.md`, `pages.md`, `collections.md`, `lead-form.md`, `booking.md`,
