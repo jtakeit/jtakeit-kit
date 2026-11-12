@@ -12,6 +12,18 @@ export function storeId(entry: Entry): string {
 }
 
 /**
+ * What an entry's rendered body was made of — its prose, and each run of prose
+ * below it — kept beside the rendering, so the panel's live preview can tell
+ * a body the build rendered from one whose words the draft changed since
+ * (`bodyOf`, jtakeit-core wiki/89 §12).
+ */
+export function sourceOf(entry: Entry): string {
+  const body = entry.fields.value('body');
+  const texts = entry.body.filter((block) => block.type === 'text').map((block) => block.value('body'));
+  return JSON.stringify([typeof body === 'string' ? body : '', texts]);
+}
+
+/**
  * The entries' bodies, rendered by this site's markdown pipeline.
  *
  * ── what the loader does now, and what it does not ──────────────────────────
@@ -104,7 +116,7 @@ async function fill(ctx: LoaderContext): Promise<void> {
         const rendered = await drawn(renderer, typeof body === 'string' ? body : '', pathToFileURL(file));
         ctx.store.set({
           id: storeId(entry),
-          data: { texts: await written(renderer, entry.body, file) },
+          data: { texts: await written(renderer, entry.body, file), source: sourceOf(entry) },
           rendered,
           /*
            * The half that is easy to leave out and impossible to notice.
@@ -131,7 +143,7 @@ async function fill(ctx: LoaderContext): Promise<void> {
       for (const specimen of site.specimens(collection.name, { locale })) {
         ctx.store.set({
           id: storeId(specimen),
-          data: { texts: await written(renderer, specimen.body, 'specimen') },
+          data: { texts: await written(renderer, specimen.body, 'specimen'), source: sourceOf(specimen) },
           rendered: { html: '', metadata: {} },
           digest: ctx.generateDigest(JSON.stringify(specimen.body.map((one) => [one.type, one.view]))),
         });

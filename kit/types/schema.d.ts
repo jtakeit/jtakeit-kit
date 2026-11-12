@@ -259,6 +259,12 @@ export interface Schema {
   shared?: string[];
   collections?: Collection[];
   modules?: Modules;
+  /**
+   * `live`: the template draws a draft at request time the way it draws its
+   * files at build time, and the panel may preview a saved field at once
+   * (jtakeit-core wiki/89 §12). The platform checks it at every build.
+   */
+  render?: 'live';
 }
 
 /** What `src/content/blocks.ts` exports, on contract 3. */
@@ -271,6 +277,8 @@ export interface Declaration {
   SHARED?: string[];
   COLLECTIONS?: Collection[];
   MODULES?: Modules;
+  /** `'live'`: written as the schema's `render` (the scaffold's template is ready). */
+  RENDER?: 'live';
 }
 
 /** A thing wrong with a schema, as the platform names it. */

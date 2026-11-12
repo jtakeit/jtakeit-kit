@@ -49,9 +49,23 @@
  *
  * `PUBLIC_JTK_ANNOTATE=false` writes no annotation anywhere — a build with no
  * editor carries no trace of one.
+ *
+ * ── the draft, rendered live ────────────────────────────────────────────────
+ *
+ * The panel's preview draws a draft with this code under server output, per
+ * request, from the draft the platform hands the renderer (src/live/,
+ * jtakeit-core wiki/89 §12). `live` makes `site` that request's door for as
+ * long as it renders, and the build's files' door at every other moment — a
+ * static build is drawn from exactly the door above, and its pages are the
+ * same bytes. So nothing here, and nothing a template does with `site`, is
+ * kept at a module's top level: what is read there is read once a process,
+ * from the build's files, whatever the draft says.
  */
 import { content } from '@jtakeit/kit/content';
+import { live } from '@jtakeit/kit/live';
 
-export const site = content(import.meta.glob('/jtk/**/*.json', { eager: true, import: 'default' }), {
-  annotate: import.meta.env.PUBLIC_JTK_ANNOTATE !== 'false',
-});
+const annotate = import.meta.env.PUBLIC_JTK_ANNOTATE !== 'false';
+
+export const site = live(content(import.meta.glob('/jtk/**/*.json', { eager: true, import: 'default' }), { annotate }), (files) =>
+  content(files, { annotate }),
+);

@@ -1,4 +1,5 @@
 import type { ImageMetadata } from 'astro';
+import { fromBucket, sizeOf } from '@jtakeit/kit/live';
 
 /**
  * The pictures the owner uploaded, as local files.
@@ -76,10 +77,28 @@ export function isUpload(value: string): boolean {
 
 /** An uploaded photograph, ready for `<Image>`. */
 export function uploaded(key: string): ImageMetadata | undefined {
-  return byKey.get(key)?.default;
+  return byKey.get(key)?.default ?? fromTheDraft(key);
 }
 
 /** An uploaded clip's address in the built site. */
 export function uploadedClip(key: string): string | undefined {
-  return clipsByKey.get(key);
+  return clipsByKey.get(key) ?? (/\.(mp4|webm)$/i.test(key) ? fromBucket(key) : undefined);
+}
+
+/**
+ * ── a picture uploaded since the last build ─────────────────────────────────
+ *
+ * The panel's live preview draws a draft between builds (jtakeit-core wiki/89
+ * §12), and a photograph the owner has just uploaded is in the draft and in no
+ * build's `src/assets/`. There it is the bucket's file as it is, at the size
+ * the platform measured when it was uploaded — under a draft only: a build
+ * that has not fetched a picture draws the placeholder, as it always has.
+ */
+function fromTheDraft(key: string): ImageMetadata | undefined {
+  if (!/\.(jpe?g|png|webp|avif)$/i.test(key)) return undefined;
+  const src = fromBucket(key);
+  if (src === undefined) return undefined;
+  const size = sizeOf(key) ?? { width: 1600, height: 1200 };
+  const format = (/\.([a-z0-9]+)$/i.exec(key)?.[1] ?? 'jpg').toLowerCase().replace('jpeg', 'jpg') as ImageMetadata['format'];
+  return { src, width: size.width, height: size.height, format };
 }

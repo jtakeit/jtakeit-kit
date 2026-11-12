@@ -1,0 +1,68 @@
+---
+/**
+ * The one route a draft is rendered live by — and nothing in a static build.
+ *
+ * ── why there is a second way to reach the same pages ──────────────────────
+ *
+ * A static build asks each catch-all route for its addresses
+ * (`getStaticPaths`) and renders each with the props it handed out. A server
+ * does neither: it takes the first route whose pattern matches — every
+ * address of this site matches `[...entry]` — and hands it no props. So a
+ * site built for a server answered 500 on its home page and on every entry
+ * (jtakeit-core wiki/89 §9.2), until its routes were told apart again.
+ *
+ * Under `JTK_RENDER=live` (jtakeit-meta.mjs), and only then, this file is the
+ * route, `/[...path]`, and the routes below are its templates: each one's own
+ * `getStaticPaths`, run per request against the request's door — the draft's
+ * — says whether the address is its, and with what props, as the build
+ * would. An entry the draft added is found exactly as a build would find it.
+ * The order is the static build's own (Astro's route priority): the paged
+ * listing, the entry, the home, the listing.
+ *
+ * Those routes are marked prerendered under server output, so the server
+ * passes them over for this one (`astro:route:setup` in jtakeit-meta.mjs);
+ * a static build never imports this file. A route the scaffold does not
+ * know of — one the developer added — is rendered by Astro as it always is.
+ *
+ * An address none of them claims is a 404 the renderer answers, and the
+ * panel's preview then shows the built page instead (wiki/89 §12).
+ */
+import Entry, { getStaticPaths as entryPaths } from '../pages/[...entry].astro';
+import Listing, { getStaticPaths as listingPaths } from '../pages/[...listing].astro';
+import Paged, { getStaticPaths as pagedPaths } from '../pages/[...listing]/page/[page].astro';
+import Home from '../pages/[...lang]/index.astro';
+import { localeParams } from '../lib/locale';
+
+type Found = { params: Record<string, string | number | undefined>; props?: Record<string, unknown> };
+
+/** An address from params, as the request's path says it: `en/blog/winter-care`, `''` for the home. */
+const addressOf = (...parts: (string | number | undefined)[]) =>
+  parts.filter((one) => one !== undefined && one !== '').join('/').replace(/^\/+|\/+$/g, '');
+const asked = addressOf(Astro.params.path);
+
+/**
+ * Astro's `paginate`, as much of it as the paged listing reads: a page's
+ * entries, its number and the last, and `page` in the params from the second.
+ */
+function paginate<T>(data: readonly T[], { pageSize = 10, params = {}, props = {} }: { pageSize?: number; params?: Record<string, string | number | undefined>; props?: Record<string, unknown> } = {}) {
+  const last = Math.max(1, Math.ceil(data.length / pageSize));
+  return Array.from({ length: last }, (_, i) => {
+    const n = i + 1;
+    const start = i * pageSize;
+    const end = Math.min(start + pageSize, data.length);
+    return {
+      params: { ...params, page: n === 1 ? undefined : String(n) },
+      props: { ...props, page: { data: data.slice(start, end), start, end: end - 1, size: pageSize, total: data.length, currentPage: n, lastPage: last } },
+    };
+  });
+}
+
+const find = (paths: Found[], ...keys: string[]) => paths.find((one) => addressOf(...keys.map((key) => one.params[key])) === asked);
+const paged = find((await (pagedPaths as unknown as (o: { paginate: typeof paginate }) => Promise<Found[]>)({ paginate })).map((one) => ({ ...one, params: { ...one.params, page: one.params.page === undefined ? undefined : `page/${one.params.page}` } })), 'listing', 'page');
+const entry = paged ? undefined : find(await entryPaths(), 'entry');
+const home = paged || entry ? undefined : find(localeParams(), 'lang');
+const listing = paged || entry || home ? undefined : find(await listingPaths(), 'listing');
+if (!paged && !entry && !home && !listing) return new Response(null, { status: 404 });
+---
+
+{paged ? <Paged {...paged.props} /> : entry ? <Entry {...entry.props} /> : home ? <Home /> : <Listing {...listing!.props} />}

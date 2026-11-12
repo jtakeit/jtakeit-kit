@@ -14,9 +14,10 @@
  * A language declared and not registered here renders with the site's own
  * words — the page is not broken, it is untranslated, and that is easy to see.
  */
+import { inDraft } from '@jtakeit/kit/live';
 import { COPY as own, STRINGS } from './{{LOCALE}}';
 import { site } from '../lib/site';
-import { makeCopy, type Copy } from './make';
+import { makeCopy, type Copy, type Strings } from './make';
 
 const BY_LOCALE: Record<string, Copy> = { '': own };
 
@@ -33,10 +34,25 @@ const BY_LOCALE: Record<string, Copy> = { '': own };
  * copy above, and renders an unregistered language with the site's own words,
  * as it always has.
  */
-const beside = import.meta.glob<{ COPY?: Copy }>(['./*.ts', '!./index.ts', '!./make.ts'], { eager: true });
+const beside = import.meta.glob<{ COPY?: Copy; STRINGS?: Strings }>(['./*.ts', '!./index.ts', '!./make.ts'], { eager: true });
 const laid = new Map<string, Copy>();
 
+/**
+ * ── a draft rendered live ───────────────────────────────────────────────────
+ *
+ * Each language's copy is made when its file is first imported — once a
+ * process, from the build's home page. Under the panel's live preview a
+ * process renders draft after draft (jtakeit-core wiki/89 §12), so there a
+ * language's copy is made again from the draft's home page, once a request,
+ * by the same `makeCopy` and the same `STRINGS` its file makes it with; a
+ * build never has a draft, and is handed the copy it always was.
+ */
 export function copyFor(locale: string): Copy {
+  const built = builtFor(locale);
+  return inDraft(`copy:${locale}`, () => draftedFor(locale, built)) ?? built;
+}
+
+function builtFor(locale: string): Copy {
   const registered = BY_LOCALE[locale];
   if (registered !== undefined) return registered;
   if (site.contract !== 3 || locale === '' || !site.locales.includes(locale)) return own;
@@ -46,6 +62,15 @@ export function copyFor(locale: string): Copy {
     laid.set(locale, copy);
   }
   return copy;
+}
+
+/** The copy `builtFor` hands out, made of the draft: what is made of the home page, made again; a copy registered by hand stays as it was registered. */
+function draftedFor(locale: string, built: Copy): Copy {
+  if (built === own) return makeCopy(site.page('/'), STRINGS);
+  if (BY_LOCALE[locale] !== undefined) return built;
+  const file = beside[`./${locale}.ts`];
+  if (file?.COPY !== undefined) return file.STRINGS !== undefined ? makeCopy(site.page('/', locale), file.STRINGS) : built;
+  return makeCopy(site.page('/', locale), { ...STRINGS, lang: locale, ogLocale: locale.replace('-', '_') }, STRINGS.lang);
 }
 
 export type { Copy } from './make';

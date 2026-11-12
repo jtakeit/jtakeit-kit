@@ -90,7 +90,7 @@ export function contractOfDeclaration(declared) {
 /**
  * The schema a contract-3 declaration says, top level in the order the file
  * is written in: `contract`, `generator`, `locale`, `locales`, `blocks`,
- * `page_seo`, `shared`, `collections`, `modules`. Inside each table the
+ * `page_seo`, `shared`, `collections`, `modules`, `render`. Inside each table the
  * declaration's own order stands. A table that is empty is left out — empty
  * is absent (§1, 6) — except `blocks`, which a schema must have. The
  * languages are spelt as the platform spells them (`de-CH`).
@@ -116,6 +116,9 @@ export function schemaOf(declared, options = {}) {
   if (some(declared.SHARED)) schema.shared = declared.SHARED;
   if (some(declared.COLLECTIONS)) schema.collections = declared.COLLECTIONS;
   if (some(declared.MODULES)) schema.modules = declared.MODULES;
+  // Whether the template draws a draft live (jtakeit-core wiki/89 §12):
+  // `RENDER = 'live'` in the declaration, as the scaffold writes it.
+  if (declared.RENDER !== undefined) schema.render = declared.RENDER;
   if (declared.BUSINESS_FACTS !== undefined) schema.business_facts = declared.BUSINESS_FACTS;
   return schema;
 }

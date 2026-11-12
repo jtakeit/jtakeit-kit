@@ -1,7 +1,8 @@
 import { execFile } from 'node:child_process';
+import { existsSync, readdirSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { join } from 'node:path';
+import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { content } from '@jtakeit/kit/content';
 import { contractOf, readJtk } from '@jtakeit/kit/content/node';
@@ -169,10 +170,115 @@ function catalogueWriter(root, logger) {
   return write;
 }
 
+/**
+ * ── what the build found on the disk ─────────────────────────────────────────
+ *
+ * `virtual:jtk/build` (src/live/build.d.ts): the files of `src/pages` and
+ * whether `public/icon.png` is there, read once when the build starts. Code
+ * that renders a page asked the disk for both, and a page rendered on request
+ * — the panel's live preview, below — has no checkout to ask (jtakeit-core
+ * wiki/89 §9.2). Under `astro dev` the module is read again when a page or
+ * the icon comes or goes.
+ */
+const BUILD_MODULE = 'virtual:jtk/build';
+
+function filesUnder(dir, from = dir) {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true })
+    .flatMap((one) => (one.isDirectory() ? filesUnder(join(dir, one.name), from) : [relative(from, join(dir, one.name)).split(sep).join('/')]))
+    .sort();
+}
+
+function buildFacts(root) {
+  const resolved = `\0${BUILD_MODULE}`;
+  return {
+    name: 'jtakeit-build-facts',
+    resolveId: (id) => (id === BUILD_MODULE ? resolved : undefined),
+    load(id) {
+      if (id !== resolved) return undefined;
+      const pages = filesUnder(join(root, 'src', 'pages'));
+      const raster = existsSync(join(root, 'public', 'icon.png'));
+      return `export const PAGE_FILES = ${JSON.stringify(pages)};\nexport const RASTER_MARK = ${raster};\n`;
+    },
+    configureServer(server) {
+      const again = (file) => {
+        if (!file.startsWith(join(root, 'src', 'pages')) && file !== join(root, 'public', 'icon.png')) return;
+        const module = server.moduleGraph.getModuleById(resolved);
+        if (module) server.moduleGraph.invalidateModule(module);
+      };
+      server.watcher.on('add', again);
+      server.watcher.on('unlink', again);
+    },
+  };
+}
+
+/**
+ * ── a draft, rendered live: `JTK_RENDER=live` ────────────────────────────────
+ *
+ * The platform builds a site whose schema says `render: "live"` twice: as it
+ * always has, static, and once more for a server (`@astrojs/node`), which the
+ * panel's preview asks for a page drawn from the draft the moment a field is
+ * saved (jtakeit-core wiki/89 §12). Publishing is the static build alone.
+ * Here, and only under that variable:
+ *
+ *   - server output, `@astrojs/node` in middleware mode — the platform's
+ *     renderer runs it;
+ *   - `src/live/Route.astro` as the one route, `/[...path]`, which draws the
+ *     scaffold's catch-alls as templates — a server hands a route no props
+ *     from `getStaticPaths` — and those routes prerendered, so the server
+ *     passes them over for it;
+ *   - `src/live/middleware.ts`, which renders a request inside the draft the
+ *     renderer hands it;
+ *   - pictures served as they are (`src/live/images.ts`), nothing resized
+ *     on request; the icons drawn when the server build is made.
+ *
+ * A route the developer added renders as Astro renders it: under server
+ * output that means from the request, so one that reads `Astro.props` from
+ * its own `getStaticPaths` is listed in `DRAWN` here, with a template in the
+ * one route — or the platform finds its pages differ from the build's, says
+ * so, and the preview shows the build (wiki/89 §12, the check at build).
+ */
+const LIVE = process.env.JTK_RENDER === 'live';
+const DRAWN = new Set([
+  'src/pages/[...entry].astro',
+  'src/pages/[...listing].astro',
+  'src/pages/[...lang]/index.astro',
+  'src/pages/[...listing]/page/[page].astro',
+  // Not drawn live: a feed is a build's, and the preview never frames one.
+  'src/pages/[...feed].xml.ts',
+  // Drawn once, by the server build, with sharp: files beside the pages.
+  'src/pages/favicon-32.png.ts',
+  'src/pages/apple-touch-icon.png.ts',
+]);
+
+/** A file of this site's, by its path from the root, as Astro takes an entrypoint. */
+const own = (file) => fileURLToPath(new URL(file, import.meta.url));
+
+/**
+ * The site's Astro config, as `astro.config.mjs` writes it — or, under
+ * `JTK_RENDER=live`, the same config for a server: output `server` on
+ * `@astrojs/node` in middleware mode, and pictures as they are. The adapter
+ * is a dependency of the site's own, so the platform's renderer runs exactly
+ * the code its lockfile says.
+ */
+export async function liveRender(config) {
+  if (!LIVE) return config;
+  const { default: node } = await import('@astrojs/node');
+  return {
+    ...config,
+    output: 'server',
+    adapter: node({ mode: 'middleware' }),
+    image: { ...config.image, service: { entrypoint: own('src/live/images.ts') } },
+  };
+}
+
 export function jtakeitMeta() {
   return {
     name: 'jtakeit-meta',
     hooks: {
+      'astro:route:setup': ({ route }) => {
+        if (LIVE && DRAWN.has(route.component.split(sep).join('/'))) route.prerender = true;
+      },
       // The panel reads the dev server from the browser, across origins
       // (https://admin.jtakeit.com → http://localhost). Astro 7's dev server
       // refuses a cross-origin subresource request outright — 403, before
@@ -180,7 +286,7 @@ export function jtakeitMeta() {
       // `security.allowedDomains`; the platform's panels are, on either
       // environment. Only the dev server reads this: the built site is
       // static and has no forwarded host to validate.
-      'astro:config:setup': ({ updateConfig, injectScript, command }) => {
+      'astro:config:setup': async ({ updateConfig, injectScript, injectRoute, addMiddleware, command, config }) => {
         updateConfig({
           security: {
             allowedDomains: [
@@ -188,7 +294,12 @@ export function jtakeitMeta() {
               { hostname: 'admin.stg.jtakeit.com', protocol: 'https' },
             ],
           },
+          vite: { plugins: [buildFacts(fileURLToPath(config.root))] },
         });
+        if (LIVE && config.output === 'server') {
+          injectRoute({ pattern: '/[...path]', entrypoint: own('src/live/Route.astro'), prerender: false });
+          addMiddleware({ entrypoint: own('src/live/middleware.ts'), order: 'pre' });
+        }
         // The page's own card, bottom right: where the site is and what the
         // developer can do in the panel meanwhile. On every
         // page under `astro dev`, on none of a build.
