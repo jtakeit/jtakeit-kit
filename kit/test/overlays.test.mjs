@@ -189,5 +189,13 @@ test('an entry somebody books is in every language, always: listed in each with 
   ]);
   const refused = judgeTranslations(files);
   assert.deepEqual(refused.map((one) => [one.code, one.path]), [['JTK_E_DOCUMENT_INVALID', 'jtk/entries/masters/anna.en.json visible']]);
-  assert.match(refused[0].says, /masters is what people book.*in every language/);
+  assert.match(refused[0].says, /an entry of "masters" is the bookings module's resources, and is in every language, always/);
+});
+
+test('what a module books is every collection one of its roles names, as the platform\'s registry.Booked answers: the services, the resources, the classes', async () => {
+  const { bookedIn } = await import('../lib/content/overlay.mjs');
+  const booked = bookedIn({ modules: { bookings: { services: 'services', resources: 'masters', classes: 'groups' } } });
+  assert.deepEqual([...booked.keys()].sort(), ['groups', 'masters', 'services']);
+  assert.deepEqual(booked.get('groups'), { module: 'bookings', role: 'classes' });
+  assert.equal(bookedIn({}).size, 0);
 });

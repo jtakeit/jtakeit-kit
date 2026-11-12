@@ -311,8 +311,9 @@ language nobody translated it into, as `visible: false` in a translation holds
 one back: built for the panel's preview, listed nowhere, in no sitemap.
 
 **What people book is in every language, always.** An entry of a collection
-the bookings module names as its `services` or `resources` is booked by the
-diary in every language, so the booking form lists it in every language: where
+a module names in one of its roles — the bookings' `services`, `resources` and
+`classes` — is booked by the diary in every language, so the booking form
+lists it in every language: where
 nobody translated it, in the original's words, marked with the original's
 `lang`. Such a collection cannot say `untranslated: "hide"`, nor a translation
 of its entry `visible: false` — `jtk schema` refuses both. The form names a

@@ -38,9 +38,10 @@
  *     words marked; hidden there, as held back, where its collection says
  *     `untranslated: "hide"`.
  *   - **An entry somebody books is in every language, always** (the owner,
- *     12 November 2026): an entry of a collection a module names as its
- *     `services` or `resources` is neither held back nor hidden by a missing
- *     translation — where nobody translated it, it is the original's words.
+ *     12 November 2026): an entry of a collection a module names in one of
+ *     its roles (`registry.Booked`) is neither held back nor hidden by a
+ *     missing translation — where nobody translated it, it is the original's
+ *     words.
  *     The diary books it in every language, so the booking form lists it in
  *     every language. `jtk schema` refuses both ways of saying otherwise.
  *   - A key the schema does not declare is never read from a translation
@@ -155,17 +156,25 @@ function readSchema(schema) {
 }
 
 /**
- * The collections somebody books: those a module names as its `services` or
- * its `resources` (`modules.bookings.services`, `.resources`). Their entries
- * are in every language, always (the owner, 12 November 2026).
+ * The collections somebody books: every collection a module names in one of
+ * its roles — the bookings' `services` and `resources`, and any role a module
+ * fills with a collection (its `classes`) — as the platform's
+ * `registry.Booked` answers. Their entries are in every language, always (the
+ * owner, 12 November 2026): a visitor books them in any language's form, and
+ * the diary reads the original.
  * @param {any} schema
- * @returns {Set<string>}
+ * @returns {Map<string, { module: string; role: string }>} the module and the role that name each, the first by name
  */
 export function bookedIn(schema) {
-  const out = new Set();
-  for (const roles of Object.values(isObject(schema?.modules) ? schema.modules : {})) {
+  const out = new Map();
+  const modules = isObject(schema?.modules) ? schema.modules : {};
+  for (const module of Object.keys(modules).sort()) {
+    const roles = modules[module];
     if (!isObject(roles)) continue;
-    for (const role of ['services', 'resources']) if (typeof roles[role] === 'string' && roles[role] !== '') out.add(roles[role]);
+    for (const role of Object.keys(roles).sort()) {
+      const collection = roles[role];
+      if (typeof collection === 'string' && collection !== '' && !out.has(collection)) out.set(collection, { module, role });
+    }
   }
   return out;
 }
