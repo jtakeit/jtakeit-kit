@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { content } from '../lib/content/index.mjs';
 import { specimenId, specimenAddresses, hiddenEntries, buildMeta, writeMeta, draftsOf } from '../lib/meta.mjs';
-import { checkKit, kitSettings, kitEntries, mergeKitIntoCatalogue, layKitFiles, kitLanguage } from '../lib/kits.mjs';
+import { checkKit, kitSettings, kitEntries, mergeKitIntoCatalogue, layKitFiles, kitLanguage, catalogueIn2, CONTRACT_3_ONLY } from '../lib/kits.mjs';
 
 const blocks = [
   { type: 'gallery', views: [{ key: 'row' }, { key: 'pile' }] },
@@ -172,6 +172,69 @@ test('the kit\'s files are laid out under a repository, the catalogue only when 
     const other = join(dir, 'astro');
     layKitFiles(other, kit, { locale: 'de' });
     assert.ok(!existsSync(join(other, 'jtk', 'catalogue.json')), 'the scaffold writes its declaration itself');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// A kit served with contract 3's words on it — a person's name the same in
+// every language, `"localized": false` on the salon's masters' title
+// (jtakeit-core #223) — goes into a contract-2 catalogue without them: the
+// platform refuses a contract-2 schema that writes any key only contract 3
+// has (registry decode2, contract3KeyIn), at any depth.
+test("a kit's contract-3 words are left out of a contract-2 catalogue, at every depth, and nothing else is touched", () => {
+  const three = structuredClone(kit);
+  three.catalogue.shared = ['contacts'];
+  const car = three.catalogue.blocks.find((b) => b.type === 'car');
+  car.fields[0].localized = false;
+  car.fields.push(
+    { key: 'seats', label: 'Seats', kind: 'number', integer: true, min_zero: true, max_zero: true },
+    { key: 'price', label: 'Price', kind: 'money', qualifiers: ['from'] },
+    { key: 'phone', label: 'Phone', kind: 'tel', role: 'phone' },
+    { key: 'colour', label: 'Colour', kind: 'select', options: ['red'], option_defs: [{ value: 'red' }] },
+    { key: 'class', label: 'Class', kind: 'ref', ref: 'services', to: ['services'], many: true, on_delete: 'restrict' },
+    { key: 'extras', label: 'Extras', kind: 'list', localized: true, of: [{ key: 'name', label: 'Name', kind: 'text', Localized: false }] },
+  );
+  car.asks = [{ key: 'licence', label: 'Licence', kind: 'text', localized: false }];
+  Object.assign(three.catalogue.collections[1], { route: { detail: '/cars/{slug}' }, shown_on: ['/cars#cars-{slug}'], untranslated: 'hide' });
+  const before = JSON.stringify(three);
+
+  const two = catalogueIn2(three.catalogue);
+  assert.equal(JSON.stringify(three), before, 'the kit itself is not changed');
+  const said = [];
+  const look = (value, at) => {
+    if (Array.isArray(value)) value.forEach((one, i) => look(one, `${at}[${i}]`));
+    else if (value !== null && typeof value === 'object') {
+      for (const [key, one] of Object.entries(value)) {
+        if ([...CONTRACT_3_ONLY.catalogue, ...CONTRACT_3_ONLY.field, ...CONTRACT_3_ONLY.collection].includes(key.toLowerCase())) said.push(`${at}.${key}`);
+        look(one, `${at}.${key}`);
+      }
+    }
+  };
+  look(two, 'catalogue');
+  assert.deepEqual(said, []);
+  const twoCar = two.blocks.find((b) => b.type === 'car');
+  assert.deepEqual(twoCar.fields.map((f) => Object.keys(f)), [
+    ['key', 'label', 'kind'], ['key', 'label', 'kind'], ['key', 'label', 'kind'], ['key', 'label', 'kind'],
+    ['key', 'label', 'kind', 'options'], ['key', 'label', 'kind', 'ref'], ['key', 'label', 'kind', 'of'],
+  ], "every other key kept, in its order: a select's options, a reference's ref, a list's rows");
+  assert.deepEqual(twoCar.fields.at(-1).of, [{ key: 'name', label: 'Name', kind: 'text' }]);
+  assert.deepEqual(twoCar.asks, [{ key: 'licence', label: 'Licence', kind: 'text' }]);
+  assert.deepEqual(two.collections[1], { name: 'cars', label: 'Cars', prefix: '/cars', type: 'car' });
+  assert.deepEqual(Object.keys(two), ['blocks', 'collections', 'modules']);
+
+  // A kit that says none of them comes back the same, key for key and in order.
+  assert.equal(JSON.stringify(catalogueIn2(kit.catalogue)), JSON.stringify(kit.catalogue));
+
+  // jtkit apply's catalogue: the kit's types without them, the site's own untouched.
+  const merged = mergeKitIntoCatalogue({ contract: 2, blocks: [{ type: 'mine', v: 1, label: 'Mine', fields: [] }] }, three);
+  assert.equal(JSON.stringify(merged.blocks.filter((b) => b.type !== 'mine')), JSON.stringify(two.blocks));
+  assert.equal(JSON.stringify(merged.collections), JSON.stringify(two.collections));
+  assert.equal('shared' in merged, false);
+  const dir = mkdtempSync(join(tmpdir(), 'jtk-kit-2-'));
+  try {
+    layKitFiles(dir, three, { locale: 'en', catalogue: true });
+    assert.doesNotMatch(readFileSync(join(dir, 'jtk', 'catalogue.json'), 'utf8'), /"(localized|role|integer|qualifiers|to|many|on_delete|option_defs|min_zero|max_zero|shared|route|shown_on|untranslated)"/i);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

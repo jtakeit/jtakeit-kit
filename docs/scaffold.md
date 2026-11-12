@@ -9,9 +9,10 @@ writes a README and makes the first commit (`--no-git` to skip it). It decides
 nothing about how the site looks: every component is a starting point, and the
 contract below is the only thing the platform will hold the repository to.
 
-The site is on contract 3 unless `--contract 2` says otherwise (below). The
-template is one for both: its pages read the content through the kit's door,
-and only the files that are a contract's own differ — contract 3's are laid
+The site is on contract 3: a new site is always laid out on the latest
+contract, and contract 2 is only for a site made before it and not moved yet
+(below). The template is one for both: its pages read the content through the
+kit's door, and only the files that are a contract's own differ — contract 3's are laid
 from `template/contract-3/` in place of contract 2's `src/content/blocks.ts`
 and `jtk/content/`.
 
@@ -23,8 +24,7 @@ the README it writes says the same:
 1. `create_site`, if the site is not made yet — with the brief's currency.
 2. `npm ci && npm run dev`, then `open_dev_session` with its address and the
    `run` command its answer gives — before writing a line.
-3. `src/content/blocks.ts`, then `npx @jtakeit/astro schema` — `catalogue`
-   under `--contract 2`.
+3. `src/content/blocks.ts`, then `npx @jtakeit/astro schema`.
 4. `validate_schema` with the schema, the `jtk/` files and the `site_id`.
 5. No GitHub remote in the copy → `push_code`, then
    `npx @jtakeit/astro push '<url>'`; a GitHub remote → ask the developer
@@ -95,9 +95,10 @@ after that.
 A contract-3 site in several languages is laid out with `--locales`
 (`jtk create probe --locale de-CH --locales en`): each other language a
 translation beside every original, its words that are not content in
-`src/copy/<locale>.ts` ([languages.md](languages.md)). `jtk create
---contract 2` lays out contract 2's files exactly as they were, in one
-language:
+`src/copy/<locale>.ts` ([languages.md](languages.md)). A site made before
+contract 3, and not moved yet, keeps contract 2's files, in one language
+(`jtk create --contract 2` still lays them out exactly as they were, for the
+kit's own tests and for rehearsing a move — never for a new site):
 
 ```
 jtk/catalogue.json    what the owner may edit — derived from src/content/blocks.ts by `jtk catalogue`;

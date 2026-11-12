@@ -6,8 +6,9 @@
 > `src/content/blocks.ts` with `CONTRACT = 3`, and its schema is
 > `jtk/schema.json`, written and checked against the page by
 > `npx @jtakeit/astro schema` (jtakeit-core wiki/98; the declaration's own
-> header says the contract-3 words). This page is the catalogue of a site laid
-> out with `jtk create --contract 2`, and what it says of declaring a field,
+> header says the contract-3 words). This page is the catalogue of a
+> contract-2 site — one made before contract 3 and not moved yet; a new site
+> is never laid out on contract 2 — and what it says of declaring a field,
 > annotating it and checking it against the build holds on both.
 
 The studio's admin edits a site by tapping the text on it. It can do that for a
@@ -34,7 +35,7 @@ npx @jtakeit/astro catalogue
 The site renders from the emitted file too: the kit's door
 (`@jtakeit/kit/content`, `site` in `src/lib/site.ts`) reads the schema the
 platform reads — the collections, their order and groups, the languages, which
-fields take a tap — never `blocks.ts` itself. `jtk create --contract 2` writes it, and under
+fields take a tap — never `blocks.ts` itself. `jtk create` wrote it for such a site, and under
 `astro dev` the scaffold writes it again every time `blocks.ts` is saved — the
 same tool, `--emit-only` — so the page follows the declaration with nothing to
 run. A change that does not check is said in the dev server's log, with the

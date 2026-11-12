@@ -156,24 +156,85 @@ export function kitEntries(kit, locale) {
 }
 
 /**
+ * The keys only contract 3 has, by where they are written: what the
+ * platform's judge refuses in a contract-2 schema as a key it does not know
+ * (JTK_E_CATALOGUE_UNREADABLE, «unknown field») — the registry's keys tagged
+ * `contract:"3"`, read by its `decode2`, `contract3KeyIn` and
+ * `routeWrittenOtherwise`. A field's at every depth of a list's rows, in a
+ * block's fields and its asks.
+ */
+export const CONTRACT_3_ONLY = Object.freeze({
+  catalogue: Object.freeze(['shared']),
+  field: Object.freeze(['localized', 'role', 'integer', 'qualifiers', 'to', 'many', 'on_delete', 'option_defs', 'min_zero', 'max_zero']),
+  collection: Object.freeze(['route', 'shown_on', 'untranslated']),
+});
+
+const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+/** An object without the keys named, in its own order; the decoder matches a key in any case. */
+const without = (object, keys) => Object.fromEntries(Object.entries(object).filter(([key]) => !keys.includes(key.toLowerCase())));
+const fields2 = (fields) => (Array.isArray(fields)
+  ? fields.map((field) => {
+    if (!isObject(field)) return field;
+    const out = without(field, CONTRACT_3_ONLY.field);
+    if (Array.isArray(field.of)) out.of = fields2(field.of);
+    return out;
+  })
+  : fields);
+
+/**
+ * A kit's catalogue as a contract-2 schema holds it: without contract 3's
+ * keys (`CONTRACT_3_ONLY`), and nothing else changed — a kit that says none
+ * of them comes back the same, key for key and in the same order.
+ *
+ * The platform serves a kit in contract 2's words with contract 3's on it
+ * where a kit says what only contract 3 can — a person's name the same in
+ * every language, `"localized": false` on the salon's masters' and the
+ * clinic's doctors' title (jtakeit-core #223). Laid out on contract 3
+ * (`jtk create`'s default), the upgrade's mapping carries them over; laid
+ * out on contract 2, they would reach `src/content/blocks.ts` and
+ * `jtk/catalogue.json`, which the platform then refuses whole — so contract
+ * 2's layouts leave them out, as the platform's own `kits.Into` does.
+ *
+ * @param {any} catalogue a kit's `catalogue`
+ */
+export function catalogueIn2(catalogue) {
+  if (!isObject(catalogue)) return catalogue;
+  const out = without(catalogue, CONTRACT_3_ONLY.catalogue);
+  if (Array.isArray(catalogue.blocks)) {
+    out.blocks = catalogue.blocks.map((block) => {
+      if (!isObject(block)) return block;
+      const two = { ...block };
+      for (const list of ['fields', 'asks']) if (Array.isArray(block[list])) two[list] = fields2(block[list]);
+      return two;
+    });
+  }
+  if (Array.isArray(catalogue.collections)) {
+    out.collections = catalogue.collections.map((collection) => (isObject(collection) ? without(collection, CONTRACT_3_ONLY.collection) : collection));
+  }
+  return out;
+}
+
+/**
  * A kit's block types, collections and module put into a catalogue object —
  * for a site whose catalogue is `jtk/catalogue.json` rather than a
- * declaration. A type or a collection the catalogue already has by that name
- * is left as it is: the site's own wins.
+ * declaration, which is contract 2's file: the kit's in contract 2's words
+ * (`catalogueIn2`). A type or a collection the catalogue already has by that
+ * name is left as it is: the site's own wins.
  * @param {any} catalogue
  * @param {any} kit
  */
 export function mergeKitIntoCatalogue(catalogue, kit) {
+  const brought = catalogueIn2(kit.catalogue);
   const out = { contract: 2, ...catalogue };
   out.blocks = [...(out.blocks ?? [])];
-  for (const block of kit.catalogue.blocks) {
+  for (const block of brought.blocks) {
     if (!out.blocks.some((one) => one.type === block.type)) out.blocks.push(block);
   }
   out.collections = [...(out.collections ?? [])];
-  for (const collection of kit.catalogue.collections) {
+  for (const collection of brought.collections) {
     if (!out.collections.some((one) => one.name === collection.name)) out.collections.push(collection);
   }
-  out.modules = { ...(out.modules ?? {}), ...kit.catalogue.modules };
+  out.modules = { ...(out.modules ?? {}), ...brought.modules };
   return out;
 }
 

@@ -235,13 +235,16 @@ writes `jtk/bookings.json` with `page` at the services' listing and `kit` /
 `kit_version` recorded, the rates as entries under `jtk/content`, and the
 kit's block types, collections and module into `jtk/catalogue.json` (a type
 or a collection the site already has by that name is left alone) — contract
-2's files, so a contract-3 tree is refused. The scaffold lays a kit out
-through `jtk create --kit`, writing the declaration into
-`src/content/blocks.ts` instead of the catalogue file: on contract 3, its
-default, in contract 3's words, the settings at `jtk/modules/bookings.json`
-and the rates under `jtk/entries/`; on `--contract 2`, the files above. `@jtakeit/kit/kits`
-has the pieces — `loadKit`, `kitSettings`, `kitEntries`,
-`mergeKitIntoCatalogue`, `layKitFiles` — for a tool of your own.
+2's files, so a contract-3 tree is refused, and the kit's types in contract
+2's words: a key only contract 3 has, such as a person's name said
+`"localized": false`, is left out, since the platform refuses a contract-2
+catalogue that writes one. The scaffold lays a kit out through `jtk create
+--kit`, writing the declaration into `src/content/blocks.ts` instead of the
+catalogue file, in contract 3's words, the settings at
+`jtk/modules/bookings.json` and the rates under `jtk/entries/`.
+`@jtakeit/kit/kits` has the pieces — `loadKit`, `kitSettings`, `kitEntries`,
+`catalogueIn2`, `mergeKitIntoCatalogue`, `layKitFiles` — for a tool of your
+own.
 
 ## The catalogue tool
 

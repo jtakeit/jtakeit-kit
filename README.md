@@ -70,7 +70,7 @@ A file of the kit's JSON is taken too — `--kit ./car_rental.json` — and
 
 The kit's collections, rates and settings are laid out — `blocks.ts` in contract 3's
 words, `jtk/modules/bookings.json`, the rates as entries under `jtk/entries/` in the
-site's language (`jtk/bookings.json` and `jtk/content/` under `--contract 2`) — and the
+site's language — and the
 page the services are shown on is the booking page — the kit whole, nothing left out quietly. What it
 leaves to the brief (the time zone, the prices, the cars) is printed at the end,
 with where to read what it chose for the business — confirmation, cancellation,
@@ -95,7 +95,8 @@ where a file has none. The platform's own judge is the authority — `validate_s
 over MCP, or `--judge` here with `JTK_API` and `JTK_TOKEN` set — and this tool sits its
 exam.
 
-A contract-2 site (`--contract 2`) has `jtk/catalogue.json` instead, written and
+A contract-2 site — one made before contract 3 and not moved yet; a new site is
+always laid out on the latest contract — has `jtk/catalogue.json` instead, written and
 checked the same way by `npx @jtakeit/astro catalogue` ([docs/catalogue.md](docs/catalogue.md));
 `npx @jtakeit/astro upgrade contract-3` moves one in one commit.
 
