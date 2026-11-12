@@ -170,13 +170,23 @@ const form = sells
 const horizon = typeof settings.horizon === 'number' && settings.horizon > 0 ? Math.floor(settings.horizon) : 730;
 
 const heading = site.words(collection.label, langOf(locale));
+// The page the listing is drawn on, where the content has one (contract 3's
+// jtk/pages/services.json, which `jtk upgrade` writes for a collection shown
+// only there): its SEO and its name, laid over in this language by the door.
+// A listing used to say the collection's label and nothing else, whatever
+// the owner wrote there (the two-language rehearsal, 12 November 2026).
+const listedAtBase = collection.pages ? site.listingOf(collection.name, '') : site.shownOn(collection.name, '');
+const ownPage = listedAtBase === undefined ? undefined : site.page(listedAtBase, locale);
+const seoWords = (key: string): string => (typeof ownPage?.seo[key] === 'string' ? (ownPage.seo[key] as string).trim() : '');
+const pageTitle = seoWords('title') || ownPage?.name?.trim() || heading;
+const pageDescription = seoWords('description');
 ---
 
 {paged && (
   <EntryListing collection={collection} locale={locale} entries={paged.entries.slice(0, paged.size)} current={1} last={paged.last} alternates={alternates} />
 )}
 {!paged && (
-<Layout title={heading} description="" alternates={alternates}>
+<Layout title={pageTitle} description={pageDescription} alternates={alternates}>
   <main id="content">
     <section class="listing">
       {/* The collection's own name, from the catalogue: the repository's, not a
@@ -188,7 +198,7 @@ const heading = site.words(collection.label, langOf(locale));
             {/* A category's title is that entry's, and taps open it; a
                 select's label is the repository's, fixed. */}
             {run.heading && (
-              <h2 class="listing-group" {...run.heading.at} data-jtk-fixed={run.heading.fixed ? true : undefined}>{run.heading.text}</h2>
+              <h2 class="listing-group" {...run.heading.at} {...(run.heading.entry?.fields.lang('title') ?? {})} data-jtk-fixed={run.heading.fixed ? true : undefined}>{run.heading.text}</h2>
             )}
             <ul class="listing-rows">
               {
@@ -214,8 +224,8 @@ const heading = site.words(collection.label, langOf(locale));
                         }
                         if (field.kind === 'duration') return <span class="listing-row__term" {...fields.at(field.key)}>{length(Number(value))}</span>;
                         if (field.kind === 'money') return <span class="listing-row__term" {...fields.at(field.key)}>{site.money(value, locale)}</span>;
-                        if (field.key === 'title') return <RowTitle {...fields.at(field.key)}>{String(value)}</RowTitle>;
-                        return <p {...fields.at(field.key)}>{String(value)}</p>;
+                        if (field.key === 'title') return <RowTitle {...fields.at(field.key)} {...fields.lang(field.key)}>{String(value)}</RowTitle>;
+                        return <p {...fields.at(field.key)} {...fields.lang(field.key)}>{String(value)}</p>;
                       })}
                     </li>
                   );

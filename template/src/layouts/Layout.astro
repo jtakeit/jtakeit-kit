@@ -36,9 +36,16 @@ interface Props {
    * set of one is noise.
    */
   alternates?: { locale: string; address: string }[];
+  /**
+   * Every language the page can be read in, for the language switch —
+   * `site.languagesOf(page)`: the switch goes to a page in another language
+   * whether or not anybody translated it, where `hreflang` names only the
+   * translated (contract 3). The alternates where it is not given.
+   */
+  languages?: { locale: string; address: string }[];
 }
 
-const { title, description, suffix = true, schema, bodyClass, alternates = [] } = Astro.props;
+const { title, description, suffix = true, schema, bodyClass, alternates = [], languages = alternates } = Astro.props;
 // The page's language, from its address: `/de/…` is German. The copy is that
 // language's where the site has registered it (src/copy/index.ts); `lang`
 // is the page's whatever the copy says.
@@ -70,7 +77,12 @@ const ogImage = new URL(under('/og.jpg'), Astro.site).href;
 // written yet is named after the business, which is what a visitor would
 // call it anyway (12 October 2026: the home page of a fresh site had none).
 const named = title.trim() || NAME || '';
-const fullTitle = suffix && title.trim() ? `${named}${META.titleSuffix}` : named;
+// The suffix names the business as its shared text does (contract 3's
+// contacts, by role) — the name og:site_name and the structured data say —
+// and the copy's suffix, written at `jtk create`, only where the shared text
+// names nobody (contract 2, or contacts not filled yet).
+const ownName = facts.text('name').trim();
+const fullTitle = suffix && title.trim() ? `${named}${ownName !== '' ? ` — ${ownName}` : META.titleSuffix}` : named;
 
 /**
  * One business, described once, on every page. The `@id` is stable across the
@@ -228,13 +240,15 @@ const businessSchema = {
       `x-default` is the site's own language: it is what a search engine shows
       somebody whose language is none of these, and leaving it out means the
       engine picks for itself. The locale of the site's own pages is empty in
-      the content, and here it becomes the site's `lang` — the value is the
-      same fact written two ways, so it is written once in META.
+      the content, and here it becomes the site's own tag (`langOf`), never
+      this page's: on /en/ the original's alternate said `en`, so the page
+      named two English alternates (the two-language rehearsal on staging, 12
+      November 2026).
     */}
     {alternates.map((other) => (
       <link
         rel="alternate"
-        hreflang={other.locale === '' ? META.lang : other.locale}
+        hreflang={langOf(other.locale)}
         href={canonicalFor(other.address)}
       />
     ))}
@@ -297,12 +311,12 @@ const businessSchema = {
       were in the copy since the scaffold had a copy, and nothing drew them
       (12 October 2026).
     */}
-    <a class="skip-link" href="#content" data-jtk-fixed>{COPY.A11Y.skipToContent}</a>
+    <a class="skip-link" href="#content" data-jtk-fixed lang={COPY.WORDS_LANG || undefined}>{COPY.A11Y.skipToContent}</a>
     <slot />
     {/* The switcher, drawn only on a page that exists in more than one
         language. Here so a second language works the day it is declared;
         move it into the header when the design has one. */}
-    <Languages alternates={alternates} current={locale} class="languages--corner" />
+    <Languages alternates={languages} current={locale} class="languages--corner" />
 
     <script>
       /*

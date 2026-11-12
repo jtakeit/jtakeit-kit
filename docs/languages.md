@@ -320,14 +320,31 @@ of its entry `visible: false` — `jtk schema` refuses both. The form names a
 service and a master by `entry.baseSlug`, the original's slug, which the diary
 books by whatever a language calls the entry.
 
-**`hreflang` names a language only where a translation is.** A page is built in
-every language the site has; where nobody translated it, it is the original's
-words under another address, and no alternate of the original.
+**`hreflang` and the sitemap name a language only where a translation is.** A
+page is built in every language the site has; where nobody translated it, it is
+the original's words under another address — no alternate of the original, and
+no line of the sitemap or `llms.txt` (`page.translated`, `entry.translated`).
+The language switch goes there all the same (`site.languagesOf`): a visitor
+asked for the language, and reads the original's words, marked.
 
-**The copy.** A language with no `src/copy/<locale>.ts` of its own still reads
-its page through the door on contract 3, `<html lang>` its own; only the words
-that are not content — the form's, the privacy page's — are the site's own until
-a copy is registered in `src/copy/index.ts`.
+**The copy.** The words that are not content — the form's messages, the
+privacy page, the skip link, a listing's pager — are `src/copy/<locale>.ts`,
+found by its name on contract 3. `npx @jtakeit/astro copy en` writes English's
+in the kit's words, for every language the scaffold speaks; `jtk upgrade
+contract-3` writes them for the languages a site has; `jtk schema` and `jtkit
+progress` name a language that has none. Until it has one, its pages say the
+site's own words there, each marked with its `lang` (`COPY.WORDS_LANG`), as is
+a label the declaration wrote once (`site.wordsLang`): write labels a visitor
+reads per language, `{ 'de-CH': 'Worum es geht', en: 'What it is about' }`.
+
+**A listing is a page.** `/services` and `/blog` read their page document's
+`seo` and `name` in the language, where the content has one, and the title
+names the business as the shared contacts do.
+
+**The business's facts are mostly the same in every language.** The contacts
+`jtk upgrade` declares say `localized: false` on the name, the street, the
+postcode, the schema.org type and the price range; the city stays per language
+(«Zürich», «Zurich»).
 
 **Checked before the push.** `jtk schema` judges every translation as the
 platform's import will: beside its original, `of` its id, in a language the

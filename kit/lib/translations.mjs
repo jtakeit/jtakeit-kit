@@ -60,6 +60,8 @@
  * that says nothing (§4.7), from which nothing was made.
  */
 import { createHash } from 'node:crypto';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { canonicalLocale, sharedLocaleOf } from './content/locale.mjs';
 import { bookedIn, isEmpty, kindOf, layOf, localizedIn, overlay, valueAt } from './content/overlay.mjs';
 
@@ -425,4 +427,33 @@ export function statesOf(files) {
     }
     return { locale, missing, outdated, held };
   });
+}
+
+// ── the copy, per language ─────────────────────────────────────────────────
+
+/**
+ * The site's other languages that have no copy module beside the scaffold's
+ * copy registry (`src/copy/<locale>.ts` beside `src/copy/index.ts`): on their
+ * pages the words that are not content — the form's messages, the privacy
+ * page, the skip link — are the site's own language's, marked with its
+ * `lang`, until `npx @jtakeit/astro copy <locale>` writes them in the kit's
+ * words for the language (the two-language rehearsal on staging, 12 November
+ * 2026). Nothing for a repository without the registry: another generator
+ * says its own words its own way.
+ *
+ * @param {string} root the site's repository
+ * @param {any} schema `jtk/schema.json`
+ * @returns {string[]} the languages, canonical
+ */
+export function copiesMissing(root, schema) {
+  if (!existsSync(join(root, 'src', 'copy', 'index.ts'))) return [];
+  const base = canonicalLocale(schema?.locale);
+  return (Array.isArray(schema?.locales) ? schema.locales : [])
+    .map(canonicalLocale)
+    .filter((tag) => tag !== null && tag !== base && !existsSync(join(root, 'src', 'copy', `${tag}.ts`)));
+}
+
+/** The sentence a missing copy module is said in. @param {string} tag @param {string} base */
+export function copyMissingSays(tag, base) {
+  return `src/copy/${tag}.ts is not written: on the ${tag} pages the words that are not content — the form's messages, the privacy page, the skip link — are ${base || "the site's own language"}'s (marked lang="${base}"); npx @jtakeit/astro copy ${tag} writes them in the kit's words for ${tag}`;
 }

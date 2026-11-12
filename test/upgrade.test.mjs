@@ -425,3 +425,24 @@ test('two languages, a page only in English: nothing to be a translation of — 
     rmSync(join(site, '..'), { recursive: true, force: true });
   }
 });
+
+test('jtk copy: a language\'s words that are not content, in the kit\'s, beside the copy registry; refused for the site\'s own, an unknown language and over one there', () => {
+  const site = scaffold();
+  try {
+    const run = spawnSync('node', [bin, 'copy', 'en', '--root', site], { encoding: 'utf8' });
+    assert.equal(run.status, 0, said(run));
+    const text = readFileSync(join(site, 'src/copy/en.ts'), 'utf8');
+    assert.match(text, /^  lang: 'en',$/m);
+    assert.match(text, /skipToContent: 'Skip to content'/);
+    assert.match(text, /titleSuffix: ' — Probe'/);
+    assert.match(text, /makeCopy\(site\.page\('\/', 'en'\), STRINGS\)/);
+    assert.doesNotMatch(text, /\{\{[A-Z_]+\}\}|from '\.\.\/content\/blocks'/);
+    assert.match(run.stdout, /contract 2 registers it in src\/copy\/index\.ts by hand/);
+    assert.equal(spawnSync('node', [bin, 'copy', 'en', '--root', site]).status, 1, 'not over one that is there');
+    assert.equal(spawnSync('node', [bin, 'copy', 'de-CH', '--root', site]).status, 1, 'not the site\'s own');
+    assert.match(spawnSync('node', [bin, 'copy', 'nl', '--root', site], { encoding: 'utf8' }).stderr, /the kit has no words for nl/);
+    assert.match(readFileSync(join(site, 'src/copy/en.ts'), 'utf8'), /lang: 'en'/);
+  } finally {
+    rmSync(join(site, '..'), { recursive: true, force: true });
+  }
+});

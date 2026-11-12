@@ -21,16 +21,19 @@ import { makeCopy, type Copy } from './make';
 const BY_LOCALE: Record<string, Copy> = { '': own };
 
 /**
- * Contract 3: a language with no copy of its own here still has its page.
- * The door lays the translation over the original (`site.page('/', locale)`:
- * the translation's words, the original's where nobody translated them, each
- * of those marked with the original's `lang`), so the page is the language's
- * and `<html lang>` says it; only the words that are not content — the
- * form's, the privacy page's, a listing's — are the site's own until a copy
- * registered above says them. Contract 2 reads a page per language from its
- * own file, and renders an unregistered language with the site's own words,
+ * Contract 3: every language's copy beside this file, found by its name —
+ * `src/copy/en.ts` is English's, as `npx @jtakeit/astro copy en` writes it, in
+ * the kit's words for the language — with no line to add here. A language
+ * with none still has its page: the door lays the translation over the
+ * original (`site.page('/', locale)`), so the page is the language's and
+ * `<html lang>` says it; the words that are not content — the form's, the
+ * privacy page's — are the site's own, and say so (`WORDS_LANG`), until its
+ * copy is written. `jtk schema` and `jtkit progress` name a language without
+ * one. Contract 2 reads a page per language from its own file, registers its
+ * copy above, and renders an unregistered language with the site's own words,
  * as it always has.
  */
+const beside = import.meta.glob<{ COPY?: Copy }>(['./*.ts', '!./index.ts', '!./make.ts'], { eager: true });
 const laid = new Map<string, Copy>();
 
 export function copyFor(locale: string): Copy {
@@ -39,7 +42,7 @@ export function copyFor(locale: string): Copy {
   if (site.contract !== 3 || locale === '' || !site.locales.includes(locale)) return own;
   let copy = laid.get(locale);
   if (copy === undefined) {
-    copy = makeCopy(site.page('/', locale), { ...STRINGS, lang: locale, ogLocale: locale.replace('-', '_') });
+    copy = beside[`./${locale}.ts`]?.COPY ?? makeCopy(site.page('/', locale), { ...STRINGS, lang: locale, ogLocale: locale.replace('-', '_') }, STRINGS.lang);
     laid.set(locale, copy);
   }
   return copy;

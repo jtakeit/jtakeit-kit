@@ -62,7 +62,7 @@ import { content } from './content/index.mjs';
 import { contractOf, mintJtk, readJtk } from './content/node.mjs';
 import { canonicalTag, judgeSchema } from './judge3.mjs';
 import { filesBeside, judgeRequest } from './judgeFiles.mjs';
-import { judgeTranslations } from './translations.mjs';
+import { copiesMissing, copyMissingSays, judgeTranslations } from './translations.mjs';
 import { BY_INDEX, DOCUMENT_ID, ID, isEmpty, KEY, placesIn, tappable3 } from './places3.mjs';
 import { builtPages, prefixBuild, servedFaults, unboundedHeights, unowned } from './served.mjs';
 
@@ -533,6 +533,14 @@ studio's preview arrangement, which the schema has nothing to say about.`);
     if (refused.length > 0) console.error(`\njtk schema: ${refused.length} thing(s) in the translations the platform will refuse\n`);
     for (const one of judged) console.error(`  ${isAdvice(one.code) ? '·' : '✗'} ${one.code}  ${one.path}: ${one.says}`);
     translations = refused.length;
+
+    // Each other language's words that are not content: the copy module the
+    // scaffold's registry finds by its name. A language without one says the
+    // site's own words on its pages.
+    const said = problems.length === 0 ? schema : tree['/jtk/schema.json'];
+    const copies = copiesMissing(root, said);
+    for (const tag of copies) console.error(`  ✗ ${LOCAL}  ${copyMissingSays(tag, canonicalTag(said?.locale ?? '') ?? '')}`);
+    translations += copies.length;
   }
 
   // A module the schema turns on has its settings, `{ v, settings }` at

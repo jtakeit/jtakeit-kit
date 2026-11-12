@@ -34,7 +34,7 @@ import { content } from './content/index.mjs';
 import { unnamed } from './content/identity.mjs';
 import { contractOf, readJtk } from './content/node.mjs';
 import { isObject, pricePaths, srcOf } from './places3.mjs';
-import { statesOf } from './translations.mjs';
+import { copiesMissing, copyMissingSays, statesOf } from './translations.mjs';
 
 /** Under the weaker rule, a key named like one of these is not words. */
 const NOT_WORDS = /(^|_)(image|picture|photo|media|video|url|href|link|icon|src)(_|$)|_href$|_url$/;
@@ -307,6 +307,9 @@ async function readProgress3(root, dir) {
   }
   if (facts !== null && facts.placeholders > 0) missing.push(`src/data/site.ts still carries ${facts.placeholders} placeholder${facts.placeholders === 1 ? '' : 's'}`);
   if (pages.length > 0 && media === 0) missing.push('no picture yet');
+
+  // Each other language's words that are not content (src/copy/<locale>.ts).
+  for (const tag of copiesMissing(root, schema)) missing.push(copyMissingSays(tag, site?.locale ?? ''));
 
   // Each other language: what is left to translate, and what is outdated.
   const languages = site === null ? [] : statesOf(files).map((one) => ({ locale: one.locale, missing: one.missing, outdated: one.outdated, held: one.held }));

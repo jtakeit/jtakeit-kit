@@ -220,6 +220,12 @@ export interface Page {
    * the site's own language, and under contract 2.
    */
   fromBase?: string[];
+  /**
+   * Whether the page is in this language's own words: the original, or a language with a
+   * translation of it (contract 3). A page nobody translated is built in every language, in the
+   * original's words — and named neither in `hreflang` nor in the sitemap. Always true on contract 2.
+   */
+  translated: boolean;
   /** Annotated as the page it is drawn on (no document named). The default for a page. */
   here: Page;
   /** Annotated as another page's words: `page:<address>:…` (contract 2), `page:<id>:…` (contract 3). */
@@ -297,6 +303,8 @@ export interface Entry {
    * is not counted: an address has no language.
    */
   fromBase?: string[];
+  /** Whether the entry is in this language's own words: the original, or one with a translation (contract 3); true on contract 2. */
+  translated: boolean;
   /** Annotated as its own page, where the entry is the document. */
   here: Entry;
   /** Annotated as drawn on another page — a tile, a row, a heading: `page:<address>:…`. The default for an entry. */
@@ -376,6 +384,13 @@ export interface Site {
    * it is no alternate; an entry where it is out (not held back, not hidden) and has a page.
    */
   alternatesOf(document: Page | Entry): { locale: string; address: string }[];
+  /**
+   * Every language a page or an entry can be read in, with its address there, base first — for the
+   * language switch, which goes to the page in another language whether or not anybody translated
+   * it. Contract 3: a page in every language the site has, an entry where it is out and has a page;
+   * contract 2: `alternatesOf`. Empty for one in a single language.
+   */
+  languagesOf(document: Page | Entry): { locale: string; address: string }[];
 
   /** Entries under their headings, or `undefined` for a collection with no `group`. */
   groupsOf(name: string, entries: Entry[], locale?: string): { heading?: Heading; entries: Entry[] }[] | undefined;
@@ -394,6 +409,12 @@ export interface Site {
   money(value: unknown, locale?: string, own?: { from?: string; on_request?: string }): string;
   /** A label's words in a language. */
   words(text: Text | undefined, locale?: string): string;
+  /**
+   * The language `words(text, locale)` found its words in, where it is not the page's — the site's
+   * own for words written once, another language's where a map lacks this one — and `''` where they
+   * are the page's: put it on the element as `lang`. Always `''` on contract 2.
+   */
+  wordsLang(text: Text | undefined, locale?: string): string;
   tappable(field: Field | undefined): boolean;
 
   /**

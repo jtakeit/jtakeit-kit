@@ -413,6 +413,8 @@ export function content(files, options = {}) {
         file: doc.file,
         blocks,
         block: find,
+        // Contract 2 keeps a file per language: a page is in its language's own words.
+        translated: true,
         get here() {
           return pageOf(doc, 'here');
         },
@@ -446,6 +448,7 @@ export function content(files, options = {}) {
       file: undefined,
       blocks: [],
       block: missing,
+      translated: false,
       get here() {
         return self;
       },
@@ -488,6 +491,7 @@ export function content(files, options = {}) {
         slug: doc.slug,
         // A slug is the same in every language on contract 2.
         baseSlug: doc.slug,
+        translated: true,
         locale: doc.locale,
         visible: doc.shown,
         seo: doc.seo,
@@ -758,6 +762,8 @@ export function content(files, options = {}) {
     /** An address in a language: `/about` → `/de/about`, `/` → `/de`. */
     inLocale: (locale, address) => inLocale(want(locale), address),
 
+    /** The language switch's languages: on contract 2 the alternates, the files a document has in each language. */
+    languagesOf: (document) => site.alternatesOf(document),
     alternatesOf(document) {
       if (document?.kind === 'page') {
         const self = documents.find((doc) => doc.file === document.file && doc.file !== undefined);
@@ -879,6 +885,8 @@ export function content(files, options = {}) {
     },
 
     words,
+    // Contract 2's words are said as they always were, unmarked.
+    wordsLang: () => '',
     tappable,
 
     /**

@@ -73,10 +73,12 @@ export function listingHref(name: string, locale: string, n = 1): string | undef
  * and its annotation where the title is the owner's to tap, drawn
  * `data-jtk-fixed` where it is not.
  */
-export function titleOf(entry: Entry): { text: string; at: { 'data-jtk-path'?: string }; fixed: boolean } {
+export function titleOf(entry: Entry): { text: string; at: { 'data-jtk-path'?: string; lang?: string }; fixed: boolean } {
   const title = entry.fields.value('title');
   const tappable = entry.fields.tappable('title');
-  return { text: String(title ?? entry.slug), at: tappable ? entry.elsewhere.fields.at('title') : {}, fixed: !tappable };
+  // The original's words, where nobody translated them, carry its language.
+  const lang = entry.fields.lang('title');
+  return { text: String(title ?? entry.slug), at: { ...(tappable ? entry.elsewhere.fields.at('title') : {}), ...lang }, fixed: !tappable };
 }
 
 /*

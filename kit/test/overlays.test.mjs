@@ -199,3 +199,19 @@ test('what a module books is every collection one of its roles names, as the pla
   assert.deepEqual(booked.get('groups'), { module: 'bookings', role: 'classes' });
   assert.equal(bookedIn({}).size, 0);
 });
+
+test('the door says which documents are in their language\'s own words, every language one can be read in, and the language a label falls back to', () => {
+  const site = content(tree());
+  // The home has an English translation and no French: built in both, translated in one.
+  assert.deepEqual([site.page('/').translated, site.page('/', 'en').translated, site.page('/', 'fr').translated], [true, true, false]);
+  assert.deepEqual(site.languagesOf(site.page('/', 'fr')).map((one) => one.locale), ['', 'en', 'fr'], 'the switch: every language the page is built in');
+  assert.deepEqual(site.alternatesOf(site.page('/', 'fr')).map((one) => one.locale), ['', 'en'], 'hreflang: only the translated');
+  assert.equal(site.entry('blog', 'erster', 'fr').translated, false);
+  assert.deepEqual(site.languagesOf(site.entry('blog', 'erster')).map((one) => one.address), ['/blog/erster', '/fr/blog/erster'], 'not where it is held back');
+  // A label written once is the site's own language's; a map lacking the language falls back, and says to which.
+  assert.equal(site.wordsLang('Worum es geht', 'en'), 'de');
+  assert.equal(site.wordsLang('Worum es geht', ''), '');
+  assert.equal(site.wordsLang({ de: 'Thema', en: 'Topic' }, 'en'), '');
+  assert.equal(site.wordsLang({ de: 'Thema', en: 'Topic' }, 'fr'), 'en');
+  assert.equal(site.wordsLang({ de: 'Thema' }, 'fr'), 'de');
+});

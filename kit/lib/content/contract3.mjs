@@ -83,7 +83,7 @@ import { money as priced, priceWords } from '../money.mjs';
 import { shownAt } from '../schedule.mjs';
 import { ancestors, capped, descendants, grouped, groupField, selectHeadings } from './groups.mjs';
 import { canonicalLocale, baseAddressOf, inLocale, languagesOf, localeArg, localeOfAddress, sharedLocaleOf } from './locale.mjs';
-import { byRank, factsOf, labelWords, minorOf, namesIn, specimenId, tappable } from './rules.mjs';
+import { byRank, factsOf, labelLang, labelWords, minorOf, namesIn, specimenId, tappable } from './rules.mjs';
 import { altGiven, given, laid, layOf, overlay } from './overlay.mjs';
 
 // The merge's rule of which field is laid how, read by identity.mjs and the
@@ -237,6 +237,7 @@ export function contract3(byPath, names, { annotate, now }) {
   const langOf = (locale) => (locale === '' ? base : locale);
   const want = (locale) => localeArg(locale, base);
   const words = labelWords(base, others, want);
+  const wordsLang = labelLang(base, others, want);
   const served = (language) => every.includes(language);
 
   const types = Array.isArray(schema.blocks) ? schema.blocks.filter(isObject).map(typeDeclared) : [];
@@ -742,6 +743,7 @@ export function contract3(byPath, names, { annotate, now }) {
         blocks,
         block: find,
         fromBase: [...doc.fromBase],
+        translated: doc.language === '' || doc.translated === true,
         get here() {
           return pageOf(doc, 'here');
         },
@@ -770,6 +772,7 @@ export function contract3(byPath, names, { annotate, now }) {
       blocks: [],
       block: missing,
       fromBase: [],
+      translated: locale === '',
       get here() {
         return self;
       },
@@ -810,6 +813,7 @@ export function contract3(byPath, names, { annotate, now }) {
         fields: reader(doc.fields, { prefix, trail: '', depth: 0, fields: collection?.fields ?? [], origin: doc.fieldsOrigin, locale: doc.language }),
         body: doc.body.map((values) => block(values, prefix, doc.bodyOrigin, doc.language)),
         fromBase: [...(doc.fromBase ?? [])],
+        translated: doc.language === '' || doc.translated === true,
         get here() {
           return entryOf(doc, 'here');
         },
@@ -1151,6 +1155,29 @@ export function contract3(byPath, names, { annotate, now }) {
     },
 
     /**
+     * Every language a page or an entry is built in and can be read in, with
+     * its address there, base first — for the language switch, which takes a
+     * visitor to the page in another language whether or not anybody has
+     * translated it (its words are then the original's, marked). `hreflang`
+     * is `alternatesOf`, which names only the languages with a translation.
+     * An entry is in a language where it is out there and has a page.
+     */
+    languagesOf(document) {
+      const doc = docOf.get(document);
+      if (doc === undefined) return [];
+      if (doc.kind === 'page') return every.length > 1 ? every.map((language) => ({ locale: language, address: inLocale(language, doc.path) })) : [];
+      if (doc.specimen || doc.original === undefined) return [];
+      const found = [];
+      for (const language of every) {
+        const one = entryDoc(doc.original, language);
+        if (one === undefined || !one.shown) continue;
+        const address = addressIn(collections.get(one.collection), language, one.slug);
+        if (address !== undefined) found.push({ locale: language, address });
+      }
+      return found.length > 1 ? found : [];
+    },
+
+    /**
      * Entries under their headings: a select's options by their labels, or
      * the entries of the collection a reference names, each heading keyed by
      * that entry's id — what the entries' values hold (§3.4). The headings
@@ -1266,6 +1293,7 @@ export function contract3(byPath, names, { annotate, now }) {
     },
 
     words,
+    wordsLang,
     tappable,
 
     /**

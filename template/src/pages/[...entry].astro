@@ -84,6 +84,9 @@ const locale = entry.locale;
 const LANG = langOf(locale);
 const { LISTING } = copyFor(locale);
 const alternates = site.alternatesOf(entry);
+// Every language it can be read in, for the switch — in the original's words
+// where nobody translated it; hreflang names only the translated.
+const languages = site.languagesOf(entry);
 
 /*
  * Whether this entry's type has a body at all. A post has; a car, a doctor, an
@@ -337,7 +340,7 @@ const schema = hasBody
   : undefined;
 ---
 
-<Layout title={said('title') || title} description={said('description') || excerpt} schema={schema} alternates={alternates}>
+<Layout title={said('title') || title} description={said('description') || excerpt} schema={schema} alternates={alternates} languages={languages}>
   <main id="content">
     <article class="entry">
       {

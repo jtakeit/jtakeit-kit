@@ -95,11 +95,12 @@ test('the tables: §3 field by field, and a schema the platform\'s judge accepts
   assert.deepEqual(tables.SHARED, ['contacts']);
   const contacts = tables.BLOCKS.at(-1);
   assert.equal(contacts.type, 'contacts');
-  assert.deepEqual(contacts.fields.map((one) => [one.key, one.kind, one.role]), [
-    ['name', 'text', 'name'],
-    ['phone', 'tel', 'phone'],
-    ['social', 'list', 'social'],
-    ['parking', 'text', undefined],
+  assert.deepEqual(contacts.fields.map((one) => [one.key, one.kind, one.role, one.localized]), [
+    // The business's name is the same in every language: nothing to translate.
+    ['name', 'text', 'name', false],
+    ['phone', 'tel', 'phone', undefined],
+    ['social', 'list', 'social', undefined],
+    ['parking', 'text', undefined, undefined],
   ]);
   assert.ok(notes.some((one) => /BUSINESS_FACTS currency is not content/.test(one)));
   assert.ok(notes.some((one) => /hero.old was deprecated/.test(one)));

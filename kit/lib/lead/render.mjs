@@ -25,6 +25,7 @@
  * @property {number} [max]
  * @property {number} [min]
  * @property {{ value: string; label: string }[]} [options]  for a select
+ * @property {string} [lang]                     the label's language where it is not the page's — words the declaration wrote once, in the site's own
  */
 
 /**
@@ -66,6 +67,7 @@
  * @property {string} [tag]        the element's name around the form, `jtk-lead`; `''` for none
  * @property {number} [photos]     how many photographs the form takes, 1 to 7 — what the collecting block declares as `photos`; absent is none
  * @property {string} [lang]       the page's language, for the photo control's words when `copy` does not carry them, and the labels and the button where it leaves them empty
+ * @property {string} [wordsLang]  the language of `copy`'s messages where it is not the page's — the site's own, for a language the site has no copy of: the status line and the field errors, which say only them, carry it
  */
 
 import { PHOTOS_MAX, PHOTO_TYPES, photoWords } from './photos.mjs';
@@ -158,7 +160,9 @@ function askControl(ask) {
  * @returns {string}
  */
 export function renderLeadForm(props) {
-  const { action, copy, asks = [], paths = {}, tag = 'jtk-lead', photos = 0, lang = 'en' } = props;
+  const { action, copy, asks = [], paths = {}, tag = 'jtk-lead', photos = 0, lang = 'en', wordsLang = '' } = props;
+  // The messages' language, on what says only them, where it is not the page's.
+  const said_in = wordsLang ? ` lang="${esc(wordsLang)}"` : '';
   if (typeof action !== 'string' || action === '') throw new TypeError('renderLeadForm: action is where /api/lead is from this page');
   if (!copy || typeof copy !== 'object') throw new TypeError('renderLeadForm: copy is the form\'s words');
   if (!Number.isInteger(photos) || photos < 0 || photos > PHOTOS_MAX) {
@@ -179,13 +183,13 @@ export function renderLeadForm(props) {
   <div class="field">
     <label class="field__label" for="lead-name">${said(copy.name, paths.name_label, words.name)} <span aria-hidden="true">*</span></label>
     <input class="field__input" id="lead-name" name="name" type="text" autocomplete="name" required maxlength="120"${attr('data-message', copy.invalidName)}>
-    <p class="field__error" data-error-for="name" hidden></p>
+    <p class="field__error" data-error-for="name"${said_in} hidden></p>
   </div>
 
   <div class="field">
     <label class="field__label" for="lead-contact">${said(copy.contact, paths.contact_label, words.contact)} <span aria-hidden="true">*</span></label>
     <input class="field__input" id="lead-contact" name="contact" type="text" inputmode="tel" autocomplete="tel" required maxlength="120"${attr('data-message', copy.invalidContact)}>
-    <p class="field__error" data-error-for="contact" hidden></p>
+    <p class="field__error" data-error-for="contact"${said_in} hidden></p>
   </div>
 
   <div class="field">
@@ -194,7 +198,7 @@ export function renderLeadForm(props) {
   </div>
 
   ${asks.map((ask) => `<div class="field">
-    <label class="field__label" for="lead-${esc(ask.key)}"${ask.path ? at(ask.path) : ' data-jtk-fixed'}>${esc(ask.label)}${ask.required ? ' <span aria-hidden="true">*</span>' : ''}</label>
+    <label class="field__label" for="lead-${esc(ask.key)}"${ask.path ? at(ask.path) : ' data-jtk-fixed'}${ask.lang ? ` lang="${esc(ask.lang)}"` : ''}>${esc(ask.label)}${ask.required ? ' <span aria-hidden="true">*</span>' : ''}</label>
     ${askControl(ask)}
   </div>`).join('\n  ')}
 
@@ -209,7 +213,7 @@ ${photos > 0 ? photoControl(photos, copy, lang) : ''}
 
   <div class="lead__foot">
     <button class="btn" type="submit" data-submit>${said(copy.submit, paths.cta_label, words.submit, ' data-submit-label')}</button>
-    <p class="lead__status" role="status" data-status></p>
+    <p class="lead__status" role="status" data-status${said_in}></p>
   </div>
 </form>`;
 

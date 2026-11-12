@@ -34,7 +34,7 @@ import { localeOf, localeParams, withLocale, EVERY_LOCALE } from '../../lib/loca
 export const getStaticPaths = localeParams;
 
 const locale = localeOf(Astro.url.pathname);
-const { PRIVACY } = copyFor(locale);
+const { PRIVACY, WORDS_LANG } = copyFor(locale);
 // A page written in code exists in every language the site has.
 const alternates = EVERY_LOCALE.map((one) => ({ locale: one, address: withLocale(one, '/privacy') }));
 import { PROCESSING_URL } from '../../content/blocks';
@@ -45,10 +45,28 @@ import { site } from '../../lib/site';
 // business to, and the platform's part is the kit's sentence (wiki/87).
 const takesPhotos = site.types.some((block) => block.collects === 'enquiry' && (block.photos ?? 0) > 0);
 const photosSentence = photoWords(langOf(locale)).privacy;
+import { BUSINESS } from '../../data/site';
+// Who «we» are, under the page's last heading: the business's name, address
+// and how to reach it, from the shared contacts the owner keeps (by role),
+// and src/data/site.ts where they say nothing — as the head and llms.txt
+// say them. The heading stood alone with nothing under it until somebody
+// wrote it in (the two-language rehearsal, 12 November 2026).
+// Contract 3's: contract 2 keeps the heading for the developer to write under.
+const facts = site.facts(locale);
+const fact = (role: string, own: string): string => facts.text(role).trim() || own;
+const who =
+  site.contract !== 3
+    ? []
+    : [
+        fact('name', BUSINESS.name),
+        fact('street', BUSINESS.street),
+        [fact('postal_code', BUSINESS.postalCode), fact('city', BUSINESS.city)].filter(Boolean).join(' '),
+        [fact('phone', BUSINESS.phoneDisplay), fact('email', BUSINESS.email)].filter(Boolean).join(' · '),
+      ].filter(Boolean);
 ---
 
 <Layout title={PRIVACY.title} description={PRIVACY.intro} alternates={alternates}>
-  <main id="content" class="prose" data-jtk-fixed>
+  <main id="content" class="prose" data-jtk-fixed lang={WORDS_LANG || undefined}>
     <h1>{PRIVACY.title}</h1>
     <p class="lead">{PRIVACY.intro}</p>
 
@@ -70,5 +88,6 @@ const photosSentence = photoWords(langOf(locale)).privacy;
       empty one is noticed before launch rather than after.
     */}
     <h2>{PRIVACY.ownTitle}</h2>
+    {who.length > 0 && <address>{who.map((line, i) => (<Fragment>{i > 0 && <br />}{line}</Fragment>))}</address>}
   </main>
 </Layout>
