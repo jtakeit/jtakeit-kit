@@ -50,6 +50,20 @@ function settled(site) {
   return out;
 }
 
+/**
+ * The next steps in the platform's order (jtakeit:///guides/start.md): the
+ * site made, the dev session open before a line is written, the schema
+ * written and judged, the code where the copy says, then the build — never
+ * «push the repository, then create_site» (a staging rehearsal, 12 November
+ * 2026). In the printed steps and in the README alike.
+ */
+function inOrder(words, tool, said) {
+  const steps = ['create_site', 'open_dev_session', `npx @jtakeit/astro ${tool}`, 'validate_schema', 'push_code', "npx @jtakeit/astro push '<url>'", 'attach_repo', 'commit_and_build', 'get_build', 'preflight'];
+  let at = 0;
+  for (const step of steps) at = at < 0 ? at : words.indexOf(step, at);
+  if (at < 0 || /push the repository/.test(words)) fail(`${said} is not in the platform's order — ${steps.join(', ')}:\n${words}`);
+}
+
 /** Built, then held to `jtk schema` and `jtkit lint` on its dist/. */
 function judged(site, packed, said) {
   execFileSync('npm', ['install', '--no-audit', '--no-fund', packed], { cwd: site, stdio: 'pipe' });
@@ -95,6 +109,8 @@ try {
   }
   if (!text(plain, 'README.md').includes('npx @jtakeit/astro schema')) fail('the README does not say npx @jtakeit/astro schema');
   if (!run.stdout.includes('then: npx @jtakeit/astro schema') || run.stdout.includes('astro catalogue')) fail(`the next steps are not contract 3's:\n${run.stdout}`);
+  inOrder(run.stdout, 'schema', 'the next steps');
+  inOrder(text(plain, 'README.md'), 'schema', 'the README');
 
   // A salon from the kit's fixture, with rates and a master, and a blog.
   const kit = JSON.parse(readFileSync(resolve('test/fixtures/kit-salon.json'), 'utf8'));
@@ -130,6 +146,9 @@ try {
     const moved = join(dir, `${out}-moved`);
     run = create(`${out}-moved`, '--contract', '2', ...flags);
     if (run.status !== 0 || !existsSync(join(moved, 'jtk/catalogue.json'))) fail(`--contract 2 did not lay out contract 2:\n${run.stderr}`);
+    inOrder(run.stdout, 'catalogue', '--contract 2\'s next steps');
+    inOrder(text(moved, 'README.md'), 'catalogue', '--contract 2\'s README');
+    if (/astro schema|jtk\/schema\.json/.test(run.stdout)) fail(`--contract 2's next steps say contract 3's schema:\n${run.stdout}`);
     if (other !== undefined) {
       const blocks = join(moved, 'src/content/blocks.ts');
       writeFileSync(blocks, text(moved, 'src/content/blocks.ts').replace('export const LOCALES: string[] = [];', `export const LOCALES: string[] = ['${other}'];`));

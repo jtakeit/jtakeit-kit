@@ -15,6 +15,23 @@ and only the files that are a contract's own differ — contract 3's are laid
 from `template/contract-3/` in place of contract 2's `src/content/blocks.ts`
 and `jtk/content/`.
 
+## What comes next
+
+It ends by printing the platform's order (`jtakeit:///guides/start.md`), and
+the README it writes says the same:
+
+1. `create_site`, if the site is not made yet — with the brief's currency.
+2. `npm ci && npm run dev`, then `open_dev_session` with its address and the
+   `run` command its answer gives — before writing a line.
+3. `src/content/blocks.ts`, then `npx @jtakeit/astro schema` — `catalogue`
+   under `--contract 2`.
+4. `validate_schema` with the schema, the `jtk/` files and the `site_id`.
+5. No GitHub remote in the copy → `push_code`, then
+   `npx @jtakeit/astro push '<url>'`; a GitHub remote → ask the developer
+   once, then our GitHub App on it (a person installs it) and `attach_repo`.
+6. `commit_and_build` — nothing public; `get_build` until it settles;
+   `preflight` before saying done.
+
 ## The tokens
 
 | token | example |
