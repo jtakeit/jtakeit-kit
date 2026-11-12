@@ -12,7 +12,8 @@
  *
  * As the platform's import will judge one (its `content.Lay`, held to the
  * same corpus) — each a `JTK_E_DOCUMENT_INVALID`, the code its judge gives
- * every other fault of a contract-3 document, but a shared value:
+ * every other fault of a contract-3 document, but a shared value and a
+ * malformed record:
  *
  *   - a translation names what it translates, `of` the original's id, and
  *     sits beside it named for its language, which its `locale` says too, in
@@ -31,7 +32,11 @@
  *     its roles (`registry.Booked`) — is not held back (`visible: false`): it
  *     is in every language, always (the owner, 12 November 2026);
  *   - a key the schema does not declare is refused (§15 · 17);
- *   - a block, a row or a picture is named by its `_key`, never by its place.
+ *   - a block, a row or a picture is named by its `_key`, never by its place;
+ *   - a record in `translated` is `{ from, by, at }`, `from` eight hex
+ *     digits, `by` a person, an agent or the machine, `at` a moment —
+ *     `JTK_E_TRANSLATION_RECORD` where it is not; one whose `from` is empty is
+ *     no record, and refused by nothing.
  *
  * And, as advice (`JTK_W_TRANSLATION_ORPHAN`, refusing nothing): a
  * `_key` the original has not got. A row the original removed is gone in
@@ -47,7 +52,10 @@
  *              not the digest of the original's value as it is now
  *
  * A value with no `translated` record is current: the import records what an
- * agent wrote as made from the original as it stands (§4.4).
+ * agent wrote as made from the original as it stands (§4.4). A record is
+ * never made from nothing: a value the translation gives where the original
+ * has none is its own words — neither missing nor outdated — and a record
+ * whose `from` is empty is no record (the core's wiki/98 §16 · 9).
  *
  * ── the digest ──────────────────────────────────────────────────────────────
  *
@@ -71,6 +79,8 @@ const isObject = (value) => value !== null && typeof value === 'object' && !Arra
 export const REFUSED = 'JTK_E_DOCUMENT_INVALID';
 /** A shared value in a translation (the platform's `CodeTranslationShared`, Since: 3). */
 export const SHARED = 'JTK_E_TRANSLATION_SHARED';
+/** A malformed record in `translated` (the platform's `CodeTranslationRecord`, Since: 3). */
+export const RECORD = 'JTK_E_TRANSLATION_RECORD';
 /** Advice: words for a block, a row or a picture the original has not got (`JTK_W_TRANSLATION_ORPHAN`). */
 export const ORPHAN = 'JTK_W_TRANSLATION_ORPHAN';
 
@@ -203,15 +213,26 @@ export function judgeTranslation(schema, base, translation, at = {}) {
     if (translation.blocks !== undefined && !Array.isArray(translation.blocks)) refuse('blocks', 'blocks is the body in this language, whole — a list of blocks');
   }
 
-  // The record of where each value came from.
+  // The record of where each value came from. A record is never made from
+  // nothing (the core's wiki/98 §16 · 9, 12 November 2026): one whose `from`
+  // is empty — as an earlier save wrote for words the original has none of —
+  // is no record, refused by nothing and left out; a malformed one is its own
+  // code, and the fix is to leave it out, since the import records a value it
+  // has none for.
   if (translation.translated !== undefined) {
-    if (!isObject(translation.translated)) refuse('translated', 'translated is an object: per place, { from, by, at }');
+    const record = (where, says) => out.push({ code: RECORD, path: `${file} ${where}`, says: `${says} — or leave the record out: the import records a value without one as made from the original as it stands` });
+    if (!isObject(translation.translated)) record('translated', 'translated is an object: per place, { from, by, at }');
     else {
-      for (const [place, record] of Object.entries(translation.translated)) {
+      for (const [place, made] of Object.entries(translation.translated)) {
         const where = `translated[${JSON.stringify(place)}]`;
-        if (!isObject(record) || typeof record.from !== 'string' || !/^[0-9a-f]{8}$/.test(record.from)) refuse(where, `${where} says where its value came from: { "from": the digest of the original's value, eight hex digits }`);
-        else if (record.by !== undefined && !MAKERS.has(record.by)) refuse(`${where}.by`, `${where}.by is "person", "agent" or "machine"`);
-        else if (record.at !== undefined && (typeof record.at !== 'string' || Number.isNaN(Date.parse(record.at)))) refuse(`${where}.at`, `${where}.at is a moment, RFC 3339`);
+        if (isObject(made) && (made.from === undefined || made.from === null || made.from === '')) continue;
+        if (!isObject(made) || typeof made.from !== 'string' || !/^[0-9a-f]{8}$/.test(made.from)) record(where, `${where} says where its value came from: { "from": the digest of the original's value, eight hex digits }`);
+        else if (made.by !== undefined && !MAKERS.has(made.by)) record(`${where}.by`, `${where}.by is "person", "agent" or "machine"`);
+        else if (made.at !== undefined && (typeof made.at !== 'string' || Number.isNaN(Date.parse(made.at)))) record(`${where}.at`, `${where}.at is a moment, RFC 3339`);
+        else {
+          const stray = Object.keys(made).find((key) => !['from', 'by', 'at'].includes(key));
+          if (stray !== undefined) record(`${where}.${stray}`, `${where} has "${stray}" — a record is { from, by, at }`);
+        }
       }
     }
   }
@@ -391,7 +412,8 @@ export function outdatedIn(schema, base, translation, kind = kindOf(base)) {
   const gave = new Set(localizedIn(schema, merged, kind).map((value) => value.place).filter((place) => !kept.has(place)));
   const out = [];
   for (const [place, made] of Object.entries(translation.translated)) {
-    if (!isObject(made) || typeof made.from !== 'string' || !gave.has(place)) continue;
+    // A record with an empty `from` is no record: nothing it was made from to have changed.
+    if (!isObject(made) || typeof made.from !== 'string' || made.from === '' || !gave.has(place)) continue;
     if (made.from !== digest(valueAt(base, place, kind))) out.push(place);
   }
   return out;

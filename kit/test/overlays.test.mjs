@@ -25,8 +25,9 @@ for (const { file, case: one } of [...own, ...theirs]) {
 }
 
 test('the corpus covers what M3 promises: page, entry, shared text, rows by key, a gallery\'s words, seo, a body whole, held back, refused, missing, an unknown key', () => {
-  const names = own.map((one) => one.case.name);
-  for (const want of ['page-words-laid-by-key', 'entry-fields-shared-and-localized', 'shared-text-words-and-phone', 'keyed-rows-in-any-order', 'gallery-pictures-words-by-key', 'page-seo', 'entry-body-whole-per-language', 'entry-held-back', 'refused-shared-value-price', 'entry-missing-translation', 'unknown-key-is-advice', 'outdated-by-digest', 'entry-missing-translation-hidden']) {
+  // By file: the platform's cases are named by a sentence, the file by the case.
+  const names = own.map((one) => one.file.split('/').pop().replace(/\.json$/, ''));
+  for (const want of ['page-words-laid-by-key', 'entry-fields-shared-and-localized', 'shared-text-words-and-phone', 'keyed-rows-in-any-order', 'gallery-pictures-words-by-key', 'page-seo', 'entry-body-whole-per-language', 'entry-held-back', 'refused-shared-value-price', 'entry-missing-translation', 'unknown-key-is-advice', 'outdated-by-digest', 'entry-missing-translation-hidden', 'original-empty-translation-own', 'original-gains-a-value']) {
     assert.ok(names.includes(want), want);
   }
   const keys = ['name', 'schema', 'base', 'translation', 'locale', 'merged', 'fromBase', 'outdated', 'advice', 'refused'];
@@ -73,6 +74,7 @@ const schema = {
   shared: ['contacts'],
   collections: [{ name: 'blog', label: 'Blog', type: 'post', route: { detail: '/blog/{slug}', listing: '/blog' } }],
 };
+const base3 = schema;
 const tree = (more = {}) => ({
   '/jtk/schema.json': schema,
   '/jtk/pages/index.json': { id: ID, path: '/', name: 'Start', blocks: [{ _key: 'hero', type: 'hero', v: 1, title: 'Hallo', image: { src: 'a.jpg', alt: 'Tür' }, pictures: [{ _key: 'p1', src: 'b.jpg', alt: 'Eins' }] }] },
@@ -214,4 +216,25 @@ test('the door says which documents are in their language\'s own words, every la
   assert.equal(site.wordsLang({ de: 'Thema', en: 'Topic' }, 'en'), '');
   assert.equal(site.wordsLang({ de: 'Thema', en: 'Topic' }, 'fr'), 'en');
   assert.equal(site.wordsLang({ de: 'Thema' }, 'fr'), 'de');
+});
+
+test('a record is never made from nothing: words the original has none of are the translation\'s own, with no record; a record with an empty from is no record — refused by nothing, never outdated; a malformed one is JTK_E_TRANSLATION_RECORD', async () => {
+  const { RECORD } = await import('../lib/translations.mjs');
+  const schema = { ...base3, page_seo: [{ key: 'title', label: 'Title', kind: 'text' }] };
+  const page = { id: ID, path: '/', name: 'Start', blocks: [{ _key: 'hero', type: 'hero', v: 1, title: 'Hallo' }] };
+  const english = { of: ID, locale: 'en', name: 'Home', seo: { title: 'Home' }, blocks: [{ _key: 'hero', title: 'Hello' }], translated: { 'seo.title': { from: '', by: 'agent' } } };
+  assert.deepEqual(judgeTranslation(schema, page, english), [], 'an empty from refuses nothing');
+  const files = { ...tree(), '/jtk/schema.json': schema, '/jtk/pages/index.json': page, '/jtk/pages/index.en.json': english };
+  const [en] = statesOf(files);
+  assert.ok(!en.missing.some((one) => one.includes('seo.title')) && !en.outdated.some((one) => one.includes('seo.title')), 'neither missing nor outdated');
+  // The original gains the title: still no record to compare, so not outdated.
+  const gained = { ...files, '/jtk/pages/index.json': { ...page, seo: { title: 'Start' } } };
+  assert.ok(!statesOf(gained)[0].outdated.some((one) => one.includes('seo.title')));
+  // A malformed record: its own code, and the fix is to leave it out.
+  for (const made of [{ from: 'nothex!!' }, { from: digest('Hallo'), by: 'robot' }, { from: digest('Hallo'), at: 'yesterday' }, { from: digest('Hallo'), who: 'me' }, 'a string']) {
+    const said = judgeTranslation(schema, page, { ...english, translated: { 'blocks[hero].title': made } });
+    assert.deepEqual(said.map((one) => one.code), [RECORD], JSON.stringify(made));
+    assert.match(said[0].says, /leave the record out/);
+  }
+  assert.deepEqual(judgeTranslation(schema, page, { ...english, translated: [] }).map((one) => one.code), [RECORD]);
 });

@@ -363,6 +363,10 @@ translated) and what is **outdated**: a translation remembers the original it wa
 made from, `translated: { "blocks[hero].title": { "from": "e3ea67be" } }`, the
 first eight hex digits of the SHA-256 of the original value's canonical JSON. An
 agent may leave `translated` out; the import records the original as it stands.
+A record is never made from nothing: words the original has none of (a page with
+no SEO whose translation gives some) are the translation's own, with no record,
+neither missing nor outdated, and a record whose `from` is empty is no record. A
+malformed one is `JTK_E_TRANSLATION_RECORD` — leave it out.
 
 **Moving a contract-2 site** with `jtk upgrade contract-3`: each language's copy
 becomes a translation beside its original. A shared value equal in every
