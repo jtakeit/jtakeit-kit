@@ -1,0 +1,415 @@
+{
+  "kind": "hotel",
+  "version": 2,
+  "sum": "336e282c2ad8",
+  "about": "A hotel: rooms by the night, grouped in room types that carry the price of a night.",
+  "ask": [
+    "zone: the business's time zone — from its address; say it back rather than asking",
+    "the room types, each with its price of a night. A stay in a type costs that price times its nights, whichever rate was taken",
+    "the rates' own prices (`costs`) only if some rooms have no type: those are charged the rate",
+    "the rooms: each one's type, how many guests it sleeps, and its number — shown to visitors when they choose a room"
+  ],
+  "catalogue": {
+    "blocks": [
+      {
+        "type": "tariff",
+        "v": 1,
+        "label": {
+          "uk": "Тариф",
+          "en": "Rate",
+          "de": "Tarif"
+        },
+        "fields": [
+          {
+            "key": "title",
+            "label": {
+              "uk": "Назва",
+              "en": "Name",
+              "de": "Name"
+            },
+            "kind": "text",
+            "required": true,
+            "max": 80,
+            "client_editable": true
+          },
+          {
+            "key": "takes",
+            "label": {
+              "uk": "Триває",
+              "en": "Takes",
+              "de": "Dauer"
+            },
+            "kind": "duration",
+            "required": true,
+            "min": 30,
+            "max": 43200,
+            "client_editable": true
+          },
+          {
+            "key": "costs",
+            "label": {
+              "uk": "Ціна",
+              "en": "Price",
+              "de": "Preis"
+            },
+            "kind": "money",
+            "client_editable": true
+          },
+          {
+            "key": "scale",
+            "label": {
+              "uk": "Одиниця",
+              "en": "Sold in",
+              "de": "Einheit"
+            },
+            "kind": "select",
+            "options": [
+              "hourly",
+              "daily"
+            ],
+            "option_labels": {
+              "hourly": {
+                "uk": "години",
+                "en": "hours",
+                "de": "Stunden"
+              },
+              "daily": {
+                "uk": "доби",
+                "en": "days",
+                "de": "Tage"
+              }
+            },
+            "hint": {
+              "uk": "Години — у робочий час; доби — цілими днями.",
+              "en": "Hours — inside opening hours; days — whole days.",
+              "de": "Stunden — innerhalb der Öffnungszeiten; Tage — ganze Tage."
+            },
+            "client_editable": true,
+            "no_tap_target": true
+          },
+          {
+            "key": "fewest",
+            "label": {
+              "uk": "Щонайменше",
+              "en": "At least",
+              "de": "Mindestens"
+            },
+            "kind": "number",
+            "min": 1,
+            "max": 365,
+            "hint": {
+              "uk": "Скільки одиниць тарифу щонайменше за раз.",
+              "en": "The fewest units of this rate at once.",
+              "de": "Die wenigsten Einheiten dieses Tarifs auf einmal."
+            },
+            "client_editable": true,
+            "no_tap_target": true
+          },
+          {
+            "key": "most",
+            "label": {
+              "uk": "Щонайбільше",
+              "en": "At most",
+              "de": "Höchstens"
+            },
+            "kind": "number",
+            "min": 1,
+            "max": 365,
+            "hint": {
+              "uk": "Скільки одиниць тарифу щонайбільше за раз.",
+              "en": "The most units of this rate at once.",
+              "de": "Die meisten Einheiten dieses Tarifs auf einmal."
+            },
+            "client_editable": true,
+            "no_tap_target": true
+          }
+        ]
+      },
+      {
+        "type": "room",
+        "v": 1,
+        "label": {
+          "uk": "Номер",
+          "en": "Room",
+          "de": "Zimmer",
+          "ru": "Номер",
+          "es": "Habitación",
+          "it": "Camera",
+          "pt": "Quarto",
+          "fr": "Chambre"
+        },
+        "fields": [
+          {
+            "key": "title",
+            "label": {
+              "uk": "Назва",
+              "en": "Name",
+              "de": "Name",
+              "ru": "Название",
+              "es": "Nombre",
+              "it": "Nome",
+              "pt": "Nome",
+              "fr": "Nom"
+            },
+            "kind": "text",
+            "required": true,
+            "max": 80,
+            "client_editable": true
+          },
+          {
+            "key": "cover",
+            "label": {
+              "uk": "Фото",
+              "en": "Photo",
+              "de": "Foto"
+            },
+            "kind": "media",
+            "accept": "image",
+            "client_editable": true
+          },
+          {
+            "key": "seats",
+            "label": {
+              "uk": "Гостей",
+              "en": "Guests",
+              "de": "Gäste",
+              "ru": "Гостей",
+              "es": "Huéspedes",
+              "it": "Ospiti",
+              "pt": "Hóspedes",
+              "fr": "Personnes"
+            },
+            "kind": "number",
+            "min": 1,
+            "max": 10,
+            "client_editable": true,
+            "no_tap_target": true
+          },
+          {
+            "key": "class",
+            "label": {
+              "uk": "Клас",
+              "en": "Class",
+              "de": "Klasse",
+              "ru": "Класс",
+              "es": "Clase",
+              "it": "Classe",
+              "pt": "Classe",
+              "fr": "Catégorie"
+            },
+            "kind": "ref",
+            "ref": "room_types",
+            "client_editable": true,
+            "no_tap_target": true
+          },
+          {
+            "key": "marks",
+            "label": {
+              "uk": "Відмітні ознаки",
+              "en": "Distinguishing marks",
+              "de": "Merkmale"
+            },
+            "kind": "text",
+            "max": 80,
+            "hint": {
+              "uk": "Що відрізняє від схожих: колір і номер, поверх, серійний номер.",
+              "en": "What tells it from its twins: colour and plate, floor, serial number.",
+              "de": "Was es von gleichen unterscheidet: Farbe und Kennzeichen, Stockwerk, Seriennummer."
+            },
+            "client_editable": true,
+            "no_tap_target": true
+          }
+        ]
+      },
+      {
+        "type": "room_type",
+        "v": 1,
+        "label": {
+          "uk": "Тип номера",
+          "en": "Room type",
+          "de": "Zimmerkategorie",
+          "ru": "Тип номера",
+          "es": "Tipo de habitación",
+          "it": "Tipo di camera",
+          "pt": "Tipo de quarto",
+          "fr": "Type de chambre"
+        },
+        "fields": [
+          {
+            "key": "title",
+            "label": {
+              "uk": "Назва",
+              "en": "Name",
+              "de": "Name",
+              "ru": "Название",
+              "es": "Nombre",
+              "it": "Nome",
+              "pt": "Nome",
+              "fr": "Nom"
+            },
+            "kind": "text",
+            "required": true,
+            "max": 80,
+            "client_editable": true
+          },
+          {
+            "key": "cover",
+            "label": {
+              "uk": "Фото",
+              "en": "Photo",
+              "de": "Foto"
+            },
+            "kind": "media",
+            "accept": "image",
+            "client_editable": true
+          },
+          {
+            "key": "costs",
+            "label": {
+              "uk": "Ціна за ніч",
+              "en": "Price a night",
+              "de": "Preis pro Nacht",
+              "ru": "Цена за ночь",
+              "es": "Precio por noche",
+              "it": "Prezzo a notte",
+              "pt": "Preço por noite",
+              "fr": "Prix par nuit"
+            },
+            "kind": "money",
+            "client_editable": true
+          }
+        ]
+      }
+    ],
+    "collections": [
+      {
+        "name": "services",
+        "label": {
+          "uk": "Тарифи",
+          "en": "Rates",
+          "de": "Tarife",
+          "ru": "Тарифы",
+          "es": "Tarifas",
+          "it": "Tariffe",
+          "pt": "Tarifas",
+          "fr": "Tarifs"
+        },
+        "one": {
+          "uk": "тариф",
+          "en": "rate",
+          "de": "Tarif",
+          "ru": "тариф",
+          "es": "tarifa",
+          "it": "tariffa",
+          "pt": "tarifa",
+          "fr": "tarif"
+        },
+        "icon": "lucide:tag",
+        "prefix": "/rates",
+        "type": "tariff",
+        "pages": false
+      },
+      {
+        "name": "rooms",
+        "label": {
+          "uk": "Номери",
+          "en": "Rooms",
+          "de": "Zimmer",
+          "ru": "Номера",
+          "es": "Habitaciones",
+          "it": "Camere",
+          "pt": "Quartos",
+          "fr": "Chambres"
+        },
+        "one": {
+          "uk": "номер",
+          "en": "room",
+          "de": "Zimmer",
+          "ru": "номер",
+          "es": "habitación",
+          "it": "camera",
+          "pt": "quarto",
+          "fr": "chambre"
+        },
+        "icon": "lucide:bed-double",
+        "prefix": "/rooms",
+        "type": "room",
+        "pages": false
+      },
+      {
+        "name": "room_types",
+        "label": {
+          "uk": "Типи номерів",
+          "en": "Room types",
+          "de": "Zimmerkategorien",
+          "ru": "Типы номеров",
+          "es": "Tipos de habitación",
+          "it": "Tipi di camera",
+          "pt": "Tipos de quarto",
+          "fr": "Types de chambre"
+        },
+        "one": {
+          "uk": "тип номера",
+          "en": "room type",
+          "de": "Zimmerkategorie",
+          "ru": "тип номера",
+          "es": "tipo de habitación",
+          "it": "tipo di camera",
+          "pt": "tipo de quarto",
+          "fr": "type de chambre"
+        },
+        "icon": "lucide:layers",
+        "prefix": "/room-types",
+        "type": "room_type"
+      }
+    ],
+    "modules": {
+      "bookings": {
+        "services": "services",
+        "resources": "rooms",
+        "classes": "room_types"
+      }
+    }
+  },
+  "settings": {
+    "kind": "hotel",
+    "scale": "daily",
+    "hand_out": 840,
+    "hand_back": 720,
+    "hands_over": true,
+    "lead": 0,
+    "horizon": 365,
+    "confirm": "auto",
+    "cancel_until": 1440,
+    "payment": "no",
+    "combine": false
+  },
+  "entries": [
+    {
+      "collection": "services",
+      "slug": "night",
+      "fields": {
+        "title": {
+          "uk": "Ніч",
+          "en": "Night",
+          "de": "Nacht",
+          "ru": "Ночь",
+          "es": "Noche",
+          "it": "Notte",
+          "pt": "Noite",
+          "fr": "Nuit"
+        },
+        "takes": 1440,
+        "scale": "daily",
+        "fewest": 1,
+        "most": 30
+      }
+    }
+  ],
+  "changes": [
+    {
+      "from": "1",
+      "says": "Five more languages: every label, collection name and rate of the kit now says ru, es, it, pt and fr beside uk, en and de (7 October 2026)."
+    }
+  ]
+}

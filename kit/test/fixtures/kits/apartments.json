@@ -1,0 +1,311 @@
+{
+  "kind": "apartments",
+  "version": 2,
+  "sum": "1fce2b5155a1",
+  "about": "Apartments by the night: check-in and check-out hours, the guests an apartment sleeps.",
+  "ask": [
+    "zone: the business's time zone — from its address; say it back rather than asking",
+    "costs: the price of a night — the kit's rate is the unit, never a price",
+    "the apartments: each one's guests, and what tells it from the others (a floor, a number) — shown to visitors when they choose one; not the street address unless the client wants it printed"
+  ],
+  "catalogue": {
+    "blocks": [
+      {
+        "type": "tariff",
+        "v": 1,
+        "label": {
+          "uk": "Тариф",
+          "en": "Rate",
+          "de": "Tarif"
+        },
+        "fields": [
+          {
+            "key": "title",
+            "label": {
+              "uk": "Назва",
+              "en": "Name",
+              "de": "Name"
+            },
+            "kind": "text",
+            "required": true,
+            "max": 80,
+            "client_editable": true
+          },
+          {
+            "key": "takes",
+            "label": {
+              "uk": "Триває",
+              "en": "Takes",
+              "de": "Dauer"
+            },
+            "kind": "duration",
+            "required": true,
+            "min": 30,
+            "max": 43200,
+            "client_editable": true
+          },
+          {
+            "key": "costs",
+            "label": {
+              "uk": "Ціна",
+              "en": "Price",
+              "de": "Preis"
+            },
+            "kind": "money",
+            "client_editable": true
+          },
+          {
+            "key": "scale",
+            "label": {
+              "uk": "Одиниця",
+              "en": "Sold in",
+              "de": "Einheit"
+            },
+            "kind": "select",
+            "options": [
+              "hourly",
+              "daily"
+            ],
+            "option_labels": {
+              "hourly": {
+                "uk": "години",
+                "en": "hours",
+                "de": "Stunden"
+              },
+              "daily": {
+                "uk": "доби",
+                "en": "days",
+                "de": "Tage"
+              }
+            },
+            "hint": {
+              "uk": "Години — у робочий час; доби — цілими днями.",
+              "en": "Hours — inside opening hours; days — whole days.",
+              "de": "Stunden — innerhalb der Öffnungszeiten; Tage — ganze Tage."
+            },
+            "client_editable": true,
+            "no_tap_target": true
+          },
+          {
+            "key": "fewest",
+            "label": {
+              "uk": "Щонайменше",
+              "en": "At least",
+              "de": "Mindestens"
+            },
+            "kind": "number",
+            "min": 1,
+            "max": 365,
+            "hint": {
+              "uk": "Скільки одиниць тарифу щонайменше за раз.",
+              "en": "The fewest units of this rate at once.",
+              "de": "Die wenigsten Einheiten dieses Tarifs auf einmal."
+            },
+            "client_editable": true,
+            "no_tap_target": true
+          },
+          {
+            "key": "most",
+            "label": {
+              "uk": "Щонайбільше",
+              "en": "At most",
+              "de": "Höchstens"
+            },
+            "kind": "number",
+            "min": 1,
+            "max": 365,
+            "hint": {
+              "uk": "Скільки одиниць тарифу щонайбільше за раз.",
+              "en": "The most units of this rate at once.",
+              "de": "Die meisten Einheiten dieses Tarifs auf einmal."
+            },
+            "client_editable": true,
+            "no_tap_target": true
+          }
+        ]
+      },
+      {
+        "type": "apartment",
+        "v": 1,
+        "label": {
+          "uk": "Квартира",
+          "en": "Apartment",
+          "de": "Wohnung",
+          "ru": "Квартира",
+          "es": "Apartamento",
+          "it": "Appartamento",
+          "pt": "Apartamento",
+          "fr": "Appartement"
+        },
+        "fields": [
+          {
+            "key": "title",
+            "label": {
+              "uk": "Назва",
+              "en": "Name",
+              "de": "Name",
+              "ru": "Название",
+              "es": "Nombre",
+              "it": "Nome",
+              "pt": "Nome",
+              "fr": "Nom"
+            },
+            "kind": "text",
+            "required": true,
+            "max": 80,
+            "client_editable": true
+          },
+          {
+            "key": "cover",
+            "label": {
+              "uk": "Фото",
+              "en": "Photo",
+              "de": "Foto"
+            },
+            "kind": "media",
+            "accept": "image",
+            "client_editable": true
+          },
+          {
+            "key": "seats",
+            "label": {
+              "uk": "Гостей",
+              "en": "Guests",
+              "de": "Gäste",
+              "ru": "Гостей",
+              "es": "Huéspedes",
+              "it": "Ospiti",
+              "pt": "Hóspedes",
+              "fr": "Personnes"
+            },
+            "kind": "number",
+            "min": 1,
+            "max": 20,
+            "client_editable": true,
+            "no_tap_target": true
+          },
+          {
+            "key": "marks",
+            "label": {
+              "uk": "Відмітні ознаки",
+              "en": "Distinguishing marks",
+              "de": "Merkmale"
+            },
+            "kind": "text",
+            "max": 80,
+            "hint": {
+              "uk": "Що відрізняє від схожих: колір і номер, поверх, серійний номер.",
+              "en": "What tells it from its twins: colour and plate, floor, serial number.",
+              "de": "Was es von gleichen unterscheidet: Farbe und Kennzeichen, Stockwerk, Seriennummer."
+            },
+            "client_editable": true,
+            "no_tap_target": true
+          }
+        ]
+      }
+    ],
+    "collections": [
+      {
+        "name": "services",
+        "label": {
+          "uk": "Тарифи",
+          "en": "Rates",
+          "de": "Tarife",
+          "ru": "Тарифы",
+          "es": "Tarifas",
+          "it": "Tariffe",
+          "pt": "Tarifas",
+          "fr": "Tarifs"
+        },
+        "one": {
+          "uk": "тариф",
+          "en": "rate",
+          "de": "Tarif",
+          "ru": "тариф",
+          "es": "tarifa",
+          "it": "tariffa",
+          "pt": "tarifa",
+          "fr": "tarif"
+        },
+        "icon": "lucide:tag",
+        "prefix": "/rates",
+        "type": "tariff",
+        "pages": false
+      },
+      {
+        "name": "apartments",
+        "label": {
+          "uk": "Квартири",
+          "en": "Apartments",
+          "de": "Wohnungen",
+          "ru": "Квартиры",
+          "es": "Apartamentos",
+          "it": "Appartamenti",
+          "pt": "Apartamentos",
+          "fr": "Appartements"
+        },
+        "one": {
+          "uk": "квартира",
+          "en": "apartment",
+          "de": "Wohnung",
+          "ru": "квартира",
+          "es": "apartamento",
+          "it": "appartamento",
+          "pt": "apartamento",
+          "fr": "appartement"
+        },
+        "icon": "lucide:building",
+        "prefix": "/apartments",
+        "type": "apartment"
+      }
+    ],
+    "modules": {
+      "bookings": {
+        "services": "services",
+        "resources": "apartments"
+      }
+    }
+  },
+  "settings": {
+    "kind": "apartments",
+    "scale": "daily",
+    "hand_out": 840,
+    "hand_back": 720,
+    "hands_over": true,
+    "lead": 0,
+    "horizon": 365,
+    "confirm": "by_hand",
+    "hold": 1440,
+    "cancel_until": 4320,
+    "payment": "no",
+    "combine": false
+  },
+  "entries": [
+    {
+      "collection": "services",
+      "slug": "night",
+      "fields": {
+        "title": {
+          "uk": "Ніч",
+          "en": "Night",
+          "de": "Nacht",
+          "ru": "Ночь",
+          "es": "Noche",
+          "it": "Notte",
+          "pt": "Noite",
+          "fr": "Nuit"
+        },
+        "takes": 1440,
+        "scale": "daily",
+        "fewest": 1,
+        "most": 30
+      }
+    }
+  ],
+  "changes": [
+    {
+      "from": "1",
+      "says": "Five more languages: every label, collection name and rate of the kit now says ru, es, it, pt and fr beside uk, en and de (7 October 2026)."
+    }
+  ]
+}

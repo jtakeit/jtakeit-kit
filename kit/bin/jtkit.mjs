@@ -2,17 +2,20 @@
 /**
  * jtkit — the command line of @jtakeit/kit, for a site on any generator.
  *
- *   jtkit apply --kit <kind>|<file> [--locale uk] [--api <url>] [--root <dir>]
- *       lay a booking kit out: jtk/bookings.json, the rates as entries, and the
- *       kit's types, collections and module into jtk/catalogue.json — contract 2's
- *       files, so a contract-3 tree is refused, and the kit's types without the
- *       keys only contract 3 has (a person's name said "localized": false)
- *   jtkit catalogue [--declaration src/content/blocks.ts] [--emit-only] [--dist ./dist] [--judge]
- *       write jtk/catalogue.json from a declaration and check it against the built pages;
- *       on a contract-3 tree, mint the ids and _keys and write no catalogue
+ *   jtkit apply --kit <kind>|<file> [--locale de-CH] [--api <url>] [--root <dir>]
+ *       lay a booking kit into the tree, in the words of its contract: on a new tree
+ *       and a contract-3 one, the kit's types, collections and module into
+ *       jtk/schema.json beside the site's own — judged as the platform judges it —
+ *       the settings at jtk/modules/bookings.json, the rates under jtk/entries with
+ *       their ids, the page the services are shown on under jtk/pages; on a site
+ *       still on contract 2, jtk/bookings.json, the rates under jtk/content and the
+ *       kit's types into jtk/catalogue.json, without the keys only contract 3 has
  *   jtkit schema [--declaration src/content/blocks.ts] [--emit-only] [--dist ./dist] [--judge]
  *       write jtk/schema.json from a declaration that says CONTRACT = 3, mint the ids and
  *       _keys, and check it against the built pages in the grammar by key
+ *   jtkit catalogue [--declaration src/content/blocks.ts] [--emit-only] [--dist ./dist] [--judge]
+ *       a site still on contract 2: write jtk/catalogue.json from a declaration and check it
+ *       against the built pages; on a contract-3 tree, mint the ids and _keys and write no catalogue
  *   jtkit lint [--dist dist] [--root .] [--site-url https://…]
  *       the annotation lint the platform's build runs, on this working tree; on a contract-3 tree,
  *       by key and by id against jtk/schema.json, and every price in the site's currency
@@ -37,7 +40,9 @@ const flag = (name, fallback) => {
 
 switch (command) {
   case 'apply': {
-    const { loadKit, layKitFiles } = await import(pathToFileURL(join(HERE, '..', 'lib', 'kits.mjs')).href);
+    // The tree says which contract: a new one and a contract-3 one take the
+    // kit in contract 3's files, a site still on contract 2 in its own.
+    const { loadKit, applyKit } = await import(pathToFileURL(join(HERE, '..', 'lib', 'kits.mjs')).href);
     const asked = has('kit') ? flag('kit', '') : has('kind') ? flag('kind', '') : '';
     if (asked === '') {
       console.error('jtkit apply: --kit <kind> or --kit <file> says which kit');
@@ -46,12 +51,14 @@ switch (command) {
     const root = resolve(flag('root', process.cwd()));
     try {
       const kit = await loadKit(asked, flag('api', undefined));
-      const written = layKitFiles(root, kit, { locale: flag('locale', 'en'), catalogue: true });
-      console.log(`${written.length} files written under ${relative(process.cwd(), root) || '.'}:`);
+      const { contract, written, questions } = applyKit(root, kit, { locale: flag('locale', undefined) });
+      console.log(`${written.length} files written under ${relative(process.cwd(), root) || '.'}${contract === 3 ? ', on contract 3' : ''}:`);
       for (const file of written) console.log(`  ${relative(root, file)}`);
       console.log(`\nThe «${kit.kind}» kit is laid out. Ask, never make up:`);
       for (const line of kit.ask ?? []) console.log(`  - ${line}`);
+      for (const one of questions) console.log(`  - ${one.ask}`);
       console.log(`What the kit chose for the business — say each back and get a yes: jtakeit:///kits/${kit.kind}.md, «Taken by default».`);
+      if (contract === 3) console.log('jtk/schema.json is judged as the platform judges it; before the push, validate_schema with it and the jtk/ files beside it.');
     } catch (why) {
       console.error(`jtkit apply: ${why.message}`);
       process.exit(1);
@@ -127,9 +134,9 @@ switch (command) {
   default: {
     console.error(`@jtakeit/kit — the framework-free half of a site on jtakeit
 
-  jtkit apply --kit <kind>|<file> [--locale uk] [--api <url>] [--root <dir>]
-  jtkit catalogue [--declaration src/content/blocks.ts] [--emit-only] [--dist ./dist] [--judge]
+  jtkit apply --kit <kind>|<file> [--locale de-CH] [--api <url>] [--root <dir>]
   jtkit schema [--declaration src/content/blocks.ts] [--emit-only] [--dist ./dist] [--judge]
+  jtkit catalogue [--declaration src/content/blocks.ts] [--emit-only] [--dist ./dist] [--judge]   (a contract-2 site)
 
 The contract the platform holds a repository to: jtakeit:///guides/connecting-a-site.md
 (the platform's MCP server, https://mcp.jtakeit.com/mcp, hands it to your agent)`);

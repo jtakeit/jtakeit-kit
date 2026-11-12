@@ -1,0 +1,326 @@
+{
+  "kind": "clinic",
+  "version": 3,
+  "sum": "a2197b365fcf",
+  "about": "A clinic or a dental practice: appointments by the hour with a doctor, confirmed by the practice.",
+  "ask": [
+    "zone: the business's time zone — from its address; say it back rather than asking",
+    "hours: when it is open — the kit does not guess them",
+    "the services: each one's takes and costs",
+    "the doctors: who they are, their own hours, which services each one sees patients for"
+  ],
+  "catalogue": {
+    "blocks": [
+      {
+        "type": "service",
+        "v": 1,
+        "label": {
+          "uk": "Послуга",
+          "en": "Service",
+          "de": "Leistung",
+          "ru": "Услуга",
+          "es": "Servicio",
+          "it": "Servizio",
+          "pt": "Serviço",
+          "fr": "Prestation"
+        },
+        "fields": [
+          {
+            "key": "title",
+            "label": {
+              "uk": "Назва",
+              "en": "Name",
+              "de": "Name",
+              "ru": "Название",
+              "es": "Nombre",
+              "it": "Nome",
+              "pt": "Nome",
+              "fr": "Nom"
+            },
+            "kind": "text",
+            "required": true,
+            "max": 80,
+            "client_editable": true
+          },
+          {
+            "key": "takes",
+            "label": {
+              "uk": "Триває",
+              "en": "Takes",
+              "de": "Dauer",
+              "ru": "Длится",
+              "es": "Duración",
+              "it": "Durata",
+              "pt": "Duração",
+              "fr": "Durée"
+            },
+            "kind": "duration",
+            "required": true,
+            "min": 5,
+            "max": 480,
+            "client_editable": true
+          },
+          {
+            "key": "costs",
+            "label": {
+              "uk": "Ціна",
+              "en": "Price",
+              "de": "Preis",
+              "ru": "Цена",
+              "es": "Precio",
+              "it": "Prezzo",
+              "pt": "Preço",
+              "fr": "Prix"
+            },
+            "kind": "money",
+            "client_editable": true
+          }
+        ]
+      },
+      {
+        "type": "doctor",
+        "v": 1,
+        "label": {
+          "uk": "Лікар",
+          "en": "Doctor",
+          "de": "Ärztin oder Arzt",
+          "ru": "Врач",
+          "es": "Médico",
+          "it": "Medico",
+          "pt": "Médico",
+          "fr": "Médecin"
+        },
+        "fields": [
+          {
+            "key": "title",
+            "label": {
+              "uk": "Ім’я",
+              "en": "Name",
+              "de": "Name",
+              "ru": "Название",
+              "es": "Nombre",
+              "it": "Nome",
+              "pt": "Nome",
+              "fr": "Nom"
+            },
+            "kind": "text",
+            "required": true,
+            "max": 80,
+            "client_editable": true,
+            "localized": false
+          },
+          {
+            "key": "cover",
+            "label": {
+              "uk": "Фото",
+              "en": "Photo",
+              "de": "Foto"
+            },
+            "kind": "media",
+            "accept": "image",
+            "client_editable": true
+          },
+          {
+            "key": "hours",
+            "label": {
+              "uk": "Власні години",
+              "en": "Own hours",
+              "de": "Eigene Zeiten",
+              "ru": "Свои часы",
+              "es": "Horario propio",
+              "it": "Orari propri",
+              "pt": "Horário próprio",
+              "fr": "Horaires propres"
+            },
+            "kind": "list",
+            "max": 21,
+            "client_editable": true,
+            "of": [
+              {
+                "key": "day",
+                "label": {
+                  "uk": "День",
+                  "en": "Day",
+                  "de": "Tag",
+                  "ru": "Сутки",
+                  "es": "Día",
+                  "it": "Giorno",
+                  "pt": "Dia",
+                  "fr": "Jour"
+                },
+                "kind": "select",
+                "options": [
+                  "monday",
+                  "tuesday",
+                  "wednesday",
+                  "thursday",
+                  "friday",
+                  "saturday",
+                  "sunday"
+                ],
+                "required": true,
+                "client_editable": true,
+                "no_tap_target": true
+              },
+              {
+                "key": "opens",
+                "label": {
+                  "uk": "Відкриття",
+                  "en": "Opens",
+                  "de": "Öffnet",
+                  "ru": "Открытие",
+                  "es": "Abre",
+                  "it": "Apre",
+                  "pt": "Abre",
+                  "fr": "Ouverture"
+                },
+                "kind": "time_of_day",
+                "required": true,
+                "client_editable": true,
+                "no_tap_target": true
+              },
+              {
+                "key": "closes",
+                "label": {
+                  "uk": "Закриття",
+                  "en": "Closes",
+                  "de": "Schliesst",
+                  "ru": "Закрытие",
+                  "es": "Cierra",
+                  "it": "Chiude",
+                  "pt": "Fecha",
+                  "fr": "Fermeture"
+                },
+                "kind": "time_of_day",
+                "required": true,
+                "client_editable": true,
+                "no_tap_target": true
+              }
+            ]
+          },
+          {
+            "key": "does",
+            "label": {
+              "uk": "Що робить",
+              "en": "Does",
+              "de": "Macht",
+              "ru": "Что делает",
+              "es": "Realiza",
+              "it": "Esegue",
+              "pt": "Faz",
+              "fr": "Prestations assurées"
+            },
+            "kind": "list",
+            "max": 40,
+            "client_editable": true,
+            "of": [
+              {
+                "key": "service",
+                "label": {
+                  "uk": "Послуга",
+                  "en": "Service",
+                  "de": "Leistung",
+                  "ru": "Услуга",
+                  "es": "Servicio",
+                  "it": "Servizio",
+                  "pt": "Serviço",
+                  "fr": "Prestation"
+                },
+                "kind": "ref",
+                "ref": "services",
+                "required": true,
+                "client_editable": true,
+                "no_tap_target": true
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "collections": [
+      {
+        "name": "services",
+        "label": {
+          "uk": "Послуги",
+          "en": "Services",
+          "de": "Leistungen",
+          "ru": "Услуги",
+          "es": "Servicios",
+          "it": "Servizi",
+          "pt": "Serviços",
+          "fr": "Prestations"
+        },
+        "one": {
+          "uk": "послуга",
+          "en": "service",
+          "de": "Leistung",
+          "ru": "услуга",
+          "es": "servicio",
+          "it": "servizio",
+          "pt": "serviço",
+          "fr": "prestation"
+        },
+        "icon": "lucide:list",
+        "prefix": "/services",
+        "type": "service",
+        "pages": false
+      },
+      {
+        "name": "doctors",
+        "label": {
+          "uk": "Лікарі",
+          "en": "Doctors",
+          "de": "Ärztinnen und Ärzte",
+          "ru": "Врачи",
+          "es": "Médicos",
+          "it": "Medici",
+          "pt": "Médicos",
+          "fr": "Médecins"
+        },
+        "one": {
+          "uk": "лікар",
+          "en": "doctor",
+          "de": "Ärztin oder Arzt",
+          "ru": "врач",
+          "es": "médico",
+          "it": "medico",
+          "pt": "médico",
+          "fr": "médecin"
+        },
+        "icon": "lucide:stethoscope",
+        "prefix": "/doctors",
+        "type": "doctor"
+      }
+    ],
+    "modules": {
+      "bookings": {
+        "services": "services",
+        "resources": "doctors"
+      }
+    }
+  },
+  "settings": {
+    "kind": "clinic",
+    "scale": "hourly",
+    "slot_every": 15,
+    "buffer": 5,
+    "lead": 120,
+    "horizon": 180,
+    "confirm": "by_hand",
+    "hold": 1440,
+    "cancel_until": 1440,
+    "payment": "no",
+    "combine": false
+  },
+  "entries": [],
+  "changes": [
+    {
+      "from": "1",
+      "says": "Five more languages: every label, collection name and rate of the kit now says ru, es, it, pt and fr beside uk, en and de (7 October 2026)."
+    },
+    {
+      "from": "2",
+      "says": "A doctor's name is the same in every language: on a contract-3 site the `title` of the `doctor` type says `\"localized\": false`, so it is not counted as words to translate — add it to your schema; a contract-2 schema has no such key and leaves it out (12 November 2026)."
+    }
+  ]
+}
