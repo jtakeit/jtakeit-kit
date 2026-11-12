@@ -99,6 +99,10 @@
     "./content/node": {
       "types": "./types/content-node.d.ts",
       "default": "./lib/content/node.mjs"
+    },
+    "./live": {
+      "types": "./types/live.d.ts",
+      "default": "./lib/live.mjs"
     }
   },
   "files": [
