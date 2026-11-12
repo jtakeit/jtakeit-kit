@@ -4,7 +4,8 @@
 // masters, a post, the same in German — built, and read on every page it
 // wrote; then built again on a dark palette and read again. A scaffold
 // nobody has written in has empty headings and no form, and passes
-// everything for the wrong reason.
+// everything for the wrong reason. On contract 2 (`--contract 2`): a site in
+// two languages is contract 2's until the platform's M3.
 //
 //   node test/a11y.mjs                  lays out its own scaffold (asks the platform for the salon kit)
 //   node test/a11y.mjs --site /tmp/probe  seeds and reads one already laid out and installed (CI's probe)
@@ -27,7 +28,7 @@ let scratch = '';
 if (!site) {
   scratch = mkdtempSync(join(tmpdir(), 'jtk-a11y-'));
   site = join(scratch, 'probe');
-  execFileSync('node', [join(root, 'bin/jtk.mjs'), 'create', 'probe', '--out', site, '--kit', 'salon', '--locale', 'en', '--blog', '--no-git'], { stdio: 'pipe' });
+  execFileSync('node', [join(root, 'bin/jtk.mjs'), 'create', 'probe', '--out', site, '--kit', 'salon', '--locale', 'en', '--blog', '--no-git', '--contract', '2'], { stdio: 'pipe' });
   execFileSync('npm', ['install', '--no-audit', '--no-fund', join(root, 'kit')], { cwd: site, stdio: 'pipe' });
 }
 site = resolve(site);

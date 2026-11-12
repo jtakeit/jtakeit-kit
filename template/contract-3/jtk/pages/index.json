@@ -1,0 +1,24 @@
+{
+  "path": "/",
+  "name": "{{HOME_NAME}}",
+  "blocks": [
+    {
+      "_key": "hero0001",
+      "type": "hero",
+      "v": 1,
+      "cta_href": "#contact"
+    },
+    {
+      "_key": "ctab0001",
+      "type": "cta_banner",
+      "v": 1,
+      "cta_href": "#contact",
+      "form": true
+    },
+    {
+      "_key": "ques0001",
+      "type": "questions",
+      "v": 1
+    }
+  ]
+}

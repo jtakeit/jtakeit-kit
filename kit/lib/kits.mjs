@@ -10,7 +10,9 @@
  * as entries in the site's language, and — for a site whose catalogue is a
  * file rather than a declaration — its block types, collections and the
  * module into `jtk/catalogue.json`. `@jtakeit/astro` writes the same into
- * `src/content/blocks.ts` instead, and takes the rest from here.
+ * `src/content/blocks.ts` instead, and takes the rest from here — on a
+ * contract-3 scaffold, `jtk create`'s default, `kitSettings` and `kitEntries`
+ * moved into contract 3's files by `@jtakeit/kit/upgrade`'s mapping.
  *
  * Nothing written is a fact about the business: the rates carry no price and
  * the settings no zone and no hours. What the kit says to take from the brief
@@ -197,7 +199,7 @@ export function mergeKitIntoCatalogue(catalogue, kit) {
 export function layKitFiles(target, kit, { locale = 'en', catalogue = false } = {}) {
   if (contractOf(target) === 3) {
     throw new Error(
-      `${join(target, 'jtk', 'schema.json')} says contract 3, and a kit is laid out in contract 2's files (jtk/catalogue.json, jtk/bookings.json, entries under jtk/content) — this release lays no kit out on a contract-3 tree`,
+      `${join(target, 'jtk', 'schema.json')} says contract 3, and a kit is laid out in contract 2's files (jtk/catalogue.json, jtk/bookings.json, entries under jtk/content) — this release lays no kit out on a contract-3 tree; a new one takes its kit from jtk create --kit`,
     );
   }
   const literal = (value) => JSON.stringify(value, null, 2);

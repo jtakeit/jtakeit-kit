@@ -1,5 +1,7 @@
 // The scaffold writes a project with every token filled and nothing of the
-// studio's left in it; the catalogue tool emits a file from it.
+// studio's left in it; the catalogue tool emits a file from it. Contract 2's,
+// laid out by `--contract 2` exactly as before contract 3 became the default;
+// contract 3's own tree is test/create3.mjs's.
 import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -10,7 +12,7 @@ const dir = mkdtempSync(join(tmpdir(), 'jtk-smoke-'));
 const fail = (m) => { console.error(`smoke: ${m}`); process.exit(1); };
 
 try {
-  execFileSync('node', [bin, 'create', 'smoke-salon', '--name', 'Smoke Salon', '--locale', 'de-CH', '--out', join(dir, 'site'), '--no-git'], { stdio: 'pipe' });
+  execFileSync('node', [bin, 'create', 'smoke-salon', '--name', 'Smoke Salon', '--locale', 'de-CH', '--out', join(dir, 'site'), '--no-git', '--contract', '2'], { stdio: 'pipe' });
   const site = join(dir, 'site');
   for (const must of ['package.json', 'astro.config.mjs', 'src/content/blocks.ts', 'src/copy/de-CH.ts', 'jtk/design.json', '.gitignore', 'jtakeit-meta.mjs']) {
     if (!existsSync(join(site, must))) fail(`missing ${must}`);
@@ -90,7 +92,7 @@ try {
 
   // A blog, turned on by --blog: the two lines at the foot of blocks.ts, and
   // the listing page that builds itself once the collection is there.
-  execFileSync('node', [bin, 'create', 'smoke-blog', '--locale', 'en', '--blog', '--out', join(dir, 'blog'), '--no-git'], { stdio: 'pipe' });
+  execFileSync('node', [bin, 'create', 'smoke-blog', '--locale', 'en', '--blog', '--out', join(dir, 'blog'), '--no-git', '--contract', '2'], { stdio: 'pipe' });
   const blogged = readFileSync(join(dir, 'blog', 'src/content/blocks.ts'), 'utf8');
   if (!blogged.includes('BLOCKS.push(BLOG_POST);') || !blogged.includes('COLLECTIONS.push(BLOG_COLLECTION);')) fail('--blog did not turn the blog on');
   if (!existsSync(join(dir, 'blog', 'src/pages/[...lang]/blog/index.astro'))) fail('the blog listing is not scaffolded');
@@ -122,7 +124,7 @@ try {
     entries: [{ collection: 'services', slug: 'day', fields: { title: { uk: 'Доба', en: 'Day', de: 'Tag' }, takes: 1440 } }],
   }));
   const rental = join(dir, 'rental');
-  execFileSync('node', [bin, 'create', 'smoke-rental', '--locale', 'de-CH', '--kit', kitFile, '--out', rental, '--no-git'], { stdio: 'pipe' });
+  execFileSync('node', [bin, 'create', 'smoke-rental', '--locale', 'de-CH', '--kit', kitFile, '--out', rental, '--no-git', '--contract', '2'], { stdio: 'pipe' });
   const laid = readFileSync(join(rental, 'src/content/blocks.ts'), 'utf8');
   if (!laid.includes('BLOCKS.push(') || !laid.includes('"prefix": "/rates"') || !laid.includes('"resources": "cars"')) fail('the kit did not reach blocks.ts');
   const diary = JSON.parse(readFileSync(join(rental, 'jtk/bookings.json'), 'utf8')).blocks[0];
@@ -155,13 +157,21 @@ try {
   });
   try {
     const asked = join(dir, 'asked');
-    execFileSync('node', [bin, 'create', 'smoke-asked', '--locale', 'uk', '--kit', 'car_rental', '--api', `http://127.0.0.1:${port}`, '--out', asked, '--no-git'], { stdio: 'pipe' });
+    execFileSync('node', [bin, 'create', 'smoke-asked', '--locale', 'uk', '--kit', 'car_rental', '--api', `http://127.0.0.1:${port}`, '--out', asked, '--no-git', '--contract', '2'], { stdio: 'pipe' });
     const settings = JSON.parse(readFileSync(join(asked, 'jtk/bookings.json'), 'utf8')).blocks[0];
     if (settings.kit !== 'car_rental' || settings.kit_version !== 'abc123def456') fail('a kit asked by its kind did not record which kit and which version');
     if (JSON.parse(readFileSync(join(asked, 'jtk/content/rates/day.json'), 'utf8')).blocks[0].title !== 'Доба') fail('a kit asked by its kind did not lay its rates out');
     const byKind = join(dir, 'by-kind');
-    execFileSync('node', [bin, 'create', 'smoke-kind', '--kind', 'car_rental', '--api', `http://127.0.0.1:${port}`, '--out', byKind, '--no-git'], { stdio: 'pipe' });
+    execFileSync('node', [bin, 'create', 'smoke-kind', '--kind', 'car_rental', '--api', `http://127.0.0.1:${port}`, '--out', byKind, '--no-git', '--contract', '2'], { stdio: 'pipe' });
     if (JSON.parse(readFileSync(join(byKind, 'jtk/bookings.json'), 'utf8')).blocks[0].kit !== 'car_rental') fail('--kind is not --kit');
+    // And on contract 3, the default: the settings at jtk/modules/bookings.json, the rate an entry with its id.
+    const three = join(dir, 'asked-three');
+    execFileSync('node', [bin, 'create', 'smoke-three', '--locale', 'uk', '--kit', 'car_rental', '--api', `http://127.0.0.1:${port}`, '--out', three, '--no-git'], { stdio: 'pipe' });
+    const module = JSON.parse(readFileSync(join(three, 'jtk/modules/bookings.json'), 'utf8'));
+    if (module.settings?.kit !== 'car_rental' || module.settings.kit_version !== 'abc123def456' || module.settings.page !== '/rates') fail(`a kit on contract 3 did not record which kit and which version: ${JSON.stringify(module)}`);
+    const rate = JSON.parse(readFileSync(join(three, 'jtk/entries/services/day.json'), 'utf8'));
+    if (!/^[0-9a-f-]{36}$/.test(rate.id) || rate.fields?.title !== 'Доба' || rate.fields.takes !== 1440) fail(`a kit on contract 3 did not lay its rate out as an entry: ${JSON.stringify(rate)}`);
+    if (existsSync(join(three, 'jtk/catalogue.json')) || existsSync(join(three, 'jtk/bookings.json')) || existsSync(join(three, 'jtk/content'))) fail('a kit on contract 3 left contract 2\'s files');
 
     let said = '';
     try {
@@ -190,9 +200,9 @@ try {
   }
   if (!whined.includes('is a file, not a directory') || whined.includes('readdirSync')) fail(`--out on a file: ${whined || 'was not refused'}`);
 
-  // A contract-3 tree is not scaffolded over, not even with --force: the
-  // template's jtk/content and jtk/catalogue.json beside jtk/schema.json are a
-  // tree the platform refuses. Nothing is written into it.
+  // A contract-3 tree is not scaffolded over, not even with --force, on either
+  // contract: a site is there, and contract 2's files beside jtk/schema.json are
+  // a tree the platform refuses. Nothing is written into it.
   const three = join(dir, 'three');
   mkdirSync(join(three, 'jtk'), { recursive: true });
   writeFileSync(join(three, 'jtk', 'schema.json'), '{"contract": 3, "locale": "de", "blocks": []}');
@@ -204,6 +214,13 @@ try {
   }
   if (!overThree.includes('says contract 3')) fail(`a contract-3 tree was scaffolded over: ${overThree || 'not refused'}`);
   if (existsSync(join(three, 'jtk', 'catalogue.json')) || existsSync(join(three, 'package.json'))) fail('the refused scaffold wrote into the contract-3 tree');
+  overThree = '';
+  try {
+    execFileSync('node', [bin, 'create', 'smoke-three', '--out', three, '--force', '--no-git', '--contract', '2'], { stdio: 'pipe' });
+  } catch (why) {
+    overThree = String(why.stderr);
+  }
+  if (!overThree.includes('says contract 3') || existsSync(join(three, 'package.json'))) fail(`--contract 2 scaffolded over a contract-3 tree: ${overThree || 'not refused'}`);
 
   console.log('smoke: the scaffold is whole');
 } finally {

@@ -7,6 +7,15 @@ in one admin.
 written — every page, every post, every footer, for ever. It is a commitment,
 not a feature, and the bar is a sentence in the brief that names the language.
 
+**On contract 2, until the platform's M3.** A new site is on contract 3, which
+keeps a site in one language until M3 brings translations as overlays beside
+their originals; before it, the platform refuses a contract-3 schema with
+other languages and every translation (`JTK_E_TRANSLATION_BEFORE_M_THREE`), and
+`jtk create` refuses to lay one out. A site that needs a second language now is
+laid out with `jtk create --contract 2`, and this page — its files under
+`jtk/content/`, its schema `jtk/catalogue.json` — is how it is written; it
+moves to contract 3 once M3 is there.
+
 ---
 
 ## Declare the languages once

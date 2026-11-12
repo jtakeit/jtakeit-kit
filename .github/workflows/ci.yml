@@ -32,9 +32,16 @@ jobs:
         # A slug and a directory, the kit asked of the platform's public
         # kits endpoint, no git — and the kit from this checkout rather
         # than from npm, so the scaffold is tried against the kit it ships with.
+        # Contract 2's: the next step seeds it in two languages, which
+        # contract 3 refuses until the platform's M3.
         run: |
-          node bin/jtk.mjs create probe --out /tmp/probe --kit salon --locale en --no-git
+          node bin/jtk.mjs create probe --out /tmp/probe --kit salon --locale en --no-git --contract 2
           cd /tmp/probe && npm install --no-audit --no-fund "$GITHUB_WORKSPACE/kit" && npm run build
+      - name: Every kit the platform has, laid out on contract 3, built, judged and linted
+        # jtk create's default: each kind of the platform's public kits
+        # endpoint with a blog, built, then jtk schema against dist/ and
+        # jtkit lint (test/create3.mjs).
+        run: JTK_KITS_API=https://api.jtakeit.com node test/create3.mjs
       - name: The scaffold's pages read against WCAG 2.1 AA
         # The probe above, seeded with real content and read in the runner's
         # Chrome by `jtk a11y`, in a light and a dark palette (docs/accessibility.md).
