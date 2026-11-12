@@ -9,6 +9,12 @@ writes a README and makes the first commit (`--no-git` to skip it). It decides
 nothing about how the site looks: every component is a starting point, and the
 contract below is the only thing the platform will hold the repository to.
 
+The site is on contract 3 unless `--contract 2` says otherwise (below). The
+template is one for both: its pages read the content through the kit's door,
+and only the files that are a contract's own differ — contract 3's are laid
+from `template/contract-3/` in place of contract 2's `src/content/blocks.ts`
+and `jtk/content/`.
+
 ## The tokens
 
 | token | example |
@@ -22,11 +28,59 @@ contract below is the only thing the platform will hold the repository to.
 | `{{SCHEMA_TYPE}}` | `LocalBusiness`, or `--schema-type HairSalon` |
 | `{{PREVIEW_URL}}` | `http://localhost:4321/` — where `astro dev` says it is; every build the platform makes passes `SITE_URL` |
 | `{{UI_*}}` | the form's, the privacy page's and a listing's sentences («And 3 more», «Page 2 of 5») in the site's language |
+| `{{HOME_NAME}}` | `Startseite` — the home page's `name` on contract 3, in the site's language |
 
 An unreplaced `{{` anywhere in the tree is a scaffold bug; the package's smoke
 test fails on one.
 
 ## The `jtk/` contract
+
+Contract 3, what `jtk create` lays out (jtakeit-core wiki/98):
+
+```
+jtk/schema.json                       what the owner may edit — written from src/content/blocks.ts
+                                      (`CONTRACT = 3`) by `jtk schema`; the schema the pages
+                                      render from, through the kit's door
+jtk/pages/<path>.json                 a page — `/` is index.json — with its id, path and name
+jtk/entries/<collection>/<slug>.json  an entry: its id, slug, its own values under `fields`
+jtk/shared.json                       the text on every page: the business's contacts, by role
+jtk/modules/bookings.json             the diary's settings, when the schema turns bookings on
+jtk/design.json                       the design document the panel reads for the editor's chrome
+jtk/site.json                         the platform's, written by its saves: never by the scaffold
+```
+
+Every page and entry carries its `id`, every block, row and picture its `_key`:
+`jtk schema` mints the ones a file lacks. The documents are the panel's, written
+by a publish. A module's settings are its own document, `{ "v": 1, "settings":
+{ … } }`, each row of a list with its `_key`; `jtk schema` seeds an empty one
+when the file is missing — fill in `settings` and commit it, and `import_branch`
+reads it into the diary so the demo takes bookings before anybody opens the
+panel.
+
+```json
+{
+  "v": 1,
+  "settings": {
+    "zone": "Europe/Zurich",
+    "hours": [{ "_key": "mon", "day": "monday", "opens": 540, "closes": 1020 }],
+    "horizon": 30,
+    "confirm": "auto",
+    "payment": "no"
+  }
+}
+```
+
+The currency is the site's setting, not a file of the scaffold's: it is given
+once, to `create_site` (or as `currency` at the top of `jtk/site.json`, which an
+import takes while the site has none), and a person changes it in the panel
+after that.
+
+A contract-3 site in several languages is laid out with `--locales`
+(`jtk create probe --locale de-CH --locales en`): each other language a
+translation beside every original, its words that are not content in
+`src/copy/<locale>.ts` ([languages.md](languages.md)). `jtk create
+--contract 2` lays out contract 2's files exactly as they were, in one
+language:
 
 ```
 jtk/catalogue.json    what the owner may edit — derived from src/content/blocks.ts by `jtk catalogue`;
@@ -37,11 +91,12 @@ jtk/bookings.json     the diary's settings, when the catalogue turns bookings on
 jtk/design.json       the design document the panel reads for the editor's chrome
 ```
 
-`jtk/bookings.json` has one shape, and it is the one a publish writes back: a
-document of one block of type `bookings_config`, with the settings as that
-block's fields. `jtk catalogue` writes the empty skeleton when the file is
+There, `jtk/bookings.json` has one shape, and it is the one a publish writes
+back: a document of one block of type `bookings_config`, with the settings as
+that block's fields. `jtk catalogue` writes the empty skeleton when the file is
 missing; fill it in and commit it, and `import_branch` reads it into the diary
-so the demo takes bookings before anybody opens the panel.
+so the demo takes bookings before anybody opens the panel. `jtk upgrade
+contract-3` moves such a site to contract 3 in one commit.
 
 ```json
 {

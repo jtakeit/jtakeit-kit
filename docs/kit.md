@@ -98,9 +98,10 @@ public/            favicons, the og image, clips
   how a gallery is fed from content so the owner keeps it rather than us.
 - **Their own video, cut into loops** — `<Clip>`, which carries every rule a
   silent autoplaying loop has to meet; the cutting is yours.
-- [catalogue.md](catalogue.md) — `jtk/catalogue.json`: what the admin
-  may edit, declared in `src/content/blocks.ts` and emitted by `jtk catalogue`.
-  Without it a site cannot be attached to the admin at all.
+- [catalogue.md](catalogue.md) — what the admin may edit, declared in
+  `src/content/blocks.ts`: on contract 3, a new site's, emitted into
+  `jtk/schema.json` by `jtk schema`; on contract 2, into `jtk/catalogue.json`
+  by `jtk catalogue`. Without it a site cannot be attached to the admin at all.
 - **The hero's moving ground** — [hero-motion.md](hero-motion.md)
 - **Grounds, edges and entrances** — [surface.md](surface.md)
 - **The shapes a page can take** — [shapes.md](shapes.md)
@@ -456,7 +457,8 @@ a button; a component that puts words on the fill token is a contrast bug.
 npm run dev                       # http://localhost:4321
 npm run check                     # 0 errors / 0 warnings / 0 hints
 npm run build
-npx @jtakeit/astro catalogue      # jtk/catalogue.json, checked against dist/ both ways
+npx @jtakeit/astro schema         # jtk/schema.json, checked against dist/ both ways
+                                  # (a contract-2 site: npx @jtakeit/astro catalogue)
 ```
 
 The form posts to `/api/lead`, which the platform serves beside the site: locally

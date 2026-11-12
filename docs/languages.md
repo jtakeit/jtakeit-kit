@@ -7,6 +7,14 @@ in one admin.
 written — every page, every post, every footer, for ever. It is a commitment,
 not a feature, and the bar is a sentence in the brief that names the language.
 
+**Two contracts.** A new site is on contract 3: one document in the site's own
+language and a translation beside it holding only words — `jtk create
+--locale de-CH --locales en` lays it out, and [the last part of this
+page](#contract-3-one-document-its-translations-beside-it) says how it is
+written. Everything before that is contract 2 (`jtk create --contract 2`): a
+full copy of every document per language, under `jtk/content/`, its schema
+`jtk/catalogue.json`; such a site moves with `jtk upgrade contract-3`.
+
 ---
 
 ## Declare the languages once

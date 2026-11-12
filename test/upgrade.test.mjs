@@ -1,5 +1,5 @@
 // `jtk upgrade contract-3` (lib/upgrade.mjs) on scaffolds laid out by `jtk
-// create`: the move, a second run that does nothing, every refusal with the
+// create --contract 2`: the move, a second run that does nothing, every refusal with the
 // tree left as it was, the platform's state where the files lack it, a kit's
 // `does` by id, and a scaffold file the developer changed listed with what
 // it reads. The scaffold is not installed here: the codemod reads with this
@@ -20,7 +20,7 @@ const id = (n) => `0193a5c3-0000-7000-8000-${String(n).padStart(12, '0')}`;
 function scaffold(...flags) {
   const dir = mkdtempSync(join(tmpdir(), 'jtk-upgrade-'));
   const site = join(dir, 'site');
-  execFileSync('node', [bin, 'create', 'probe-site', '--name', 'Probe', '--locale', 'de-CH', '--out', site, '--no-git', ...flags], { stdio: 'pipe' });
+  execFileSync('node', [bin, 'create', 'probe-site', '--name', 'Probe', '--locale', 'de-CH', '--out', site, '--no-git', '--contract', '2', ...flags], { stdio: 'pipe' });
   return site;
 }
 const upgrade = (site, ...flags) => spawnSync('node', [bin, 'upgrade', 'contract-3', '--root', site, ...flags], { encoding: 'utf8' });

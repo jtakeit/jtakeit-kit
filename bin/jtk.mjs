@@ -2,7 +2,7 @@
 /**
  * jtk — the command line of @jtakeit/astro.
  *
- *   jtk create <slug> …     scaffold a site (lib/create.mjs)
+ *   jtk create <slug> …     scaffold a site, on contract 3 unless --contract 2 (lib/create.mjs)
  *   jtk catalogue …         write jtk/catalogue.json and check it; on contract 3, the names only (the kit's lib/catalogue.mjs)
  *   jtk schema …            contract 3's: write jtk/schema.json from blocks.ts and check it (the kit's lib/schema.mjs)
  *   jtk upgrade contract-3  move a contract-2 site to contract 3 in one commit (lib/upgrade.mjs)
@@ -85,7 +85,9 @@ switch (command) {
     const copies = await import(pathToFileURL(join(HERE, '..', 'lib', 'copies.mjs')).href);
     console.error(`@jtakeit/astro — the scaffold and the catalogue tool for a site on jtakeit
 
-  jtk create <slug> [options]     scaffold a site into ./<slug>
+  jtk create <slug> [options]     scaffold a site into ./<slug>, on contract 3: jtk/schema.json
+                                  (--locales en,fr for its other languages; --contract 2
+                                  for contract 2's files, in one language)
   jtk catalogue [--emit-only] [--dist ./dist] [--judge]
                                   write jtk/catalogue.json from src/content/blocks.ts and
                                   check it against the built pages; on a contract-3 tree,

@@ -11,8 +11,9 @@
 //   8  a length and a price in a listing's row, apart
 //   9  the booking form's last day the diary's horizon
 //
-// A salon laid out from the kit's fixture, with a blog, in de-CH; the kit is
-// this checkout's, packed, as the smoke test installs it.
+// A salon laid out from the kit's fixture, with a blog, in de-CH, on contract 2
+// (`--contract 2`) and moved; the kit is this checkout's, packed, as the smoke
+// test installs it. A contract-3 scaffold laid out directly is test/create3.mjs's.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -58,7 +59,7 @@ const settle = (stage) => {
 };
 
 try {
-  execFileSync('node', [bin, 'create', 'salon-probe', '--name', 'Salon Probe', '--locale', 'de-CH', '--kit', resolve('test/fixtures/kit-salon.json'), '--blog', '--out', site, '--no-git'], { stdio: 'pipe' });
+  execFileSync('node', [bin, 'create', 'salon-probe', '--name', 'Salon Probe', '--locale', 'de-CH', '--kit', resolve('test/fixtures/kit-salon.json'), '--blog', '--out', site, '--no-git', '--contract', '2'], { stdio: 'pipe' });
   const packed = execFileSync('npm', ['pack', resolve('kit'), '--pack-destination', dir], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim().split('\n').pop();
   execFileSync('npm', ['install', '--no-audit', '--no-fund', join(dir, packed)], { cwd: site, stdio: 'pipe' });
 
