@@ -70,13 +70,36 @@ const first = PAGE.blocks.findIndex((_, at) => at !== rendered);
 const arrives = (at: number) => (at === first ? undefined : reveal);
 
 /**
+ * Which blocks carry the form. A block whose `form` switch is on; and, where
+ * no block's is, the form's own block — the `cta_banner` whose fields are
+ * the form's words, which `LeadForm` reads them from — unless its switch is
+ * off. A switch nobody wrote leaves the form where the scaffold put it: a
+ * page that sells and cannot be answered is a leaflet.
+ *
+ * The form's words are content in every language (`name_label`,
+ * `contact_label`, `message_label`, `<key>_label`), and a translation keeps
+ * its own where the original has none. With the switch read as off when it
+ * was not written, a page with every optional field taken out — the
+ * platform's `empty` variant, which takes the switch out of the original
+ * and leaves the translation's words as they are — drew no form, so `/en`
+ * had the form's English words drawn nowhere, and an agent's build stopped
+ * on JTK_E_UNANNOTATED_FIELD (jtakeit-core wiki/89 §11, 12 November 2026).
+ * Now the form is drawn there, its words the translation's on `/en` and the
+ * kit's stand-ins at their places on `/`, every one annotated.
+ */
+const switchedOn = PAGE.blocks.some((block) => block.value('form') === true);
+const formBlock = PAGE.block('cta_banner');
+const carries = (block: (typeof PAGE.blocks)[number]) =>
+  block.value('form') === true || (!switchedOn && block === formBlock && block.value('form') !== false);
+
+/**
  * The one band that is `#contact`, where a button with no link of its own
  * leads: the first that carries the form, else the last. An id is the
  * page's once — both were it on the scaffold's own home page, the form's
  * band and the questions under it, and `#contact` led to whichever a
  * browser picked (the contract-3 rehearsal, 11 November 2026).
  */
-const withForm = PAGE.blocks.findIndex((block, at) => at !== rendered && block.value('form') === true);
+const withForm = PAGE.blocks.findIndex((block, at) => at !== rendered && carries(block));
 const contactAt = withForm !== -1 ? withForm : PAGE.blocks.length - 1;
 ---
 
@@ -89,7 +112,7 @@ const contactAt = withForm !== -1 ? withForm : PAGE.blocks.length - 1;
     // A block that carries the form does not also render its own heading and
     // button: `LeadForm` renders both, from this same block, and annotating a
     // field twice means two elements claiming one path.
-    const carriesForm = block.value('form') === true;
+    const carriesForm = carries(block);
 
     return (
       <section

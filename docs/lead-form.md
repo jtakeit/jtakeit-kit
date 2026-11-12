@@ -61,6 +61,16 @@ remove in the panel would be one the form sends and the declaration refuses.
 Contract 2's form is as it was: its questions are drawn under the
 declaration's label, fixed.
 
+Which band draws the form is the block's `form` switch: a block whose
+switch is on, and, where none is, the form's own block — the `cta_banner`
+whose fields are its words — unless its switch says `false`. A switch
+nobody wrote leaves the form where the scaffold put it, so the form's words
+are on the page in every language whenever they are in the content: the
+platform builds new code with every optional field taken out of the
+originals and each translation as it is, and a form gone with its switch
+left English's words drawn nowhere on `/en` (`JTK_E_UNANNOTATED_FIELD`).
+To show that block as a button without the form, say `form: false`.
+
 ## The band it sits in
 
 The form is a component; the band around it is a layout decision, and it is the

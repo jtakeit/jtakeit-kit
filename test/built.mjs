@@ -11,12 +11,14 @@
 //   7  an Article with its @context, and only a post an Article
 //   8  a length and a price in a listing's row, apart
 //   9  the booking form's last day the diary's horizon
+//  23  with every optional field empty, as the platform builds the code
+//      before it takes it, in two languages: the form drawn and annotated
 //
 // A salon laid out from the kit's fixture, with a blog, in de-CH, on contract 2
 // (`--contract 2`) and moved; the kit is this checkout's, packed, as the smoke
 // test installs it. A contract-3 scaffold laid out directly is test/create3.mjs's.
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -305,6 +307,67 @@ try {
     check(english !== undefined && english.held === 1 && english.missing.includes('jtk/pages/index.en.json blocks[' + hero._key + '].lead'), `14 · jtkit progress does not say what English lacks: ${JSON.stringify(english)}`);
   }
   settle('contract 3, in two languages');
+
+  // ── contract 3, in two languages, every optional field empty ────────────
+  //
+  //  23  the platform's `empty` variant (jtakeit-core sitebuild/variants.mjs):
+  //      every optional field of every original taken out — the form's
+  //      switch among them — and each translation left as it is, built and
+  //      linted. The form's words English's translation keeps are drawn on
+  //      /en, annotated, and the original's, gone, are the kit's stand-ins at
+  //      their places on / (wiki/89 §11: /en had them drawn nowhere, and an
+  //      agent's build stopped on JTK_E_UNANNOTATED_FIELD)
+  {
+    const schema3 = json('jtk/schema.json');
+    const types = new Map(schema3.blocks.map((one) => [one.type, one.fields ?? []]));
+    const typeOfCollection = new Map((schema3.collections ?? []).map((one) => [one.name, one.type]));
+    // As variants.mjs empties an object of fields: an optional list taken out, a required one's rows emptied in turn; every optional value taken out.
+    const vary = (object, fields) => {
+      for (const field of fields) {
+        if (field.kind === 'list' && field.required === true) {
+          for (const row of Array.isArray(object[field.key]) ? object[field.key] : []) if (row && typeof row === 'object') vary(row, field.of ?? []);
+        } else if (field.required !== true) delete object[field.key];
+      }
+    };
+    const varyBlocks = (blocks) => {
+      for (const block of Array.isArray(blocks) ? blocks : []) if (block && types.has(block.type)) vary(block, types.get(block.type));
+    };
+    const translation = (file) => /\.[A-Za-z]{2}(?:-[A-Za-z]{2})?\.json$/.test(file);
+    const under = (at) => readdirSync(join(site, at), { withFileTypes: true }).flatMap((one) => (one.isDirectory() ? (one.name === 'media' ? [] : under(join(at, one.name))) : one.name.endsWith('.json') ? [join(at, one.name)] : []));
+    for (const file of under('jtk/pages').filter((one) => !translation(one))) {
+      const doc = json(file);
+      varyBlocks(doc.blocks);
+      write(file, doc);
+    }
+    for (const file of under('jtk/entries').filter((one) => !translation(one))) {
+      const doc = json(file);
+      const fields = types.get(typeOfCollection.get(doc.collection));
+      if (fields !== undefined) vary((doc.fields ??= {}), fields);
+      varyBlocks(doc.blocks);
+      write(file, doc);
+    }
+    const shared = json('jtk/shared.json');
+    varyBlocks(shared.blocks);
+    write('jtk/shared.json', shared);
+    const form = json('jtk/pages/index.json').blocks.find((one) => one.type === 'cta_banner');
+    if (form.form !== undefined || form.name_label !== undefined) fail(`23 · the empty variant left the form's switch or its words in the original: ${JSON.stringify(form)}`);
+    if (json('jtk/pages/index.en.json').blocks.find((one) => one._key === form._key)?.name_label !== 'Name') fail('23 · English\'s translation lost the form\'s words');
+
+    build('https://salon-probe.example/');
+    const en = page('en');
+    const de = page('');
+    for (const [field, words] of [['name_label', 'Name'], ['contact_label', 'Phone or email'], ['message_label', 'Message']]) {
+      check(en.includes(`<span data-jtk-path="blocks[ctab0001].${field}">${words}</span>`), `23 · /en with every optional field empty: the form's ${field} is not drawn, annotated: ${en.match(new RegExp(`<span[^>]*${field}[^>]*>[^<]*</span>`))?.[0]}`);
+    }
+    check(en.includes('<label class="field__label" for="lead-topic" data-jtk-path="blocks[ctab0001].topic_label">What it is about</label>'), `23 · /en with every optional field empty: the question is not English, annotated: ${en.match(/<label[^>]*for="lead-topic"[^>]*>[^<]*<\/label>/)?.[0]}`);
+    check(en.includes('<span data-submit-label data-jtk-path="blocks[ctab0001].cta_label">Send</span>'), '23 · /en with every optional field empty: the button is not English, annotated');
+    check(/<span data-jtk-path="blocks\[ctab0001\]\.name_label">Name<\/span>/.test(de) && de.includes('<span data-jtk-path="blocks[ctab0001].contact_label">Telefon oder E-Mail</span>'), '23 · / with every optional field empty: the form\'s stand-ins are not drawn at their places');
+    check((en.match(/id="contact"/g) ?? []).length === 1 && /<section class="band band--cta_banner" id="contact">/.test(en), '23 · /en with every optional field empty: #contact is not the form\'s band');
+    const jtkit = join(site, 'node_modules/@jtakeit/kit/bin/jtkit.mjs');
+    const linted = spawnSync('node', [jtkit, 'lint', '--root', site, '--dist', join(site, 'dist'), '--site-url', 'https://salon-probe.example/'], { encoding: 'utf8' });
+    check(linted.status === 0, `23 · jtkit lint with every optional field empty:\n${linted.stdout}\n${linted.stderr}`);
+  }
+  settle('contract 3, in two languages, every optional field empty');
   console.log('built: the scaffold, on contract 2 and contract 3, in one language and two, says what its content says');
 } finally {
   if (!process.env.KEEP_BUILT) rmSync(dir, { recursive: true, force: true });
