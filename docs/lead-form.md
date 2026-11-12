@@ -15,6 +15,52 @@ the page; a site on another generator calls the same two pieces without
 Astro. Restyle the markup; keep the control names, the honeypot and the
 `data-*` hooks.
 
+## Every word on it is the owner's
+
+On contract 3 every word a visitor reads on the form is content, like any other
+text on the page: the owner taps it, changes it, and translates it. They are
+the collecting block's own fields —
+
+| on the form | the block's field |
+| --- | --- |
+| the heading, the line under it | `title`, `lead` |
+| over the name, the contact, the message | `name_label`, `contact_label`, `message_label` |
+| the button | `cta_label` |
+| over a question in `asks` | `<key>_label` — the scaffold's `topic` has `topic_label` |
+| the line under the form | `required_note` |
+
+— on the home page in the site's language (`jtk/pages/index.json`) and in each
+other language's translation beside it (`jtk/pages/index.en.json`).
+`jtk create` writes them in the kit's words for every language the site has;
+`npx @jtakeit/astro copy <locale>` writes them for a language added later, and
+`jtk upgrade contract-3` for a site that moves — each only where nobody has
+written them, and into a translation only where the original says the kit's
+words: a label the owner wrote their own way is theirs to translate. Until it
+is, the page shows it in the original's words, marked with the original's
+`lang`.
+
+An ask's `label` in the declaration is what the owner's inbox, the
+notification and the export name the answer by. The form draws it only for a
+question whose block declares no `<key>_label` — fixed, as declared — and as
+the stand-in, at the field's path, where the block leaves its words empty. So a
+new question is two lines in `blocks.ts`: the ask, and its words.
+
+```ts
+asks: [{ key: 'guests', label: 'Personen', kind: 'number', min: 1, max: 12 }],
+fields: [
+  // …
+  { key: 'guests_label', label: 'Label for the “guests” field', kind: 'text', max: 120, client_editable: true },
+],
+```
+
+The options of a `select` question stay the declaration's (`options: [{ value,
+label }]`, a label written per language where the site has several): the value
+is what the inbox and the export keep, and an option the owner could add or
+remove in the panel would be one the form sends and the declaration refuses.
+
+Contract 2's form is as it was: its questions are drawn under the
+declaration's label, fixed.
+
 ## The band it sits in
 
 The form is a component; the band around it is a layout decision, and it is the

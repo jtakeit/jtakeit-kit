@@ -78,6 +78,22 @@ test('the asks from the catalogue are drawn by kind, fixed, and nothing else is 
   assert.equal(inputType('richtext_lite'), 'text');
 });
 
+test('every word on the form may be the block\'s: an ask\'s over its control tappable at its path, and the original\'s words marked with their language', () => {
+  // On /en of a site in de-CH, where the translation gives the ask's words and not the message's.
+  const asks = [{ key: 'topic', label: 'What it is about', kind: 'text', path: 'blocks[ctab0001].topic_label' }, { key: 'wished', label: 'Wunschtag', kind: 'date', lang: 'de-CH', path: 'blocks[ctab0001].wished_label' }];
+  const langs = { message_label: 'de-CH', required_note: 'de-CH', title: undefined };
+  const html = renderLeadForm({ action: '/api/lead', copy: { ...copy, message: 'Nachricht', requiredNote: 'Pflichtfelder' }, paths, langs, asks, lang: 'en' });
+  assert.ok(html.includes('<label class="field__label" for="lead-topic" data-jtk-path="blocks[ctab0001].topic_label">What it is about</label>'));
+  assert.ok(html.includes('<label class="field__label" for="lead-wished" data-jtk-path="blocks[ctab0001].wished_label" lang="de-CH">Wunschtag</label>'));
+  assert.ok(html.includes('<span data-jtk-path="blocks[3].message_label" lang="de-CH">Nachricht</span>'));
+  assert.ok(html.includes('<p class="lead__legal" data-jtk-path="blocks[3].required_note" lang="de-CH">Pflichtfelder</p>'));
+  // The page's own words carry none, and the kit's stand-in for an empty field is in the page's language.
+  assert.ok(html.includes('<span data-jtk-path="blocks[3].name_label">Your name</span>'));
+  assert.ok(html.includes('<h2 class="lead__title" data-jtk-path="blocks[3].title">Write to us</h2>'));
+  const bare = renderLeadForm({ action: '/api/lead', copy: { ...copy, name: '' }, paths, langs: { name_label: 'de-CH' }, lang: 'en' });
+  assert.ok(bare.includes('<span data-jtk-path="blocks[3].name_label">Name</span>'));
+});
+
 test('words are escaped, the wrapper may be left off, and a form with nowhere to post is refused', () => {
   const html = renderLeadForm({ action: '/api/lead', copy: { ...copy, title: 'A <b>bold</b> "title"' }, tag: '' });
   assert.ok(html.startsWith('<form class="lead"'));

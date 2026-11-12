@@ -74,6 +74,20 @@ test('a scaffold moves: the declaration in contract 3\'s words, every file at it
     assert.deepEqual(page.blocks[0].image, { src: 'media/x/a.jpg', alt: 'Der Laden' });
     assert.match(page.blocks[2].items[0]._key, /^k[0-9a-f]{7}$/);
     assert.deepEqual(read(site, 'jtk/shared.json').blocks.map((one) => one.type), ['contacts']);
+    // The form: contract 3's, every word on it the block's — the question's
+    // words declared, and what a visitor read written in the site's language.
+    assert.match(run.stdout, /↻ src\/components\/LeadForm\.astro — the scaffold's [0-9.]+, untouched: replaced with the door's/);
+    assert.equal(readFileSync(join(site, 'src/components/LeadForm.astro'), 'utf8'), readFileSync(resolve('template/contract-3/src/components/LeadForm.astro'), 'utf8'));
+    const banner = read(site, 'jtk/schema.json').blocks.find((one) => one.type === 'cta_banner');
+    assert.deepEqual(banner.fields.at(-1), { key: 'topic_label', label: 'Label for the “topic” field', kind: 'text', max: 120, client_editable: true });
+    assert.equal(banner.asks[0].label, 'Worum es geht', 'the declaration\'s label still names the answer in the inbox');
+    assert.match(source, /\/\/ What a visitor reads over each question in asks: the owner's words, since `jtk upgrade contract-3`\.\n\s*\{\n\s*key: 'topic_label',/);
+    const form = page.blocks.find((one) => one.type === 'cta_banner');
+    assert.deepEqual(
+      { cta_label: form.cta_label, name_label: form.name_label, contact_label: form.contact_label, message_label: form.message_label, topic_label: form.topic_label },
+      { cta_label: 'Senden', name_label: 'Name', contact_label: 'Telefon oder E-Mail', message_label: 'Nachricht', topic_label: 'Worum es geht' },
+    );
+    assert.equal(existsSync(join(site, 'jtk/pages/index.en.json')), false, 'a translation only for a language the site has');
 
     const before = snapshot(site);
     const again = upgrade(site);
@@ -162,6 +176,27 @@ test('the platform\'s state: no id made up for a site the platform has saved; --
     assert.match(run.stdout, /1 minted/);
   } finally {
     rmSync(join(fresh, '..'), { recursive: true, force: true });
+  }
+});
+
+test('a form the developer changed: left, its questions\' words the declaration\'s, and that said for a person; the owner\'s own words kept', () => {
+  const site = scaffold();
+  try {
+    const form = readFileSync(join(site, 'src/components/LeadForm.astro'), 'utf8');
+    write(site, 'src/components/LeadForm.astro', `${form}\n<p class="note">Wir antworten am selben Tag.</p>\n`);
+    const home = read(site, 'jtk/content/index.json');
+    Object.assign(home.blocks[1], { name_label: 'Ihr Name' });
+    write(site, 'jtk/content/index.json', home);
+    const run = upgrade(site);
+    assert.equal(run.status, 0, said(run));
+    assert.match(run.stdout, /✎ src\/components\/LeadForm\.astro — changed here, left as it is/);
+    assert.match(run.stdout, /a question whose words are the declaration's — src\/components\/LeadForm\.astro is the developer's, so the words over «topic» stay the declaration's label/);
+    assert.equal(read(site, 'jtk/schema.json').blocks.find((one) => one.type === 'cta_banner').fields.some((one) => one.key === 'topic_label'), false);
+    const banner = read(site, 'jtk/pages/index.json').blocks.find((one) => one.type === 'cta_banner');
+    assert.equal(banner.name_label, 'Ihr Name');
+    assert.equal(banner.contact_label, undefined, 'nothing written for a form that is not the scaffold\'s');
+  } finally {
+    rmSync(join(site, '..'), { recursive: true, force: true });
   }
 });
 
@@ -369,7 +404,10 @@ test('two languages, the shared values equal: one original, its translation besi
     assert.deepEqual(english.blocks, [
       { _key: 'hero0001', title: 'Welcome', image: { alt: 'The shop' } },
       { _key: 'ques0001', items: [{ _key: row, question: 'An appointment?', answer: 'Yes.' }] },
-    ], 'the words by the original\'s keys — the rows by the key the move gave the original\'s; no file, no cta link');
+      // What the English page's form said, in the kit's English, now the owner's words to tap.
+      { _key: 'ctab0001', cta_label: 'Send', name_label: 'Name', contact_label: 'Phone or email', message_label: 'Message', topic_label: 'What it is about' },
+    ], 'the words by the original\'s keys — the rows by the key the move gave the original\'s; no file, no cta link; the form\'s words in English');
+    assert.equal(Object.keys(english.translated).some((place) => place.startsWith('blocks[ctab0001]')), false, 'the form\'s words written by the move carry no record: the import records them');
     assert.deepEqual(english.translated['blocks[hero0001].title'], { from: digest('Willkommen') });
     assert.deepEqual(english.translated['blocks[hero0001].image.alt'], { from: digest('Der Laden') });
     assert.deepEqual(english.translated[`blocks[ques0001].items[${row}].answer`], { from: digest('Ja.') });
@@ -444,5 +482,66 @@ test('jtk copy: a language\'s words that are not content, in the kit\'s, beside 
     assert.match(readFileSync(join(site, 'src/copy/en.ts'), 'utf8'), /lang: 'en'/);
   } finally {
     rmSync(join(site, '..'), { recursive: true, force: true });
+  }
+});
+
+test('jtk copy on contract 3: the form\'s words, content, in the language\'s translation and the site\'s own where nobody wrote them — the kit\'s, a label\'s own words for the language, never over the owner\'s', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'jtk-copy3-'));
+  const site = join(dir, 'site');
+  try {
+    execFileSync('node', [bin, 'create', 'probe-three', '--name', 'Probe', '--locale', 'de-CH', '--out', site, '--no-git'], { stdio: 'pipe' });
+    const home = read(site, 'jtk/pages/index.json');
+    const form = home.blocks.find((one) => one.type === 'cta_banner');
+    assert.equal(form.topic_label, 'Worum es geht', 'jtk create writes the question\'s words in the site\'s language');
+    // A site laid out before the form's words were content: none written, and the owner's own over the message.
+    for (const field of ['cta_label', 'name_label', 'contact_label', 'topic_label']) delete form[field];
+    form.message_label = 'Ihre Frage';
+    write(site, 'jtk/pages/index.json', home);
+    // A second question, its words written per language in the declaration.
+    const blocks = readFileSync(join(site, 'src/content/blocks.ts'), 'utf8')
+      .replace("asks: [{ key: 'topic', label: 'Worum es geht', kind: 'text', max: 120 }],", "asks: [{ key: 'topic', label: 'Worum es geht', kind: 'text', max: 120 }, { key: 'wished_day', label: { 'de-CH': 'Wunschtag', fr: 'Jour souhaité' }, kind: 'date' }],")
+      .replace("{ key: 'topic_label', label: 'Label for the “topic” field', kind: 'text', max: 120, client_editable: true },", "{ key: 'topic_label', label: 'Label for the “topic” field', kind: 'text', max: 120, client_editable: true },\n      { key: 'wished_day_label', label: 'Label for the “wished day” field', kind: 'text', max: 120, client_editable: true },")
+      .replace('export const LOCALES: string[] = [];', "export const LOCALES: string[] = ['fr'];");
+    assert.match(blocks, /wished_day_label/);
+    write(site, 'src/content/blocks.ts', blocks);
+    spawnSync('node', [bin, 'schema', '--emit-only', '--root', site], { encoding: 'utf8' });
+
+    const run = spawnSync('node', [bin, 'copy', 'fr', '--root', site], { encoding: 'utf8' });
+    assert.equal(run.status, 0, said(run));
+    assert.match(run.stdout, /src\/copy\/fr\.ts — written in the kit's words for fr/);
+    assert.match(run.stdout, /jtk\/pages\/index\.fr\.json: cta_label, name_label, contact_label, topic_label, wished_day_label — the form's words/);
+    const own = read(site, 'jtk/pages/index.json').blocks.find((one) => one.type === 'cta_banner');
+    assert.deepEqual(
+      [own.cta_label, own.name_label, own.contact_label, own.message_label, own.topic_label, own.wished_day_label],
+      ['Senden', 'Name', 'Telefon oder E-Mail', 'Ihre Frage', 'Worum es geht', 'Wunschtag'],
+      'the site\'s own language where nobody wrote them, and the owner\'s words kept',
+    );
+    const french = read(site, 'jtk/pages/index.fr.json');
+    assert.equal(french.of, home.id);
+    assert.equal(french.locale, 'fr');
+    assert.deepEqual(french.blocks, [{ _key: form._key, cta_label: 'Envoyer', name_label: 'Nom', contact_label: 'Téléphone ou e-mail', topic_label: 'De quoi il s’agit', wished_day_label: 'Jour souhaité' }], 'the owner\'s «Ihre Frage» is theirs to translate');
+    assert.equal(french.translated, undefined);
+
+    // Again: the copy is there, nothing left to write — refused as before, and nothing changed.
+    const before = snapshot(site);
+    assert.equal(spawnSync('node', [bin, 'copy', 'fr', '--root', site]).status, 1);
+    assert.deepEqual(snapshot(site), before);
+    // The copy there and the translation's words taken out: written again, the copy left.
+    write(site, 'jtk/pages/index.fr.json', { of: home.id, locale: 'fr', name: 'Accueil' });
+    const again = spawnSync('node', [bin, 'copy', 'fr', '--root', site], { encoding: 'utf8' });
+    assert.equal(again.status, 0, said(again));
+    assert.match(again.stdout, /src\/copy\/fr\.ts is there, and it is the site's: left as it is/);
+    assert.equal(read(site, 'jtk/pages/index.fr.json').name, 'Accueil');
+    assert.equal(read(site, 'jtk/pages/index.fr.json').blocks[0].name_label, 'Nom');
+    // A language the schema does not name: no translation the platform would read.
+    const unnamed = spawnSync('node', [bin, 'copy', 'it', '--root', site], { encoding: 'utf8' });
+    assert.equal(unnamed.status, 0, said(unnamed));
+    assert.match(unnamed.stdout, /the form's words in it are written into its translation once LOCALES in src\/content\/blocks\.ts names it/);
+    assert.equal(existsSync(join(site, 'jtk/pages/index.it.json')), false);
+    // And the tree is one the judge takes.
+    const judged = spawnSync('node', [bin, 'schema', '--emit-only', '--root', site], { encoding: 'utf8' });
+    assert.equal(judged.status, 0, said(judged));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
 });

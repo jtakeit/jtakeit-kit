@@ -13,7 +13,10 @@
  * `website`, and nothing else that the collecting block does not declare in
  * `asks`. The words on it are the site's: the block's own fields (title,
  * lead, the labels), annotated with their paths so the owner edits them by
- * tapping, and the `asks` from the catalogue, fixed.
+ * tapping, and the `asks` from the catalogue — fixed, as declared, or the
+ * block's own words over each where the page hands the ask a `path` (a
+ * `<key>_label` field of the collecting block). Words that are the
+ * original's on a page in another language carry its `lang` (`langs`).
  */
 
 /**
@@ -59,11 +62,27 @@
  */
 
 /**
+ * @typedef {object} LeadLangs
+ * The language of each of the block's words the form renders where it is
+ * not the page's — the original's, on a page in a language nobody
+ * translated it into (the door's `block.lang(field)`) — so what says them
+ * carries it, as every other text on the page does. Keys as `LeadPaths`'.
+ * @property {string} [title]
+ * @property {string} [lead]
+ * @property {string} [name_label]
+ * @property {string} [contact_label]
+ * @property {string} [message_label]
+ * @property {string} [required_note]
+ * @property {string} [cta_label]
+ */
+
+/**
  * @typedef {object} LeadFormProps
  * @property {string} action       where `/api/lead` is from this page — under the preview the site is served at `/p/<slug>/`
  * @property {LeadCopy} copy
  * @property {Ask[]} [asks]
  * @property {LeadPaths} [paths]
+ * @property {LeadLangs} [langs]   the language of each of the block's words where it is not the page's
  * @property {string} [tag]        the element's name around the form, `jtk-lead`; `''` for none
  * @property {number} [photos]     how many photographs the form takes, 1 to 7 — what the collecting block declares as `photos`; absent is none
  * @property {string} [lang]       the page's language, for the photo control's words when `copy` does not carry them, and the labels and the button where it leaves them empty
@@ -160,7 +179,7 @@ function askControl(ask) {
  * @returns {string}
  */
 export function renderLeadForm(props) {
-  const { action, copy, asks = [], paths = {}, tag = 'jtk-lead', photos = 0, lang = 'en', wordsLang = '' } = props;
+  const { action, copy, asks = [], paths = {}, langs = {}, tag = 'jtk-lead', photos = 0, lang = 'en', wordsLang = '' } = props;
   // The messages' language, on what says only them, where it is not the page's.
   const said_in = wordsLang ? ` lang="${esc(wordsLang)}"` : '';
   if (typeof action !== 'string' || action === '') throw new TypeError('renderLeadForm: action is where /api/lead is from this page');
@@ -169,31 +188,32 @@ export function renderLeadForm(props) {
     throw new TypeError(`renderLeadForm: photos is how many the form takes, 0 to ${PHOTOS_MAX}`);
   }
 
-  // A label the block leaves empty says the kit's word, tappable where the page annotates the field, fixed where it does not.
+  // A label the block leaves empty says the kit's word, tappable where the page annotates the field, fixed where it does not;
+  // the block's own words carry their language where it is not the page's.
   const words = leadWords(lang);
-  const said = (/** @type {string | undefined} */ own, /** @type {string | undefined} */ path, /** @type {string} */ fallback, extra = '') =>
-    own ? `<span${extra}${at(path)}>${esc(own)}</span>` : `<span${extra}${path ? at(path) : ' data-jtk-fixed'}>${esc(fallback)}</span>`;
+  const said = (/** @type {string | undefined} */ own, /** @type {string | undefined} */ path, /** @type {string} */ fallback, extra = '', /** @type {string | undefined} */ language = undefined) =>
+    own ? `<span${extra}${at(path)}${attr('lang', language)}>${esc(own)}</span>` : `<span${extra}${path ? at(path) : ' data-jtk-fixed'}>${esc(fallback)}</span>`;
 
   const form = `<form class="lead" method="post" action="${esc(action)}" novalidate data-lead-form${attr('data-success', copy.success)}${attr('data-error', copy.error)}${attr('data-sending', copy.sending)}>
   <div class="lead__head">
-    ${copy.title ? `<h2 class="lead__title"${at(paths.title)}>${esc(copy.title)}</h2>` : ''}
-    ${copy.lead ? `<p class="lead__lead"${at(paths.lead)}>${esc(copy.lead)}</p>` : ''}
+    ${copy.title ? `<h2 class="lead__title"${at(paths.title)}${attr('lang', langs.title)}>${esc(copy.title)}</h2>` : ''}
+    ${copy.lead ? `<p class="lead__lead"${at(paths.lead)}${attr('lang', langs.lead)}>${esc(copy.lead)}</p>` : ''}
   </div>
 
   <div class="field">
-    <label class="field__label" for="lead-name">${said(copy.name, paths.name_label, words.name)} <span aria-hidden="true">*</span></label>
+    <label class="field__label" for="lead-name">${said(copy.name, paths.name_label, words.name, '', langs.name_label)} <span aria-hidden="true">*</span></label>
     <input class="field__input" id="lead-name" name="name" type="text" autocomplete="name" required maxlength="120"${attr('data-message', copy.invalidName)}>
     <p class="field__error" data-error-for="name"${said_in} hidden></p>
   </div>
 
   <div class="field">
-    <label class="field__label" for="lead-contact">${said(copy.contact, paths.contact_label, words.contact)} <span aria-hidden="true">*</span></label>
+    <label class="field__label" for="lead-contact">${said(copy.contact, paths.contact_label, words.contact, '', langs.contact_label)} <span aria-hidden="true">*</span></label>
     <input class="field__input" id="lead-contact" name="contact" type="text" inputmode="tel" autocomplete="tel" required maxlength="120"${attr('data-message', copy.invalidContact)}>
     <p class="field__error" data-error-for="contact"${said_in} hidden></p>
   </div>
 
   <div class="field">
-    <label class="field__label" for="lead-message">${said(copy.message, paths.message_label, words.message)}</label>
+    <label class="field__label" for="lead-message">${said(copy.message, paths.message_label, words.message, '', langs.message_label)}</label>
     <textarea class="field__input field__input--area" id="lead-message" name="message" rows="4" maxlength="2000"></textarea>
   </div>
 
@@ -209,10 +229,10 @@ ${photos > 0 ? photoControl(photos, copy, lang) : ''}
     <input id="lead-website" name="website" type="text" tabindex="-1" autocomplete="off">
   </div>
 
-  ${copy.requiredNote ? `<p class="lead__legal"${at(paths.required_note)}>${esc(copy.requiredNote)}</p>` : ''}
+  ${copy.requiredNote ? `<p class="lead__legal"${at(paths.required_note)}${attr('lang', langs.required_note)}>${esc(copy.requiredNote)}</p>` : ''}
 
   <div class="lead__foot">
-    <button class="btn" type="submit" data-submit>${said(copy.submit, paths.cta_label, words.submit, ' data-submit-label')}</button>
+    <button class="btn" type="submit" data-submit>${said(copy.submit, paths.cta_label, words.submit, ' data-submit-label', langs.cta_label)}</button>
     <p class="lead__status" role="status" data-status${said_in}></p>
   </div>
 </form>`;

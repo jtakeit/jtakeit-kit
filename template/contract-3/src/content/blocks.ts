@@ -203,6 +203,8 @@ export function words(text: Text | undefined, locale: string = LOCALE): string {
  *   collects         'enquiry' on the block whose form keeps what a visitor
  *                    types; `asks` are its questions beyond name, contact and
  *                    message, `photos` how many pictures it takes, 1 to 7.
+ *                    The words a visitor reads over a question are the
+ *                    block's `<key>_label` field, content like the rest.
  */
 export const BLOCKS: Block[] = [
   {
@@ -267,10 +269,16 @@ export const BLOCKS: Block[] = [
      * restaurant for a number of guests. Rewrite it for the business, or
      * take it out — a field the owner never reads costs a visitor for nothing.
      *
-     * Its label is what a visitor reads above the control, so it is in the
-     * site's language from the first commit (`jtk create` writes it), not in
-     * the English the panel's labels arrive in: a Swiss form asked «What it
-     * is about» (the contract-3 rehearsal, 11 November 2026).
+     * Its `label` is what the owner's inbox, the notification and the export
+     * name the answer by, so it is in the site's language from the first
+     * commit (`jtk create` writes it), not in the English the panel's labels
+     * arrive in. What a visitor reads above the control is content, as every
+     * other word on the page: the block's `topic_label` below — `<key>_label`
+     * for each question — which the owner taps, changes and translates
+     * (LeadForm.astro). An ask's label written once in the declaration stayed
+     * German on the English page and could not be tapped (the owner's
+     * two-language site, 12 November 2026). An ask with no `<key>_label` is
+     * drawn under its `label`, fixed.
      */
     asks: [{ key: 'topic', label: '{{UI_ASK_TOPIC}}', kind: 'text', max: 120 }],
     fields: [
@@ -293,11 +301,18 @@ export const BLOCKS: Block[] = [
        * "Sent.", the message a browser shows for an empty field. There is
        * nothing an owner wants to say in those, and the server has its own copy
        * of the refusals anyway.
+       *
+       * `jtk create` writes them, and the button's `cta_label`, in the site's
+       * language in jtk/pages/index.json, and in each other language's
+       * translation beside it; `npx @jtakeit/astro copy <locale>` does the
+       * same for a language added later. One for each question in `asks`,
+       * named `<key>_label`, is the words over its control.
        */
       { key: 'name_label', label: 'Label for the “name” field', kind: 'text', max: 60, client_editable: true },
       { key: 'contact_label', label: 'Label for the “how to reach you” field', kind: 'text', max: 90, client_editable: true },
       { key: 'message_label', label: 'Label for the “message” field', kind: 'text', max: 120, client_editable: true },
       { key: 'required_note', label: 'Line under the form', kind: 'text', max: 140, client_editable: true },
+      { key: 'topic_label', label: 'Label for the “topic” field', kind: 'text', max: 120, client_editable: true },
     ],
   },
   {

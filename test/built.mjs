@@ -4,7 +4,8 @@
 //
 //   1  the business's facts from the shared contacts, by role: the structured
 //      data, the head and llms.txt — src/data/site.ts only where they say nothing
-//   4  the enquiry form's labels in the site's language; one #contact
+//   4  the enquiry form's labels in the site's language; one #contact; on
+//      contract 3 every word of it the block's, the question's too, tappable
 //   5  a button's link from the content under the build's base
 //   6  the sitemap: the booking page, the blog's listing, the privacy page
 //   7  an Article with its @context, and only a post an Article
@@ -130,6 +131,11 @@ try {
     check(!llms.includes('[object Object]'), '1 · contract 3: llms.txt says [object Object]');
     check(index.includes('<a class="btn" href="/services"'), '5 · contract 3: the hero\'s /services is not drawn');
     check((index.match(/id="contact"/g) ?? []).length === 1, '4 · contract 3: the home page has not one #contact');
+    // Every word of the form is the block's since the move, the question's too: tappable, in the site's language.
+    for (const [field, words] of [['name_label', 'Name'], ['contact_label', 'Telefon oder E-Mail'], ['message_label', 'Nachricht']]) {
+      check(index.includes(`<span data-jtk-path="blocks[ctab0001].${field}">${words}</span>`), `4 · contract 3: the form's ${field} is not «${words}», the block's`);
+    }
+    check(index.includes('<label class="field__label" for="lead-topic" data-jtk-path="blocks[ctab0001].topic_label">Worum es geht</label>'), `4 · contract 3: the question is not the block's words, tappable: ${index.match(/<label[^>]*for="lead-topic"[^>]*>[^<]*<\/label>/)?.[0]}`);
     const sitemap = read('dist/sitemap.xml');
     for (const address of ['', 'services/', 'blog/', 'privacy/', 'masters/anna/', 'blog/erster/']) {
       check(sitemap.includes(`<loc>https://salon-probe.example/${address}</loc>`), `6 · contract 3: the sitemap has no /${address}`);
@@ -245,6 +251,8 @@ try {
     check(/<a class="skip-link"[^>]*lang="de-CH"[^>]*>Zum Inhalt springen<\/a>/.test(en), `17 · /en's skip link is not marked de-CH: ${en.match(/<a class="skip-link"[^>]*>[^<]*<\/a>/)?.[0]}`);
     check(/<p class="lead__status" role="status" data-status lang="de-CH">/.test(en), '17 · /en\'s form messages are not marked de-CH');
     check(/<label class="field__label" for="lead-topic"[^>]*lang="de-CH"[^>]*>Worum es geht/.test(en) || !en.includes('Worum es geht'), `17 · /en's ask label is not marked de-CH: ${en.match(/<label[^>]*>Worum es geht/)?.[0]}`);
+    // The form's words are content: a translation that has none of them shows the original's, marked, still tappable.
+    check(en.includes('<span data-jtk-path="blocks[ctab0001].contact_label" lang="de-CH">Telefon oder E-Mail</span>'), `17 · /en's contact label is not the original's, marked: ${en.match(/<span[^>]*contact_label[^>]*>[^<]*<\/span>/)?.[0]}`);
     check(/<main id="content" class="prose" data-jtk-fixed lang="de-CH"/.test(page('en/privacy')), '17 · /en/privacy is not marked de-CH');
     check(!/(?<![a-z])lang="de-CH"/.test(page('privacy').replace(/<html[^>]*>/, '').replace(/<a [^>]*hreflang[^>]*>/g, '')), '17 · the original\'s privacy page marks its own words');
     const missingCopy = JSON.parse(spawnSync('node', [join(site, 'node_modules/@jtakeit/kit/bin/jtkit.mjs'), 'progress', '--root', site, '--json'], { encoding: 'utf8' }).stdout || '{}').missing ?? [];
@@ -281,6 +289,10 @@ try {
     check(/<p class="lead__status" role="status" data-status>/.test(en2), '22 · /en\'s form messages are still marked after jtk copy');
     check(/<main id="content" class="prose" data-jtk-fixed>/.test(page('en/privacy')) && !page('en/privacy').includes('Datenschutz'), '22 · /en/privacy is not in English after jtk copy');
     check(/<p class="lead" [^>]*lang="de-CH">Seit 1998 an der Langstrasse<\/p>/.test(en2), '22 · the untranslated lead lost its mark');
+    // jtk copy writes the form's words into English's translation, in the kit's: English, tappable, unmarked.
+    check(json('jtk/pages/index.en.json').title === undefined && json('jtk/pages/index.en.json').name === 'Home', '22 · jtk copy en wrote over the translation');
+    check(en2.includes('<label class="field__label" for="lead-topic" data-jtk-path="blocks[ctab0001].topic_label">What it is about</label>'), `22 · /en's question after jtk copy: ${en2.match(/<label[^>]*for="lead-topic"[^>]*>[^<]*<\/label>/)?.[0]}`);
+    check(en2.includes('<span data-jtk-path="blocks[ctab0001].contact_label">Phone or email</span>') && en2.includes('<span data-submit-label data-jtk-path="blocks[ctab0001].cta_label">Send</span>'), '22 · /en\'s form labels are not English after jtk copy');
 
     const judged = spawnSync('node', [bin, 'schema', '--root', site, '--dist', join(site, 'dist')], { encoding: 'utf8' });
     const said = `${judged.stdout}\n${judged.stderr}`;

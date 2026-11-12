@@ -345,6 +345,15 @@ site's own words there, each marked with its `lang` (`COPY.WORDS_LANG`), as is
 a label the declaration wrote once (`site.wordsLang`): write labels a visitor
 reads per language, `{ 'de-CH': 'Worum es geht', en: 'What it is about' }`.
 
+**The form's labels are content.** The words over the form's fields and its
+questions and on its button are the form block's fields (`name_label`,
+`contact_label`, `message_label`, `cta_label`, and `<key>_label` for each
+question in `asks`), translated like any other: `jtk create` writes them in
+the kit's words on the home page and in each language's translation beside it,
+and `npx @jtakeit/astro copy <locale>` does the same for a language added later
+— where nobody wrote them, and for the words the original says in the kit's
+(docs/lead-form.md).
+
 **A listing is a page.** `/services` and `/blog` read their page document's
 `seo` and `name` in the language, where the content has one, and the title
 names the business as the shared contacts do.
