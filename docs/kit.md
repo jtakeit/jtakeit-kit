@@ -74,7 +74,7 @@ src/
   lib/photos.ts    slot → file, via import.meta.glob
   pages/           routes; robots.txt.ts and sitemap.xml.ts are routes too
   styles/          tokens and globals
-jtk/               the catalogue, the content and the design document — the owner's half
+jtk/               the schema, the content and the design document — the owner's half
 public/            favicons, the og image, clips
 ```
 
@@ -293,7 +293,7 @@ h1   { font-size: clamp(2.25rem, 1.2rem + 3.4vw, 5rem); }
 
 /* 2a. A screen-tall section has a ceiling too. The panel draws the page in a
        frame as tall as the document, where 100svh is all of it — a first
-       screen of min-height: 100svh filled the whole thumbnail. `jtk catalogue`
+       screen of min-height: 100svh filled the whole thumbnail. `jtk schema`
        refuses one with no ceiling. */
 .hero { min-block-size: min(100svh, 56rem); }
 

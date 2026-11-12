@@ -100,7 +100,7 @@ const plates = block('plates');
 `gallery()` is the seam and does three things at once: it reads the field, it
 keeps the document's order, and **it gives every picture its `data-jtk-path`**.
 That last one is not optional — without it the owner sees their work and cannot
-touch it, and `jtk catalogue` fails on exactly that. A gallery is the longest
+touch it, and `jtk schema` fails on exactly that. A gallery is the longest
 list on the site to have to fix afterwards.
 
 **A picture is either the repository's or the owner's, and `<Shot>` resolves
