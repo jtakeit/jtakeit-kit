@@ -51,12 +51,20 @@ export interface LeadPaths {
   cta_label?: string;
 }
 
+/**
+ * The language of each of the block's words where it is not the page's — the
+ * original's, on a page in a language nobody translated them into (the door's
+ * `block.lang(field).lang`). What says them carries it as `lang`.
+ */
+export type LeadLangs = { [K in keyof LeadPaths]?: string };
+
 export interface LeadFormProps {
   /** Where `/api/lead` is from this page. */
   action: string;
   copy: LeadCopy;
   asks?: Ask[];
   paths?: LeadPaths;
+  langs?: LeadLangs;
   /** The element around the form, `jtk-lead`; `''` for none. */
   tag?: string;
   /** How many photographs the form takes, 1 to 7 — the collecting block's `photos`. Absent is none. */

@@ -12,6 +12,10 @@
 //   4  several languages on contract 3 (M3): the others in LOCALES, each one's
 //      copy in the kit's words; what it refuses: several at once on contract 2,
 //      a site already there
+//   6  every word a visitor reads on the form is content: the labels, the
+//      question's words and the button, in the site's language on the home
+//      page and in each other language's translation, in the kit's words —
+//      and on /en the question is English, tappable and annotated
 //   5  every kit the platform has, laid out, built, judged and linted — when
 //      JTK_KITS_API names a platform (JTK_KITS_API=https://api.stg.jtakeit.com
 //      node test/create3.mjs); not in `npm test`, which asks no platform
@@ -94,9 +98,17 @@ try {
   const schema = json(plain, 'jtk/schema.json');
   if (schema.contract !== 3 || schema.locale !== 'de-CH' || JSON.stringify(schema.shared) !== '["contacts"]') fail(`jtk/schema.json is not contract 3's: ${JSON.stringify({ contract: schema.contract, locale: schema.locale, shared: schema.shared })}`);
   if (schema.blocks.find((one) => one.type === 'cta_banner')?.asks?.[0]?.label !== 'Worum es geht') fail('the form\'s question is not in the site\'s language');
+  // 6 · the form's words are the block's: the question's declared beside the others.
+  if (!schema.blocks.find((one) => one.type === 'cta_banner')?.fields?.some((one) => one.key === 'topic_label' && one.client_editable === true && one.kind === 'text')) fail('the form\'s question has no words of the block\'s, topic_label');
   const home = json(plain, 'jtk/pages/index.json');
   if (!ID.test(home.id) || home.path !== '/' || home.name !== 'Startseite' || home.blocks.map((one) => one._key).join() !== 'hero0001,ctab0001,ques0001') fail(`the home page is not contract 3's: ${JSON.stringify(home)}`);
   if (/"title": ""/.test(text(plain, 'jtk/pages/index.json'))) fail('the home page writes empty values');
+  {
+    const form = home.blocks.find((one) => one.type === 'cta_banner');
+    const said = { cta_label: 'Senden', name_label: 'Name', contact_label: 'Telefon oder E-Mail', message_label: 'Nachricht', topic_label: 'Worum es geht' };
+    for (const [field, words] of Object.entries(said)) if (form[field] !== words) fail(`6 · the form's ${field} is not «${words}» in the site's language: ${JSON.stringify(form)}`);
+    if (existsSync(join(plain, 'jtk/pages/index.en.json')) || readdirSync(join(plain, 'jtk/pages')).some((one) => /\.[a-z]{2}(-[A-Z]{2})?\.json$/.test(one))) fail('6 · a site in one language has a translation');
+  }
   const declaration = text(plain, 'src/content/blocks.ts');
   if (!/^export const CONTRACT = 3;$/m.test(declaration) || /BUSINESS_FACTS|image_alt|catalogue\.json|jtk\/content/.test(declaration)) fail('src/content/blocks.ts is not written in contract 3\'s words');
   // The words it is given: contract 3's, wherever the template names contract 2's files.
@@ -172,6 +184,14 @@ try {
   if (!/^export const LOCALES: string\[\] = \['en'\];$/m.test(text(two, 'src/content/blocks.ts'))) fail('LOCALES does not say English');
   if (!/skipToContent: 'Skip to content'/.test(text(two, 'src/copy/en.ts')) || !/makeCopy\(site\.page\('\/', 'en'\), STRINGS\)/.test(text(two, 'src/copy/en.ts'))) fail('src/copy/en.ts is not English\'s words, reading English\'s home');
   if (!twoRun.stdout.includes('en: a translation beside each page and entry')) fail(`the next steps do not say English:\n${twoRun.stdout}`);
+  {
+    // 6 · the form's words in English: the translation of the home page, beside it, of its id.
+    const english = json(two, 'jtk/pages/index.en.json');
+    const original = json(two, 'jtk/pages/index.json');
+    const form = original.blocks.find((one) => one.type === 'cta_banner');
+    const said = { _key: form._key, cta_label: 'Send', name_label: 'Name', contact_label: 'Phone or email', message_label: 'Message', topic_label: 'What it is about' };
+    if (english.of !== original.id || english.locale !== 'en' || JSON.stringify(english.blocks) !== JSON.stringify([said])) fail(`6 · the English translation does not hold the form's words: ${JSON.stringify(english)}`);
+  }
   run = create('three', '--locale', 'de-CH,fr-ch', '--locales', 'en');
   if (run.status !== 0 || JSON.stringify(json(join(dir, 'three'), 'jtk/schema.json').locales) !== '["fr-CH","en"]' || !existsSync(join(dir, 'three', 'src/copy/fr-CH.ts'))) fail(`--locale with a comma and --locales together:\n${run.stderr}`);
   run = create('nobody', '--locale', 'de', '--locales', 'xx-yy-zz');
@@ -196,6 +216,20 @@ try {
   judged(salon, packed, 'the salon with a blog');
   judged(two, packed, 'a site in two languages');
   if (!text(two, 'dist/en/index.html').includes('<html lang="en"')) fail('a site in two languages has no English home');
+  // 6 · on /en every word of the form is English, the question's too: tappable, annotated, unmarked.
+  {
+    const en = text(two, 'dist/en/index.html');
+    const de = text(two, 'dist/index.html');
+    const key = json(two, 'jtk/pages/index.json').blocks.find((one) => one.type === 'cta_banner')._key;
+    const question = (words) => `<label class="field__label" for="lead-topic" data-jtk-path="blocks[${key}].topic_label">${words}</label>`;
+    if (!en.includes(question('What it is about'))) fail(`6 · /en's question is not English, tappable and annotated: ${en.match(/<label[^>]*for="lead-topic"[^>]*>[^<]*<\/label>/)?.[0]}`);
+    if (!de.includes(question('Worum es geht'))) fail(`6 · /'s question is not the block's: ${de.match(/<label[^>]*for="lead-topic"[^>]*>[^<]*<\/label>/)?.[0]}`);
+    for (const [field, words] of [['name_label', 'Name'], ['contact_label', 'Phone or email'], ['message_label', 'Message']]) {
+      if (!en.includes(`<span data-jtk-path="blocks[${key}].${field}">${words}</span>`)) fail(`6 · /en's ${field} is not «${words}», annotated`);
+    }
+    if (!en.includes(`<span data-submit-label data-jtk-path="blocks[${key}].cta_label">Send</span>`)) fail('6 · /en\'s button is not «Send», annotated');
+    if (/Worum es geht|Telefon oder E-Mail|Nachricht|Senden/.test(en.slice(en.indexOf('<form class="lead"'), en.indexOf('</form>', en.indexOf('<form class="lead"'))))) fail('6 · /en\'s form says German');
+  }
   console.log('create3: built, jtk schema agrees with the page and jtkit lint finds nothing — plain, a salon with a blog, and a site in two languages');
 
   // ── 5 · every kit the platform has ────────────────────────────────────────

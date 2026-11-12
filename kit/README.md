@@ -104,8 +104,9 @@ import { renderLeadForm } from '@jtakeit/kit/lead';
 const html = renderLeadForm({
   action: `${base}api/lead`,      // under the preview the site is served at /p/<slug>/
   copy: { title, lead, name, contact, message, requiredNote, submit, sending, success, error, invalidName, invalidContact },
-  asks: [{ key: 'topic', label: 'What it is about', kind: 'text', max: 120 }],   // the block's `asks`, labels resolved
-  paths: { title: 'blocks[3].title', lead: 'blocks[3].lead', name_label: 'blocks[3].name_label', /* … */ },  // the block's fields' data-jtk-path, when annotating
+  asks: [{ key: 'topic', label: 'What it is about', kind: 'text', max: 120, path: 'blocks[ctab0001].topic_label' }],   // the block's `asks`, labels resolved
+  paths: { title: 'blocks[ctab0001].title', name_label: 'blocks[ctab0001].name_label', /* … */ },  // the block's fields' data-jtk-path, when annotating
+  langs: { message_label: 'de-CH' },  // the original's words on a page in another language, marked with its lang
 });
 ```
 
@@ -114,7 +115,11 @@ const html = renderLeadForm({
 ```
 
 `copy` is the collecting block's own words — the owner edits them by tapping,
-which is what `paths` annotates — and `asks` are the catalogue's, drawn fixed.
+which is what `paths` annotates, and `langs` says which are the original's on
+a page in another language — and `asks` are the catalogue's: drawn fixed under
+their declared label, or under the block's own words where an ask carries a
+`path` (a `<key>_label` field of the collecting block, as the scaffold's
+contract-3 form draws every question).
 A label or the button the block leaves empty says the kit's word in `lang`
 (`leadWords`: en, de, fr, it, es, pt, uk, ru), carrying the field's path so a
 tap opens it, or `data-jtk-fixed` where there is none: a control is never
