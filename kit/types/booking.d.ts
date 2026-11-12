@@ -11,6 +11,8 @@ export interface Named {
   group?: string;
   /** For a resource: the services they perform, by slug. The element greys the others out once they are chosen. */
   does?: string[];
+  /** The language of `title` where it is not the page's — the original's words, nobody having translated them (the door's `entry.fields.lang('title').lang`); drawn as the name's `lang`. */
+  lang?: string;
 }
 
 export interface BookingFormProps {

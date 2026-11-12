@@ -53,6 +53,7 @@ export const SENDS = Object.freeze(['service', 'services', 'resource', 'class', 
  * @property {string} [per]   `'person'` for a price times the party — a class per place, shoes; the list says so and the running total multiplies
  * @property {string} [group] a heading the services are listed under — the words (an option's label, a category's title), not the stored value; services with none are listed after every heading
  * @property {string[]} [does] for a resource: the services they perform, by slug — the element greys the others out once they are chosen; empty or absent is everything
+ * @property {string} [lang]  the language of `title` where it is not the page's — the original's words, nobody having translated them (the door's `entry.fields.lang('title').lang`); drawn as the name's `lang`
  */
 
 /**
@@ -86,6 +87,8 @@ const ESCAPE = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#
 function esc(value) {
   return String(value ?? '').replace(/[&<>"']/g, (c) => ESCAPE[c]);
 }
+/** A name's `lang` where its words are not the page's language, else nothing. @param {Named} one */
+const langOf = (one) => (typeof one.lang === 'string' && one.lang !== '' ? ` lang="${esc(one.lang)}"` : '');
 
 /**
  * A service's price as the list says it: the price, or «from …» for one
@@ -210,7 +213,7 @@ export function renderBookingForm(props) {
             ${run.group !== '' ? `<p class="booking__run-title" id="booking-run-${i}">${esc(run.group)}</p>` : ''}
             ${run.items.map((one) => `<label class="booking__service" data-service-row>
                 <input type="checkbox" name="service" value="${esc(one.slug)}" data-takes="${esc(one.takes ?? 0)}" data-costs="${esc(one.costs ?? 0)}"${one.per === 'person' ? ' data-per="person"' : ''}>
-                <span class="booking__service-name" data-service-name>${esc(one.title)}</span>
+                <span class="booking__service-name" data-service-name${langOf(one)}>${esc(one.title)}</span>
                 <span class="booking__service-meta">${esc(one.meta)}</span>
               </label>`).join('\n')}
           </div>`).join('\n')}
@@ -218,7 +221,7 @@ export function renderBookingForm(props) {
       </fieldset>`
     : `<label class="field__label" for="booking-service" data-say="service">${esc(WORDS.service)}</label>
         <select class="field__input" id="booking-service" name="service" required>
-          ${services.map((one) => `<option value="${esc(one.slug)}">${esc(one.title)}</option>`).join('\n')}
+          ${services.map((one) => `<option value="${esc(one.slug)}"${langOf(one)}>${esc(one.title)}</option>`).join('\n')}
         </select>`;
 
   const resourcesField = resources.length > 0
@@ -226,7 +229,7 @@ export function renderBookingForm(props) {
       <label class="field__label" for="booking-resource" data-say="resource">${esc(WORDS.resource)}</label>
       <select class="field__input" id="booking-resource" name="resource" data-say-wait>
         <option value="" data-say="any">${esc(WORDS.any)}</option>
-        ${resources.map((one) => `<option value="${esc(one.slug)}"${one.does ? ` data-does="${esc(one.does)}"` : ''}>${esc(one.title)}</option>`).join('\n')}
+        ${resources.map((one) => `<option value="${esc(one.slug)}"${one.does ? ` data-does="${esc(one.does)}"` : ''}${langOf(one)}>${esc(one.title)}</option>`).join('\n')}
       </select>
     </div>`
     : '';
