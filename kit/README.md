@@ -229,9 +229,12 @@ npx @jtakeit/kit apply --kit ./car_rental.json           # or a file of it
 writes `jtk/bookings.json` with `page` at the services' listing and `kit` /
 `kit_version` recorded, the rates as entries under `jtk/content`, and the
 kit's block types, collections and module into `jtk/catalogue.json` (a type
-or a collection the site already has by that name is left alone). The
-scaffold does the same through `jtk create --kit`, writing the declaration
-into `src/content/blocks.ts` instead of the catalogue file. `@jtakeit/kit/kits`
+or a collection the site already has by that name is left alone) — contract
+2's files, so a contract-3 tree is refused. The scaffold lays a kit out
+through `jtk create --kit`, writing the declaration into
+`src/content/blocks.ts` instead of the catalogue file: on contract 3, its
+default, in contract 3's words, the settings at `jtk/modules/bookings.json`
+and the rates under `jtk/entries/`; on `--contract 2`, the files above. `@jtakeit/kit/kits`
 has the pieces — `loadKit`, `kitSettings`, `kitEntries`,
 `mergeKitIntoCatalogue`, `layKitFiles` — for a tool of your own.
 

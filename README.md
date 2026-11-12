@@ -14,8 +14,8 @@ the platform's contract as a working Astro project, ready to build on.
 jtakeit is an agent-driven platform for building and running websites for clients:
 the site is written by an agent in a repository, and the platform runs the panel the
 business owner edits it in, the enquiries and the bookings, the backups and the
-domain. What the platform holds a repository to is small — a `jtk/catalogue.json`
-that validates, a `data-jtk-path` on every editable field, a `dist/` from an Astro
+domain. What the platform holds a repository to is small — a `jtk/schema.json`
+that validates, an annotation on every editable field, a `dist/` from an Astro
 build — and this package is that contract with a page already on it.
 
 This is the one scaffold the platform ships, and it is Astro's. The platform
@@ -35,9 +35,28 @@ cd <slug> && npm ci && npm run dev
 
 You get a static Astro project: a layout, a hero, a lead form posting to `/api/lead`
 (the platform serves it), a booking form for the platform's diary, opening hours read
-from `jtk/bookings.json`, pages for robots, sitemap and llms.txt, and
+from its settings, pages for robots, sitemap and llms.txt, and
 `src/content/blocks.ts` — the declaration of what the owner may edit. Nothing in it
 decides how the site looks; every component is yours to replace.
+
+A new site is on **contract 3** (jtakeit-core wiki/98): `src/content/blocks.ts` says
+`CONTRACT = 3`, `jtk/schema.json` is written from it, the pages are under `jtk/pages/`,
+the entries under `jtk/entries/<collection>/`, the business's facts in `jtk/shared.json`
+and a module's settings at `jtk/modules/<module>.json`. `jtk/site.json` is the
+platform's: the site's currency is given once, to `create_site`.
+
+```
+jtk/schema.json          what the owner may edit — written from src/content/blocks.ts
+jtk/pages/index.json     the home page; every page has its id, its path and its name
+jtk/shared.json          the text on every page: the business's contacts, by role
+jtk/design.json          the design document the panel reads for the editor's chrome
+```
+
+Contract 3 keeps a site in one language until the platform's M3 brings translations;
+before it, the platform refuses a second (`JTK_E_TRANSLATION_BEFORE_M_THREE`). A site
+that needs several now is laid out on contract 2 — `--contract 2`: `jtk/catalogue.json`
+and the documents under `jtk/content/` ([docs/languages.md](docs/languages.md)) — and
+moves with `npx @jtakeit/astro upgrade contract-3` once M3 is there.
 
 A business that takes bookings starts from its **kit**, asked of the platform
 by its kind (`GET /v1/kits/<kind>`; the kinds are at `/v1/kits`):
@@ -49,9 +68,10 @@ npx @jtakeit/astro create <slug> --locale uk --kit car_rental
 A file of the kit's JSON is taken too — `--kit ./car_rental.json` — and
 `--api` points at another platform than `https://api.jtakeit.com`.
 
-The kit's collections, rates and settings are laid out — `blocks.ts`,
-`jtk/bookings.json`, the rates as entries in the site's language — and the services'
-listing is the booking page — the kit whole, nothing left out quietly. What it
+The kit's collections, rates and settings are laid out — `blocks.ts` in contract 3's
+words, `jtk/modules/bookings.json`, the rates as entries under `jtk/entries/` in the
+site's language (`jtk/bookings.json` and `jtk/content/` under `--contract 2`) — and the
+page the services are shown on is the booking page — the kit whole, nothing left out quietly. What it
 leaves to the brief (the time zone, the prices, the cars) is printed at the end,
 with where to read what it chose for the business — confirmation, cancellation,
 payment, hand-over hours — to be said back to the developer and confirmed
@@ -60,18 +80,24 @@ record which kit and which version they came from (`kit`, `kit_version`): when
 the kit is fixed later, the platform's judge says so to the site
 (`JTK_W_KIT_BEHIND`), with what changed.
 
-## The catalogue
+## The schema
 
 ```
-npx @jtakeit/astro catalogue              # write jtk/catalogue.json, build, check it against dist/
-npx @jtakeit/astro catalogue --emit-only  # write it and stop
+npx @jtakeit/astro schema                 # write jtk/schema.json, build, check it against dist/
+npx @jtakeit/astro schema --emit-only     # write it and stop
 ```
 
-`jtk/catalogue.json` is derived from `src/content/blocks.ts` and checked against the
-built pages in both directions: every declared field is rendered with its path, and
-every annotated path is declared. The platform's own validator is the authority —
-`validate_catalogue` over MCP, or `--judge` here with `JTK_API` and `JTK_TOKEN` set —
-and this tool sits its exam.
+`jtk/schema.json` is derived from `src/content/blocks.ts` and checked against the
+built pages in both directions: every field the owner edits is drawn with its
+annotation, by key, and every annotation names a place the schema declares. It
+also gives a page or an entry its `id`, and a block, a row or a picture its `_key`,
+where a file has none. The platform's own judge is the authority — `validate_schema`
+over MCP, or `--judge` here with `JTK_API` and `JTK_TOKEN` set — and this tool sits its
+exam.
+
+A contract-2 site (`--contract 2`) has `jtk/catalogue.json` instead, written and
+checked the same way by `npx @jtakeit/astro catalogue` ([docs/catalogue.md](docs/catalogue.md));
+`npx @jtakeit/astro upgrade contract-3` moves one in one commit.
 
 ## Then, on the platform
 
