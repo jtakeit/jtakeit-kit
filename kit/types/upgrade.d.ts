@@ -78,6 +78,8 @@ export interface Differing {
  * the original as it stands (`translated[place].from`); a shared value equal to the original's
  * kept once, on the original; one that differs listed in `differing`, unless `takeBase` says the
  * original's stands — a field marked `localized` in `to` is per language and differs from nothing.
+ * A copy with no original is listed in `alone` and not moved. An entry somebody books (of a
+ * collection a module names as `services` or `resources`) is never held back in a language.
  */
 export function documentsOf(
   files: Record<string, any>,
@@ -98,6 +100,8 @@ export function documentsOf(
   notes: string[];
   minted: { ids: string[]; ranks: string[]; keys: number; rekeyed: number };
   differing: Differing[];
+  /** Copies in another language with no original in the site's own: nothing to be a translation of, and not moved. */
+  alone: { file: string; locale: string; kind: 'page' | 'entry'; path?: string; collection?: string; slug?: string }[];
 };
 
 /** Which language a contract-2 document is in: `''` for the site's own, else the canonical tag. */

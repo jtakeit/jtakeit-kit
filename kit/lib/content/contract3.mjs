@@ -799,6 +799,9 @@ export function contract3(byPath, names, { annotate, now }) {
         id: doc.id,
         collection: doc.collection,
         slug: doc.slug,
+        // The original's slug, whatever this language calls it: what the
+        // booking protocol names a service and a resource by, in every language.
+        baseSlug: doc.original?.slug ?? doc.slug,
         locale: doc.language,
         visible: doc.shown,
         seo: doc.seo,

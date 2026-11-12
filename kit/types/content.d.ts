@@ -268,6 +268,12 @@ export interface Entry {
   collection: string;
   /** Its path without the language and the collection's prefix (contract 2); its `slug` in its language (contract 3). */
   slug: string;
+  /**
+   * The original's slug, whatever this language calls the entry: what the booking protocol names a
+   * service and a resource by, in every language (a form in English posts the slug the diary knows).
+   * The same as `slug` on contract 2, and in the site's own language.
+   */
+  baseSlug: string;
   /** `''` for the base language, the tag of any other. */
   locale: string;
   /** Whether a listing shows it now: `visible`, `show_at`, `hide_at`. */

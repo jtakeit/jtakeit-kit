@@ -1,0 +1,128 @@
+{
+  "name": "booked-entry-missing-translation",
+  "schema": {
+    "contract": 3,
+    "locale": "de-CH",
+    "locales": [
+      "en"
+    ],
+    "blocks": [
+      {
+        "type": "service",
+        "v": 1,
+        "label": "Service",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Name",
+            "kind": "text",
+            "required": true,
+            "client_editable": true
+          },
+          {
+            "key": "takes",
+            "label": "Length",
+            "kind": "duration",
+            "required": true,
+            "client_editable": true
+          },
+          {
+            "key": "costs",
+            "label": "Price",
+            "kind": "money",
+            "client_editable": true
+          }
+        ]
+      },
+      {
+        "type": "master",
+        "v": 1,
+        "label": "Master",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Name",
+            "kind": "text",
+            "required": true,
+            "client_editable": true
+          },
+          {
+            "key": "bio",
+            "label": "About",
+            "kind": "textarea",
+            "client_editable": true
+          },
+          {
+            "key": "does",
+            "label": "Does",
+            "kind": "ref",
+            "ref": {
+              "to": [
+                "services"
+              ],
+              "many": true
+            }
+          }
+        ]
+      }
+    ],
+    "collections": [
+      {
+        "name": "services",
+        "label": "Services",
+        "type": "service",
+        "route": {
+          "detail": "/leistungen/{slug}"
+        }
+      },
+      {
+        "name": "masters",
+        "label": "Team",
+        "type": "master",
+        "route": {
+          "detail": "/team/{slug}"
+        }
+      }
+    ],
+    "modules": {
+      "bookings": {
+        "services": "services",
+        "resources": "masters"
+      }
+    }
+  },
+  "base": {
+    "id": "0193a5c3-0a11-7d02-9f3c-1e2d3c4b5a71",
+    "collection": "services",
+    "slug": "schnitt",
+    "visible": true,
+    "fields": {
+      "title": "Haarschnitt",
+      "takes": 30,
+      "costs": {
+        "minor": 4500
+      }
+    }
+  },
+  "translation": null,
+  "locale": "en",
+  "merged": {
+    "id": "0193a5c3-0a11-7d02-9f3c-1e2d3c4b5a71",
+    "collection": "services",
+    "slug": "schnitt",
+    "visible": true,
+    "fields": {
+      "title": "Haarschnitt",
+      "takes": 30,
+      "costs": {
+        "minor": 4500
+      }
+    }
+  },
+  "fromBase": [
+    "fields.title"
+  ],
+  "outdated": [],
+  "advice": [],
+  "refused": null
+}

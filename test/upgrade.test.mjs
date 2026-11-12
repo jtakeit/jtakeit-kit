@@ -410,3 +410,18 @@ test('two languages, a shared value that differs: the move stops and lists it; -
     rmSync(join(marked, '..'), { recursive: true, force: true });
   }
 });
+
+test('two languages, a page only in English: nothing to be a translation of — the move stops and lists it, nothing written', () => {
+  const site = twoLanguages();
+  try {
+    write(site, 'jtk/content/en/about.json', { path: '/en/about', locale: 'en', seo: { title: 'About us' }, blocks: [] });
+    const before = snapshot(site);
+    const run = upgrade(site, '--mint-ids');
+    assert.equal(run.status, 1, said(run));
+    assert.match(run.stderr, /1 document\(s\) are written only in another language, and the site's own \(de-CH\) has no original for them/);
+    assert.match(run.stderr, /✗ jtk\/content\/en\/about\.json \(en\): the page \/about, with no jtk\/content\/about\.json in de-CH/);
+    assert.deepEqual(snapshot(site), before, 'nothing written');
+  } finally {
+    rmSync(join(site, '..'), { recursive: true, force: true });
+  }
+});

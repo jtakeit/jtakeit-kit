@@ -155,6 +155,8 @@ try {
   //  12  an entry held back in a language: built, listed nowhere, no alternate
   //  13  hreflang, the sitemap and llms.txt in every language with a translation
   //  14  jtk schema and jtkit lint and progress read the two languages
+  //  15  what people book is in every language: a master nobody translated
+  //      is in the English booking form, in German words marked de-CH
   {
     const photos = resolve('lib/showroom/photos');
     mkdirSync(join(site, 'src/assets/media/probe'), { recursive: true });
@@ -174,6 +176,11 @@ try {
     write('jtk/entries/blog/erster.en.json', { of: post.id, locale: 'en', slug: 'first', visible: false, fields: { title: 'First post' } });
     const anna = json('jtk/entries/masters/anna.json');
     write('jtk/entries/masters/anna.en.json', { of: anna.id, locale: 'en', slug: 'anna', fields: { title: 'Anna Meier' } });
+    // A second master nobody has translated: what people book is in every
+    // language, always (the owner, 12 November 2026) — in the English form,
+    // in German words marked as German.
+    const cut = json('jtk/entries/services/cut.json');
+    write('jtk/entries/masters/beat.json', { id: '0193a5c3-0000-7000-8000-0000000000b1', collection: 'masters', slug: 'beat', rank: 'z', visible: true, fields: { title: 'Beat Keller', does: [cut.id] } });
     const shared3 = json('jtk/shared.json');
     write('jtk/shared.en.json', { locale: 'en', blocks: [{ _key: shared3.blocks[0]._key, name: 'Langstrasse Hair' }] });
 
@@ -201,6 +208,14 @@ try {
     check(!page('en/blog').includes('First post'), '12 · the held-back English post is listed at /en/blog');
     check(!page('blog/erster').includes('hreflang="en"'), '12 · the post has an English alternate while it is held back');
     check(page('masters/anna').includes('hreflang="en"') && page('en/masters/anna').includes('hreflang="de-CH"'), '13 · a translated entry has no alternates in both languages');
+    // 15 · what people book, in every language: the master nobody translated
+    // is in the English booking form, in German marked as German, named by
+    // the slug the diary books by; the translated one in English, unmarked.
+    const form = page('en/services');
+    check(/<option value="beat" data-does="cut" lang="de-CH"[^>]*>Beat Keller<\/option>/.test(form), `15 · the untranslated master is not in /en's booking form, marked de-CH: ${form.match(/<select[^>]*name="resource"[\s\S]*?<\/select>/)?.[0]}`);
+    check(/<option value="anna" data-does="cut"(?![^>]*\blang=)[^>]*>Anna Meier<\/option>/.test(form), '15 · the translated master is not in /en\'s booking form in its own words');
+    check(/value="cut"[^>]*>[\s\S]{0,200}?lang="de-CH"[^>]*>Haarschnitt</.test(form) || /<option value="cut" lang="de-CH"[^>]*>Haarschnitt<\/option>/.test(form), '15 · the untranslated service is not in /en\'s booking form, marked de-CH');
+    check(/<option value="beat" data-does="cut"(?![^>]*\blang=)[^>]*>Beat Keller<\/option>/.test(page('services')), '15 · the original\'s form marks its own words');
     check(de.includes('hreflang="en"') && en.includes('hreflang="de-CH"') && de.includes('hreflang="x-default"'), '13 · the home pages do not name each other');
     const sitemap = read('dist/sitemap.xml');
     for (const address of ['en/', 'en/blog/', 'en/privacy/', 'en/masters/anna/', 'en/services/']) {

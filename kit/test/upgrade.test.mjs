@@ -439,3 +439,37 @@ test('a copy in another language: its words into a translation by the original\'
   assert.deepEqual(taken.differing, []);
   assert.equal(taken.notes.filter((one) => one.includes('stands for every language')).length, 3);
 });
+
+test('a copy with no original is not moved, and listed; a copy contract 2 hid of what people book is shown in its language from now on', () => {
+  const from = {
+    contract: 2, locale: 'de', locales: ['en'],
+    blocks: [
+      { type: 'service', v: 1, label: 'Service', fields: [{ key: 'title', label: 'Name', kind: 'text' }, { key: 'takes', label: 'Length', kind: 'duration' }] },
+      { type: 'master', v: 1, label: 'Master', fields: [{ key: 'title', label: 'Name', kind: 'text' }] },
+    ],
+    collections: [
+      { name: 'services', label: 'Services', prefix: '/services', type: 'service', pages: false },
+      { name: 'masters', label: 'Team', prefix: '/team', type: 'master' },
+    ],
+    modules: { bookings: { services: 'services', resources: 'masters' } },
+  };
+  const { tables } = tablesOf({ LOCALE: 'de', LOCALES: ['en'], BLOCKS: from.blocks, COLLECTIONS: from.collections, MODULES: from.modules });
+  const to = schemaOf(tables, { generator: 'test' });
+  const files = {
+    '/jtk/content/team/anna.json': { id: '0193a5c3-0a11-7d02-9f3c-1e2d3c4b5a72', path: '/team/anna', collection: 'masters', visible: true, blocks: [{ type: 'master', v: 1, title: 'Anna Meier' }] },
+    // Hidden in English, in contract 2.
+    '/jtk/content/en/team/anna.json': { path: '/en/team/anna', collection: 'masters', locale: 'en', visible: false, blocks: [{ type: 'master', v: 1, title: 'Anna Meier' }] },
+    // Only in English: nothing to be a translation of.
+    '/jtk/content/en/team/beat.json': { path: '/en/team/beat', collection: 'masters', locale: 'en', visible: true, blocks: [{ type: 'master', v: 1, title: 'Beat Keller' }] },
+    '/jtk/content/en/about.json': { path: '/en/about', locale: 'en', blocks: [] },
+  };
+  const moved = documentsOf(files, { from, to, order: { masters: ['/jtk/content/team/anna.json'] } });
+  assert.deepEqual(moved.alone, [
+    { file: 'jtk/content/en/about.json', locale: 'en', kind: 'page', path: '/about' },
+    { file: 'jtk/content/en/team/beat.json', locale: 'en', kind: 'entry', collection: 'masters', slug: 'beat' },
+  ]);
+  assert.equal(moved.write['/jtk/entries/masters/beat.json'], undefined, 'no original made up');
+  const english = moved.write['/jtk/entries/masters/anna.en.json'];
+  assert.equal(english.visible, undefined, 'what people book is not held back');
+  assert.ok(moved.notes.some((one) => /the en copy of masters «anna» was hidden, and what people book is in every language/.test(one)));
+});

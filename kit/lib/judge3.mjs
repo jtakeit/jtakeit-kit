@@ -1019,6 +1019,11 @@ function validateCollection(j, reg, c, names, prefixes) {
   });
   if (c.untranslated !== '' && c.untranslated !== 'base' && c.untranslated !== 'hide') {
     say(E.ATTRIBUTE, `${path}.untranslated`, `collection ${q(c.name)} says untranslated ${q(c.untranslated)} — it is "base", the original shown, or "hide", the entry left out`);
+  } else if (c.untranslated === 'hide' && Object.values(reg.modules ?? {}).some((roles) => roles !== null && typeof roles === 'object' && (roles.services === c.name || roles.resources === c.name))) {
+    // An entry somebody books is in every language, always (the owner, 12
+    // November 2026): the diary books it in every language, so a language
+    // without its translation shows the original's words, never nothing.
+    say(E.ATTRIBUTE, `${path}.untranslated`, `collection ${q(c.name)} is what people book (modules name it), and says untranslated "hide" — an entry somebody books is in every language, the original's words where nobody translated it: take untranslated out`);
   }
   return prefixes;
 }

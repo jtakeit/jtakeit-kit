@@ -36,7 +36,7 @@
 import { ID, KEY } from './content/contract3.mjs';
 import { uuid7, newKey } from './content/identity.mjs';
 import { baseAddressOf, canonicalLocale, localeOfAddress } from './content/locale.mjs';
-import { layOf } from './content/overlay.mjs';
+import { bookedIn, layOf } from './content/overlay.mjs';
 import { canonicalJSON, digest } from './translations.mjs';
 
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -663,23 +663,22 @@ export function documentsOf(files, how) {
     }
     (language === '' ? documents : copies).push({ file, raw, path, collection, slug, language });
   }
-  // A copy with no original: a page or an entry written only in another
-  // language. It moves as the original — in that language's words — and a
-  // person is asked, since contract 3 has every document in the site's own
-  // language first.
+  // A copy with no original — a page or an entry written only in another
+  // language — has nothing to be a translation of: contract 3 has every
+  // document in the site's own language first, and a translation without its
+  // original is refused. It is not made up here: listed in `alone`, and the
+  // command stops (lib/upgrade.mjs) until somebody writes the original or
+  // removes the copy.
   for (const copy of copies) {
     copy.original = documents.find((doc) => doc.collection === copy.collection && (copy.collection === undefined ? doc.path === copy.path : doc.slug === copy.slug));
   }
-  for (const copy of copies.filter((one) => one.original === undefined)) {
-    if (documents.some((doc) => doc.collection === copy.collection && (copy.collection === undefined ? doc.path === copy.path : doc.slug === copy.slug))) continue;
-    documents.push({ ...copy, language: '' });
-    questions.push({
-      what: 'a document only in another language',
-      where: copy.file.slice(1),
-      ask: `${copy.file.slice(1)} is in ${copy.language}, and the site's own language (${to.locale}) has no such ${copy.collection === undefined ? 'page' : 'entry'}: it was moved as the original, in ${copy.language}'s words — translate it into ${to.locale} in the original's file, and write ${copy.language}'s beside it.`,
-    });
-  }
+  const alone = copies
+    .filter((one) => one.original === undefined)
+    .map((one) => ({ file: one.file.slice(1), locale: one.language, kind: one.collection === undefined ? 'page' : 'entry', ...(one.collection === undefined ? { path: one.path } : { collection: one.collection, slug: one.slug }) }))
+    .sort((a, b) => (a.file < b.file ? -1 : a.file > b.file ? 1 : 0));
   const translationCopies = copies.filter((one) => one.original !== undefined);
+  /** The collections somebody books: their entries are in every language, always. */
+  const booked = bookedIn(to);
 
   // ── the ids (§4.3): the file's, the platform's, or a new one ─────────────
   const platformId = (doc) =>
@@ -1222,8 +1221,15 @@ export function documentsOf(files, how) {
       }
       out = { of: doc.out.id, locale, slug: copy.slug };
       ctx.record('slug', doc.out.slug);
-      // Held back in this language; or shown where the original is hidden, which a translation cannot say.
-      if (doc.out.visible !== false && copy.raw.visible === false) out.visible = false;
+      // Held back in this language; or shown where the original is hidden,
+      // which a translation cannot say. Never an entry somebody books: it is
+      // in every language, always (the owner, 12 November 2026) — a copy
+      // contract 2 hid is shown, in its own words.
+      if (doc.out.visible !== false && copy.raw.visible === false) {
+        if (booked.has(doc.collection)) {
+          notes.push(`${target.slice(1)}: the ${locale} copy of ${doc.collection} «${doc.slug}» was hidden, and what people book is in every language — it is shown in ${locale} from now on, in its own words`);
+        } else out.visible = false;
+      }
       if (doc.out.visible === false && copy.raw.visible !== false) {
         questions.push({ what: 'a language shown where the original is hidden', where: copy.file.slice(1), ask: `${copy.file.slice(1)} is out in ${locale}, and the original is hidden — a language is out only where the original is (wiki/98 §4.4): show the original, or the entry stays hidden in every language.` });
       }
@@ -1375,6 +1381,7 @@ export function documentsOf(files, how) {
     notes,
     minted,
     differing,
+    alone,
   };
 }
 

@@ -100,7 +100,9 @@ const schema = {
     { name: 'rates', label: 'Rates', type: 'rate', route: 'none', shown_on: ['/preise#{slug}'], order: 'manual', group: 'category' },
     { name: 'tags', label: 'Tags', type: 'tag', route: { detail: '/tags/{slug}' } },
   ],
-  modules: { bookings: { services: 'rates', resources: 'works' } },
+  // What people book is in every language, always (the owner, 12 November
+  // 2026): the rates and the tags, neither of them held back or hidden here.
+  modules: { bookings: { services: 'rates', resources: 'tags' } },
 };
 
 const work = (id, slug, fields, extra = {}, blocks) => ({
@@ -192,7 +194,7 @@ test('a schema.json saying contract 3 is read as contract 3; its languages are t
   assert.equal(site.locale, 'de');
   assert.deepEqual(site.locales, ['de', 'en', 'fr-CH']);
   assert.equal(site.currency, 'CHF');
-  assert.deepEqual(site.rolesOf('bookings'), { services: 'rates', resources: 'works' });
+  assert.deepEqual(site.rolesOf('bookings'), { services: 'rates', resources: 'tags' });
   // A schema.json that is not contract 3 is no catalogue: contract 2 reads catalogue.json.
   const two = content({ '/jtk/schema.json': { ...schema, contract: 2 }, '/jtk/catalogue.json': { locale: 'uk' } });
   assert.equal(two.contract, 2);

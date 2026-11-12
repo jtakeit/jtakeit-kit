@@ -27,6 +27,9 @@
  *     translation of a price, a date, a picture's file is the base,
  *     everywhere (§4.4);
  *   - a block's `type`, `v` and `view` are the original's, and refused;
+ *   - an entry somebody books — of a collection a module names as its
+ *     `services` or `resources` — is not held back (`visible: false`): it is
+ *     in every language, always (the owner, 12 November 2026);
  *   - a key the schema does not declare is refused (§15 · 17);
  *   - a block, a row or a picture is named by its `_key`, never by its place.
  *
@@ -58,7 +61,7 @@
  */
 import { createHash } from 'node:crypto';
 import { canonicalLocale, sharedLocaleOf } from './content/locale.mjs';
-import { isEmpty, kindOf, layOf, localizedIn, overlay, valueAt } from './content/overlay.mjs';
+import { bookedIn, isEmpty, kindOf, layOf, localizedIn, overlay, valueAt } from './content/overlay.mjs';
 
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 
@@ -151,6 +154,12 @@ export function judgeTranslation(schema, base, translation, at = {}) {
   if (kind === 'entry') {
     words('slug');
     if (translation.visible !== undefined && typeof translation.visible !== 'boolean') refuse('visible', 'visible is true or false — false holds this language back');
+    // An entry somebody books is in every language, always (the owner, 12
+    // November 2026): the diary books it in every language, so no language
+    // may drop it from its booking form.
+    else if (translation.visible === false && bookedIn(schema).has(base.collection)) {
+      refuse('visible', `${base.collection} is what people book (the schema's modules name it), and an entry somebody books is in every language — it cannot be held back in one; take visible out, and where nobody translated a word the original's stands`);
+    }
   }
 
   // Its SEO: the words of the keys `page_seo` declares.

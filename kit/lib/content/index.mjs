@@ -486,6 +486,8 @@ export function content(files, options = {}) {
         id: idOf(doc),
         collection: doc.collection,
         slug: doc.slug,
+        // A slug is the same in every language on contract 2.
+        baseSlug: doc.slug,
         locale: doc.locale,
         visible: doc.shown,
         seo: doc.seo,

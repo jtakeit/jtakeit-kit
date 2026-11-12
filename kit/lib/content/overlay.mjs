@@ -37,6 +37,12 @@
  *   - An entry with no translation is the original in every language, its
  *     words marked; hidden there, as held back, where its collection says
  *     `untranslated: "hide"`.
+ *   - **An entry somebody books is in every language, always** (the owner,
+ *     12 November 2026): an entry of a collection a module names as its
+ *     `services` or `resources` is neither held back nor hidden by a missing
+ *     translation — where nobody translated it, it is the original's words.
+ *     The diary books it in every language, so the booking form lists it in
+ *     every language. `jtk schema` refuses both ways of saying otherwise.
  *   - A key the schema does not declare is never read from a translation
  *     (§15 · 17), nor a block, a row or a picture the original has not got.
  *
@@ -145,7 +151,23 @@ function readSchema(schema) {
     collections.set(one.name, { fields: types.get(one.type) ?? [], untranslated: one.untranslated === 'hide' ? 'hide' : 'base', route: one.route });
   }
   const seo = (Array.isArray(schema?.page_seo) ? schema.page_seo : []).filter((one) => isObject(one) && typeof one.key === 'string');
-  return { types, collections, seo, fieldsOf: (type) => types.get(type) ?? [] };
+  return { types, collections, seo, booked: bookedIn(schema), fieldsOf: (type) => types.get(type) ?? [] };
+}
+
+/**
+ * The collections somebody books: those a module names as its `services` or
+ * its `resources` (`modules.bookings.services`, `.resources`). Their entries
+ * are in every language, always (the owner, 12 November 2026).
+ * @param {any} schema
+ * @returns {Set<string>}
+ */
+export function bookedIn(schema) {
+  const out = new Set();
+  for (const roles of Object.values(isObject(schema?.modules) ? schema.modules : {})) {
+    if (!isObject(roles)) continue;
+    for (const role of ['services', 'resources']) if (typeof roles[role] === 'string' && roles[role] !== '') out.add(roles[role]);
+  }
+  return out;
 }
 
 /**
@@ -308,8 +330,10 @@ export function overlay(schema) {
     else if (Array.isArray(base.blocks) && base.blocks.length > 0) from.push('blocks');
     // Held back in this language — or hidden in it, where nobody translated
     // the entry and its collection says so (`untranslated: "hide"`): served
-    // hidden, every word the original's, as a held-back one is.
-    if (over?.visible === false || (over === undefined && collection?.untranslated === 'hide')) merged.visible = false;
+    // hidden, every word the original's, as a held-back one is. Never an
+    // entry somebody books: it is in every language, always.
+    const booked = read.booked.has(base.collection);
+    if (!booked && (over?.visible === false || (over === undefined && collection?.untranslated === 'hide'))) merged.visible = false;
     return { merged, fromBase: from };
   }
 

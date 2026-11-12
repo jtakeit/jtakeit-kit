@@ -141,3 +141,53 @@ test('the door serves the merge, and says which words are the original\'s: lang(
   assert.deepEqual(site.entry('blog', 'erster', 'fr').fromBase, ['fields.title'], 'a slug left as the original\'s is not counted: an address has no language');
   assert.deepEqual(site.shared('fr').fromBase, ['blocks[contacts].name']);
 });
+
+// ── what people book is in every language (the owner, 12 November 2026) ────
+
+test('an entry somebody books is in every language, always: listed in each with the original\'s words marked, whatever a translation or the collection says — and jtk schema refuses both ways of saying otherwise', async () => {
+  const { judgeSchema } = await import('../lib/judge3.mjs');
+  const CUT = '0193a5c3-0a11-7d02-9f3c-1e2d3c4b5a71';
+  const ANNA = '0193a5c3-0a11-7d02-9f3c-1e2d3c4b5a72';
+  const BEAT = '0193a5c3-0a11-7d02-9f3c-1e2d3c4b5a73';
+  const booking = {
+    contract: 3,
+    locale: 'de-CH',
+    locales: ['en'],
+    blocks: [
+      { type: 'service', v: 1, label: 'Service', fields: [{ key: 'title', label: 'Name', kind: 'text', required: true, client_editable: true }, { key: 'takes', label: 'Length', kind: 'duration', required: true }] },
+      { type: 'master', v: 1, label: 'Master', fields: [{ key: 'title', label: 'Name', kind: 'text', required: true, client_editable: true }, { key: 'does', label: 'Does', kind: 'ref', ref: { to: ['services'], many: true } }] },
+    ],
+    collections: [
+      { name: 'services', label: 'Services', type: 'service', route: 'none', shown_on: ['/preise#{slug}'], untranslated: 'hide' },
+      { name: 'masters', label: 'Team', type: 'master', route: { detail: '/team/{slug}' }, untranslated: 'hide' },
+    ],
+    modules: { bookings: { services: 'services', resources: 'masters' } },
+  };
+  const files = {
+    '/jtk/schema.json': booking,
+    '/jtk/pages/preise.json': { id: ID, path: '/preise', name: 'Preise' },
+    '/jtk/entries/services/schnitt.json': { id: CUT, collection: 'services', slug: 'schnitt', visible: true, fields: { title: 'Haarschnitt', takes: 30 } },
+    '/jtk/entries/services/schnitt.en.json': { of: CUT, locale: 'en', slug: 'cut', fields: { title: 'Haircut' } },
+    '/jtk/entries/masters/anna.json': { id: ANNA, collection: 'masters', slug: 'anna', visible: true, fields: { title: 'Anna Meier', does: [CUT] } },
+    '/jtk/entries/masters/anna.en.json': { of: ANNA, locale: 'en', visible: false, fields: { title: 'Anna Meier' } },
+    '/jtk/entries/masters/beat.json': { id: BEAT, collection: 'masters', slug: 'beat', visible: true, fields: { title: 'Beat Keller', does: [CUT] } },
+  };
+  const site = content(files);
+  // Held back, and untranslated in a collection that hides the untranslated: both listed in English.
+  const masters = site.entries('masters', { locale: 'en' });
+  assert.deepEqual(masters.map((one) => [one.slug, one.visible, one.fields.lang('title')]), [['anna', true, {}], ['beat', true, { lang: 'de-CH' }]]);
+  // The booking protocol names an entry by the original's slug in every language.
+  const [cut] = site.entries('services', { locale: 'en' });
+  assert.deepEqual([cut.slug, cut.baseSlug, cut.fields.text('title')], ['cut', 'schnitt', 'Haircut']);
+  assert.deepEqual(masters[1].fields.refs('does').map((one) => one.baseSlug), ['schnitt']);
+  // An entry nobody books keeps the rule it had (content-v3: a held-back post, a hidden category).
+
+  // jtk schema refuses both.
+  assert.deepEqual(judgeSchema(JSON.stringify(booking)).map((one) => [one.code, one.path]), [
+    ['JTK_E_ATTRIBUTE_INVALID', 'collections.services.untranslated'],
+    ['JTK_E_ATTRIBUTE_INVALID', 'collections.masters.untranslated'],
+  ]);
+  const refused = judgeTranslations(files);
+  assert.deepEqual(refused.map((one) => [one.code, one.path]), [['JTK_E_DOCUMENT_INVALID', 'jtk/entries/masters/anna.en.json visible']]);
+  assert.match(refused[0].says, /masters is what people book.*in every language/);
+});

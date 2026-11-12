@@ -310,6 +310,15 @@ the places. A collection that says `untranslated: "hide"` hides an entry in a
 language nobody translated it into, as `visible: false` in a translation holds
 one back: built for the panel's preview, listed nowhere, in no sitemap.
 
+**What people book is in every language, always.** An entry of a collection
+the bookings module names as its `services` or `resources` is booked by the
+diary in every language, so the booking form lists it in every language: where
+nobody translated it, in the original's words, marked with the original's
+`lang`. Such a collection cannot say `untranslated: "hide"`, nor a translation
+of its entry `visible: false` — `jtk schema` refuses both. The form names a
+service and a master by `entry.baseSlug`, the original's slug, which the diary
+books by whatever a language calls the entry.
+
 **`hreflang` names a language only where a translation is.** A page is built in
 every language the site has; where nobody translated it, it is the original's
 words under another address, and no alternate of the original.
@@ -335,4 +344,7 @@ language is kept once; one that differs — two photographs, two prices — stop
 the move and is listed, for the agent or a person to answer: `--take-base` (or
 `--take-base=hero.image,…`) keeps the original's for every language, and
 `localized: true` on the field in `src/content/blocks.ts` keeps each language's
-own.
+own. A page or an entry written only in another language has nothing to be a
+translation of: the move stops and lists it, until its original is written or
+the copy removed. A copy contract 2 hid of something people book is shown in
+its language from now on.
