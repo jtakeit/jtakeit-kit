@@ -32,7 +32,7 @@
     "agent"
   ],
   "scripts": {
-    "test": "node scripts/example-prints.mjs --check && node test/smoke.mjs && node test/create3.mjs && node test/units.mjs && node test/built.mjs && node test/live.mjs && node --test test/code.test.mjs test/code-wire.test.mjs test/upgrade.test.mjs && npm test --workspace kit",
+    "test": "node scripts/example-prints.mjs --check && node test/smoke.mjs && node test/create3.mjs && node test/units.mjs && node test/built.mjs && node test/live.mjs && node --test test/code.test.mjs test/code-wire.test.mjs test/media.test.mjs test/media-prep.test.mjs test/upgrade.test.mjs && npm test --workspace kit",
     "release": "node scripts/release.mjs"
   },
   "dependencies": {

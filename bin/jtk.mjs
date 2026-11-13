@@ -8,6 +8,7 @@
  *   jtk upgrade contract-3  move a contract-2 site to contract 3 in one commit (lib/upgrade.mjs)
  *   jtk a11y …              read the built pages against WCAG 2.1 AA (lib/a11y.mjs)
  *   jtk push|pull <url>     move the site's code to and from jtakeit (lib/code.mjs)
+ *   jtk media push|pull     the site's pictures into and out of its media library (lib/media.mjs)
  *   jtk add|remove <unit>   a section or a module of the example site, part by part (lib/units/)
  *   jtk units               what the site has of the example, what can be added
  */
@@ -79,6 +80,12 @@ switch (command) {
     const { main } = await import(pathToFileURL(join(HERE, '..', 'lib', 'units', 'cli.mjs')).href);
     process.exit(await main(command, rest));
   }
+  case 'media': {
+    // The command prints its own errors, with the token taken out of them.
+    const { main } = await import(pathToFileURL(join(HERE, '..', 'lib', 'media.mjs')).href);
+    process.exitCode = await main(rest);
+    break;
+  }
   case 'push':
   case 'pull': {
     // The command prints its own errors, with the token taken out of them.
@@ -88,6 +95,7 @@ switch (command) {
   }
   default: {
     const code = await import(pathToFileURL(join(HERE, '..', 'lib', 'code.mjs')).href);
+    const media = await import(pathToFileURL(join(HERE, '..', 'lib', 'media.mjs')).href);
     const { usage } = await import(pathToFileURL(join(HERE, '..', 'lib', 'create.mjs')).href);
     const upgrade = await import(pathToFileURL(join(HERE, '..', 'lib', 'upgrade.mjs')).href);
     const copies = await import(pathToFileURL(join(HERE, '..', 'lib', 'copies.mjs')).href);
@@ -115,6 +123,7 @@ switch (command) {
                                   read the built pages against WCAG 2.1 AA in Chrome
                                   (npm i -D playwright-core axe-core first)
 ${code.usage()}
+${media.usage()}
 
 ${usage()}
 

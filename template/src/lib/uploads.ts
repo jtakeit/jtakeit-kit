@@ -4,13 +4,14 @@ import { fromBucket, sizeOf } from '@jtakeit/kit/live';
 /**
  * The pictures the owner uploaded, as local files.
  *
- * ── the two places a picture can be ─────────────────────────────────────────
+ * ── the one place a content picture is ──────────────────────────────────────
  *
- * `src/assets/hero.jpg` is the developer's: it is in the repository, it is
- * chosen by whoever built the site, and `photos.ts` resolves it by slot name.
- * This is the other half — a photograph somebody put in through the admin,
- * which arrives as a key like `media/<site>/<hash>.jpg` inside the content
- * document.
+ * A picture a field names lives in the site's media library, and the content
+ * names it by its key, `media/<site>/<hash>.jpg` (jtakeit-core wiki/108). An
+ * agent puts its photographs there with `npx @jtakeit/astro media push`; the
+ * owner with the panel. `src/assets/hero.jpg` — a slot `photos.ts` resolves
+ * by name — is the code's own: a design asset, or a working name until the
+ * push turns it into a key.
  *
  * **They are both local files by the time this runs.** The build's second step
  * downloads every key the content names into `src/assets/`, before `npm run
@@ -23,12 +24,15 @@ import { fromBucket, sizeOf } from '@jtakeit/kit/live';
  * is under two. The difference is not visible to anybody building the site — it
  * is visible to somebody on a phone, on a train, deciding whether to wait.
  *
- * ── on a laptop, before any of that ─────────────────────────────────────────
+ * ── on a laptop ─────────────────────────────────────────────────────────────
  *
- * There are no downloaded files while a developer is building the site, so
- * every lookup here answers undefined and `<Shot>` draws its labelled
- * placeholder. That is the same behaviour as a missing slot, and it is what lets
- * a site be built, checked and pushed before it has ever been attached.
+ * The same files, in the same place, git-ignored: `jtk media push` keeps a
+ * copy of each file it sends, `jtk pull` and `jtk media pull` download the
+ * ones the content names, and under `astro dev` the integration fetches any
+ * the copy still lacks from the public media host (`libraryPictures` in
+ * jtakeit-meta.mjs). A key with no file yet draws `<Shot>`'s labelled
+ * placeholder, as a missing slot does — which is what lets a site be built,
+ * checked and pushed before it has a picture.
  */
 
 /**

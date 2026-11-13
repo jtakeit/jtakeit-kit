@@ -118,6 +118,25 @@ always laid out on the latest contract — has `jtk/catalogue.json` instead, wri
 checked the same way by `npx @jtakeit/astro catalogue` ([docs/catalogue.md](docs/catalogue.md));
 `npx @jtakeit/astro upgrade contract-3` moves one in one commit.
 
+## Pictures: the site's media library
+
+A picture the owner may change — every value of a `media` field, every picture in
+an entry's body — is a key of the site's media library, `media/<site>/<hash>.jpg`,
+never a file in the repository (jtakeit-core wiki/108). Design with slots
+(`src/assets/atelier-raum.jpg`, named `atelier-raum` in the field) or with the
+example's keys; then one command puts them in the library and writes the keys:
+
+```
+npx @jtakeit/astro media push '<url>' [_photos/ _clips/]   the URL is media_link's
+npx @jtakeit/astro media push --dry-run                    the plan, nothing sent
+npx @jtakeit/astro media pull ['<url>']                    the library's pictures, here
+```
+
+It keeps every word a field or the owner wrote, moves the files no code names any
+more to `.jtakeit/adopted/` (never deletes them), and can be run again: what the
+library holds is not sent twice. `jtk push --media '<url>'` runs it before the code
+goes; `jtk pull` brings the pictures with the code. [docs/media.md](docs/media.md).
+
 ## Then, on the platform
 
 In the platform's order (`jtakeit:///guides/start.md`), which `jtk create` prints
@@ -130,9 +149,11 @@ at the end and writes into the site's README:
    contract 2).
 4. `validate_schema` with the schema, the `jtk/` files and the `site_id` — before
    the push.
-5. The code: no GitHub remote in the copy → `push_code`, then
-   `npx @jtakeit/astro push '<url>'`; a GitHub remote → ask the developer once,
-   then our GitHub App on it (a person installs it) and `attach_repo`.
+5. The code: no GitHub remote in the copy → `push_code` and `media_link`, then
+   `npx @jtakeit/astro push '<url>' --media '<media url>'` — the photographs go
+   into the site's media library first; a GitHub remote → `media_link` and
+   `npx @jtakeit/astro media push '<url>'` before the commit, ask the developer
+   once, then our GitHub App on it (a person installs it) and `attach_repo`.
 6. `commit_and_build` — nothing public; `get_build` until it settles;
    `get_preview_link` to look (the studio hands the owner's link to the client
    from the panel).
@@ -144,7 +165,7 @@ refuses one that has not.
 
 The whole of it, with the reasons, is in [docs/](docs/): `kit.md` first, then
 `catalogue.md`, `pages.md`, `collections.md`, `lead-form.md`, `booking.md`,
-`photos.md`, and the rest as you need them — `live.md` for how the panel draws a
+`photos.md` and `media.md`, and the rest as you need them — `live.md` for how the panel draws a
 saved draft at once. The platform's own reference —
 field kinds, modules, every error code — is what the MCP server hands an agent on
 `initialize`: `jtakeit:///` resources, starting with `jtakeit:///guides/start.md`.

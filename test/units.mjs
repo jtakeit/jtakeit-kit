@@ -22,6 +22,7 @@ import { createHash } from 'node:crypto';
 import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
+import { placeOf } from '../lib/units/photos.mjs';
 
 const bin = resolve('bin/jtk.mjs');
 const kitFile = resolve('test/fixtures/kit-salon.json');
@@ -135,7 +136,7 @@ try {
     if (!/bookings: \{"services":"services","resources":"masters"\}/.test(blocks)) fail('add booking did not turn the diary on');
     if (!existsSync(join(site, 'jtk/entries/masters/maria-muster.json')) || existsSync(join(site, 'jtk/entries/team'))) fail('the salon\'s people are not the example\'s team');
     const maria = JSON.parse(readFileSync(join(site, 'jtk/entries/masters/maria-muster.json'), 'utf8'));
-    if (maria.fields.cover?.src !== 'example-team-apron' || maria.fields.role !== 'Handwerk und Beratung') fail(`a person's portrait and role did not come along: ${JSON.stringify(maria.fields)}`);
+    if (maria.fields.cover?.src !== placeOf('team-apron').value || maria.fields.role !== 'Handwerk und Beratung') fail(`a person's portrait and role did not come along: ${JSON.stringify(maria.fields)}`);
     if (!existsSync(join(site, 'jtk/entries/services/the-work.json'))) fail('the example\'s price list did not stay');
     const settings = JSON.parse(readFileSync(join(site, 'jtk/modules/bookings.json'), 'utf8')).settings;
     const hours = JSON.parse(readFileSync(join(site, 'jtk/shared.json'), 'utf8')).blocks.find((one) => one.type === 'hours');
