@@ -42,9 +42,9 @@ const languages = site.languagesOf(page);
   <main id="content" class="legal">
     <div class="legal__in">
       {block.text('title') && <h1 {...block.at('title')} {...block.lang('title')}>{block.text('title')}</h1>}
-      <address class="legal__who" data-jtk-fixed>
-        {lines.map((line) => (line === countryName ? <span data-country={country}>{line}</span> : <span>{line}</span>))}
-        {reach.map((line) => <span>{line}</span>)}
+      <address class="legal__who">
+        {lines.map((line) => (line === facts.text('street') ? <span {...facts.at('street')}>{line}</span> : line === countryName ? <span data-country={country} data-jtk-fixed>{line}</span> : <span data-jtk-fixed>{line}</span>))}
+        {reach.map((line) => <span data-jtk-fixed>{line}</span>)}
       </address>
       {block.text('body') && <p class="legal__body" {...block.at('body')} {...block.lang('body')}>{block.text('body')}</p>}
     </div>

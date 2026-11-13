@@ -22,6 +22,9 @@ translated in the panel; the words are the example's, in the business's own
 name, in the site's language and English (German and English for a
 German-speaking site); the photographs are the example's own (`example/media/`),
 named as keys of the media library from the first line (below).
+The languages are the ones `create` is given: `--locale en` alone (the default)
+is an English site in one language; the first market's is `--locale de-CH
+--locales en`, German with an English translation beside every page and entry.
 No sentence states a fact about the business: the people are «Muster», the
 address is Musterstrasse 1, the testimonials are signed «an example».
 
@@ -45,6 +48,14 @@ the plain band where it has none; the layout draws the header, the footer and
 the look where `src/components/site/` has them (`src/lib/sections.ts`). A site
 without them — one laid out before the example, or moved from contract 2 —
 builds the same bytes it always did.
+
+**Every field the owner can fill is drawn where its block is.** The platform
+builds a site's code with every optional field empty, and again with every one
+filled and as long as it may be, and refuses code that draws a filled field
+nowhere (`JTK_E_CONTENT_VARIANT`); the kit's tests do the same to the example
+(`test/variants.mjs`). So the price list's own page draws its services through
+`services_all`, which has no link to itself, the footer draws a profile's words,
+and the hours' note is drawn with no hours.
 
 The brief decides what stays: `npx @jtakeit/astro remove <section>` and
 `add <section|module>`, or `create --without team,testimonials` ([units.md](units.md)).

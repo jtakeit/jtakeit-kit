@@ -49,9 +49,9 @@ const note = shared.text('note');
 ---
 
 {
-  rows.length > 0 && (
+  (rows.length > 0 || note) && (
     <div class:list={['hours', extra]} data-hours={machine} data-days={rows.map((row) => row.value('day')).join(' ')}>
-      <dl class="hours__list">
+      {rows.length > 0 && <dl class="hours__list">
         {runs.map((run) => (
           <div class="hours__row">
             <dt data-jtk-fixed lang={wordsLang}>
@@ -60,7 +60,7 @@ const note = shared.text('note');
             <dd data-jtk-fixed lang={run.hours === '' ? wordsLang : undefined}>{run.hours === '' ? W.closed : run.hours}</dd>
           </div>
         ))}
-      </dl>
+      </dl>}
       {note && (
         <p class="hours__note" {...shared.at('note')} {...shared.lang('note')}>
           {note}
