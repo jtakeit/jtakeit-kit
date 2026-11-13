@@ -1,0 +1,79 @@
+---
+/**
+ * The imprint: who is responsible for this site, as the law of Switzerland,
+ * Germany and Austria asks a business to say it — the name, the address and
+ * how to reach it, drawn from the shared contacts the owner keeps in the
+ * panel, and below them the page's own block for what contract 3 holds no
+ * field of: the register entry, the VAT number, the person responsible.
+ *
+ * Its words are the page's, `jtk/pages/imprint.json` and its translations;
+ * every language the site has gets the page (`localeParams`). The example's
+ * register lines are examples, and say so — write the business's, or delete
+ * them.
+ */
+import Layout from '../../layouts/Layout.astro';
+import { site } from '../../lib/site';
+import { langOf, localeOf, localeParams } from '../../lib/locale';
+
+export const getStaticPaths = localeParams;
+
+const locale = localeOf(Astro.url.pathname);
+const page = site.page('/imprint', locale);
+const block = page.block('imprint');
+const facts = site.facts(locale);
+const country = facts.text('country');
+// A country written as its two letters is said in the page's language: CH, «Schweiz».
+const countryName = (() => {
+  if (!/^[A-Z]{2}$/.test(country)) return country;
+  try {
+    return new Intl.DisplayNames([langOf(locale)], { type: 'region' }).of(country) ?? country;
+  } catch {
+    return country;
+  }
+})();
+const lines = [facts.text('name'), facts.text('street'), [facts.text('postal_code'), facts.text('city')].filter(Boolean).join(' '), countryName].filter(Boolean);
+const reach = [facts.text('phone'), facts.text('email')].filter(Boolean);
+const seo = (key: string): string => (typeof page.seo[key] === 'string' ? (page.seo[key] as string) : '');
+const alternates = site.alternatesOf(page);
+const languages = site.languagesOf(page);
+---
+
+<Layout title={seo('title') || page.name || ''} description={seo('description')} alternates={alternates} languages={languages}>
+  <main id="content" class="legal">
+    <div class="legal__in">
+      {block.text('title') && <h1 {...block.at('title')} {...block.lang('title')}>{block.text('title')}</h1>}
+      <address class="legal__who" data-jtk-fixed>
+        {lines.map((line) => (line === countryName ? <span data-country={country}>{line}</span> : <span>{line}</span>))}
+        {reach.map((line) => <span>{line}</span>)}
+      </address>
+      {block.text('body') && <p class="legal__body" {...block.at('body')} {...block.lang('body')}>{block.text('body')}</p>}
+    </div>
+  </main>
+</Layout>
+
+<style>
+  .legal {
+    padding: clamp(7.5rem, 18vh, 11rem) var(--gutter, 1.25rem) clamp(3rem, 8vh, 6rem);
+  }
+  .legal__in {
+    display: grid;
+    gap: 2rem;
+    inline-size: min(46rem, 100%);
+    margin-inline: auto;
+  }
+  .legal h1 {
+    font-size: var(--step-4, 2.5rem);
+    line-height: 1;
+  }
+  .legal__who {
+    display: grid;
+    font-style: normal;
+    line-height: 1.6;
+  }
+  .legal__body {
+    margin: 0;
+    white-space: pre-line;
+    line-height: 1.7;
+    color: var(--ink-quiet, inherit);
+  }
+</style>

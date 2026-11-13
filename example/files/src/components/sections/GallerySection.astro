@@ -1,0 +1,57 @@
+---
+/**
+ * The pictures: a heading and the block's gallery, drawn by the template's
+ * `Gallery` in the arrangement the block says — one of the twelve
+ * (docs/gallery.md), chosen by the studio for the amount of work, not by the
+ * owner. `ragged` is the example's: still columns, every picture in its own
+ * proportions, as many columns as the pictures fill evenly, so none is left
+ * out of a short last row.
+ *
+ * Each picture carries its own annotation (`images[<key>].src`), so the
+ * owner replaces one, describes one, or adds one in the panel.
+ */
+import type { Block } from '@jtakeit/kit/content';
+import Gallery from '../gallery/Gallery.astro';
+import { ARRANGEMENTS, type Arrangement } from '../gallery/galleries';
+
+interface Props {
+  block: Block;
+  first?: boolean;
+}
+
+const { block, first = false } = Astro.props;
+const pictures = block.gallery('images');
+const asked = String(block.value('arrangement') ?? 'ragged') as Arrangement;
+const arrangement: Arrangement = ARRANGEMENTS.includes(asked) ? asked : 'ragged';
+// Columns the pictures fill evenly; a count none of them divides is a strip.
+const columns = [4, 3, 2].find((n) => pictures.length >= n && pictures.length % n === 0);
+const drawn: Arrangement = arrangement === 'ragged' && columns === undefined ? 'strip' : arrangement;
+const pieces = pictures.map((one) => ({ name: one.src, alt: one.alt, path: one['data-jtk-path'] }));
+---
+
+<section class="s pictures" id={first ? 'gallery' : undefined}>
+  <div class="s__in">
+    <div class="s__head">
+      {block.text('eyebrow') && <p class="label label--accent" {...block.at('eyebrow')} {...block.lang('eyebrow')}>{block.text('eyebrow')}</p>}
+      {block.text('title') && <h2 class="s__title" {...block.at('title')} {...block.lang('title')}>{block.text('title')}</h2>}
+    </div>
+    {pieces.length > 0 && <Gallery arrangement={drawn} items={pieces} columns={drawn === 'ragged' ? columns : undefined} />}
+  </div>
+</section>
+
+<style>
+  .pictures :global(.shot__frame) {
+    border-radius: var(--r-3);
+  }
+
+  /*
+   * Narrower than four columns, the template's ragged drops the columns past
+   * the second; here they wrap under the first two instead, so a phone sees
+   * every picture the owner put in.
+   */
+  @media (max-width: 61.99rem) {
+    .pictures :global(.gallery--ragged .gallery__col:nth-child(n + 3)) {
+      display: block;
+    }
+  }
+</style>

@@ -8,4 +8,6 @@ declare module 'virtual:jtk/build' {
   export const PAGE_FILES: readonly string[];
   /** Whether public/icon.png is there: the mark is a picture rather than SVG (src/lib/icon.ts). */
   export const RASTER_MARK: boolean;
+  /** The year the build was made in, for a footer's «©»: the build's, never the clock's at render. */
+  export const YEAR: number;
 }

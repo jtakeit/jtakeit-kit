@@ -46,3 +46,7 @@ jobs:
         # The probe above, seeded with real content and read in the runner's
         # Chrome by `jtk a11y`, in a light and a dark palette (docs/accessibility.md).
         run: node test/a11y.mjs --site /tmp/probe
+      - name: The example site's pages read against WCAG 2.1 AA
+        # What `jtk create` lays out by default (jtakeit-core wiki/110), in
+        # German and English, every page, read by `jtk a11y`.
+        run: node test/a11y-example.mjs

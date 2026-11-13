@@ -18,3 +18,9 @@ server.
 - The kit's checker is a copy of the platform's judge, kept honest by
   `jtk catalogue --judge` (see `kit/lib/codes.mjs`); a change to a code or a
   rule starts on the platform's side.
+- The example site `jtk create` lays out (`example/`, `lib/units/`) is in
+  the design system of Brumy (brumy.ch), the company that makes jtakeit: its
+  look was taken from Brumy's own site and published here by Brumy. Its
+  words change in `lib/units/units.mjs`, and then `node
+  scripts/example-prints.mjs` writes the fingerprints again (append-only;
+  `npm test` checks them); its photographs are Brumy's (`example/README.md`).

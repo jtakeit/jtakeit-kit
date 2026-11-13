@@ -5,9 +5,48 @@ npx @jtakeit/astro create <slug> --name "The Business" --locale de-CH --vertical
 ```
 
 Copies `template/`, fills in the tokens, names the copy module for the locale,
-writes a README and makes the first commit (`--no-git` to skip it). It decides
-nothing about how the site looks: every component is a starting point, and the
-contract below is the only thing the platform will hold the repository to.
+lays out the example site, writes a README and makes the first commit
+(`--no-git` to skip it). Every component is a starting point, and the contract
+below is the only thing the platform will hold the repository to.
+
+## The example site
+
+What it lays out is an **example in the design system of Brumy** (brumy.ch), the
+company that makes jtakeit (jtakeit-core wiki/110): a home page of eight
+sections — a hero with a photograph, values, services and prices, a gallery, the
+team, testimonials, questions, and the form with the address and the hours —
+a price list at `/services`, the privacy page and an imprint, a header with the
+navigation, the language switch and a button, and a footer with the hours, the
+profiles and the legal links. Every word and picture is content, tapped and
+translated in the panel; the words are the example's, in the business's own
+name, in the site's language and English (German and English for a
+German-speaking site); the photographs are the example's own (`example/media/`).
+No sentence states a fact about the business: the people are «Muster», the
+address is Musterstrasse 1, the testimonials are signed «an example».
+
+Say so to the developer: the look may be kept, and is meant to be adapted — a
+palette and a type pairing from the brief replace `src/styles/tokens.css` and
+the three `@fontsource` packages, and every component keeps working; a deeper
+direction replaces sections in `src/components/sections/`. `jtk/design.json`
+says `"look": "brumy"` (`--look` takes no other yet).
+
+| | where |
+| --- | --- |
+| the tokens: colour, type, space, radius, motion, the glass | `src/styles/tokens.css` |
+| what is made of them: the glass, the button, the mono label, a section's frame | `src/styles/look.css` |
+| the fonts, self-hosted (SIL OFL 1.1), two weights preloaded | `src/components/site/Look.astro` |
+| the header, the footer, the hours, the button | `src/components/site/` |
+| a section per block type, and the `SECTIONS` map | `src/components/sections/` |
+| the declaration of every section's type, the shared `header`, `hours`, `footer` | `src/content/blocks.ts` |
+
+`Blocks.astro` draws a block through its section where `SECTIONS` has one and as
+the plain band where it has none; the layout draws the header, the footer and
+the look where `src/components/site/` has them (`src/lib/sections.ts`). A site
+without them — one laid out before the example, or moved from contract 2 —
+builds the same bytes it always did.
+
+The brief decides what stays: `npx @jtakeit/astro remove <section>` and
+`add <section|module>`, or `create --without team,testimonials` ([units.md](units.md)).
 
 The site is on contract 3: a new site is always laid out on the latest
 contract, and contract 2 is only for a site made before it and not moved yet

@@ -1,0 +1,25 @@
+{
+  "v": 2,
+  "field": "",
+  "scrim": true,
+  "ground": "",
+  "colors": [],
+  "paper": "#f8f7f4",
+  "ink": "#111110",
+  "accent": "#e2431f",
+  "surface": {
+    "pattern": "",
+    "scope": "page",
+    "size": "",
+    "weight": "",
+    "opacity": 0,
+    "draw": false,
+    "edge": "",
+    "reveal": ""
+  },
+  "photos": {
+    "treatment": "",
+    "amount": 0
+  },
+  "look": "brumy"
+}

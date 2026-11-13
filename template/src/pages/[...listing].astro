@@ -55,6 +55,7 @@
 import Layout from '../layouts/Layout.astro';
 import BookingForm from '../components/BookingForm.astro';
 import EntryListing from '../components/EntryListing.astro';
+import { FRAME, SECTIONS } from '../lib/sections';
 import { Image } from 'astro:assets';
 import { listsPaged, rowId, type Collection, type Entry } from '../lib/entries';
 import { EVERY_LOCALE, langOf } from '../lib/locale';
@@ -75,7 +76,10 @@ export async function getStaticPaths() {
   return site.collections.filter((one) => !one.pages || listsPaged(one)).flatMap((collection) =>
     EVERY_LOCALE.flatMap((locale) => {
       const listing = listedAt(collection, locale);
-      return listing === undefined ? [] : [{ params: { listing: listing.slice(1) }, props: { collection, locale } }];
+      // A collection shown on a language's home page (`shown_on: ['/#team-{slug}']`)
+      // is drawn there, by the home page's own route.
+      if (listing === undefined || listing === site.inLocale(locale, '/')) return [];
+      return [{ params: { listing: listing.slice(1) }, props: { collection, locale } }];
     }),
   );
 }
@@ -180,6 +184,11 @@ const ownPage = listedAtBase === undefined ? undefined : site.page(listedAtBase,
 const seoWords = (key: string): string => (typeof ownPage?.seo[key] === 'string' ? (ownPage.seo[key] as string).trim() : '');
 const pageTitle = seoWords('title') || ownPage?.name?.trim() || heading;
 const pageDescription = seoWords('description');
+// A page of the content that its own sections draw (src/components/sections/,
+// the example's /services): drawn by them, its rows among them, and the
+// plain list below where it is not.
+const Sections = FRAME.Page;
+const sectioned = Sections !== undefined && ownPage !== undefined && ownPage.blocks.some((block) => SECTIONS[block.type] !== undefined);
 ---
 
 {paged && (
@@ -188,7 +197,8 @@ const pageDescription = seoWords('description');
 {!paged && (
 <Layout title={pageTitle} description={pageDescription} alternates={alternates}>
   <main id="content">
-    <section class="listing">
+    {sectioned && <Sections page={ownPage} />}
+    {!sectioned && <section class="listing">
       {/* The collection's own name, from the catalogue: the repository's, not a
           field of any entry — fixed, as the check asks it to be said. */}
       <h1 data-jtk-fixed>{heading}</h1>
@@ -235,7 +245,7 @@ const pageDescription = seoWords('description');
           </Fragment>
         ))
       }
-    </section>
+    </section>}
 
     {
       form && form.services.length > 0 && (

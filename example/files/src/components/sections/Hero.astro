@@ -1,0 +1,192 @@
+---
+/**
+ * The first screen: what this is, for whom, and one action — the heading at
+ * the size of a sign, a photograph, and over its lower edge a plate of glass
+ * with the lead and the two buttons.
+ *
+ * The heading's gesture is the example's one signature: the light crosses the
+ * words once as the page arrives — one gradient over the whole heading,
+ * clipped to the letters, ink when it has passed (Brumy's, as design). CSS on
+ * `html.js`, so without a script, and for a visitor who asked for less
+ * motion, the words are simply there.
+ *
+ * Every value is the block's, annotated through the door (`block.at`); the
+ * photograph is the page's largest picture and the one loaded eagerly.
+ */
+import type { Block } from '@jtakeit/kit/content';
+import Shot from '../Shot.astro';
+import Button from '../site/Button.astro';
+import { linkTo } from '../../lib/under';
+import { withLocale } from '../../lib/locale';
+
+interface Props {
+  block: Block;
+  locale: string;
+}
+
+const { block, locale } = Astro.props;
+const shot = block.picture('image');
+/** A link of the content, in this page's language. */
+const go = (href: string): string => {
+  if (!href.startsWith('/') || href.startsWith('//')) return linkTo(href);
+  const [path, hash] = href.split('#');
+  return `${linkTo(withLocale(locale, path || '/'))}${hash ? `#${hash}` : ''}`;
+};
+const title = block.text('title');
+---
+
+<section class="hx">
+  <div class="hx__in">
+    <div class="hx__words">
+      {block.text('eyebrow') && <p class="label hx__eyebrow" {...block.at('eyebrow')} {...block.lang('eyebrow')}>{block.text('eyebrow')}</p>}
+      {title && <h1 class="hx__title" {...block.at('title')} {...block.lang('title')}>{title}</h1>}
+    </div>
+
+    <div class="hx__stage">
+      {
+        shot.src && (
+          <Shot
+            name={shot.src}
+            alt={shot.alt}
+            lang={shot.lang}
+            path={shot['data-jtk-path']}
+            focus={shot.focus}
+            ratio="16 / 9"
+            class="hx__shot"
+            eager
+            width={1600}
+            sizes="(min-width: 80rem) 80rem, 100vw"
+          />
+        )
+      }
+      {
+        (block.text('lead') || block.text('cta_label') || block.text('more_label')) && (
+          <div class="hx__plate glass">
+            {block.text('lead') && <p class="hx__lead" {...block.at('lead')} {...block.lang('lead')}>{block.text('lead')}</p>}
+            <p class="hx__actions">
+              {block.text('cta_label') && (
+                <Button href={go(block.text('cta_href') || '#contact')} label={block.text('cta_label')} at={block.at('cta_label')} lang={block.lang('cta_label')} />
+              )}
+              {block.text('more_label') && (
+                <Button href={go(block.text('more_href') || '/services')} label={block.text('more_label')} at={block.at('more_label')} lang={block.lang('more_label')} quiet />
+              )}
+            </p>
+          </div>
+        )
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .hx {
+    padding: clamp(6.5rem, 15vh, 9rem) var(--gutter) var(--section-y);
+  }
+
+  .hx__in {
+    inline-size: var(--shell);
+    margin-inline: auto;
+  }
+
+  .hx__words {
+    display: grid;
+    gap: var(--space-5);
+    margin-block-end: clamp(2rem, 5vh, 3.5rem);
+  }
+
+  .hx__title {
+    max-inline-size: 13ch;
+    font-family: var(--font-display);
+    font-size: var(--step-6);
+    font-weight: 700;
+    line-height: var(--leading-display);
+    letter-spacing: var(--tracking-display);
+    /*
+     * The light crosses the heading. One gradient two and a half times the
+     * heading's width — ink behind, a hot edge, the deep accent in front —
+     * clipped to the letters; what moves is which part of it stands in the
+     * words. At rest the window is all ink.
+     */
+    background-image: linear-gradient(90deg, var(--ink) 0%, var(--ink) 46%, var(--accent-hot) 53%, var(--accent-deep) 60%, var(--accent-deep) 100%);
+    background-size: 260% 100%;
+    background-position: 0 0;
+    background-repeat: no-repeat;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    /* The descenders: background-clip paints only inside the box. */
+    padding-block: 0.06em 0.18em;
+    margin-block: -0.06em -0.18em;
+  }
+
+  :global(html.js) .hx__title {
+    animation: hx-sweep var(--sweep-dur) cubic-bezier(0.25, 0.4, 0.35, 1) 150ms both;
+  }
+
+  @keyframes hx-sweep {
+    from {
+      opacity: 0;
+      background-position: 100% 0;
+    }
+    18% {
+      opacity: 1;
+    }
+    to {
+      opacity: 1;
+      background-position: 0 0;
+    }
+  }
+
+  .hx__stage {
+    position: relative;
+  }
+
+  .hx__stage :global(.hx__shot .shot__frame) {
+    border-radius: var(--r-4);
+  }
+
+  /* The plate stands over the photograph's lower edge, on the reading side. */
+  .hx__plate {
+    position: absolute;
+    inset-inline-start: clamp(1rem, 3vw, 2.5rem);
+    inset-block-end: clamp(1rem, 3vw, 2.5rem);
+    display: grid;
+    gap: var(--space-5);
+    max-inline-size: min(34rem, calc(100% - 2rem));
+    padding: clamp(1.25rem, 2.5vw, 2rem);
+    border-radius: var(--r-4);
+  }
+
+  .hx__lead {
+    margin: 0;
+    font-size: var(--step-1);
+    line-height: 1.45;
+    color: var(--ink);
+  }
+
+  .hx__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin: 0;
+  }
+
+  /* A phone: the photograph taller, the plate under it, rising over its edge. */
+  @media (max-width: 760px) {
+    .hx__stage :global(.hx__shot .shot__frame) {
+      aspect-ratio: 4 / 5 !important;
+    }
+    .hx__plate {
+      position: relative;
+      inset: auto;
+      max-inline-size: none;
+      margin: -4.5rem 0.75rem 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(html.js) .hx__title {
+      animation: none;
+    }
+  }
+</style>

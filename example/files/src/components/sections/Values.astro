@@ -1,0 +1,98 @@
+---
+/**
+ * What the business holds to: a statement and a short numbered list — each
+ * row a mono counter, a title and a line, a hairline between them. The
+ * counters are the design's (drawn from the row's place), every word the
+ * block's.
+ */
+import type { Block } from '@jtakeit/kit/content';
+
+interface Props {
+  block: Block;
+  first?: boolean;
+}
+
+const { block, first = false } = Astro.props;
+const items = block.rows('items');
+---
+
+<section class="s values" id={first ? 'values' : undefined}>
+  <div class="s__in values__in">
+    <div class="values__head">
+      {block.text('eyebrow') && <p class="label label--accent" {...block.at('eyebrow')} {...block.lang('eyebrow')}>{block.text('eyebrow')}</p>}
+      {block.text('title') && <h2 class="s__title" {...block.at('title')} {...block.lang('title')}>{block.text('title')}</h2>}
+    </div>
+    {
+      items.length > 0 && (
+        <ol class="values__list">
+          {items.map((row, at) => (
+            <li class="values__row">
+              <span class="values__n label" aria-hidden="true" data-jtk-fixed>
+                {String(at + 1).padStart(2, '0')}
+              </span>
+              {row.text('title') && <h3 class="values__title" {...row.at('title')} {...row.lang('title')}>{row.text('title')}</h3>}
+              {row.text('text') && <p class="values__text" {...row.at('text')} {...row.lang('text')}>{row.text('text')}</p>}
+            </li>
+          ))}
+        </ol>
+      )
+    }
+  </div>
+</section>
+
+<style>
+  .values__in {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: clamp(2rem, 6vw, 6rem);
+    align-items: start;
+  }
+
+  .values__head {
+    display: grid;
+    gap: var(--space-4);
+    position: sticky;
+    inset-block-start: 7rem;
+  }
+
+  .values__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-block-start: 1px solid var(--line);
+  }
+
+  .values__row {
+    display: grid;
+    grid-template-columns: 3.5rem minmax(0, 1fr);
+    gap: 0.4rem 1rem;
+    padding-block: clamp(1.4rem, 3vh, 2rem);
+    border-block-end: 1px solid var(--line);
+  }
+
+  .values__n {
+    grid-row: span 2;
+    padding-block-start: 0.45rem;
+    color: var(--accent-deep);
+  }
+
+  .values__title {
+    font-size: var(--step-2);
+    line-height: 1.15;
+  }
+
+  .values__text {
+    margin: 0;
+    max-inline-size: 34rem;
+    color: var(--ink-quiet);
+  }
+
+  @media (max-width: 860px) {
+    .values__in {
+      grid-template-columns: 1fr;
+    }
+    .values__head {
+      position: static;
+    }
+  }
+</style>

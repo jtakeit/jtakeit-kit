@@ -1,0 +1,320 @@
+---
+/**
+ * The header: a strip of glass that stays at the top while the page moves
+ * under it — clear over the first screen, frosted once something passes
+ * beneath (one class, set from a frame). Brumy's, as design.
+ *
+ * Every word in it is the shared text's (`header` in jtk/shared.json), tapped
+ * and translated in the panel: the navigation, the button, and a logo where
+ * one is given — the business's name from the contacts where it is not. The
+ * language switch is the template's, drawn from the languages the site has.
+ *
+ * A link the content gives (`/services`, `/#team`) is written in this page's
+ * language and under the build's base, so the preview's `/p/<slug>/` holds.
+ */
+import Button from './Button.astro';
+import Languages from '../Languages.astro';
+import Shot from '../Shot.astro';
+import { frameWords, frameLang } from './words';
+import { site } from '../../lib/site';
+import { langOf, withLocale } from '../../lib/locale';
+import { under } from '../../lib/under';
+
+interface Props {
+  languages: { locale: string; address: string }[];
+  locale: string;
+}
+
+const { languages, locale } = Astro.props;
+const W = frameWords(langOf(locale));
+const wordsLang = frameLang(langOf(locale));
+const header = site.shared(locale).block('header');
+const facts = site.facts(locale);
+const name = facts.text('name');
+const logo = header.picture('logo');
+
+/** A link of the content, in this page's language and under the base. */
+const go = (href: string): string => {
+  if (!href.startsWith('/') || href.startsWith('//')) return href;
+  const [path, hash] = href.split('#');
+  return `${under(withLocale(locale, path || '/'))}${hash ? `#${hash}` : ''}`;
+};
+const here = Astro.url.pathname.replace(/\/$/, '');
+const current = (href: string) => !href.includes('#') && go(href).replace(/\/$/, '') === here;
+const nav = header.rows('nav');
+const cta = header.text('cta_label');
+---
+
+<header class="bar" data-bar>
+  <div class="bar__in glass">
+    <a class="bar__mark" href={go('/')} aria-label={name ? undefined : W.home}>
+      {
+        logo.src ? (
+          <Shot name={logo.src} alt={logo.alt || name} path={logo['data-jtk-path']} class="bar__logo" width={320} fit="contain" />
+        ) : (
+          <span data-jtk-fixed>{name}</span>
+        )
+      }
+    </a>
+
+    {
+      nav.length > 0 && (
+        <nav class="bar__nav" id="bar-nav" aria-label={W.navigation}>
+          {nav.map((row) => (
+            <a href={go(row.text('link'))} aria-current={current(row.text('link')) ? 'page' : undefined} {...row.at('label')} {...row.lang('label')}>
+              {row.text('label')}
+            </a>
+          ))}
+        </nav>
+      )
+    }
+
+    <Languages alternates={languages} current={locale} class="bar__lang" />
+
+    {cta && <Button href={go(header.text('cta_link') || '/#contact')} label={cta} at={header.at('cta_label')} lang={header.lang('cta_label')} small class="bar__cta" />}
+
+    {
+      nav.length > 0 && (
+        <button class="bar__toggle" type="button" aria-controls="bar-nav" aria-expanded="false" data-jtk-fixed lang={wordsLang}>
+          <span class="bar__toggle-open">{W.menu}</span>
+          <span class="bar__toggle-shut">{W.close}</span>
+        </button>
+      )
+    }
+  </div>
+</header>
+
+<style>
+  .bar {
+    position: fixed;
+    inset-block-start: 0;
+    inset-inline: 0;
+    z-index: 50;
+    padding: 0.75rem var(--gutter) 0;
+    pointer-events: none;
+  }
+
+  .bar__in {
+    display: flex;
+    align-items: center;
+    gap: clamp(0.75rem, 2.2vw, 1.75rem);
+    inline-size: var(--shell);
+    margin-inline: auto;
+    padding: 0.35rem 0.35rem 0.35rem 1.25rem;
+    border-radius: var(--r-pill);
+    pointer-events: auto;
+    transition:
+      background 360ms var(--ease-out),
+      box-shadow 360ms var(--ease-out),
+      -webkit-backdrop-filter 360ms,
+      backdrop-filter 360ms;
+  }
+
+  /* Over the first screen there is nothing under the strip but paper, and
+     glass over paper is a grey rectangle: no material until there is
+     something to be glass over. */
+  .bar:not(.is-over):not([data-open]) .bar__in {
+    background: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .bar__mark {
+    margin-inline-end: auto;
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: var(--tracking-tight);
+    line-height: 1;
+    text-decoration: none;
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .bar__mark :global(.bar__logo) {
+    display: block;
+    block-size: 2rem;
+    inline-size: auto;
+  }
+
+  .bar__nav {
+    display: flex;
+    gap: clamp(1rem, 2.2vw, 1.9rem);
+  }
+
+  .bar__nav a {
+    position: relative;
+    padding-block: 0.4rem;
+    color: var(--ink-quiet);
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 220ms var(--ease-out);
+  }
+
+  .bar__nav a::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 0.15rem;
+    block-size: 1px;
+    background: currentColor;
+    scale: 0 1;
+    transform-origin: left;
+    transition: scale 320ms var(--ease-out);
+  }
+
+  .bar__nav a:hover,
+  .bar__nav a[aria-current='page'] {
+    color: var(--ink);
+  }
+  .bar__nav a:hover::after,
+  .bar__nav a[aria-current='page']::after {
+    scale: 1 1;
+  }
+
+  /* The template's switch, in the strip: two letters each, the one being read in ink. */
+  .bar__in :global(.bar__lang) {
+    display: flex;
+    gap: 0.1rem;
+    padding: 0.2rem;
+    border: 0;
+    border-radius: var(--r-pill);
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+  }
+  .bar__in :global(.bar__lang a) {
+    padding: 0.35rem 0.55rem;
+    border-radius: var(--r-pill);
+    color: var(--ink-quiet);
+    text-decoration: none;
+  }
+  .bar__in :global(.bar__lang a:hover) {
+    color: var(--ink);
+  }
+  .bar__in :global(.bar__lang a[aria-current]) {
+    background: var(--paper-lift);
+    color: var(--ink);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 8%, transparent);
+  }
+
+  .bar__toggle {
+    display: none;
+    min-block-size: 2.6rem;
+    padding: 0 1rem;
+    border: 0;
+    border-radius: var(--r-pill);
+    background: var(--ink);
+    color: var(--paper);
+    font: 500 0.85rem/1 var(--font-text);
+    cursor: pointer;
+  }
+  .bar__toggle-shut {
+    display: none;
+  }
+
+  /*
+   * A phone: the navigation folds under one button and opens as a panel of
+   * the same glass below the strip. Without a script it is simply shown,
+   * wrapped under the strip — never a menu nobody can open.
+   */
+  @media (max-width: 860px) {
+    .bar__in {
+      flex-wrap: wrap;
+      border-radius: var(--r-4);
+      padding-inline-start: 1rem;
+    }
+    .bar__nav {
+      order: 10;
+      flex-basis: 100%;
+      flex-direction: column;
+      gap: 0;
+      padding: 0.25rem 0.75rem 0.75rem 0;
+    }
+    .bar__nav a {
+      padding-block: 0.7rem;
+      font-size: 1.05rem;
+      color: var(--ink);
+      border-block-start: 1px solid var(--line);
+    }
+    .bar__nav a::after {
+      display: none;
+    }
+    :global(html.js) .bar__nav {
+      display: none;
+    }
+    :global(html.js) .bar[data-open] .bar__nav {
+      display: flex;
+    }
+    :global(html.js) .bar__toggle {
+      display: inline-block;
+    }
+    .bar[data-open] .bar__toggle-open {
+      display: none;
+    }
+    .bar[data-open] .bar__toggle-shut {
+      display: inline;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .bar__in :global(.bar__cta) {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bar__in,
+    .bar__nav a::after {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  /*
+   * The strip frosts once the page has scrolled under it — one class, set
+   * from a frame and only when it would change — and the menu opens and
+   * shuts on a phone; a link chosen in it shuts it again.
+   */
+  const bar = document.querySelector<HTMLElement>('[data-bar]');
+  if (bar) {
+    let queued = false;
+    const set = () => {
+      queued = false;
+      const over = scrollY > 24;
+      if (bar.classList.contains('is-over') !== over) bar.classList.toggle('is-over', over);
+    };
+    set();
+    addEventListener(
+      'scroll',
+      () => {
+        if (!queued) {
+          queued = true;
+          requestAnimationFrame(set);
+        }
+      },
+      { passive: true },
+    );
+    const toggle = bar.querySelector<HTMLButtonElement>('.bar__toggle');
+    const shut = () => {
+      bar.removeAttribute('data-open');
+      toggle?.setAttribute('aria-expanded', 'false');
+    };
+    toggle?.addEventListener('click', () => {
+      const open = !bar.hasAttribute('data-open');
+      bar.toggleAttribute('data-open', open);
+      toggle.setAttribute('aria-expanded', String(open));
+    });
+    bar.querySelectorAll('.bar__nav a').forEach((link) => link.addEventListener('click', shut));
+    addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') shut();
+    });
+  }
+</script>

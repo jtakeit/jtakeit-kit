@@ -3,8 +3,15 @@
 ## Only when it is asked for
 
 **Never add a collection because a site could have one.** No brief that does not
-name it gets a blog, and no site gets one "for later". The scaffold declares
-none, and that is the correct state for almost every site this studio ships.
+name it gets a blog, and no site gets one "for later".
+
+The example site `jtk create` lays out declares two, `services` and `team` —
+the price list and the people, each a section of its home page (jtakeit-core
+wiki/110) — and **the brief decides which stay**: `npx @jtakeit/astro remove
+team` takes the section, its collection and its entries away, and
+`create --without team` never lays it out ([units.md](units.md)). Beyond those
+two, a collection is added on a sentence in the brief, and a blog with
+`npx @jtakeit/astro add blog` (`--blog` at create).
 
 The reason is not tidiness. A collection is a standing obligation on the person
 who owns the site: an empty blog on a live page says the business stopped
@@ -45,8 +52,10 @@ schema; `jtk upgrade contract-3` moves it.
 
 ## A blog, turned on
 
-The scaffold keeps one ready and off. `jtk create --blog` turns it on, or two
-lines at the foot of `src/content/blocks.ts` do:
+The scaffold keeps one ready and off. `npx @jtakeit/astro add blog` turns it on
+(`jtk create --blog` at create) — on the example site with two example posts and
+a section of the latest on the home page — or two lines at the foot of
+`src/content/blocks.ts` do:
 
 ```ts
 BLOCKS.push(BLOG_POST);

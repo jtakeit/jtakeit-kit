@@ -24,12 +24,14 @@ import { copyFor } from '../copy';
 import { localeOf } from '../lib/locale';
 import { linkTo } from '../lib/under';
 import LeadForm from './LeadForm.astro';
+import { SECTIONS } from '../lib/sections';
 import design from '../../jtk/design.json';
 
 // The home page of this language, through the door: every block in its
 // order, each value with its annotation (`block.at`), so nothing here writes
 // a path by hand.
-const { PAGE } = copyFor(localeOf(Astro.url.pathname));
+const locale = localeOf(Astro.url.pathname);
+const { PAGE } = copyFor(locale);
 
 /*
  * The edge and the entrance, out of the design document rather than typed here.
@@ -63,7 +65,7 @@ const edge = (surface.edge || undefined) as string | undefined;
  * produce a second hero any more; a template that silently swallows one is still
  * the wrong template.
  */
-const rendered = PAGE.blocks.findIndex((block) => block.type === 'hero');
+const rendered = SECTIONS.hero !== undefined ? -1 : PAGE.blocks.findIndex((block) => block.type === 'hero');
 
 /** The band under the hero: the one that is in the first screen on a phone. */
 const first = PAGE.blocks.findIndex((_, at) => at !== rendered);
@@ -85,6 +87,16 @@ const contactAt = withForm !== -1 ? withForm : PAGE.blocks.length - 1;
     const type = block.type;
 
     if (at === rendered) return null; // the first screen is the page's own
+
+    // A type with a section of its own (src/components/sections/, the
+    // example's): drawn by it, told whether it is the first of its type on
+    // the page — the one an anchor in the navigation leads to — and the band
+    // that is #contact.
+    const Section = SECTIONS[type];
+    if (Section !== undefined) {
+      const first = PAGE.blocks.findIndex((one) => one.type === type) === at;
+      return <Section block={block} page={PAGE} locale={locale} first={first} contact={at === contactAt} />;
+    }
 
     // A block that carries the form does not also render its own heading and
     // button: `LeadForm` renders both, from this same block, and annotating a

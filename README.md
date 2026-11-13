@@ -34,11 +34,26 @@ npx @jtakeit/astro create <slug> --name "The Business" --locale de-CH
 cd <slug> && npm ci && npm run dev
 ```
 
-You get a static Astro project: a layout, a hero, a lead form posting to `/api/lead`
-(the platform serves it), a booking form for the platform's diary, opening hours read
-from its settings, pages for robots, sitemap and llms.txt, and
-`src/content/blocks.ts` — the declaration of what the owner may edit. Nothing in it
-decides how the site looks; every component is yours to replace.
+You get a static Astro project laid out as an **example site in the design system of
+Brumy** (brumy.ch), the company that makes jtakeit: a header and a footer, a home page
+of eight sections — hero, values, services and prices, gallery, team, testimonials,
+questions, the form beside the address and the hours — a price list at `/services`,
+privacy and imprint pages, every word the owner's in the panel, in the site's language
+and English, with the example's own photographs. Keep the look or — as is meant —
+adapt it: the tokens are `src/styles/tokens.css` ([docs/scaffold.md](docs/scaffold.md)).
+Take out what the brief does not name, add what it does:
+
+```
+npx @jtakeit/astro units                  what the site has, what can be added
+npx @jtakeit/astro remove testimonials    a section, its words, its photographs
+npx @jtakeit/astro add blog               a module the brief asked for
+npx @jtakeit/astro create <slug> --without team,testimonials
+```
+
+Under it: a lead form posting to `/api/lead` (the platform serves it), a booking form
+for the platform's diary, pages for robots, sitemap and llms.txt, and
+`src/content/blocks.ts` — the declaration of what the owner may edit. Every component
+is yours to replace.
 
 A new site is on **contract 3** (jtakeit-core wiki/98): `src/content/blocks.ts` says
 `CONTRACT = 3`, `jtk/schema.json` is written from it, the pages are under `jtk/pages/`,
@@ -141,4 +156,4 @@ like is the point of writing it.
 
 ## Licence
 
-MIT — see [LICENSE](LICENSE). The showroom's photographs in `lib/showroom/photos/` are not: they stay under the [Pexels License](https://www.pexels.com/license/), each one credited in [lib/showroom/photos/CREDITS.md](lib/showroom/photos/CREDITS.md).
+MIT — see [LICENSE](LICENSE). The example site's photographs in `example/media/` were generated with Higgsfield for Brumy, the company that makes jtakeit, and are released under the same licence ([example/README.md](example/README.md)); its fonts are the SIL Open Font License's, installed from `@fontsource`.

@@ -165,10 +165,10 @@ try {
   //  15  what people book is in every language: a master nobody translated
   //      is in the English booking form, in German words marked de-CH
   {
-    const photos = resolve('lib/showroom/photos');
+    const photos = resolve('example/media');
     mkdirSync(join(site, 'src/assets/media/probe'), { recursive: true });
-    writeFileSync(join(site, 'src/assets/media/probe/eins.jpg'), readFileSync(join(photos, 'pexels-11169551.jpg')));
-    writeFileSync(join(site, 'src/assets/media/probe/zwei.jpg'), readFileSync(join(photos, 'pexels-13058812.jpg')));
+    writeFileSync(join(site, 'src/assets/media/probe/eins.jpg'), readFileSync(join(photos, 'gallery-linen.jpg')));
+    writeFileSync(join(site, 'src/assets/media/probe/zwei.jpg'), readFileSync(join(photos, 'gallery-tools.jpg')));
     write('src/content/blocks.ts', read('src/content/blocks.ts').replace('export const LOCALES: string[] = [];', "export const LOCALES: string[] = ['en'];"));
     // The one thing it says: English has no copy of its own yet (17, 22).
     const emitted = spawnSync('node', [bin, 'schema', '--emit-only', '--root', site], { encoding: 'utf8' });
