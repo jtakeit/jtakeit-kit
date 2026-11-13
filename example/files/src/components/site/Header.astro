@@ -61,7 +61,7 @@ const cta = header.text('cta_label');
       nav.length > 0 && (
         <nav class="bar__nav" id="bar-nav" aria-label={W.navigation}>
           {nav.map((row) => (
-            <a href={go(row.text('link'))} aria-current={current(row.text('link')) ? 'page' : undefined} {...row.at('label')} {...row.lang('label')}>
+            <a href={go(row.text('link'))} aria-current={current(row.text('link')) ? 'page' : undefined} {...{ ...row.at('label'), ...row.lang('label') }}>
               {row.text('label')}
             </a>
           ))}
@@ -69,7 +69,7 @@ const cta = header.text('cta_label');
       )
     }
 
-    <Languages alternates={languages} current={locale} class="bar__lang" />
+    <Languages alternates={languages} current={locale} class="bar__lang" label={W.language} />
 
     {cta && <Button href={go(header.text('cta_link') || '/#contact')} label={cta} at={header.at('cta_label')} lang={header.lang('cta_label')} small class="bar__cta" />}
 

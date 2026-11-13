@@ -32,8 +32,8 @@ const pieces = pictures.map((one) => ({ name: one.src, alt: one.alt, path: one['
 <section class="s pictures" id={first ? 'gallery' : undefined}>
   <div class="s__in">
     <div class="s__head">
-      {block.text('eyebrow') && <p class="label label--accent" {...block.at('eyebrow')} {...block.lang('eyebrow')}>{block.text('eyebrow')}</p>}
-      {block.text('title') && <h2 class="s__title" {...block.at('title')} {...block.lang('title')}>{block.text('title')}</h2>}
+      {block.text('eyebrow') && <p class="label label--accent" {...{ ...block.at('eyebrow'), ...block.lang('eyebrow') }}>{block.text('eyebrow')}</p>}
+      {block.text('title') && <h2 class="s__title" {...{ ...block.at('title'), ...block.lang('title') }}>{block.text('title')}</h2>}
     </div>
     {pieces.length > 0 && <Gallery arrangement={drawn} items={pieces} columns={drawn === 'ragged' ? columns : undefined} />}
   </div>

@@ -48,16 +48,23 @@ export function tappable(field) {
  * edits — a phone, an email, a link, a choice, a date, a time, a number, as
  * well as `TAPPABLE`'s — but a list (annotated by its rows) and a switch
  * (by what it switches), unless it is `no_tap_target`, which means not drawn
- * as an element at all. A template draws a value of such a field with its
- * `at()`; the lint says one drawn without it, as a warning until the
- * platform's gate is an error.
+ * as an element at all — `TAPPABLE`'s kinds and `ADVISED`'s. A template
+ * draws a value of such a field with its `at()`; the lint says one of
+ * `ADVISED`'s drawn without it as advice (`JTK_W_UNANNOTATED_FIELD`).
  */
 export function annotatable(field) {
   if (field === undefined || field === null) return false;
-  if (field.kind === 'list' || field.kind === 'bool') return false;
+  if (!TAPPABLE.has(field.kind) && !ADVISED.has(field.kind)) return false;
   if (field.client_editable !== true) return false;
   return field.no_tap_target !== true;
 }
+
+/**
+ * The kinds the platform's rule adds to `TAPPABLE` (wiki/111 E1, the core's
+ * annotation lint): one of them drawn without its annotation is advice,
+ * `JTK_W_UNANNOTATED_FIELD`, where one of `TAPPABLE`'s is refused.
+ */
+export const ADVISED = new Set(['number', 'time_of_day', 'select', 'tel', 'email', 'url', 'date']);
 
 /**
  * Where a specimen lives under its collection: `_fl-<type>[-<view>]`. The

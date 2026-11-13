@@ -27,7 +27,7 @@ const arrow = 'M1 6h11M8 2l4 4-4 4';
 ---
 
 <a class:list={['b', 'glass', { 'b--quiet': quiet, 'b--small': small }, extra]} href={href} data-jtk-href={hrefAt}>
-  <span {...at} {...lang}>{label}</span>
+  <span {...{ ...at, ...lang }}>{label}</span>
   {
     quiet ? (
       <svg class="b__go" width="13" height="12" viewBox="0 0 13 12" fill="none" aria-hidden="true">

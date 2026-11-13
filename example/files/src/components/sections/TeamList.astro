@@ -33,9 +33,9 @@ const portraitKey = (fields: (typeof people)[number]['fields']) => (fields.field
 <section class="s team" id={first ? 'team' : undefined}>
   <div class="s__in">
     <div class="s__head">
-      {block.text('eyebrow') && <p class="label label--accent" {...block.at('eyebrow')} {...block.lang('eyebrow')}>{block.text('eyebrow')}</p>}
-      {block.text('title') && <h2 class="s__title" {...block.at('title')} {...block.lang('title')}>{block.text('title')}</h2>}
-      {block.text('lead') && <p class="s__lead" {...block.at('lead')} {...block.lang('lead')}>{block.text('lead')}</p>}
+      {block.text('eyebrow') && <p class="label label--accent" {...{ ...block.at('eyebrow'), ...block.lang('eyebrow') }}>{block.text('eyebrow')}</p>}
+      {block.text('title') && <h2 class="s__title" {...{ ...block.at('title'), ...block.lang('title') }}>{block.text('title')}</h2>}
+      {block.text('lead') && <p class="s__lead" {...{ ...block.at('lead'), ...block.lang('lead') }}>{block.text('lead')}</p>}
     </div>
     {
       people.length > 0 && (
@@ -49,9 +49,9 @@ const portraitKey = (fields: (typeof people)[number]['fields']) => (fields.field
                   <Shot name={portrait.src} alt={portrait.alt} lang={portrait.lang} path={portrait['data-jtk-path']} focus={portrait.focus} ratio="4 / 5" class="team__shot" width={640} sizes="(min-width: 60rem) 26rem, 92vw" />
                 )}
                 <div class="team__words">
-                  {fields.text('title') && <h3 class="team__name" {...fields.at('title')} {...fields.lang('title')}>{fields.text('title')}</h3>}
-                  {fields.text('role') && <p class="team__role label" {...fields.at('role')} {...fields.lang('role')}>{fields.text('role')}</p>}
-                  {fields.text('bio') && <p class="team__bio" {...fields.at('bio')} {...fields.lang('bio')}>{fields.text('bio')}</p>}
+                  {fields.text('title') && <h3 class="team__name" {...{ ...fields.at('title'), ...fields.lang('title') }}>{fields.text('title')}</h3>}
+                  {fields.text('role') && <p class="team__role label" {...{ ...fields.at('role'), ...fields.lang('role') }}>{fields.text('role')}</p>}
+                  {fields.text('bio') && <p class="team__bio" {...{ ...fields.at('bio'), ...fields.lang('bio') }}>{fields.text('bio')}</p>}
                 </div>
               </li>
             );

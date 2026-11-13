@@ -113,6 +113,30 @@ function atTheEdges(site, said) {
   if (advice.length > 0) fail(`${said}: the schema earns the platform's advice:\n  ${advice.join('\n  ')}`);
 }
 
+/**
+ * Every built page of a site, held to what a browser and a screen reader ask:
+ * no element names an attribute twice (Astro wrote `class` twice on an
+ * element with two spreads), and the headings never skip a level going down.
+ */
+function tidy(site, said) {
+  for (const file of walk(join(site, 'dist')).filter((one) => one.endsWith('.html'))) {
+    const html = readFileSync(file, 'utf8');
+    const where = relative(join(site, 'dist'), file);
+    for (const [tag] of html.matchAll(/<[a-zA-Z][a-zA-Z0-9-]*\s[^>]*>/g)) {
+      const names = [...tag.matchAll(/\s([^\s=/>"']+)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/g)].map((one) => one[1].toLowerCase());
+      const twice = names.find((one, i) => names.indexOf(one) !== i);
+      if (twice !== undefined) fail(`${said}: ${where} has an element that says ${twice} twice: ${tag.slice(0, 160)}`);
+    }
+    const body = html.slice(html.indexOf('<body'));
+    let last = 0;
+    for (const [, level] of body.matchAll(/<h([1-6])[\s>]/g)) {
+      const n = Number(level);
+      if (last !== 0 && n > last + 1) fail(`${said}: ${where} goes from h${last} to h${n}`);
+      last = n;
+    }
+  }
+}
+
 /** Built, then held to `jtk schema` and `jtkit lint` on its dist/. */
 function judged(site, packed, said) {
   execFileSync('npm', ['install', '--no-audit', '--no-fund', packed], { cwd: site, stdio: 'pipe' });
@@ -397,6 +421,7 @@ try {
       if (!existsSync(join(example, 'dist/en/imprint/index.html'))) fail('9 · the example has no English imprint');
     // The values' counters are the rows' places as they stand in the page — a CSS counter, never a number in the markup —
     // so a row moved or added in the panel's preview is counted where it is (staging, 13 November 2026: «01 03 02»).
+    tidy(example, '9 · the example');
     // A tap on everything (wiki/111 §3.1): each value of the address its own annotated span, the hours as their list,
     // the card and «Open now» naming their source — and no warning of the platform's coming rule.
     for (const must of ['data-jtk-path="shared:blocks[contacts].postal_code"', 'data-jtk-path="shared:blocks[contacts].city"', 'data-jtk-path="shared:blocks[contacts].phone"', 'data-jtk-path="shared:blocks[contacts].email"', 'data-jtk-path="shared:blocks[contacts].country"', 'data-jtk-path="shared:blocks[hours].rows"', 'data-jtk-from="shared:blocks[contacts]"', 'data-jtk-from="shared:blocks[hours]"']) {
@@ -404,7 +429,7 @@ try {
     }
     {
       const linted = spawnSync('node', [join(example, 'node_modules/@jtakeit/kit/bin/jtkit.mjs'), 'lint', '--dist', 'dist', '--root', '.'], { cwd: example, encoding: 'utf8' });
-      if (linted.stdout.includes('warning')) fail(`9 · the example earns the lint's warning:\n${linted.stdout}`);
+      if (/advice|warning/.test(linted.stdout)) fail(`9 · the example earns the lint's advice:\n${linted.stdout}`);
     }
     const values = /<ol class="values__list"[\s\S]*?<\/ol>/.exec(de)?.[0] ?? '';
     if (values === '' || /\b0[1-9]\b/.test(values.replace(/<[^>]+>/g, ' '))) fail('9 · the values carry their numbers in the markup');
@@ -443,6 +468,7 @@ try {
     if (modules.status !== 0) fail(`10 · the example with a blog and a kit:\n${modules.stderr}`);
     await translated(join(dir, 'example-modules'), 'the example with a blog and a salon kit');
     judged(join(dir, 'example-modules'), packed, '10 · the example with a blog and a salon kit');
+    tidy(join(dir, 'example-modules'), '10 · the example with a blog and a salon kit');
     atTheEdges(join(dir, 'example-modules'), '10 · the example with a blog and a salon kit');
     console.log('create3: the example, and with a blog and a salon kit — every optional field empty, then filled and long: built, judged, linted, every filled field drawn; no advice');
   }

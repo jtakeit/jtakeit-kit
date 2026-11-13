@@ -26,7 +26,7 @@
  * And where a price sits (`pricePaths`), which the lint's currency check and
  * `jtkit progress` both ask of a schema.
  */
-import { TAPPABLE, annotatable } from './content/index.mjs';
+import { ADVISED, TAPPABLE } from './content/index.mjs';
 
 /** A `_key` and an id, as the grammar names them (§15 · 16). */
 export const KEY = /^[a-z][a-z0-9-]{0,31}$/;
@@ -47,8 +47,8 @@ export const isEmpty = (value) => value === undefined || value === null || (type
 export const srcOf = (value) => (typeof value === 'string' ? value.trim() : isObject(value) && typeof value.src === 'string' ? value.src.trim() : '');
 /** Absent is false (§3.3): only what says `client_editable: true` is the owner's to tap. */
 export const tappable3 = (field) => TAPPABLE.has(field.kind) && field.client_editable === true && field.no_tap_target !== true;
-/** What the platform's coming rule adds to `tappable3` (wiki/111 E1): a phone, an email, a link, a choice, a date, a time, a number — said as a warning until its gate. */
-export const widened3 = (field) => annotatable(field) && !tappable3(field);
+/** What the platform's rule adds to `tappable3` (wiki/111 E1): a phone, an email, a link, a choice, a date, a time, a number — advice, `JTK_W_UNANNOTATED_FIELD`, where it is drawn without its annotation. */
+export const widened3 = (field) => ADVISED.has(field.kind) && field.client_editable === true && field.no_tap_target !== true;
 
 /**
  * The rules over one schema.

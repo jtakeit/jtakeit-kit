@@ -23,9 +23,11 @@ interface Props {
   /** The language of the page it is on: `''` for the site's own. */
   current: string;
   class?: string;
+  /** The switch's name for a screen reader, in the page's language; «Language» where a template says none. */
+  label?: string;
 }
 
-const { alternates, current, class: className } = Astro.props;
+const { alternates, current, class: className, label = 'Language' } = Astro.props;
 
 const ordered = [...alternates].sort((a, b) => (a.locale === '' ? -1 : b.locale === '' ? 1 : a.locale.localeCompare(b.locale)));
 const nameOf = (tag: string): string => {
@@ -40,7 +42,7 @@ const tagOf = langOf;
 ---
 
 {ordered.length > 1 && (
-  <nav class:list={['languages', className]} aria-label="Language" data-jtk-fixed>
+  <nav class:list={['languages', className]} aria-label={label} data-jtk-fixed>
     {ordered.map((other) => (
       <a
         href={under(other.address)}

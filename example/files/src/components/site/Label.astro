@@ -2,10 +2,11 @@
 /**
  * A heading of the frame — «Address», «Opening hours», «Write or call» —
  * that is the business's to say where it says it: its shared field's words,
- * annotated, where they are written; the kit's word in the page's language,
- * the design's (`data-jtk-fixed`), where they are not (jtakeit-core wiki/111
- * §3.3, the owner's Q3). An owner who wants «Kontakt» writes it; nobody has
- * to translate the stand-in.
+ * annotated, where they are written; the kit's word in the page's language
+ * where they are not — annotated with the same field, so a tap on the
+ * stand-in opens the empty field to be filled (jtakeit-core wiki/111 §3.3 and
+ * T11, the owner's Q3). An owner who wants «Kontakt» writes it; nobody has to
+ * translate the stand-in.
  */
 import type { Values } from '@jtakeit/kit/content';
 
@@ -24,4 +25,5 @@ const { of, field, standIn, standInLang, class: extra = 'label' } = Astro.props;
 const own = of.text(field);
 ---
 
-{own ? <p class={extra} {...of.at(field)} {...of.lang(field)}>{own}</p> : <p class={extra} data-jtk-fixed lang={standInLang}>{standIn}</p>}
+{/* Tapped either way (wiki/111 T11: their eyebrows annotated): the stand-in opens the empty field to be filled. */}
+{own ? <p class={extra} {...{ ...of.at(field), ...of.lang(field) }}>{own}</p> : <p class={extra} {...of.at(field)} lang={standInLang}>{standIn}</p>}

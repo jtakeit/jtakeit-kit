@@ -50,8 +50,8 @@ const form = block.value('form') === true;
           <LeadForm />
         ) : (
           <div class="s__head">
-            {block.text('title') && <h2 class="s__title" {...block.at('title')} {...block.lang('title')}>{block.text('title')}</h2>}
-            {block.text('lead') && <p class="s__lead" {...block.at('lead')} {...block.lang('lead')}>{block.text('lead')}</p>}
+            {block.text('title') && <h2 class="s__title" {...{ ...block.at('title'), ...block.lang('title') }}>{block.text('title')}</h2>}
+            {block.text('lead') && <p class="s__lead" {...{ ...block.at('lead'), ...block.lang('lead') }}>{block.text('lead')}</p>}
           </div>
         )
       }
@@ -66,13 +66,13 @@ const form = block.value('form') === true;
               {street && <span {...facts.at('street')}>{street}</span>}
               {(postal || city) && (
                 <span>
-                  {postal && <span {...facts.at('postal_code')}>{postal}</span>} {city && <span {...facts.at('city')} {...contacts.lang('city')}>{city}</span>}
+                  {postal && <span {...facts.at('postal_code')}>{postal}</span>} {city && <span {...{ ...facts.at('city'), ...contacts.lang('city') }}>{city}</span>}
                 </span>
               )}
             </address>
             {maps && (
               <a class="reach__link" href={maps} rel="noopener" target="_blank">
-                {contacts.text('maps_label') ? <span {...contacts.at('maps_label')} {...contacts.lang('maps_label')}>{contacts.text('maps_label')}</span> : <span data-jtk-fixed lang={wordsLang}>{W.directions}</span>} ↗
+                {contacts.text('maps_label') ? <span {...{ ...contacts.at('maps_label'), ...contacts.lang('maps_label') }}>{contacts.text('maps_label')}</span> : <span {...contacts.at('maps_label')} lang={wordsLang}>{W.directions}</span>} ↗
               </a>
             )}
           </div>

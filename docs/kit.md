@@ -73,9 +73,13 @@ or worked out from them, names where they live with the door's `from()`:
 `{...hours.from()}` on «Open now», `site.settings('bookings').from()` on the
 booking form, `entry.from()` on a tile of an entry. A tap on it opens that
 source. Design text stays `data-jtk-fixed`; inside a `from()` region a tap on it
-opens the region's source. `jtkit lint` warns about a phone, an email, a link, a
-choice, a date, a time or a number drawn without its annotation; the platform's
-gate is a warning first and an error on contract 3 later.
+opens the region's source. `jtkit lint` says what the platform's lint says, in
+its codes: a number, a time, a choice, a phone, an email, a link or a date drawn
+without its annotation is advice, `JTK_W_UNANNOTATED_FIELD`; a value the owner
+edits drawn as text nothing claims is advice, `JTK_W_DRAWN_UNTAPPABLE`; a
+`data-jtk-from` outside its grammar (`blocks[<key>]`, `shared:blocks[<key>]`,
+`page:<id>[:blocks[<key>]]`, `entry:<id>[:blocks[<key>]]`, `module:<name>`) or
+naming nothing the site has is refused, `JTK_E_ANNOTATION_UNKNOWN`.
 
 **`npm run check` stays at 0 / 0 / 0.** Not "only warnings". The first
 tolerated warning is the last useful run of that command.

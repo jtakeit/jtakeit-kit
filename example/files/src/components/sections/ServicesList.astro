@@ -43,6 +43,9 @@ const length = (minutes: number): string => {
 };
 const listedAt = site.shownOn('services', locale) ?? withLocale(locale, '/services');
 const headed = block.text('eyebrow') || block.text('title') || block.text('lead');
+// A row's name is a heading under the block's; under the page's own (the price
+// list's page, whose services have no heading of their own) the next level down.
+const RowTitle = block.text('title') ? 'h3' : 'h2';
 ---
 
 <section class="s ledger" id={first ? 'services' : undefined}>
@@ -50,9 +53,9 @@ const headed = block.text('eyebrow') || block.text('title') || block.text('lead'
     {
       headed && (
         <div class="s__head">
-          {block.text('eyebrow') && <p class="label label--accent" {...block.at('eyebrow')} {...block.lang('eyebrow')}>{block.text('eyebrow')}</p>}
-          {block.text('title') && <h2 class="s__title" {...block.at('title')} {...block.lang('title')}>{block.text('title')}</h2>}
-          {block.text('lead') && <p class="s__lead" {...block.at('lead')} {...block.lang('lead')}>{block.text('lead')}</p>}
+          {block.text('eyebrow') && <p class="label label--accent" {...{ ...block.at('eyebrow'), ...block.lang('eyebrow') }}>{block.text('eyebrow')}</p>}
+          {block.text('title') && <h2 class="s__title" {...{ ...block.at('title'), ...block.lang('title') }}>{block.text('title')}</h2>}
+          {block.text('lead') && <p class="s__lead" {...{ ...block.at('lead'), ...block.lang('lead') }}>{block.text('lead')}</p>}
         </div>
       )
     }
@@ -70,8 +73,8 @@ const headed = block.text('eyebrow') || block.text('title') || block.text('lead'
                 <Shot name={photo.src} alt={photo.alt} lang={photo.lang} path={photo['data-jtk-path']} focus={photo.focus} ratio="4 / 3" class="ledger__shot" width={480} sizes="(min-width: 60rem) 11rem, 30vw" />
               )}
               <div class="ledger__words">
-                {fields.text('title') && <h3 class="ledger__title" {...fields.at('title')} {...fields.lang('title')}>{fields.text('title')}</h3>}
-                {fields.text('about') && <p class="ledger__about" {...fields.at('about')} {...fields.lang('about')}>{fields.text('about')}</p>}
+                {fields.text('title') && <RowTitle class="ledger__title" {...{ ...fields.at('title'), ...fields.lang('title') }}>{fields.text('title')}</RowTitle>}
+                {fields.text('about') && <p class="ledger__about" {...{ ...fields.at('about'), ...fields.lang('about') }}>{fields.text('about')}</p>}
               </div>
               <div class="ledger__terms">
                 {costs !== undefined && <span class="ledger__price" {...fields.at('costs')}>{site.money(costs, locale)}</span>}

@@ -68,7 +68,7 @@ const note = shared.text('note');
         ))}
       </dl>}
       {note && (
-        <p class="hours__note" {...shared.at('note')} {...shared.lang('note')}>
+        <p class="hours__note" {...{ ...shared.at('note'), ...shared.lang('note') }}>
           {note}
         </p>
       )}
