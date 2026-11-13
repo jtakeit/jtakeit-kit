@@ -388,12 +388,13 @@ export const CONTACTS: Block = {
       hint: 'The town of that address.',
     },
     {
+      // Tapped where the footer, the form's card and the imprint draw it; the
+      // map's link is edited beside it.
       key: 'street',
       label: 'Street',
       kind: 'text',
       max: 80,
       client_editable: true,
-      no_tap_target: true,
       role: 'street',
       hint: 'Street and number, as a letter is addressed.',
       localized: false,
@@ -406,6 +407,7 @@ export const CONTACTS: Block = {
       client_editable: true,
       no_tap_target: true,
       role: 'postal_code',
+      hint: 'The postcode of that address.',
       localized: false,
     },
     {
@@ -443,6 +445,7 @@ export const CONTACTS: Block = {
       kind: 'url',
       client_editable: true,
       no_tap_target: true,
+      beside: 'street',
       role: 'maps',
       hint: 'A link to the address on a map, for «Directions».',
       localized: false,
@@ -455,7 +458,11 @@ export const CONTACTS: Block = {
       client_editable: true,
       no_tap_target: true,
       role: 'social',
-      of: [{ key: 'url', label: 'Link', kind: 'url', required: true, client_editable: true, no_tap_target: true }],
+      hint: 'The business elsewhere — Instagram, a booking page: a link and the words the footer says for it.',
+      of: [
+        { key: 'label', label: 'Words', kind: 'text', max: 30, client_editable: true, hint: 'Instagram — empty: the link\'s own name.' },
+        { key: 'url', label: 'Link', kind: 'url', required: true, client_editable: true, no_tap_target: true, beside: 'label', localized: false },
+      ],
     },
   ],
 };
@@ -508,6 +515,7 @@ export const HOURS: Block = {
       max: 14,
       client_editable: true,
       no_tap_target: true,
+      hint: 'A row a day it opens, two for a day with a break; a day with no row is closed.',
       of: [
         {
           key: 'day',

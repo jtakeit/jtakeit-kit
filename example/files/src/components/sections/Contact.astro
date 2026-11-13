@@ -58,9 +58,9 @@ const form = block.value('form') === true;
         (street || place) && (
           <div class="reach__part">
             <p class="label" data-jtk-fixed lang={wordsLang}>{W.address}</p>
-            <address class="reach__addr" data-jtk-fixed>
-              {street && <span>{street}</span>}
-              {place && <span>{place}</span>}
+            <address class="reach__addr">
+              {street && <span {...facts.at('street')}>{street}</span>}
+              {place && <span data-jtk-fixed>{place}</span>}
             </address>
             {maps && (
               <a class="reach__link" href={maps} rel="noopener" target="_blank" data-jtk-fixed lang={wordsLang}>

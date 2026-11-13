@@ -40,7 +40,7 @@ page that says when.
 | the section | `SECTIONS` in `src/components/sections/index.ts`, and its component | a line and its import; the file | the line and the import; the file where it is still the scaffold's |
 | page blocks | `jtk/pages/index.json`, at the unit's place in the example's order (or `--after`/`--before`) | with the example's words and a fixed `_key` | every block of its types, from every page |
 | translations | `<file>.<locale>.json` beside each | the example's words in each language the example has (German, English) | the unit's `_key`s, from every translation |
-| pages | `jtk/pages/services.json` | written | deleted, with their translations |
+| pages | `jtk/pages/services.json` (an `intro` and `services_all`) | written | deleted, with their translations |
 | entries | `jtk/entries/<collection>/` | the example's | deleted — when still the example's |
 | navigation | `header.nav` in `jtk/shared.json` | an item, before the next unit's | every item whose link is the unit's |
 | photographs | `src/assets/example-<name>.jpg` | copied | deleted where nothing names them and they are still the example's bytes |

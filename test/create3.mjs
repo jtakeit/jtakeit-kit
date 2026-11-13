@@ -27,15 +27,22 @@
 //      team, the example's photographs and its words in German and English;
 //      `--without` leaves sections out, part by part; `--look` and a section
 //      that is none refused; built, judged — under a path too — and linted
+//  10  the content an owner can write, at its edges, as the platform tries it
+//      before it accepts a site's code (JTK_E_CONTENT_VARIANT): the example,
+//      and the example with a blog and a salon kit, built with every optional
+//      field empty and with every one filled and long — judged and linted,
+//      every field the owner fills drawn and annotated; and their schemas
+//      earn none of the platform's advice (test/variants.mjs)
 //   5  every kit the platform has, laid out, built, judged and linted — when
 //      JTK_KITS_API names a platform (JTK_KITS_API=https://api.stg.jtakeit.com
 //      node test/create3.mjs); not in `npm test`, which asks no platform
 //
 // The kit is this checkout's, packed, as the smoke test installs it.
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
+import { adviceOf, varyContent } from './variants.mjs';
 
 const bin = resolve('bin/jtk.mjs');
 const dir = mkdtempSync(join(tmpdir(), 'jtk-create3-'));
@@ -77,6 +84,25 @@ function inOrder(words, tool, said) {
   let at = 0;
   for (const step of steps) at = at < 0 ? at : words.indexOf(step, at);
   if (at < 0 || /push the repository/.test(words)) fail(`${said} is not in the platform's order — ${steps.join(', ')}:\n${words}`);
+}
+
+/** A laid-out, installed site at an edge of its content — a copy, its node_modules borrowed — built, judged and linted. */
+function atTheEdges(site, said) {
+  for (const variant of ['empty', 'full']) {
+    const copy = `${site}-${variant}`;
+    rmSync(copy, { recursive: true, force: true });
+    cpSync(site, copy, { recursive: true, filter: (from) => !/[\\/](node_modules|dist|\.git)$/.test(from) });
+    symlinkSync(join(site, 'node_modules'), join(copy, 'node_modules'));
+    varyContent(copy, variant);
+    const built = spawnSync('npm', ['run', 'build'], { cwd: copy, encoding: 'utf8', env: { ...process.env, SITE_URL: 'https://probe.example/' } });
+    if (built.status !== 0) fail(`${said}, ${variant}: does not build:\n${built.stdout}\n${built.stderr}`);
+    const schema = spawnSync('node', [bin, 'schema', '--root', copy, '--dist', 'dist'], { encoding: 'utf8' });
+    if (schema.status !== 0 || !schema.stdout.includes('the schema and the page agree')) fail(`${said}, every optional field ${variant === 'full' ? 'filled and long' : 'empty'}: jtk schema says\n${schema.stdout}\n${schema.stderr}`);
+    const lint = spawnSync('node', [join(copy, 'node_modules/@jtakeit/kit/bin/jtkit.mjs'), 'lint', '--dist', 'dist', '--root', '.'], { cwd: copy, encoding: 'utf8' });
+    if (lint.status !== 0) fail(`${said}, every optional field ${variant === 'full' ? 'filled and long' : 'empty'}: jtkit lint says\n${lint.stdout}\n${lint.stderr}`);
+  }
+  const advice = adviceOf(json(site, 'jtk/schema.json'));
+  if (advice.length > 0) fail(`${said}: the schema earns the platform's advice:\n  ${advice.join('\n  ')}`);
 }
 
 /** Built, then held to `jtk schema` and `jtkit lint` on its dist/. */
@@ -363,6 +389,14 @@ try {
       if (!existsSync(join(example, 'dist/en/imprint/index.html'))) fail('9 · the example has no English imprint');
     }
     console.log('create3: the example — its sections, shared text, pages, entries, photographs and two languages; --without; built under a path, judged and linted');
+
+    // ── 10 · at the edges of what an owner can write ────────────────────────
+    atTheEdges(example, '10 · the example');
+    const modules = create('example-modules', '--locale', 'de-CH', '--locales', 'en', '--name', 'Salon Probe', '--blog', '--kit', kitFile);
+    if (modules.status !== 0) fail(`10 · the example with a blog and a kit:\n${modules.stderr}`);
+    judged(join(dir, 'example-modules'), packed, '10 · the example with a blog and a salon kit');
+    atTheEdges(join(dir, 'example-modules'), '10 · the example with a blog and a salon kit');
+    console.log('create3: the example, and with a blog and a salon kit — every optional field empty, then filled and long: built, judged, linted, every filled field drawn; no advice');
   }
 
   // ── 5 · every kit the platform has ────────────────────────────────────────
