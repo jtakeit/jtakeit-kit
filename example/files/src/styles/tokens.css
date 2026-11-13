@@ -32,6 +32,8 @@ html:root {
   --accent-hot: #ff8a5c;
   /* Words on the accent: Layout.astro chooses by its lightness; this is the default. */
   --on-accent: #16130f;
+  /* Words on the deep accent, where a control is filled with it: 5.4:1. */
+  --on-accent-deep: #ffffff;
   /* The accent as channels, for a glow at a given strength: rgb(var(--glow) / .06). */
   --glow: 226 67 31;
   /* A state that is fine: «open now». */

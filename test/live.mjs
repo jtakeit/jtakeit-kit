@@ -1,7 +1,8 @@
 // A site `jtk create` lays out draws its draft live (jtakeit-core wiki/89 §12):
 //
 //   1  the schema says it: `render: "live"`, from RENDER in blocks.ts
-//   2  the two-language salon with a blog, filled — services, a master, three
+//   2  the two-language salon with a blog — the example site, `--kit` and
+//      `--blog` mapped onto it as `jtk add booking` and `add blog` — filled: services, a master, three
 //      posts, one with a picture in its body, an uploaded photograph on the
 //      home page, every one translated — builds static as it always did
 //   3  the same tree built for a server (`JTK_RENDER=live`, @astrojs/node in
@@ -14,6 +15,8 @@
 //   4  and a draft changed four ways is drawn at once: a hero word, a post
 //      no build drew (on the listing and at its address), a sentence in a
 //      body, and a photograph uploaded since the build, from the bucket
+//   6  the example with each section removed (`jtk remove`), one at a time:
+//      judged against its build, and every page drawn live equal to it
 //   5  the example site `jtk create` lays out (jtakeit-core wiki/110) — every
 //      section, the header, the footer, /services and /imprint — in German
 //      and English, every page drawn live equal to its built twin; and a draft
@@ -223,6 +226,23 @@ try {
     if (!(await drawn.page('/en/')).text.includes('Good work, done with care.')) fail("5 · the example's English home lost its own words");
     drawn.close();
     console.log(`live: the example — ${drawn.pages.length} pages drawn live are the built ones; a value, a picture's words, a service, a person and the footer are drawn from the draft`);
+
+    // ── 6 · each section removed ──────────────────────────────────────────
+    for (const unit of ['hero', 'values', 'services', 'gallery', 'team', 'testimonials', 'questions', 'contact']) {
+      let ran = spawnSync('node', [bin, 'remove', unit, '--root', example], { encoding: 'utf8' });
+      if (ran.status !== 0) fail(`6 · remove ${unit}:\n${ran.stdout}\n${ran.stderr}`);
+      execFileSync('node', [bin, 'schema', '--emit-only', '--root', example], { stdio: 'pipe' });
+      const without = await liveCheck(example, { url: SITE_URL, fail, said: `6 · the example without ${unit}` });
+      without.close();
+      ran = spawnSync('node', [bin, 'schema', '--root', example, '--dist', 'dist'], { encoding: 'utf8' });
+      if (ran.status !== 0 || !ran.stdout.includes('the schema and the page agree')) fail(`6 · without ${unit}, jtk schema says:\n${ran.stdout}\n${ran.stderr}`);
+      ran = spawnSync('node', [join(example, 'node_modules/@jtakeit/kit/bin/jtkit.mjs'), 'lint', '--dist', 'dist', '--root', '.'], { cwd: example, encoding: 'utf8' });
+      if (ran.status !== 0) fail(`6 · without ${unit}, jtkit lint says:\n${ran.stdout}\n${ran.stderr}`);
+      ran = spawnSync('node', [bin, 'add', unit, '--root', example], { encoding: 'utf8' });
+      if (ran.status !== 0) fail(`6 · add ${unit}:\n${ran.stdout}\n${ran.stderr}`);
+      execFileSync('node', [bin, 'schema', '--emit-only', '--root', example], { stdio: 'pipe' });
+    }
+    console.log('live: the example with each of its eight sections removed — judged, linted, and every page drawn live equal to its build');
   }
 } finally {
   server?.close();
