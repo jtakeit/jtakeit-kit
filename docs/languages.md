@@ -7,6 +7,12 @@ in one admin.
 written — every page, every post, every footer, for ever. It is a commitment,
 not a feature, and the bar is a sentence in the brief that names the language.
 
+**The example's two.** With no language asked for, `jtk create` lays its example
+out in English with German (`de-CH`) as its translation — the owner's decision
+for the example (13 November 2026); `--locale X` alone is a site in X alone, and
+a language beyond the brief's is taken out by removing it from `LOCALES` and its
+translations.
+
 **Two contracts.** A new site is on contract 3: one document in the site's own
 language and a translation beside it holding only words — `jtk create
 --locale de-CH --locales en` lays it out, and [the last part of this

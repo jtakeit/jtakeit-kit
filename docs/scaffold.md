@@ -21,9 +21,11 @@ profiles and the legal links. Every word and picture is content, tapped and
 translated in the panel; the words are the example's, in the business's own
 name, in the site's language and English (German and English for a
 German-speaking site); the photographs are the example's own (`example/media/`).
-The languages are the ones `create` is given: `--locale en` alone (the default)
-is an English site in one language; the first market's is `--locale de-CH
---locales en`, German with an English translation beside every page and entry.
+With no language asked for, `create` lays it out in English with German
+(`de-CH`) as its translation beside every page and entry — two languages, the
+example's own. `--locale X` says the site's own language (`--locale en` alone
+is English alone), and `--locales` the others: Switzerland's German site is
+`--locale de-CH --locales en`.
 No sentence states a fact about the business: the people are «Muster», the
 address is Musterstrasse 1, the testimonials are signed «an example».
 

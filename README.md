@@ -69,8 +69,10 @@ jtk/design.json          the design document the panel reads for the editor's ch
 ```
 
 Another language is a translation beside each original, holding only its words
-(`jtk/pages/index.en.json`): `--locale de-CH --locales en` lays a site out in both, its
-English words that are not content in `src/copy/en.ts`
+(`jtk/pages/index.en.json`). With no language asked for, `create` lays the example out in
+English with German (`de-CH`) beside it; `--locale de-CH --locales en` lays a site out in
+German with English, its English words that are not content in `src/copy/en.ts`, and
+`--locale X` alone a site in X alone
 ([docs/languages.md](docs/languages.md)). A contract-2 site in several languages moves
 with `npx @jtakeit/astro upgrade contract-3`.
 

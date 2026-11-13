@@ -394,6 +394,10 @@ try {
       if (!de.includes('<header class="bar"') || !de.includes('<footer class="foot"') || de.includes('languages--corner')) fail('9 · the example has not its header and footer, or the corner switch');
       if (!existsSync(join(example, 'dist/services/index.html')) || !text(example, 'dist/services/index.html').includes('id="services-the-work"')) fail('9 · /services does not draw the services at their anchors');
       if (!existsSync(join(example, 'dist/en/imprint/index.html'))) fail('9 · the example has no English imprint');
+    // The values' counters are the rows' places as they stand in the page — a CSS counter, never a number in the markup —
+    // so a row moved or added in the panel's preview is counted where it is (staging, 13 November 2026: «01 03 02»).
+    const values = /<ol class="values__list"[\s\S]*?<\/ol>/.exec(de)?.[0] ?? '';
+    if (values === '' || /\b0[1-9]\b/.test(values.replace(/<[^>]+>/g, ' '))) fail('9 · the values carry their numbers in the markup');
     }
     console.log('create3: the example — its sections, shared text, pages, entries, photographs and two languages; --without; built under a path, judged and linted');
 
@@ -407,6 +411,17 @@ try {
       }
     };
     await translated(example, 'the example in German and English');
+
+    // English by default, with German beside it; --locale alone is one language.
+    run = create('example-default', '--name', 'Atelier Probe');
+    if (run.status !== 0) fail(`11 · create with no language:\n${run.stderr}`);
+    const byDefault = json(join(dir, 'example-default'), 'jtk/schema.json');
+    if (byDefault.locale !== 'en' || JSON.stringify(byDefault.locales) !== '["de-CH"]') fail(`11 · create with no language is not English with German: ${JSON.stringify({ locale: byDefault.locale, locales: byDefault.locales })}`);
+    if (json(join(dir, 'example-default'), 'jtk/pages/index.json').blocks.find((one) => one.type === 'hero').title !== 'Good work, done with care.') fail('11 · the default site\'s original is not English');
+    if (json(join(dir, 'example-default'), 'jtk/pages/index.de-CH.json').blocks.find((one) => one._key === 'hero0001')?.title !== 'Gute Arbeit, mit Sorgfalt gemacht.') fail('11 · the default site\'s German is not the example\'s');
+    if (!existsSync(join(dir, 'example-default', 'src/copy/de-CH.ts'))) fail('11 · the default site has no German copy');
+    await translated(join(dir, 'example-default'), 'the example by default, English with German');
+    if ((json(join(dir, 'example-without'), 'jtk/schema.json').locales ?? []).length !== 0) fail('11 · --locale en alone is not English alone');
     run = create('example-en-de', '--locale', 'en', '--locales', 'de', '--name', 'Atelier Probe');
     if (run.status !== 0) fail(`11 · an English site with German:\n${run.stderr}`);
     await translated(join(dir, 'example-en-de'), 'the example in English and German');

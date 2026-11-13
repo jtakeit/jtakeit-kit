@@ -1,9 +1,11 @@
 ---
 /**
  * What the business holds to: a statement and a short numbered list — each
- * row a mono counter, a title and a line, a hairline between them. The
- * counters are the design's (drawn from the row's place), every word the
- * block's.
+ * row a mono counter, a title and a line, a hairline between them. Every word
+ * is the block's; the counters are the design's, and they are a CSS counter
+ * over the rows as they stand in the page — never a number written into the
+ * markup — so a row the owner moves, adds or takes away in the panel's
+ * preview is counted where it is now, before any page is drawn again.
  */
 import type { Block } from '@jtakeit/kit/content';
 
@@ -25,11 +27,8 @@ const items = block.rows('items');
     {
       items.length > 0 && (
         <ol class="values__list">
-          {items.map((row, at) => (
+          {items.map((row) => (
             <li class="values__row">
-              <span class="values__n label" aria-hidden="true" data-jtk-fixed>
-                {String(at + 1).padStart(2, '0')}
-              </span>
               {row.text('title') && <h3 class="values__title" {...row.at('title')} {...row.lang('title')}>{row.text('title')}</h3>}
               {row.text('text') && <p class="values__text" {...row.at('text')} {...row.lang('text')}>{row.text('text')}</p>}
             </li>
@@ -56,6 +55,7 @@ const items = block.rows('items');
   }
 
   .values__list {
+    counter-reset: value;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -63,6 +63,7 @@ const items = block.rows('items');
   }
 
   .values__row {
+    counter-increment: value;
     display: grid;
     grid-template-columns: 3.5rem minmax(0, 1fr);
     gap: 0.4rem 1rem;
@@ -70,9 +71,15 @@ const items = block.rows('items');
     border-block-end: 1px solid var(--line);
   }
 
-  .values__n {
+  /* «01», «02»… by the row's place: the mono label's voice, the deep accent. */
+  .values__row::before {
+    content: counter(value, decimal-leading-zero);
     grid-row: span 2;
     padding-block-start: 0.45rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: var(--tracking-label);
     color: var(--accent-deep);
   }
 
