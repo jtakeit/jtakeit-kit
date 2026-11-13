@@ -295,3 +295,28 @@ html .entry,
 html main.prose {
   padding-block-start: clamp(7rem, 16vh, 10rem);
 }
+
+/* An entry's own values the template lists under its title — a post's date
+   and excerpt — as a quiet ledger, the labels in the mono voice. */
+html .entry dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.4rem 1.25rem;
+  margin: 1.5rem 0 2rem;
+  padding-block: 1rem;
+  border-block: 1px solid var(--line);
+  font-size: 0.95rem;
+  color: var(--ink-quiet);
+}
+
+html .entry dt {
+  padding-block-start: 0.2rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+html .entry dd {
+  margin: 0;
+}
