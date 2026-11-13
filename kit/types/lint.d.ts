@@ -9,6 +9,13 @@ export interface Verdict {
   contract?: 3;
   /** Contract 3: the entries read, in the site's own language. */
   entries?: number;
+  /**
+   * Contract 3: what the platform's coming rule (wiki/111 E1) would refuse — a
+   * phone, an email, a link, a choice, a date, a time or a number the owner
+   * edits, drawn without its annotation. Said, never a failure, until the
+   * platform's gate is an error.
+   */
+  warnings?: Finding[];
 }
 export interface LintOptions {
   /** The site's root, holding `jtk/`; the working directory by default. */

@@ -371,7 +371,6 @@ export const CONTACTS: Block = {
       kind: 'text',
       max: 80,
       client_editable: true,
-      no_tap_target: true,
       role: 'name',
       hint: 'The business\'s name, as search engines and assistants are told it.',
       // The same in every language: nobody translates the business's name.
@@ -383,7 +382,6 @@ export const CONTACTS: Block = {
       kind: 'text',
       max: 60,
       client_editable: true,
-      no_tap_target: true,
       role: 'city',
       hint: 'The town of that address.',
     },
@@ -405,7 +403,6 @@ export const CONTACTS: Block = {
       kind: 'text',
       max: 12,
       client_editable: true,
-      no_tap_target: true,
       role: 'postal_code',
       hint: 'The postcode of that address.',
       localized: false,
@@ -416,7 +413,6 @@ export const CONTACTS: Block = {
       kind: 'text',
       max: 2,
       client_editable: true,
-      no_tap_target: true,
       role: 'country',
       hint: 'Two letters: CH, DE, AT.',
       localized: false,
@@ -426,7 +422,6 @@ export const CONTACTS: Block = {
       label: 'Phone',
       kind: 'tel',
       client_editable: true,
-      no_tap_target: true,
       role: 'phone',
       hint: 'The number to call, written as it is dialled; the site shows it formatted.',
     },
@@ -435,7 +430,6 @@ export const CONTACTS: Block = {
       label: 'Email',
       kind: 'email',
       client_editable: true,
-      no_tap_target: true,
       role: 'email',
       hint: 'Where a visitor writes to.',
     },
@@ -450,13 +444,19 @@ export const CONTACTS: Block = {
       hint: 'A link to the address on a map, for «Directions».',
       localized: false,
     },
+    // The address card's headings (Contact.astro, Footer.astro): the
+    // business's words where it writes its own, the kit's in each language
+    // where it leaves them empty — «Adresse», «Schreiben oder anrufen»,
+    // «Wegbeschreibung» (jtakeit-core wiki/111 §3.3, the owner's Q3).
+    { key: 'address_label', label: 'Heading over the address', kind: 'text', max: 40, client_editable: true, hint: 'Empty: «Address» in each language.' },
+    { key: 'reach_label', label: 'Heading over the phone and email', kind: 'text', max: 40, client_editable: true, hint: 'Empty: «Write or call» in each language.' },
+    { key: 'maps_label', label: 'Words of the map link', kind: 'text', max: 40, client_editable: true, hint: 'Empty: «Directions» in each language.' },
     {
       key: 'social',
       label: 'Profiles',
       kind: 'list',
       max: 6,
       client_editable: true,
-      no_tap_target: true,
       role: 'social',
       hint: 'The business elsewhere — Instagram, a booking page: a link and the words the footer says for it.',
       of: [
@@ -514,7 +514,6 @@ export const HOURS: Block = {
       kind: 'list',
       max: 14,
       client_editable: true,
-      no_tap_target: true,
       hint: 'A row a day it opens, two for a day with a break; a day with no row is closed.',
       of: [
         {
@@ -539,6 +538,7 @@ export const HOURS: Block = {
       ],
     },
     { key: 'note', label: 'A line under them', kind: 'text', max: 120, client_editable: true, hint: 'Sundays by appointment.' },
+    { key: 'label', label: 'Heading over them', kind: 'text', max: 40, client_editable: true, hint: 'Empty: «Opening hours» in each language.' },
   ],
 };
 BLOCKS.push(HOURS);
@@ -648,7 +648,7 @@ export const COLLECTIONS: Collection[] = [];
  * Then the posts are `jtk/entries/blog/<slug>.json`, the listing is
  * `src/pages/[...lang]/blog/index.astro`, a post's page is `[...entry].astro`,
  * the feed `/blog/rss.xml`. The five reserved keys of an entry are all here;
- * `date` and `excerpt` are drawn on the listing and are no tap targets.
+ * `date` and `excerpt` are drawn on the cards, annotated, and tapped there.
  */
 export const BLOG_POST: Block = {
   type: 'post',
@@ -670,7 +670,6 @@ export const BLOG_POST: Block = {
       kind: 'date',
       required: true,
       client_editable: true,
-      no_tap_target: true,
     },
     {
       key: 'excerpt',
@@ -678,7 +677,6 @@ export const BLOG_POST: Block = {
       kind: 'textarea',
       max: 200,
       client_editable: true,
-      no_tap_target: true,
     },
     {
       key: 'cover',

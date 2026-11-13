@@ -603,10 +603,27 @@ export function contract3(byPath, names, { annotate, now }) {
       return path(`${here}[${rowKey}].${part}${!gallery(declared) && onePicture(sub, cell) ? '.src' : ''}`);
     };
 
+    /**
+     * Where these values live, for an element drawn from them that is not one
+     * value — a card of the contacts, «Open now» from the hours, a form the
+     * diary keeps — as `data-jtk-from` (jtakeit-core wiki/111 §3.2): a block
+     * of the shared text `shared:blocks[hours]`, of another page
+     * `page:<id>:blocks[k]`, of this one `blocks[k]`; an entry `entry:<id>`; a
+     * module's settings `module:bookings`. Nothing for a row, for a document
+     * on its own page, or where annotation is off — and never typed in a
+     * template.
+     */
+    const from = () => {
+      if (!writable() || how.depth > 0) return {};
+      const place = `${how.prefix}${how.trail.replace(/\.$/, '')}`.replace(/:$/, '');
+      return place === '' ? {} : { 'data-jtk-from': place };
+    };
+
     return {
       text,
       value,
       field,
+      from,
       tappable: (key) => tappable(field(key)),
       minor: (key) => minorOf(values[key]),
       refs: (key) => resolved(field(key), values[key], how.locale ?? ''),
@@ -812,6 +829,10 @@ export function contract3(byPath, names, { annotate, now }) {
         specimen: doc.specimen,
         fields: reader(doc.fields, { prefix, trail: '', depth: 0, fields: collection?.fields ?? [], origin: doc.fieldsOrigin, locale: doc.language }),
         body: doc.body.map((values) => block(values, prefix, doc.bodyOrigin, doc.language)),
+        /** `data-jtk-from` naming the entry, `entry:<id>`, where it is drawn elsewhere (wiki/111 §3.2). */
+        from() {
+          return this.fields.from();
+        },
         fromBase: [...(doc.fromBase ?? [])],
         translated: doc.language === '' || doc.translated === true,
         get here() {

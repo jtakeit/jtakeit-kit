@@ -127,7 +127,7 @@ function priceText(one, currency, lang, words) {
 export function bookingForm(props) {
   const {
     services, resources = [], locale, daysAhead = 30, combine = false, currency = '', scale = '', kind = '',
-    api = '/api/', now = new Date(), open = [], ui = true,
+    api = '/api/', now = new Date(), open = [], ui = true, from = '',
   } = props;
   if (!Array.isArray(services)) throw new TypeError('bookingForm: services is a list of { slug, title }');
   const unsaid = kind !== '' && kind !== 'salon';
@@ -185,6 +185,9 @@ export function bookingForm(props) {
     // before the form could say so (12 October 2026).
     novalidate: 'novalidate',
     'data-jtk-fixed': '',
+    // Where it lives (wiki/111 §3.2): the diary's settings, `module:bookings`
+    // — a tap on the form opens them, and offers the services it books.
+    ...(from ? { 'data-jtk-from': from } : {}),
   };
 
   return {

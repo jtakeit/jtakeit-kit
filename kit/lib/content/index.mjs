@@ -93,14 +93,14 @@ import {
   treeFields,
 } from './groups.mjs';
 import { baseAddressOf, canonicalLocale, inLocale, languagesOf, localeArg, localeOfAddress, segmentOf, sharedLocaleOf } from './locale.mjs';
-import { byRank, factsOf, labelWords, minorOf, namesIn, specimenId, TAPPABLE, tappable } from './rules.mjs';
+import { annotatable, byRank, factsOf, labelWords, minorOf, namesIn, specimenId, TAPPABLE, tappable } from './rules.mjs';
 import { contract3 } from './contract3.mjs';
 
 export { shownAt, drawsPagedListing, linksToListing, canonicalLocale, sharedLocaleOf };
 export { DEEPEST, ancestors, capped, descendants, grouped, groupField, pointersInto, pointsAt, pointsAtAny, refHeadings, selectHeadings, treeFields } from './groups.mjs';
 // The platform's tappable kinds and where a specimen lives: rules.mjs, which
 // both contracts' readers ask.
-export { TAPPABLE, tappable, specimenId };
+export { TAPPABLE, tappable, annotatable, specimenId };
 // The merge of an original and its translation (wiki/98 §4.4): the one rule
 // the door serves a contract-3 page in another language by, for a tool or a
 // test that has one document to merge, and the fixture corpus it is held to.
@@ -301,6 +301,8 @@ export function content(files, options = {}) {
       text,
       value,
       field,
+      // Contract 2 names no source of a value (wiki/111 §3.2 is contract 3's grammar).
+      from: () => ({}),
       tappable: (key) => tappable(field(key)),
       minor: (key) => minorOf(values[key]),
       refs: (key) => resolved(field(key), values[key], how.locale ?? ''),

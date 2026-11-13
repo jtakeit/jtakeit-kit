@@ -397,6 +397,15 @@ try {
       if (!existsSync(join(example, 'dist/en/imprint/index.html'))) fail('9 · the example has no English imprint');
     // The values' counters are the rows' places as they stand in the page — a CSS counter, never a number in the markup —
     // so a row moved or added in the panel's preview is counted where it is (staging, 13 November 2026: «01 03 02»).
+    // A tap on everything (wiki/111 §3.1): each value of the address its own annotated span, the hours as their list,
+    // the card and «Open now» naming their source — and no warning of the platform's coming rule.
+    for (const must of ['data-jtk-path="shared:blocks[contacts].postal_code"', 'data-jtk-path="shared:blocks[contacts].city"', 'data-jtk-path="shared:blocks[contacts].phone"', 'data-jtk-path="shared:blocks[contacts].email"', 'data-jtk-path="shared:blocks[contacts].country"', 'data-jtk-path="shared:blocks[hours].rows"', 'data-jtk-from="shared:blocks[contacts]"', 'data-jtk-from="shared:blocks[hours]"']) {
+      if (!de.includes(must)) fail(`9 · the example's home page has no ${must}`);
+    }
+    {
+      const linted = spawnSync('node', [join(example, 'node_modules/@jtakeit/kit/bin/jtkit.mjs'), 'lint', '--dist', 'dist', '--root', '.'], { cwd: example, encoding: 'utf8' });
+      if (linted.stdout.includes('warning')) fail(`9 · the example earns the lint's warning:\n${linted.stdout}`);
+    }
     const values = /<ol class="values__list"[\s\S]*?<\/ol>/.exec(de)?.[0] ?? '';
     if (values === '' || /\b0[1-9]\b/.test(values.replace(/<[^>]+>/g, ' '))) fail('9 · the values carry their numbers in the markup');
     }

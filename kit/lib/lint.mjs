@@ -29,7 +29,7 @@ import { LOCAL } from './codes.mjs';
 import { content as door, TAPPABLE, tappable } from './content/index.mjs';
 import { unnamed } from './content/identity.mjs';
 import { collectContent, contractOf, readJtk } from './content/node.mjs';
-import { DOCUMENT_ID, ID, isObject, placesIn, pricePaths } from './places3.mjs';
+import { DOCUMENT_ID, ID, isObject, placesIn, pricePaths, widened3 } from './places3.mjs';
 
 export { CODES, said, pricePaths };
 
@@ -681,6 +681,36 @@ async function lint3({ root, distDir, siteURL, now }) {
     }
   }
 
+  // The platform's coming rule (jtakeit-core wiki/111 §3.3, E1): a phone, an
+  // email, a link, a choice, a date, a time, a number the owner edits is
+  // annotated where it is drawn too — said here as a warning, which refuses
+  // nothing, until the platform's gate is an error on contract 3.
+  const warnings = [];
+  {
+    const wide = placesIn(schema, sharedBlocks, { which: widened3 });
+    const warn = (says) => warnings.push({ code: CODES.UNANNOTATED_FIELD, says: `${says} (a warning until the platform's gate — wiki/111 E1)` });
+    for (const place of wide.blockPlaces(sharedBlocks, 'shared:')) {
+      if (!everywhere.includes(`data-jtk-path="${place}"`)) warn(`${place} is drawn on no page with its annotation`);
+    }
+    for (const page of pages) {
+      const html = htmlByPath.get(page.path);
+      if (html === undefined) continue;
+      for (const place of wide.blockPlaces(page.blocks)) if (!html.includes(`data-jtk-path="${place}"`)) warn(`${page.path}: ${place} is not annotated`);
+    }
+    for (const entry of entries) {
+      if (typeof entry.path === 'string') {
+        const html = htmlByPath.get(entry.path);
+        if (html === undefined) continue;
+        for (const place of wide.entryPlaces(entry)) if (!html.includes(`data-jtk-path="${place}"`)) warn(`${entry.path}: ${place} is not annotated`);
+        continue;
+      }
+      if (!entry.shown || !ID.test(entry.id ?? '')) continue;
+      for (const place of wide.entryPlaces(entry)) {
+        if (!everywhere.includes(`data-jtk-path="entry:${entry.id}:${place}"`)) warn(`${entry.anchor ?? entry.slug}: entry:${entry.id}:${place} is on no page`);
+      }
+    }
+  }
+
   const theBuilds = findings.length;
   const prices = priceFaults(htmlByPath, schema, site.currency);
   findings.push(...prices);
@@ -693,6 +723,7 @@ async function lint3({ root, distDir, siteURL, now }) {
   out.pages = pages.length;
   out.entries = entries.length;
   out.shared = sharedBlocks.length > 0;
+  out.warnings = warnings;
   return out;
 }
 
@@ -921,6 +952,7 @@ export async function lintCommand(options) {
     console.error(`  not published: ${withheld.join(', ')} — a path starting with a dot is never served (.well-known/ aside). It comes from the repository (usually public/): remove it there, and change any secret it held — it is in the history.`);
   }
   for (const one of out.findings) console.error('  ' + said(one.code, one.says));
+  for (const one of out.warnings ?? []) console.log(`  warning ${said(one.code, one.says)}`);
   if (out.line !== '') (out.ok ? console.log : console.error)('  ' + out.line);
   return out.ok ? 0 : 1;
 }

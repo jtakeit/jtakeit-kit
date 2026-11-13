@@ -90,7 +90,9 @@ interface Props {
 
 const { services, resources = [], locale, daysAhead = 30, combine = false, currency = site.currency, scale = '', kind = '', open = [], ui = true } = Astro.props;
 
-const form = bookingForm({ services, resources, locale, daysAhead, combine, currency, scale, kind, open, ui, api: under('/api/') });
+// Where the form lives, for a tap on it (contract 3; `{}` on contract 2): the diary's settings.
+const from = site.settings('bookings').from()['data-jtk-from'] ?? '';
+const form = bookingForm({ services, resources, locale, daysAhead, combine, currency, scale, kind, open, ui, api: under('/api/'), from });
 const w = form.words;
 ---
 

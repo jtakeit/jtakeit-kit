@@ -26,7 +26,13 @@ const W = frameWords(langOf(locale));
 const wordsLang = frameLang(langOf(locale));
 const shared = site.shared(locale).block('hours');
 const diary = site.rolesOf('bookings') !== undefined ? site.settings('bookings') : undefined;
-const rows = diary !== undefined && diary.rows('hours').length > 0 ? diary.rows('hours') : shared.rows('rows');
+const fromDiary = diary !== undefined && diary.rows('hours').length > 0;
+const rows = fromDiary ? diary.rows('hours') : shared.rows('rows');
+// What a tap on the hours opens (wiki/111 §3.1): the shared rows, as a list;
+// the diary's settings where the hours are the diary's. «Open now» is worked
+// out from them, and names them as its source.
+const listAt = fromDiary ? diary.from() : shared.at('rows');
+const nowFrom = fromDiary ? diary.from() : shared.from();
 
 type Day = (typeof DAYS)[number];
 const spansOf = (day: Day) =>
@@ -51,7 +57,7 @@ const note = shared.text('note');
 {
   (rows.length > 0 || note) && (
     <div class:list={['hours', extra]} data-hours={machine} data-days={rows.map((row) => row.value('day')).join(' ')}>
-      {rows.length > 0 && <dl class="hours__list">
+      {rows.length > 0 && <dl class="hours__list" {...listAt}>
         {runs.map((run) => (
           <div class="hours__row">
             <dt data-jtk-fixed lang={wordsLang}>
@@ -66,7 +72,7 @@ const note = shared.text('note');
           {note}
         </p>
       )}
-      <p class="hours__now label" data-hours-now data-open={W.openNow} data-closed={W.closedNow} data-jtk-fixed lang={wordsLang} hidden />
+      <p class="hours__now label" data-hours-now data-open={W.openNow} data-closed={W.closedNow} data-jtk-fixed {...nowFrom} lang={wordsLang} hidden />
     </div>
   )
 }

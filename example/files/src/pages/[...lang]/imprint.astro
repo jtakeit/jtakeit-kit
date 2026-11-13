@@ -31,8 +31,9 @@ const countryName = (() => {
     return country;
   }
 })();
-const lines = [facts.text('name'), facts.text('street'), [facts.text('postal_code'), facts.text('city')].filter(Boolean).join(' '), countryName].filter(Boolean);
-const reach = [facts.text('phone'), facts.text('email')].filter(Boolean);
+// Each value its own span, annotated with its field: a tap on «8000» opens the postcode (wiki/111 §3.1 · 2).
+const contacts = site.shared(locale).block('contacts');
+const one = (role: string) => ({ text: facts.text(role), at: facts.at(role) });
 const seo = (key: string): string => (typeof page.seo[key] === 'string' ? (page.seo[key] as string) : '');
 const alternates = site.alternatesOf(page);
 const languages = site.languagesOf(page);
@@ -42,9 +43,17 @@ const languages = site.languagesOf(page);
   <main id="content" class="legal">
     <div class="legal__in">
       {block.text('title') && <h1 {...block.at('title')} {...block.lang('title')}>{block.text('title')}</h1>}
-      <address class="legal__who">
-        {lines.map((line) => (line === facts.text('street') ? <span {...facts.at('street')}>{line}</span> : line === countryName ? <span data-country={country} data-jtk-fixed>{line}</span> : <span data-jtk-fixed>{line}</span>))}
-        {reach.map((line) => <span data-jtk-fixed>{line}</span>)}
+      <address class="legal__who" {...facts.from()}>
+        {one('name').text && <span {...one('name').at}>{one('name').text}</span>}
+        {one('street').text && <span {...one('street').at}>{one('street').text}</span>}
+        {(one('postal_code').text || one('city').text) && (
+          <span>
+            {one('postal_code').text && <span {...one('postal_code').at}>{one('postal_code').text}</span>} {one('city').text && <span {...one('city').at} {...contacts.lang('city')}>{one('city').text}</span>}
+          </span>
+        )}
+        {countryName && <span data-country={country} {...facts.at('country')}>{countryName}</span>}
+        {one('phone').text && <span {...one('phone').at}>{one('phone').text}</span>}
+        {one('email').text && <span {...one('email').at}>{one('email').text}</span>}
       </address>
       {block.text('body') && <p class="legal__body" {...block.at('body')} {...block.lang('body')}>{block.text('body')}</p>}
     </div>
