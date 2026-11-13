@@ -504,7 +504,7 @@ export const BLOCKS: Block[] = [
         seo_sensitive: true,
       },
       { key: 'cta_label', label: 'Button text', kind: 'text', max: 40, client_editable: true },
-      { key: 'cta_href', label: 'Button link', kind: 'url', no_tap_target: true },
+      { key: 'cta_href', label: 'Button link', kind: 'url', no_tap_target: true, beside: 'cta_label' },
       { key: 'image', label: 'Photograph', kind: 'media', client_editable: true },
       {
         key: 'image_alt',
@@ -539,7 +539,7 @@ export const BLOCKS: Block[] = [
       { key: 'title', label: 'Heading', kind: 'text', required: true, max: 80, client_editable: true },
       { key: 'lead', label: 'Subheading', kind: 'textarea', max: 240, client_editable: true },
       { key: 'cta_label', label: 'Button text', kind: 'text', max: 40, client_editable: true },
-      { key: 'cta_href', label: 'Button link', kind: 'url', no_tap_target: true },
+      { key: 'cta_href', label: 'Button link', kind: 'url', no_tap_target: true, beside: 'cta_label' },
       { key: 'form', label: 'Show the form', kind: 'bool', no_tap_target: true },
 
       /*
