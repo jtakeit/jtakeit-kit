@@ -7,16 +7,47 @@ build failure and swapping one never requires touching a page.
 Template: `src/lib/photos.ts` and
 `src/components/Shot.astro`.
 
-## Slots, not paths
+## Two homes, by who changes the picture
 
 ```
-src/assets/<slot>.<ext>   →  src/lib/photos.ts (import.meta.glob, eager)  →  <Shot name="hero" />
+a picture a field names   →  the site's media library   →  { "src": "media/<site>/<hash>.jpg", "alt": "…" }
+a picture the code draws  →  src/assets/<slot>.<ext>    →  <Shot name="texture-linen" />
 ```
 
-The file name is the slot. Any of `jpg jpeg png webp avif`, case-insensitive;
-first match wins, so `hero.jpg` and `hero.webp` cannot fight over one slot.
-Replacing a photo is dropping a file with the same name and rebuilding — no code
-change, no page edit.
+**A picture the owner may change lives in the site's media library** — the
+hero photograph, a portrait, a gallery, an entry's cover, a post's pictures, a
+clip and its poster, an SEO picture, a picture in a module's settings. Every
+value of a `media` field and every picture in an entry's body is a key of that
+library (jtakeit-core wiki/108). The owner sees each one there, places it again
+elsewhere, and goes back to it after replacing it. The platform refuses a slot
+in a field on contract 3 (`JTK_E_MEDIA_NOT_LIBRARY`, after one release of
+advice as `JTK_W_MEDIA_IN_CODE`).
+
+**A picture the code draws and nobody edits stays in the code**: a texture, a
+shape behind a heading, a decorative background, the logo baked into the
+layout. That is a slot: the file name in `src/assets` is its name. Any of `jpg
+jpeg png webp avif`, case-insensitive; first match wins, so `hero.jpg` and
+`hero.webp` cannot fight over one slot.
+
+**While you design, a field may name a slot** — `atelier-raum` for
+`src/assets/atelier-raum.jpg` — as a working name. Before the push, one command
+puts them all in the library ([media.md](media.md)):
+
+```bash
+# media_link (the MCP tool) gives the URL; quote it
+npx @jtakeit/astro media push '<url>' _photos/
+```
+
+It uploads every file a field or a body names and every file under `_photos/`,
+writes each key over its slot, keeps the words, and moves the files nothing in
+the code names any more to `.jtakeit/adopted/` (never deleted). A key is never
+typed by hand: it is written by the push, or copied from the library's index
+(`npx @jtakeit/astro media pull '<url>'` → `.jtakeit/media.json`).
+
+`<Shot>` and `photo()` resolve a slot and a key through the same door, so a
+component never needs to know which it was given. A key's file is in
+`src/assets/media/` (git-ignored): the build downloads it there, and on a laptop
+`jtk media push`, `jtk pull`, `jtk media pull` or the dev server put it there.
 
 **A missing file must never break the build.** `photo()` returns `undefined` and
 `<Shot>` renders a labelled placeholder that keeps the frame's aspect ratio, so
@@ -58,12 +89,12 @@ const portrait = picture(of, at, 'portrait');
 <Shot name={portrait.name} alt={portrait.alt} path={portrait.path} ratio="4 / 5" />
 ```
 
-The value in the content document is **the slot the repository already ships** —
-`artist-at-work` — so the page looks exactly as it did, and the owner replaces
-it when they want to. `<Shot>` resolves a slot and an uploaded key through the
-same door, so what lands afterwards falls into the same frame.
+The value in the content document is **a key of the site's library** —
+`media/<site>/<hash>.jpg` — written there by `jtk media push` from the slot you
+designed with, so the page looks exactly as it did, and the owner replaces it
+when they want to. Whatever they choose lands in the same frame.
 
-`picture()` returns the slot, its words and its `data-jtk-path` together, and the
+`picture()` returns the key, its words and its `data-jtk-path` together, and the
 path is the half that cannot be skipped: without it the photograph is on the
 page and nothing happens when the owner taps it. `jtkit lint` fails the
 build for exactly that, and `<Shot path={...}>` puts it on the `<img>` — never
@@ -73,14 +104,18 @@ and an element that is not an image gets its *text* replaced instead.
 A gallery is the other shape of the same rule — one field holding many, each
 item with its own alt. See [gallery.md](gallery.md).
 
-## Alt text is registered, not improvised
+## Alt text is written, not improvised
 
-(For a picture that is a field, the alt text is a sibling `<key>_alt` field and
-the content document is what the page reads. The registry below still describes
-the files, and is what a picture rendered straight from `src/assets` uses.)
+A picture's words are in its field: `{ "src": "…", "alt": "…" }` — and in the
+library, as the file's own words, which a picture placed from the library takes
+until its field says its own. `jtk media push` gives the library the field's
+words for a file that has none, and an empty field the library's; **it never
+overwrites words somebody wrote** — the owner's in the library, or a field's.
 
-Every slot is registered in `photos.ts` with alt text in the site's language and
-a category. A photo with no alt is announced by its file name. Alt text is
+`PHOTOS` in `photos.ts` registers the design's pictures by slot, with words in
+the site's language. A slot a field named and the push adopted gives its
+registered words to the field and the library where they had none; its entry
+can then go. A photo with no alt is announced by its file name. Alt text is
 written from what is actually in the frame; it does not repeat the caption and
 it does not sell.
 
@@ -108,22 +143,26 @@ attribute being used to pass the check rather than to describe anything.
 
 ## Scale
 
-`src/assets/` is web scale: long side ≤ 1600px. Astro emits the source file
-alongside the generated variants, so a 26MB camera JPEG ships 26MB whether or
-not a browser ever asks for it — and it will be the reason mobile Lighthouse is
-at 71.
+The library keeps a picture at **2 400 px on its long side**, without its
+metadata (the street a phone wrote into it): `jtk media push` scales a larger
+one before it sends it, as the panel does, and the platform's intake does the
+rest. A file is at most 8 MB; a clip is cut first (`jt-clips`).
+
+The design's own pictures in `src/assets/` are web scale too: long side ≤
+1600px. Astro emits the source file alongside the generated variants, so a 26MB
+camera JPEG ships 26MB whether or not a browser ever asks for it — and it will
+be the reason mobile Lighthouse is at 71.
 
 Camera-scale originals live in `_photos-original/`, which nothing imports and
-which stays out of the repository. Hand them to the client separately if
-they want them.
+which stays out of the repository. The photographs for the site go to
+`_photos/`, and from there to the library.
 
 ```bash
 # ffmpeg is already a requirement and behaves the same everywhere:
 for f in _photos-original/*.jpg; do
-  ffmpeg -loglevel error -y -i "$f" -vf "scale='min(1600,iw)':-2" "src/assets/$(basename "$f")"
+  ffmpeg -loglevel error -y -i "$f" -vf "scale='min(2400,iw)':-2" "_photos/$(basename "$f")"
 done
-
-sips -Z 1600 _photos-original/*.jpg --out src/assets/      # macOS shortcut
+npx @jtakeit/astro media push '<url>' _photos/
 ```
 
 ## Measure the photograph before you frame it

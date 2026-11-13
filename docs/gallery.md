@@ -103,17 +103,18 @@ That last one is not optional — without it the owner sees their work and canno
 touch it, and `jtk schema` fails on exactly that. A gallery is the longest
 list on the site to have to fix afterwards.
 
-**A picture is either the repository's or the owner's, and `<Shot>` resolves
-both.** An item's `src` is a slot name — `work-dragon`, a file in `src/assets` —
-or a key like `media/<site>/<hash>.jpg` that somebody uploaded in the admin. The
+**A gallery's pictures are the library's.** An item's `src` is a key like
+`media/<site>/<hash>.jpg` — written by `jtk media push` over the slot name you
+designed with (`work-dragon`, a file in `src/assets`), or uploaded by the owner
+in the admin ([media.md](media.md)); `<Shot>` resolves both. The
 build downloads the keys into `src/assets/` before it runs, so both go through
 `astro:assets` and come out with variants and a `srcset`. Nothing on the page
 has to know which it was given, which is the point: a photograph the owner
 swapped in lands in exactly the frame the developer's was in.
 
-That is also what lets a bespoke site be pushed with its work already in it. The
-first content document names the slots the repository ships; the owner replaces
-them one at a time, or not at all.
+That is also what lets a bespoke site be pushed with its work already in it:
+`jtk media push '<url>' _photos/` puts the shoot in the library, the gallery
+names the keys, and the owner replaces them one at a time, or not at all.
 
 ### The clips
 
