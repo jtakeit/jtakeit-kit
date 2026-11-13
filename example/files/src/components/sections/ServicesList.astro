@@ -7,9 +7,12 @@
  *
  * Each row is its entry, annotated as drawn on this page (`entry:<id>:title`),
  * and carries the entry's anchor (`#services-<slug>`), which is where the
- * collection says its entries are shown (`shown_on`). On the home page the
- * block's `limit` cuts the ledger short and its `more_label` leads to the
- * whole list at /services; on /services the block has no limit.
+ * collection says its entries are shown (`shown_on`). On the home page a
+ * `services_list` block's `limit` cuts the ledger short and its `more_label`
+ * leads to the whole list at /services; /services draws every service through
+ * `services_all`, which has neither — a field the page never draws would be
+ * one the owner fills for nothing, so a `more_label` that is filled is always
+ * drawn.
  *
  * The collection's fields are the salon kit's names, `takes` and `costs`, so
  * `jtk add booking` keeps these entries as the diary's price list.
@@ -39,7 +42,6 @@ const length = (minutes: number): string => {
   return new Intl.NumberFormat(langOf(locale), { style: 'unit', unit, unitDisplay: 'long' }).format(n);
 };
 const listedAt = site.shownOn('services', locale) ?? withLocale(locale, '/services');
-const here = Astro.url.pathname.replace(/\/$/, '') === linkTo(listedAt).replace(/\/$/, '');
 const headed = block.text('eyebrow') || block.text('title') || block.text('lead');
 ---
 
@@ -82,7 +84,7 @@ const headed = block.text('eyebrow') || block.text('title') || block.text('lead'
     </ul>
 
     {
-      block.text('more_label') && !here && (
+      block.text('more_label') && (
         <p class="ledger__more">
           <Button href={linkTo(listedAt)} label={block.text('more_label')} at={block.at('more_label')} lang={block.lang('more_label')} quiet />
         </p>

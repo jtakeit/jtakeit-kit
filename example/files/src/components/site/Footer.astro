@@ -42,7 +42,7 @@ const countryName = (() => {
 const phone = facts.text('phone');
 const email = facts.text('email');
 const maps = facts.text('maps');
-const social = facts.rows('social').map((row) => row.text('url')).filter(Boolean);
+const social = facts.rows('social').filter((row) => row.text('url') !== '');
 const nameOfLink = (url: string): string => {
   try {
     const host = new URL(url).hostname.replace(/^www\./, '').split('.')[0];
@@ -75,11 +75,11 @@ const tagline = footer.text('tagline');
     <div class="foot__card glass">
       <div class="foot__col">
         <p class="label" data-jtk-fixed lang={wordsLang}>{W.address}</p>
-        <address class="foot__addr" data-jtk-fixed>
-          <strong>{name}</strong>
-          {street && <span>{street}</span>}
-          {place && <span>{place}</span>}
-          {countryName && <span data-country={country}>{countryName}</span>}
+        <address class="foot__addr">
+          <strong data-jtk-fixed>{name}</strong>
+          {street && <span {...facts.at('street')}>{street}</span>}
+          {place && <span data-jtk-fixed>{place}</span>}
+          {countryName && <span data-country={country} data-jtk-fixed>{countryName}</span>}
         </address>
         {maps && (
           <a class="foot__link" href={maps} rel="noopener" target="_blank" data-jtk-fixed lang={wordsLang}>
@@ -101,12 +101,18 @@ const tagline = footer.text('tagline');
         </p>
         {
           social.length > 0 && (
-            <p class="foot__social" data-jtk-fixed>
-              {social.map((url) => (
-                <a href={url} rel="noopener me" target="_blank">
-                  {nameOfLink(url)} ↗
-                </a>
-              ))}
+            <p class="foot__social">
+              {social.map((row) =>
+                row.text('label') ? (
+                  <a href={row.text('url')} rel="noopener me" target="_blank">
+                    <span {...row.at('label')} {...row.lang('label')}>{row.text('label')}</span> ↗
+                  </a>
+                ) : (
+                  <a href={row.text('url')} rel="noopener me" target="_blank" data-jtk-fixed>
+                    {nameOfLink(row.text('url'))} ↗
+                  </a>
+                ),
+              )}
             </p>
           )
         }
