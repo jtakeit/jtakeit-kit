@@ -1,8 +1,8 @@
 import { execFile } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { join, relative, sep } from 'node:path';
+import { dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { content } from '@jtakeit/kit/content';
 import { contractOf, readJtk } from '@jtakeit/kit/content/node';
@@ -189,6 +189,77 @@ function filesUnder(dir, from = dir) {
     .sort();
 }
 
+/**
+ * ── the library's pictures, on the dev server ───────────────────────────────
+ *
+ * A picture a field names is a key of the site's media library,
+ * `media/<site>/<hash>.jpg` (jtakeit-core wiki/108). The build downloads every
+ * key the content names into `src/assets/media/` before it runs, so that a
+ * picture from the library goes through `astro:assets` as one from the
+ * repository does (src/lib/uploads.ts). On a laptop, `jtk pull` and
+ * `jtk media pull` do the same. This is the third way, so a copy nobody
+ * pulled draws its pictures anyway: under `astro dev` only, every key the
+ * content names that has no file here is fetched from `media_base` of
+ * `jtk/site.json` — the public host the build reads, no token — into the
+ * place the build would put it, a picture in an entry's body beside the
+ * entry. Vite sees the file arrive and the page draws it; until then it is
+ * the placeholder. Again whenever a file under jtk/ changes: a photograph
+ * the owner placed in the panel since arrives with the next pull.
+ *
+ * A static build never does this: it fetches in the platform's pipeline, or
+ * draws the placeholder, as it always has. The files are git-ignored.
+ */
+const KEY = /(?:\.\/)?(media\/[A-Za-z0-9-]+\/[0-9a-f]{8,64}\.[a-z0-9]{2,5})/g;
+
+async function libraryPictures(root, logger) {
+  let base;
+  try {
+    base = JSON.parse(await readFile(join(root, 'jtk', 'site.json'), 'utf8')).media_base;
+  } catch {
+    return;
+  }
+  if (typeof base !== 'string' || base === '') return;
+  if (!base.endsWith('/')) base += '/';
+  const wanted = new Map();
+  const want = (key, path) => wanted.set(key, (wanted.get(key) ?? new Set()).add(path));
+  for (const file of filesUnder(join(root, 'jtk'))) {
+    if (!file.endsWith('.json') || file.split('/').includes('media') || file === 'session.json') continue;
+    let text;
+    try {
+      text = await readFile(join(root, 'jtk', file), 'utf8');
+    } catch {
+      continue;
+    }
+    for (const match of text.matchAll(KEY)) {
+      const beside = match[0].startsWith('./') && /^(entries|content)\//.test(file);
+      want(match[1], beside ? join('jtk', dirname(file), match[1]) : join('src', 'assets', match[1]));
+    }
+  }
+  let fetched = 0;
+  const failed = [];
+  for (const [key, paths] of wanted) {
+    const absent = [...paths].filter((path) => !existsSync(join(root, path)));
+    if (absent.length === 0) continue;
+    try {
+      const answer = await fetch(base + key);
+      if (!answer.ok) {
+        failed.push(`${key} (${answer.status})`);
+        continue;
+      }
+      const data = Buffer.from(await answer.arrayBuffer());
+      for (const path of absent) {
+        await mkdir(dirname(join(root, path)), { recursive: true });
+        await writeFile(join(root, path), data);
+      }
+      fetched += 1;
+    } catch {
+      failed.push(key);
+    }
+  }
+  if (fetched > 0) logger.info(`${fetched} picture(s) of the media library fetched from ${base} into src/assets/media/ (git-ignored)`);
+  if (failed.length > 0) logger.warn(`not on ${base}: ${failed.slice(0, 3).join(', ')}${failed.length > 3 ? ` +${failed.length - 3} more` : ''} — drawn as placeholders`);
+}
+
 function buildFacts(root) {
   const resolved = `\0${BUILD_MODULE}`;
   return {
@@ -333,6 +404,21 @@ export function jtakeitMeta() {
           };
           server.watcher.on('change', declared);
           server.watcher.on('add', declared);
+        }
+        // The library's pictures the content names and this copy lacks
+        // (`libraryPictures` above): now, and after each change under jtk/.
+        {
+          const root = process.cwd();
+          let timer;
+          const fetchAgain = () => libraryPictures(root, logger).catch(() => {});
+          fetchAgain();
+          const changed = (file) => {
+            if (!file.startsWith(join(root, 'jtk') + sep) || !file.endsWith('.json')) return;
+            clearTimeout(timer);
+            timer = setTimeout(fetchAgain, 500);
+          };
+          server.watcher.on('change', changed);
+          server.watcher.on('add', changed);
         }
         // `/_jtk/state.json`: both halves for the page's own card — the
         // reading above, and the platform's answer through the dev session

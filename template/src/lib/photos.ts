@@ -4,12 +4,21 @@ import { isUpload, uploaded } from './uploads';
 /**
  * The site's photographs.
  *
- * The file name in src/assets is the slot: replacing a photo is dropping a file
- * with the same name and rebuilding — no code change, no page edit.
+ * **A picture the owner may change is a field, and its value is a key of the
+ * site's media library** — `{ "src": "media/<site>/<hash>.jpg", "alt": "…" }`
+ * (jtakeit-core wiki/108). While a site is designed, a field may name a
+ * slot — a file in src/assets by its name, `atelier-raum` for
+ * `src/assets/atelier-raum.jpg` — as a working name:
+ * `npx @jtakeit/astro media push '<url>'` (the URL is `media_link`'s) uploads
+ * it, writes its key over the slot, keeps its words, and moves the file out of
+ * src/assets once nothing in the code names it. The platform refuses a slot in
+ * the content on contract 3 (`JTK_E_MEDIA_NOT_LIBRARY`, after one release of
+ * advice).
  *
- * Every slot is registered here with alt text in the site's language, because a
- * photo with no alt text is a photo a screen reader announces as its file name,
- * and these sites are mostly photographs.
+ * What stays a slot is the design's: a picture the code draws by name and
+ * nobody edits — a texture, a background, a mark. `PHOTOS` registers those,
+ * with their words in the site's language; a content picture's words are in
+ * its field and in the library, where the push put them.
  *
  * **A missing file is never a build error.** `photo()` returns undefined and
  * `<Shot>` renders a labelled placeholder that keeps the frame's proportions.
