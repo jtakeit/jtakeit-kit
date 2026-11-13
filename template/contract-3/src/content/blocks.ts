@@ -106,6 +106,18 @@ import type { Block, Collection, Field, Modules, Text } from '@jtakeit/kit/schem
 /** This declaration is contract 3's: `jtk schema` writes it, `jtk catalogue` writes nothing for it. */
 export const CONTRACT = 3;
 
+/**
+ * This template draws a page the same way from a draft at request time as
+ * from its files at build time (src/live/, src/lib/site.ts), so the panel may
+ * show the owner a saved field in the preview at once, rather than after a
+ * build. `jtk schema` writes it as `render: "live"`. The platform checks the
+ * word at every build — it renders a few pages live and compares them with
+ * the built ones — and shows the build where they differ, saying why; what is
+ * published is always the build. Take the line out if the site's own pages
+ * read content in a way a server cannot (docs/live.md).
+ */
+export const RENDER = 'live';
+
 export type { Text };
 
 /**

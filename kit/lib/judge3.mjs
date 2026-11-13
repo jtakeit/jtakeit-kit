@@ -140,7 +140,7 @@ const MODULES = new Map([
 // ── the keys contract 3 has (`contract3.go`, its wire types) ───────────────
 
 const KEYS = {
-  schema: ['contract', 'generator', 'blocks', 'page_seo', 'collections', 'modules', 'locale', 'locales', 'shared'],
+  schema: ['contract', 'generator', 'blocks', 'page_seo', 'collections', 'modules', 'locale', 'locales', 'shared', 'render'],
   block: ['type', 'v', 'label', 'hint', 'fields', 'views', 'collects', 'asks', 'photos'],
   view: ['key', 'label', 'min', 'max', 'ratio', 'needs_build'],
   field: [
@@ -439,6 +439,7 @@ function decode(top) {
     locale: str(top.locale, 'locale'),
     locales: strings(top.locales, 'locales'),
     shared: strings(top.shared, 'shared'),
+    render: str(top.render, 'render'),
   };
 }
 
@@ -1282,6 +1283,8 @@ export function judgeSchema(raw) {
   if (reg.generator !== '' && !generatorRe.test(reg.generator)) j.say(E.GENERATOR, 'generator', `${q(reg.generator)} does not name a generator`);
   if (reg.blocks.length === 0) j.say(E.SCHEMA_EMPTY, 'blocks', 'a schema with no blocks describes nothing');
   if (reg.locale === '') j.say(E.LOCALE, 'locale', 'contract 3 names the site\'s own language — "locale": "de" — and the site takes it from here (wiki/98 §3.1)');
+  // `render`: "live", or absent (wiki/89 §12) — `RENDER` in the scaffold's template.
+  if (file.render !== '' && file.render !== 'live') j.say(E.ATTRIBUTE, 'render', `render is ${q(file.render)} — "live" says the template draws a draft live, and absent says it does not`);
   const seen = new Set();
   for (const block of reg.blocks) validateBlock(j, block, seen);
   validateFields(j, 'page_seo', reg.pageSEO, 2);

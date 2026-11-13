@@ -1,8 +1,11 @@
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
 import { getEntry, render } from 'astro:content';
+import { createComponent, renderTemplate, unescapeHTML } from 'astro/runtime/server/index.js';
+import { createSatteriMarkdownProcessor } from '@astrojs/markdown-satteri';
 import { drawsPagedListing, type Collection, type Entry } from '@jtakeit/kit/content';
-import { storeId } from './entryLoader';
+import { draft, fromBucket } from '@jtakeit/kit/live';
+import { PAGE_FILES } from 'virtual:jtk/build';
+import { HAST_PLUGINS } from '../../markdown.mjs';
+import { sourceOf, storeId } from './entryLoader';
 import { site } from './site';
 import { under } from './under';
 
@@ -36,9 +39,36 @@ export type { Collection, Entry };
  */
 export async function bodyOf(entry: Entry): Promise<{ Content: Awaited<ReturnType<typeof render>>['Content']; texts: Record<number, string> }> {
   const stored = await getEntry('jtk', storeId(entry));
+  // A draft rendered live (src/lib/site.ts): the body the build rendered
+  // where the draft's words are the build's, and drawn now where they are
+  // not — an entry added since, or its words changed.
+  if (draft() !== undefined && (stored === undefined || (stored.data as { source?: string }).source !== sourceOf(entry))) return drawnNow(entry);
   if (stored === undefined) throw new Error(`${entry.collection}: ${entry.slug} (${entry.locale || 'the site’s own language'}) was not loaded — see src/lib/entryLoader.ts`);
   const { Content } = await render(stored);
   return { Content, texts: ((stored.data as { texts?: Record<number, string> }).texts ?? {}) };
+}
+
+/**
+ * An entry's body drawn at request time, by the pipeline the loader renders
+ * it with (`markdown.mjs`): under the panel's live preview only, for words no
+ * build has rendered. A picture in it is the bucket's file as it is, where a
+ * build would have fetched and optimised it (`fromBucket`).
+ */
+let pipeline: ReturnType<typeof createSatteriMarkdownProcessor> | undefined;
+async function drawnNow(entry: Entry): Promise<{ Content: Awaited<ReturnType<typeof render>>['Content']; texts: Record<number, string> }> {
+  pipeline ??= createSatteriMarkdownProcessor({ hastPlugins: HAST_PLUGINS });
+  const renderer = await pipeline;
+  const pictures = (markdown: string) => markdown.replace(/(\]\()\.?\/?(media\/[^)\s]+)/g, (whole, open: string, key: string) => `${open}${fromBucket(key) ?? key}`);
+  const value = entry.fields.value('body');
+  const { code } = await renderer.render(pictures(typeof value === 'string' ? value : ''), { frontmatter: {} });
+  const texts: Record<number, string> = {};
+  for (const [at, block] of entry.body.entries()) {
+    if (block.type !== 'text') continue;
+    const prose = block.value('body');
+    texts[at] = (await renderer.render(typeof prose === 'string' ? prose : '', { frontmatter: {} })).code;
+  }
+  const Content = createComponent(() => renderTemplate`${unescapeHTML(code)}`);
+  return { Content: Content as unknown as Awaited<ReturnType<typeof render>>['Content'], texts };
 }
 
 /**
@@ -114,20 +144,17 @@ export function titleOf(entry: Entry): { text: string; at: { 'data-jtk-path'?: s
  * Whether the repository wrote a listing page of its own at a collection's
  * prefix — `src/pages/[...lang]/blog/index.astro` for `/blog`, or
  * `src/pages/works.astro` for `/works` — which the scaffold's then leaves
- * alone. Read off the files, at build time, so writing one is the whole of
+ * alone. Read off the files the build found, so writing one is the whole of
  * taking a listing over.
  */
 export function ownListing(collection: Collection): boolean {
   const listing = site.listingOf(collection.name, '');
   if (listing === undefined) return false;
   const at = listing.replace(/^\//, '');
-  const pages = join(process.cwd(), 'src', 'pages');
-  return [
-    join(pages, '[...lang]', at, 'index.astro'),
-    join(pages, '[...lang]', `${at}.astro`),
-    join(pages, at, 'index.astro'),
-    join(pages, `${at}.astro`),
-  ].some((file) => existsSync(file));
+  // The files of src/pages, as the build found them (jtakeit-meta.mjs): read
+  // off the disk while a page rendered, they were there only where the
+  // renderer ran in the checkout (jtakeit-core wiki/89 §9.2).
+  return [`[...lang]/${at}/index.astro`, `[...lang]/${at}.astro`, `${at}/index.astro`, `${at}.astro`].some((file) => PAGE_FILES.includes(file));
 }
 
 /**

@@ -1,7 +1,7 @@
 // @ts-check
 import { env } from 'node:process';
 import { defineConfig } from 'astro/config';
-import { jtakeitMeta } from './jtakeit-meta.mjs';
+import { jtakeitMeta, liveRender } from './jtakeit-meta.mjs';
 import { satteri } from '@astrojs/markdown-satteri';
 import { IMAGE, HAST_PLUGINS } from './markdown.mjs';
 
@@ -31,7 +31,11 @@ const SITE = env.SITE_URL ?? '{{PREVIEW_URL}}';
  */
 const BASE = new URL(SITE).pathname;
 
-export default defineConfig({
+// `liveRender` hands this back as it is — except to the platform's second
+// build of a site whose schema says `render: "live"` (JTK_RENDER=live), which
+// it makes for a server, for the panel's live preview of the draft
+// (jtakeit-meta.mjs). What is published is the static build alone.
+export default defineConfig(await liveRender({
   site: SITE,
   base: BASE,
 
@@ -81,4 +85,4 @@ export default defineConfig({
     // sitemap both expect.
     format: 'directory',
   },
-});
+}));

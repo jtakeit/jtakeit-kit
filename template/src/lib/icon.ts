@@ -17,17 +17,24 @@
  * preflight says when the site still wears the monogram (docs/pages.md,
  * «The icon»).
  */
-import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import sharp from 'sharp';
+import { RASTER_MARK } from 'virtual:jtk/build';
 
-const PUBLIC = join(process.cwd(), 'public');
+/**
+ * Whether the mark is a picture rather than SVG — `Layout.astro` then links
+ * only the PNGs. As the build found `public/` (jtakeit-meta.mjs): the layout
+ * asks it of every page, and a page rendered on request — the panel's live
+ * preview — reads no disk (jtakeit-core wiki/89 §9.2).
+ */
+export { RASTER_MARK };
 
-/** Whether the mark is a picture rather than SVG — `Layout.astro` then links only the PNGs. */
-export const RASTER_MARK = existsSync(join(PUBLIC, 'icon.png'));
-
-/** The icon at `size`×`size`, as PNG bytes — an ArrayBuffer, which every TypeScript takes as a response body. */
+/**
+ * The icon at `size`×`size`, as PNG bytes — an ArrayBuffer, which every
+ * TypeScript takes as a response body. Drawn at build time only; sharp and
+ * the disk are reached for here, not when a page that links the icon renders.
+ */
 export async function iconPng(size: number): Promise<ArrayBuffer> {
+  const [{ existsSync, readFileSync }, { join }, { default: sharp }] = await Promise.all([import('node:fs'), import('node:path'), import('sharp')]);
+  const PUBLIC = join(process.cwd(), 'public');
   const source = RASTER_MARK ? join(PUBLIC, 'icon.png') : join(PUBLIC, 'favicon.svg');
   if (!existsSync(source)) {
     throw new Error('the site has no icon: public/favicon.svg or public/icon.png (src/lib/icon.ts)');

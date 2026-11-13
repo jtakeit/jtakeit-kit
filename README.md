@@ -127,7 +127,8 @@ refuses one that has not.
 
 The whole of it, with the reasons, is in [docs/](docs/): `kit.md` first, then
 `catalogue.md`, `pages.md`, `collections.md`, `lead-form.md`, `booking.md`,
-`photos.md`, and the rest as you need them. The platform's own reference —
+`photos.md`, and the rest as you need them — `live.md` for how the panel draws a
+saved draft at once. The platform's own reference —
 field kinds, modules, every error code — is what the MCP server hands an agent on
 `initialize`: `jtakeit:///` resources, starting with `jtakeit:///guides/start.md`.
 It is not published on the web yet.
