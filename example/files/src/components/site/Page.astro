@@ -1,0 +1,28 @@
+---
+/**
+ * A page of the content drawn by its sections, for a route that draws a page
+ * other than the home — the services' listing at /services
+ * (`[...listing].astro`, through src/lib/sections.ts): each block through the
+ * section its type has in `SECTIONS`, in the page's order. A block whose type
+ * has none is left to the template's plain listing.
+ */
+import type { Page } from '@jtakeit/kit/content';
+import { SECTIONS } from '../../lib/sections';
+import { localeOf } from '../../lib/locale';
+
+interface Props {
+  page: Page;
+}
+
+const { page } = Astro.props;
+const locale = localeOf(Astro.url.pathname);
+---
+
+{
+  page.blocks.map((block, at) => {
+    const Section = SECTIONS[block.type];
+    if (Section === undefined) return null;
+    const first = page.blocks.findIndex((one) => one.type === block.type) === at;
+    return <Section block={block} page={page} locale={locale} first={first} contact={false} />;
+  })
+}

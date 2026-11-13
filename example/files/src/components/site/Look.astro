@@ -1,0 +1,30 @@
+---
+/**
+ * The look, in the head: the three typefaces, the tokens and what is made of
+ * them. Drawn by Layout.astro where this file is (src/lib/sections.ts).
+ *
+ * The fonts are this site's own files — `@fontsource/*`, SIL Open Font
+ * License 1.1, exact versions in package.json — served with the build, never
+ * from Google's servers: a font fetched from there hands the visitor's
+ * address to a third party before anybody asked them (LG München I, 20
+ * January 2022, 3 O 17493/20). Two weights are preloaded, the heading's and
+ * the text's, so the first screen is not drawn twice.
+ *
+ * Adapting the design: replace tokens.css, and these imports with the brief's
+ * typefaces (another `@fontsource` package, added to the scaffold's lockfile).
+ */
+import '@fontsource/space-grotesk/500.css';
+import '@fontsource/space-grotesk/600.css';
+import '@fontsource/space-grotesk/700.css';
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/jetbrains-mono/500.css';
+import '../../styles/tokens.css';
+import '../../styles/look.css';
+import display from '@fontsource/space-grotesk/files/space-grotesk-latin-600-normal.woff2?url';
+import text from '@fontsource/inter/files/inter-latin-400-normal.woff2?url';
+---
+
+<link rel="preload" href={display} as="font" type="font/woff2" crossorigin />
+<link rel="preload" href={text} as="font" type="font/woff2" crossorigin />
+<meta name="theme-color" content="#f8f7f4" />

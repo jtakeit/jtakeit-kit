@@ -1,0 +1,99 @@
+---
+/**
+ * What people said, as quotations: the words large, the name and a line
+ * under each — no stars and no rating. The example's are signed «an
+ * example», because a review nobody wrote is the one leftover that could do
+ * harm: replace them with real ones, with their source, or `jtk remove
+ * testimonials`.
+ */
+import type { Block } from '@jtakeit/kit/content';
+
+interface Props {
+  block: Block;
+  first?: boolean;
+}
+
+const { block, first = false } = Astro.props;
+const items = block.rows('items');
+---
+
+<section class="s quotes" id={first ? 'testimonials' : undefined}>
+  <div class="s__in">
+    <div class="s__head">
+      {block.text('eyebrow') && <p class="label label--accent" {...block.at('eyebrow')} {...block.lang('eyebrow')}>{block.text('eyebrow')}</p>}
+      {block.text('title') && <h2 class="s__title" {...block.at('title')} {...block.lang('title')}>{block.text('title')}</h2>}
+    </div>
+    {
+      items.length > 0 && (
+        <ul class="quotes__list">
+          {items.map((row) => (
+            <li class="quotes__one glass">
+              <svg class="quotes__mark" width="34" height="26" viewBox="0 0 34 26" aria-hidden="true">
+                <path d="M0 26V15.2C0 6.6 4.4 1.5 13.1 0l1.6 3.6C9.7 5 7.4 8 7.2 12.4h6.4V26H0Zm19.3 0V15.2C19.3 6.6 23.7 1.5 32.4 0L34 3.6c-5 1.4-7.3 4.4-7.5 8.8h6.4V26H19.3Z" fill="currentColor" />
+              </svg>
+              {row.text('quote') && (
+                <blockquote class="quotes__words">
+                  <p {...row.at('quote')} {...row.lang('quote')}>{row.text('quote')}</p>
+                </blockquote>
+              )}
+              <p class="quotes__who">
+                {row.text('name') && <span class="quotes__name" {...row.at('name')} {...row.lang('name')}>{row.text('name')}</span>}
+                {row.text('detail') && <span class="quotes__detail label" {...row.at('detail')} {...row.lang('detail')}>{row.text('detail')}</span>}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </div>
+</section>
+
+<style>
+  .quotes__list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(19rem, 100%), 1fr));
+    gap: clamp(1rem, 2vw, 1.5rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .quotes__one {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: var(--space-5);
+    padding: clamp(1.5rem, 3vw, 2.25rem);
+    border-radius: var(--r-4);
+  }
+
+  .quotes__mark {
+    color: var(--accent);
+  }
+
+  .quotes__words {
+    margin: 0;
+  }
+
+  .quotes__words p {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    font-weight: 500;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+  }
+
+  .quotes__who {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.4rem 0.75rem;
+    margin: 0;
+    padding-block-start: var(--space-4);
+    border-block-start: 1px solid var(--line);
+  }
+
+  .quotes__name {
+    font-weight: 600;
+  }
+</style>

@@ -26,10 +26,14 @@ sentence a visitor reads lives in one copy module — `src/copy/<locale>.ts` or
 script is passed through a `data-*` attribute, never hardcoded. This is what
 makes a round of revisions a series of one-line edits instead of a grep.
 
-**Facts live in `src/data/site.ts`.** Name, address in parts, both forms of the
-phone number, email, socials, price range, map link. Rendered from there
-everywhere, so the number a visitor reads and the number a phone dials cannot
-drift apart, and structured data cannot disagree with the footer.
+**Facts live in the shared text.** On contract 3 the business's name, address in
+parts, phone, email, map link and profiles are the `contacts` block of
+`jtk/shared.json`, each field with its `role`, which the owner corrects in the
+panel; the layout reads them by role (`site.facts(locale)`) for the head, the
+structured data, the header, the footer and the imprint, and `src/data/site.ts`
+only where a role is empty (contract 2 reads every fact from there). One place,
+so the number a visitor reads and the number a phone dials cannot drift apart,
+and the structured data cannot disagree with the footer.
 
 **The page works with JavaScript off.** Text, photos, layout and navigation are
 static HTML. The form posts to its endpoint and gets a plain HTML answer back.
@@ -51,10 +55,11 @@ there is no second place to forget.
 **A collection is added only when it was asked for.** A blog, a portfolio, a
 price list — a set of entries the owner keeps adding to — is a standing weekly
 obligation on somebody who did not ask for one, and an empty one on a live page
-says the business stopped caring. The scaffold declares none, and that is the
-right state for almost every site. The bar is a sentence in the brief that names
-it; not a vertical it would suit, not room in the design, not "for later". See
-[collections.md](collections.md).
+says the business stopped caring. The example site declares two, `services` and
+`team`, and the brief decides which stay (`npx @jtakeit/astro remove team`);
+beyond them the bar is a sentence in the brief that names it; not a vertical it
+would suit, not room in the design, not "for later". See
+[collections.md](collections.md) and [units.md](units.md).
 
 **`npm run check` stays at 0 / 0 / 0.** Not "only warnings". The first
 tolerated warning is the last useful run of that command.

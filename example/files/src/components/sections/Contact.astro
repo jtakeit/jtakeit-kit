@@ -1,0 +1,221 @@
+---
+/**
+ * The way in, at the end of the page: the enquiry form on one side — the
+ * template's (LeadForm.astro, the kit's renderer, every word of it the
+ * block's) restyled in the look — and on the other a card of glass with where
+ * the business is, when it is open and how to reach it, from the shared text.
+ *
+ * No embedded map: it would put a third party on the page, and the build may
+ * reach only GitHub, npm and the media host. A link to the map the contacts
+ * name (`maps`) does the job without one.
+ *
+ * `#contact`, where every button with no link of its own leads — the first
+ * band of the page that carries the form (Blocks.astro).
+ */
+import type { Block } from '@jtakeit/kit/content';
+import LeadForm from '../LeadForm.astro';
+import Hours from '../site/Hours.astro';
+import { frameLang, frameWords } from '../site/words';
+import { site } from '../../lib/site';
+import { langOf } from '../../lib/locale';
+
+interface Props {
+  block: Block;
+  locale: string;
+  contact?: boolean;
+}
+
+const { block, locale, contact = false } = Astro.props;
+const lang = langOf(locale);
+const W = frameWords(lang);
+const wordsLang = frameLang(lang);
+const facts = site.facts(locale);
+const street = facts.text('street');
+const place = [facts.text('postal_code'), facts.text('city')].filter(Boolean).join(' ');
+const maps = facts.text('maps');
+const phone = facts.text('phone');
+const email = facts.text('email');
+const form = block.value('form') === true;
+---
+
+<section class="s reach" id={contact ? 'contact' : undefined}>
+  <div class="s__in reach__in">
+    <div class="reach__form">
+      {
+        form ? (
+          <LeadForm />
+        ) : (
+          <div class="s__head">
+            {block.text('title') && <h2 class="s__title" {...block.at('title')} {...block.lang('title')}>{block.text('title')}</h2>}
+            {block.text('lead') && <p class="s__lead" {...block.at('lead')} {...block.lang('lead')}>{block.text('lead')}</p>}
+          </div>
+        )
+      }
+    </div>
+
+    <aside class="reach__card glass">
+      {
+        (street || place) && (
+          <div class="reach__part">
+            <p class="label" data-jtk-fixed lang={wordsLang}>{W.address}</p>
+            <address class="reach__addr" data-jtk-fixed>
+              {street && <span>{street}</span>}
+              {place && <span>{place}</span>}
+            </address>
+            {maps && (
+              <a class="reach__link" href={maps} rel="noopener" target="_blank" data-jtk-fixed lang={wordsLang}>
+                {W.directions} ↗
+              </a>
+            )}
+          </div>
+        )
+      }
+      <div class="reach__part">
+        <p class="label" data-jtk-fixed lang={wordsLang}>{W.hours}</p>
+        <Hours locale={locale} />
+      </div>
+      {
+        (phone || email) && (
+          <div class="reach__part">
+            <p class="label" data-jtk-fixed lang={wordsLang}>{W.write}</p>
+            <p class="reach__lines" data-jtk-fixed>
+              {phone && <a href={`tel:${phone.replace(/[^+\d]/g, '')}`}>{phone}</a>}
+              {email && <a href={`mailto:${email}`}>{email}</a>}
+            </p>
+          </div>
+        )
+      }
+    </aside>
+  </div>
+</section>
+
+<style>
+  .reach__in {
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    gap: clamp(2rem, 6vw, 6rem);
+    align-items: start;
+  }
+
+  .reach__card {
+    display: grid;
+    gap: var(--space-6);
+    padding: clamp(1.5rem, 3vw, 2.5rem);
+    border-radius: var(--r-4);
+    position: sticky;
+    inset-block-start: 7rem;
+  }
+
+  .reach__part {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .reach__addr {
+    display: grid;
+    font-style: normal;
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    font-weight: 500;
+    line-height: 1.3;
+  }
+
+  .reach__link,
+  .reach__lines a {
+    inline-size: fit-content;
+    color: var(--ink);
+    text-decoration: none;
+    border-block-end: 1px solid color-mix(in srgb, var(--ink) 25%, transparent);
+  }
+
+  .reach__lines {
+    display: grid;
+    gap: 0.4rem;
+    margin: 0;
+  }
+
+  /* ── the template's form, in the look ─────────────────────────────────── */
+
+  .reach__form :global(.lead) {
+    max-inline-size: none;
+    gap: 1.4rem;
+  }
+
+  .reach__form :global(.lead__head) {
+    display: grid;
+    gap: var(--space-4);
+    margin-block-end: var(--space-4);
+  }
+
+  .reach__form :global(.lead__title) {
+    margin: 0;
+    color: var(--ink);
+    font-size: var(--step-4);
+    line-height: 1;
+  }
+
+  .reach__form :global(.lead__lead) {
+    margin: 0;
+    max-inline-size: var(--measure);
+    font-size: var(--step-1);
+    line-height: 1.5;
+    color: var(--ink-quiet);
+  }
+
+  .reach__form :global(.field__label) {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
+
+  .reach__form :global(.field__input) {
+    inline-size: 100%;
+    min-block-size: 3.25rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-3);
+    background: var(--paper-lift);
+    font-size: 1rem;
+    transition:
+      border-color var(--dur) var(--ease),
+      box-shadow var(--dur) var(--ease);
+  }
+
+  .reach__form :global(.field__input:focus-visible) {
+    outline: none;
+    border-color: var(--ink);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+
+  .reach__form :global(.field__input--area) {
+    min-block-size: 8rem;
+  }
+
+  .reach__form :global(.lead__legal) {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--ink-quiet);
+  }
+
+  /* The submit is the page's button, the accent its fill: the one place on the page it is a surface. */
+  .reach__form :global(.lead__foot .btn) {
+    min-block-size: 3.25rem;
+    padding-inline: 1.75rem;
+    border-radius: var(--r-pill);
+    background: var(--ink);
+    color: var(--paper);
+    font-weight: 500;
+  }
+
+  @media (max-width: 860px) {
+    .reach__in {
+      grid-template-columns: 1fr;
+    }
+    .reach__card {
+      position: static;
+    }
+  }
+</style>

@@ -16,6 +16,7 @@ import { copyFor } from '../copy';
 import { localeOf, langOf } from '../lib/locale';
 import Languages from '../components/Languages.astro';
 import { RASTER_MARK } from '../lib/icon';
+import { FRAME } from '../lib/sections';
 import '../styles/global.css';
 
 interface Props {
@@ -46,6 +47,13 @@ interface Props {
 }
 
 const { title, description, suffix = true, schema, bodyClass, alternates = [], languages = alternates } = Astro.props;
+/*
+ * The site's frame, where it has one: its look in the head, a header above the
+ * page and a footer below it (src/components/site/, src/lib/sections.ts). A
+ * site without them is the page as it always was, the language switch in
+ * the corner.
+ */
+const { Look, Header, Footer } = FRAME;
 // The page's language, from its address: `/de/…` is German. The copy is that
 // language's where the site has registered it (src/copy/index.ts); `lang`
 // is the page's whatever the copy says.
@@ -301,6 +309,7 @@ const businessSchema = {
       staring at opacity: 0. Wrapped in nothing on purpose — it cannot throw.
     */}
     <script is:inline>document.documentElement.classList.add('js');</script>
+    {Look && <Look />}
   </head>
 
   <body class={bodyClass}>
@@ -312,11 +321,14 @@ const businessSchema = {
       (12 October 2026).
     */}
     <a class="skip-link" href="#content" data-jtk-fixed lang={COPY.WORDS_LANG || undefined}>{COPY.A11Y.skipToContent}</a>
+    {Header && <Header languages={languages} locale={locale} />}
     <slot />
+    {Footer && <Footer locale={locale} />}
     {/* The switcher, drawn only on a page that exists in more than one
         language. Here so a second language works the day it is declared;
-        move it into the header when the design has one. */}
-    <Languages alternates={languages} current={locale} class="languages--corner" />
+        move it into the header when the design has one — the example's
+        header has it. */}
+    {!Header && <Languages alternates={languages} current={locale} class="languages--corner" />}
 
     <script>
       /*

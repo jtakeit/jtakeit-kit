@@ -14,6 +14,11 @@
 //   4  and a draft changed four ways is drawn at once: a hero word, a post
 //      no build drew (on the listing and at its address), a sentence in a
 //      body, and a photograph uploaded since the build, from the bucket
+//   5  the example site `jtk create` lays out (jtakeit-core wiki/110) — every
+//      section, the header, the footer, /services and /imprint — in German
+//      and English, every page drawn live equal to its built twin; and a draft
+//      that changes a value's words, a service, a person, a gallery's picture
+//      and the shared footer is drawn at once
 //
 // The kit is this checkout's, packed, as the smoke test installs it.
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -23,6 +28,7 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { liveCheck } from './live-harness.mjs';
 
 const bin = resolve('bin/jtk.mjs');
 const dir = mkdtempSync(join(tmpdir(), 'jtk-live-'));
@@ -191,6 +197,33 @@ try {
   if (!img.includes(`src="https://media.example/${fresh}"`) || !img.includes('width="1200"')) fail(`4 · a photograph uploaded since the build is not drawn from the bucket: ${img || 'no <img>'}`);
 
   console.log(`live: ${pages.length} pages drawn live are the built ones; a hero word, a new post, a body's sentence and a new photograph are drawn from the draft`);
+  server.close();
+  server = undefined;
+
+  // ── 5 · the example, in two languages ─────────────────────────────────────
+  {
+    const example = join(dir, 'example');
+    execFileSync('node', [bin, 'create', 'example-live', '--name', 'Atelier Live', '--locale', 'de-CH', '--locales', 'en', '--out', example, '--no-git'], { stdio: 'pipe' });
+    execFileSync('npm', ['install', '--no-audit', '--no-fund', join(dir, packed)], { cwd: example, stdio: 'pipe' });
+    const drawn = await liveCheck(example, { url: SITE_URL, fail, said: '5 · the example' });
+    if (drawn.pages.length < 8) fail(`5 · the example built only ${drawn.pages.length} pages: ${drawn.pages.join(' ')}`);
+    for (const must of ['/', '/en/', '/services/', '/en/services/', '/imprint/', '/en/imprint/']) if (!drawn.pages.includes(must)) fail(`5 · the example has no ${must}`);
+    const { draft } = drawn.state;
+    const home = draft['/jtk/pages/index.json'];
+    home.blocks.find((one) => one.type === 'values').items[0].title = 'Zeit aus dem Entwurf';
+    home.blocks.find((one) => one.type === 'gallery').images[0].alt = 'Ein Bild aus dem Entwurf';
+    draft['/jtk/entries/services/the-work.json'].fields.title = 'Eine Leistung aus dem Entwurf';
+    draft['/jtk/entries/team/maria-muster.json'].fields.title = 'Maria Entwurf';
+    draft['/jtk/shared.json'].blocks.find((one) => one.type === 'footer').tagline = 'Eine Zeile aus dem Entwurf';
+    const got = (await drawn.page('/')).text;
+    for (const words of ['Zeit aus dem Entwurf', 'Ein Bild aus dem Entwurf', 'Eine Leistung aus dem Entwurf', 'Maria Entwurf', 'Eine Zeile aus dem Entwurf']) {
+      if (!got.includes(words)) fail(`5 · «${words}», saved in a draft, is not on the example's home page drawn live`);
+    }
+    if (!(await drawn.page('/services/')).text.includes('Eine Leistung aus dem Entwurf')) fail('5 · a service changed in a draft is not on /services drawn live');
+    if (!(await drawn.page('/en/')).text.includes('Good work, done with care.')) fail("5 · the example's English home lost its own words");
+    drawn.close();
+    console.log(`live: the example — ${drawn.pages.length} pages drawn live are the built ones; a value, a picture's words, a service, a person and the footer are drawn from the draft`);
+  }
 } finally {
   server?.close();
   rmSync(dir, { recursive: true, force: true });

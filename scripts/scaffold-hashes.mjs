@@ -17,6 +17,11 @@
  *
  * Every version git can name is here, back to 0.1.0; which of them the
  * upgrade is proved on is the pull request's to say.
+ *
+ * `example` is the same for the example site's own files (example/files/,
+ * by the path a site has them at): `jtk remove` deletes a section's
+ * component only where its hash is one of a version's — or this package's
+ * own — and leaves one the agent changed (lib/units/index.mjs, `scaffolds`).
  */
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -66,6 +71,33 @@ function filesAt(commit) {
   return out;
 }
 
+/** The example's own files of a commit (example/files/): path in a site → text. */
+function exampleAt(commit) {
+  let listed = [];
+  try {
+    listed = git('ls-tree', '-r', '--name-only', commit, '--', 'example/files').trim().split('\n').filter(Boolean);
+  } catch {
+    return new Map();
+  }
+  return new Map(listed.filter((name) => !BINARY.test(name)).map((name) => [name.slice('example/files/'.length), git('show', `${commit}:${name}`)]));
+}
+
+/** The working tree's example files. */
+function exampleHere() {
+  const out = new Map();
+  const root = join(ROOT, 'example', 'files');
+  const walk = (at) => {
+    if (!existsSync(at)) return;
+    for (const entry of readdirSync(at)) {
+      const file = join(at, entry);
+      if (statSync(file).isDirectory()) walk(file);
+      else if (!BINARY.test(entry)) out.set(relative(root, file).split(sep).join('/'), readFileSync(file, 'utf8'));
+    }
+  };
+  walk(root);
+  return out;
+}
+
 /** The working tree's. */
 function filesHere() {
   const out = new Map();
@@ -86,20 +118,26 @@ function filesHere() {
   return out;
 }
 
-const table = { scaffolds: SCAFFOLDS, versions: [], files: {} };
+const table = { scaffolds: SCAFFOLDS, versions: [], files: {}, example: {} };
 const found = versions();
 const here = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version;
-const sources = [...found.entries()].map(([version, commit]) => [version, () => filesAt(commit)]);
-if (!found.has(here)) sources.push([here, filesHere]);
-for (const [version, read] of sources) {
+const sources = [...found.entries()].map(([version, commit]) => [version, () => filesAt(commit), () => exampleAt(commit)]);
+if (!found.has(here)) sources.push([here, filesHere, exampleHere]);
+for (const [version, read, readExample] of sources) {
   table.versions.push(version);
   for (const [path, text] of read()) {
     const digest = hash(untokened(path, text));
     table.files[path] ??= {};
     (table.files[path][digest] ??= []).push(version);
   }
+  for (const [path, text] of readExample()) {
+    table.example[path] ??= {};
+    (table.example[path][hash(text)] ??= []).push(version);
+  }
 }
-table.files = Object.fromEntries(Object.entries(table.files).sort(([a], [b]) => (a < b ? -1 : 1)));
+const sorted = (one) => Object.fromEntries(Object.entries(one).sort(([a], [b]) => (a < b ? -1 : 1)));
+table.files = sorted(table.files);
+table.example = sorted(table.example);
 const text = `${JSON.stringify(table, null, 1)}\n`;
 
 if (process.argv.includes('--check')) {

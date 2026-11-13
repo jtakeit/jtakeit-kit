@@ -49,6 +49,7 @@ import Pattern from '../../components/surface/Pattern.astro';
 import { copyFor } from '../../copy';
 import { site } from '../../lib/site';
 import { localeOf, localeParams } from '../../lib/locale';
+import { SECTIONS } from '../../lib/sections';
 
 export const getStaticPaths = localeParams;
 
@@ -66,6 +67,9 @@ const painted =
 
 const surface = design.surface ?? {};
 const grounded = Boolean(surface.pattern);
+// A site whose hero has a section of its own (src/components/sections/) draws
+// it in the page's order with the rest, and this file draws no first screen.
+const sectioned = SECTIONS.hero !== undefined;
 ---
 
 <Layout title={HOME.title} description={HOME.description} suffix={false} alternates={alternates} languages={languages}>
@@ -83,7 +87,7 @@ const grounded = Boolean(surface.pattern);
   }
 
   <main id="content">
-    {painted ? (
+    {sectioned ? null : painted ? (
       <HeroField
         field={design.field as never}
         ground="var(--jtk-ground)"

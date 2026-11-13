@@ -1,0 +1,136 @@
+---
+/**
+ * The opening hours, from the shared text's `hours` rows — a day, when it
+ * opens and when it closes, minutes from midnight, the shape the diary's own
+ * hours have — said as a reader scans them: days that keep the same hours run
+ * together («Monday – Friday 09:00–18:00»), a day with no row is closed.
+ *
+ * «Open now» is the visitor's clock's, so it is a script over the rows, never
+ * markup: two renders of the same files must be the same page (docs/live.md).
+ *
+ * Where the site takes bookings, the diary's hours are the hours
+ * (`jtk add booking` moves the rows into jtk/modules/bookings.json) and this
+ * reads them there, so a site never types its hours twice.
+ */
+import { site } from '../../lib/site';
+import { langOf } from '../../lib/locale';
+import { DAYS, clock, frameLang, frameWords } from './words';
+
+interface Props {
+  locale: string;
+  class?: string;
+}
+
+const { locale, class: extra } = Astro.props;
+const W = frameWords(langOf(locale));
+const wordsLang = frameLang(langOf(locale));
+const shared = site.shared(locale).block('hours');
+const diary = site.rolesOf('bookings') !== undefined ? site.settings('bookings') : undefined;
+const rows = diary !== undefined && diary.rows('hours').length > 0 ? diary.rows('hours') : shared.rows('rows');
+
+type Day = (typeof DAYS)[number];
+const spansOf = (day: Day) =>
+  rows
+    .filter((row) => row.value('day') === day)
+    .map((row) => [Number(row.value('opens') ?? 0), Number(row.value('closes') ?? 0)] as const)
+    .sort((a, b) => a[0] - b[0]);
+const said = (day: Day) => spansOf(day).map(([from, to]) => `${clock(from)}–${clock(to)}`).join(', ');
+
+/** Days that keep the same hours, run together. */
+const runs: { from: Day; to: Day; hours: string }[] = [];
+for (const day of DAYS) {
+  const hours = said(day);
+  const last = runs.at(-1);
+  if (last !== undefined && last.hours === hours) last.to = day;
+  else runs.push({ from: day, to: day, hours });
+}
+const machine = JSON.stringify(rows.map((row) => [DAYS.indexOf(row.value('day') as Day), Number(row.value('opens') ?? 0), Number(row.value('closes') ?? 0)]));
+const note = shared.text('note');
+---
+
+{
+  rows.length > 0 && (
+    <div class:list={['hours', extra]} data-hours={machine} data-days={rows.map((row) => row.value('day')).join(' ')}>
+      <dl class="hours__list">
+        {runs.map((run) => (
+          <div class="hours__row">
+            <dt data-jtk-fixed lang={wordsLang}>
+              {run.from === run.to ? W.days[run.from] : `${W.days[run.from]} – ${W.days[run.to]}`}
+            </dt>
+            <dd data-jtk-fixed lang={run.hours === '' ? wordsLang : undefined}>{run.hours === '' ? W.closed : run.hours}</dd>
+          </div>
+        ))}
+      </dl>
+      {note && (
+        <p class="hours__note" {...shared.at('note')} {...shared.lang('note')}>
+          {note}
+        </p>
+      )}
+      <p class="hours__now label" data-hours-now data-open={W.openNow} data-closed={W.closedNow} data-jtk-fixed lang={wordsLang} hidden />
+    </div>
+  )
+}
+
+<style>
+  .hours__list {
+    display: grid;
+    gap: 0.35rem;
+    margin: 0;
+  }
+  .hours__row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.95rem;
+  }
+  .hours__row dt {
+    color: var(--ink-quiet);
+  }
+  .hours__row dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+    text-align: end;
+  }
+  .hours__note {
+    margin: 0.75rem 0 0;
+    font-size: 0.9rem;
+    color: var(--ink-quiet);
+  }
+  .hours__now {
+    margin: 0.9rem 0 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .hours__now::before {
+    content: '';
+    inline-size: 0.5rem;
+    block-size: 0.5rem;
+    border-radius: 50%;
+    background: var(--ink-quiet);
+  }
+  .hours__now[data-state='open']::before {
+    background: var(--ok);
+  }
+</style>
+
+<script>
+  /* «Open now», by the visitor's own clock — the one thing on the page that is not the same for everybody. */
+  for (const box of document.querySelectorAll<HTMLElement>('[data-hours]')) {
+    const now = box.querySelector<HTMLElement>('[data-hours-now]');
+    if (!now) continue;
+    let rows: [number, number, number][] = [];
+    try {
+      rows = JSON.parse(box.dataset.hours ?? '[]');
+    } catch {
+      continue;
+    }
+    const at = new Date();
+    const day = (at.getDay() + 6) % 7;
+    const minute = at.getHours() * 60 + at.getMinutes();
+    const open = rows.some(([d, from, to]) => d === day && minute >= from && minute < to);
+    now.textContent = (open ? now.dataset.open : now.dataset.closed) ?? '';
+    now.dataset.state = open ? 'open' : 'closed';
+    now.hidden = false;
+  }
+</script>

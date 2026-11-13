@@ -1,0 +1,248 @@
+---
+/**
+ * The foot of every page: the business's name at the size of a building's
+ * lettering, a line of its own, and a card of glass with where it is, when it
+ * is open, how to reach it and where it is elsewhere — then the legal pages
+ * and «built on jtakeit». Brumy's foot, as design; every fact the business's,
+ * from the shared text (`contacts`, `hours`, `footer`).
+ *
+ * The year is the build's (`virtual:jtk/build`), never the clock's at render:
+ * the page drawn live from a draft must be the page the build made.
+ */
+import Hours from './Hours.astro';
+import { frameLang, frameWords } from './words';
+import { site } from '../../lib/site';
+import { copyFor } from '../../copy';
+import { langOf, withLocale } from '../../lib/locale';
+import { under } from '../../lib/under';
+import { YEAR } from 'virtual:jtk/build';
+
+interface Props {
+  locale: string;
+}
+
+const { locale } = Astro.props;
+const lang = langOf(locale);
+const W = frameWords(lang);
+const wordsLang = frameLang(lang);
+const facts = site.facts(locale);
+const footer = site.shared(locale).block('footer');
+const name = facts.text('name');
+const street = facts.text('street');
+const place = [facts.text('postal_code'), facts.text('city')].filter(Boolean).join(' ');
+const country = facts.text('country');
+const countryName = (() => {
+  if (!/^[A-Z]{2}$/.test(country)) return country;
+  try {
+    return new Intl.DisplayNames([lang], { type: 'region' }).of(country) ?? country;
+  } catch {
+    return country;
+  }
+})();
+const phone = facts.text('phone');
+const email = facts.text('email');
+const maps = facts.text('maps');
+const social = facts.rows('social').map((row) => row.text('url')).filter(Boolean);
+const nameOfLink = (url: string): string => {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '').split('.')[0];
+    return host.charAt(0).toUpperCase() + host.slice(1);
+  } catch {
+    return url;
+  }
+};
+const imprint = site.page('/imprint', locale);
+const legal = [
+  { href: under(withLocale(locale, '/privacy')), label: copyFor(locale).PRIVACY.title },
+  ...(imprint.file !== undefined || imprint.blocks.length > 0 ? [{ href: under(withLocale(locale, '/imprint')), label: imprint.name || W.imprint }] : []),
+];
+const tagline = footer.text('tagline');
+---
+
+<footer class="foot">
+  <div class="foot__in">
+    <div class="foot__top">
+      <p class="foot__mark" aria-hidden="true" data-jtk-fixed>{name}</p>
+      {
+        tagline && (
+          <p class="foot__tagline" {...footer.at('tagline')} {...footer.lang('tagline')}>
+            {tagline}
+          </p>
+        )
+      }
+    </div>
+
+    <div class="foot__card glass">
+      <div class="foot__col">
+        <p class="label" data-jtk-fixed lang={wordsLang}>{W.address}</p>
+        <address class="foot__addr" data-jtk-fixed>
+          <strong>{name}</strong>
+          {street && <span>{street}</span>}
+          {place && <span>{place}</span>}
+          {countryName && <span data-country={country}>{countryName}</span>}
+        </address>
+        {maps && (
+          <a class="foot__link" href={maps} rel="noopener" target="_blank" data-jtk-fixed lang={wordsLang}>
+            {W.directions} ↗
+          </a>
+        )}
+      </div>
+
+      <div class="foot__col">
+        <p class="label" data-jtk-fixed lang={wordsLang}>{W.hours}</p>
+        <Hours locale={locale} />
+      </div>
+
+      <div class="foot__col">
+        <p class="label" data-jtk-fixed lang={wordsLang}>{W.write}</p>
+        <p class="foot__reach" data-jtk-fixed>
+          {phone && <a href={`tel:${phone.replace(/[^+\d]/g, '')}`}>{phone}</a>}
+          {email && <a href={`mailto:${email}`}>{email}</a>}
+        </p>
+        {
+          social.length > 0 && (
+            <p class="foot__social" data-jtk-fixed>
+              {social.map((url) => (
+                <a href={url} rel="noopener me" target="_blank">
+                  {nameOfLink(url)} ↗
+                </a>
+              ))}
+            </p>
+          )
+        }
+      </div>
+    </div>
+
+    <div class="foot__base" data-jtk-fixed>
+      <span>© {YEAR} {name}</span>
+      <nav class="foot__legal" aria-label={W.legal} lang={wordsLang}>
+        {legal.map((one) => <a href={one.href}>{one.label}</a>)}
+      </nav>
+      <span lang={wordsLang}>
+        {W.built} <a href="https://jtakeit.com" rel="noopener" target="_blank">jtakeit</a>
+      </span>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .foot {
+    padding: clamp(3rem, 8vh, 5rem) var(--gutter) clamp(1.5rem, 4vh, 2.5rem);
+    color: var(--ink);
+  }
+
+  .foot__in {
+    display: grid;
+    gap: clamp(1.4rem, 3.5vh, 2.2rem);
+    inline-size: var(--shell);
+    margin-inline: auto;
+  }
+
+  .foot__top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem 2rem;
+  }
+
+  /* The one large gesture at the foot, so the page ends on the business, not on a form. */
+  .foot__mark {
+    margin: 0;
+    max-inline-size: 100%;
+    font-family: var(--font-display);
+    font-size: clamp(3.4rem, 1rem + 11vw, 13rem);
+    font-weight: 700;
+    line-height: 0.92;
+    letter-spacing: -0.055em;
+    color: color-mix(in srgb, var(--ink) 90%, transparent);
+    overflow-wrap: anywhere;
+  }
+
+  .foot__tagline {
+    margin: 0 0 1rem;
+    max-inline-size: 22rem;
+    font-size: var(--step-1);
+    line-height: 1.35;
+    color: var(--ink-quiet);
+  }
+
+  .foot__card {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2rem clamp(1.5rem, 4vw, 4rem);
+    padding: clamp(1.4rem, 3vw, 2.2rem);
+    border-radius: 18px;
+  }
+
+  .foot__col {
+    display: grid;
+    align-content: start;
+    gap: 0.75rem;
+  }
+
+  .foot__addr {
+    display: grid;
+    gap: 0.1rem;
+    font-style: normal;
+    font-size: 0.95rem;
+  }
+
+  .foot__addr strong {
+    font-weight: 600;
+  }
+
+  .foot__link,
+  .foot__reach a,
+  .foot__social a {
+    inline-size: fit-content;
+    color: var(--ink);
+    font-size: 0.95rem;
+    text-decoration: none;
+    border-block-end: 1px solid color-mix(in srgb, var(--ink) 25%, transparent);
+  }
+
+  .foot__link:hover,
+  .foot__reach a:hover,
+  .foot__social a:hover {
+    border-block-end-color: currentColor;
+  }
+
+  .foot__reach,
+  .foot__social {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    margin: 0;
+  }
+
+  .foot__social {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.45rem 1rem;
+  }
+
+  .foot__base {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.5rem 1.5rem;
+    font-size: 0.82rem;
+    color: var(--ink-quiet);
+  }
+
+  .foot__legal {
+    display: flex;
+    gap: 1.25rem;
+  }
+
+  .foot__base a {
+    color: var(--ink);
+  }
+
+  @media (max-width: 860px) {
+    .foot__card {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

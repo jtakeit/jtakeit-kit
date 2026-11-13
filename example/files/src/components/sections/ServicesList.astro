@@ -1,0 +1,174 @@
+---
+/**
+ * The services and what they cost: a ledger of the `services` collection's
+ * entries, in the owner's order — a photograph, a name, a line about it, how
+ * long it takes and the price, the price set in the display face because it is
+ * what a visitor came to read.
+ *
+ * Each row is its entry, annotated as drawn on this page (`entry:<id>:title`),
+ * and carries the entry's anchor (`#services-<slug>`), which is where the
+ * collection says its entries are shown (`shown_on`). On the home page the
+ * block's `limit` cuts the ledger short and its `more_label` leads to the
+ * whole list at /services; on /services the block has no limit.
+ *
+ * The collection's fields are the salon kit's names, `takes` and `costs`, so
+ * `jtk add booking` keeps these entries as the diary's price list.
+ */
+import type { Block } from '@jtakeit/kit/content';
+import Shot from '../Shot.astro';
+import Button from '../site/Button.astro';
+import { site } from '../../lib/site';
+import { rowId } from '../../lib/entries';
+import { langOf, withLocale } from '../../lib/locale';
+import { linkTo } from '../../lib/under';
+
+interface Props {
+  block: Block;
+  locale: string;
+  first?: boolean;
+}
+
+const { block, locale, first = false } = Astro.props;
+const limit = Number(block.value('limit') ?? 0);
+const all = site.entries('services', { locale });
+const shown = limit > 0 ? all.slice(0, limit) : all;
+
+/** A length as the trade says it: whole hours, or minutes. */
+const length = (minutes: number): string => {
+  const [unit, n] = minutes % 60 === 0 ? ['hour', minutes / 60] : ['minute', minutes];
+  return new Intl.NumberFormat(langOf(locale), { style: 'unit', unit, unitDisplay: 'long' }).format(n);
+};
+const listedAt = site.shownOn('services', locale) ?? withLocale(locale, '/services');
+const here = Astro.url.pathname.replace(/\/$/, '') === linkTo(listedAt).replace(/\/$/, '');
+const headed = block.text('eyebrow') || block.text('title') || block.text('lead');
+---
+
+<section class="s ledger" id={first ? 'services' : undefined}>
+  <div class="s__in">
+    {
+      headed && (
+        <div class="s__head">
+          {block.text('eyebrow') && <p class="label label--accent" {...block.at('eyebrow')} {...block.lang('eyebrow')}>{block.text('eyebrow')}</p>}
+          {block.text('title') && <h2 class="s__title" {...block.at('title')} {...block.lang('title')}>{block.text('title')}</h2>}
+          {block.text('lead') && <p class="s__lead" {...block.at('lead')} {...block.lang('lead')}>{block.text('lead')}</p>}
+        </div>
+      )
+    }
+
+    <ul class="ledger__rows">
+      {
+        shown.map((entry) => {
+          const { fields } = entry;
+          const photo = fields.picture('photo');
+          const takes = fields.value('takes');
+          const costs = fields.value('costs');
+          return (
+            <li class="ledger__row" id={rowId(entry) || undefined}>
+              {photo.src && (
+                <Shot name={photo.src} alt={photo.alt} lang={photo.lang} path={photo['data-jtk-path']} focus={photo.focus} ratio="4 / 3" class="ledger__shot" width={480} sizes="(min-width: 60rem) 11rem, 30vw" />
+              )}
+              <div class="ledger__words">
+                {fields.text('title') && <h3 class="ledger__title" {...fields.at('title')} {...fields.lang('title')}>{fields.text('title')}</h3>}
+                {fields.text('about') && <p class="ledger__about" {...fields.at('about')} {...fields.lang('about')}>{fields.text('about')}</p>}
+              </div>
+              <div class="ledger__terms">
+                {costs !== undefined && <span class="ledger__price" {...fields.at('costs')}>{site.money(costs, locale)}</span>}
+                {typeof takes === 'number' && <span class="ledger__takes label" {...fields.at('takes')}>{length(takes)}</span>}
+              </div>
+            </li>
+          );
+        })
+      }
+    </ul>
+
+    {
+      block.text('more_label') && !here && (
+        <p class="ledger__more">
+          <Button href={linkTo(listedAt)} label={block.text('more_label')} at={block.at('more_label')} lang={block.lang('more_label')} quiet />
+        </p>
+      )
+    }
+  </div>
+</section>
+
+<style>
+  .ledger__rows {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-block-start: 1px solid var(--line);
+  }
+
+  .ledger__row {
+    display: grid;
+    grid-template-columns: 11rem minmax(0, 1fr) auto;
+    gap: clamp(1rem, 3vw, 2.5rem);
+    align-items: center;
+    padding-block: clamp(1rem, 2.5vh, 1.5rem);
+    border-block-end: 1px solid var(--line);
+    scroll-margin-block-start: 6rem;
+  }
+
+  .ledger__row:not(:has(.ledger__shot)) {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .ledger__row :global(.ledger__shot .shot__frame) {
+    border-radius: var(--r-3);
+  }
+
+  .ledger__words {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .ledger__title {
+    font-size: var(--step-2);
+    line-height: 1.1;
+  }
+
+  .ledger__about {
+    margin: 0;
+    max-inline-size: 38rem;
+    color: var(--ink-quiet);
+  }
+
+  .ledger__terms {
+    display: grid;
+    justify-items: end;
+    gap: 0.4rem;
+    text-align: end;
+  }
+
+  .ledger__price {
+    font-family: var(--font-display);
+    font-size: var(--step-2);
+    font-weight: 600;
+    letter-spacing: var(--tracking-display);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .ledger__more {
+    margin: clamp(1.5rem, 4vh, 2.5rem) 0 0;
+  }
+
+  @media (max-width: 760px) {
+    .ledger__row {
+      grid-template-columns: 6.5rem minmax(0, 1fr);
+      align-items: start;
+    }
+    .ledger__terms {
+      grid-column: 2;
+      justify-items: start;
+      text-align: start;
+      grid-auto-flow: column;
+      justify-content: start;
+      align-items: baseline;
+      gap: 1rem;
+    }
+    .ledger__price {
+      font-size: var(--step-1);
+    }
+  }
+</style>

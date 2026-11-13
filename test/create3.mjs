@@ -22,6 +22,11 @@
 //   8  `jtkit apply --kit` into an empty tree — a site on another generator —
 //      lays out contract 3, the kit's files and tables the same as `jtk
 //      create --kit` lays them, ids aside: one mapping, two layouts
+//   9  the example site (jtakeit-core wiki/110): every section, the shared
+//      header, hours and footer, /services and /imprint, the services and the
+//      team, the example's photographs and its words in German and English;
+//      `--without` leaves sections out, part by part; `--look` and a section
+//      that is none refused; built, judged — under a path too — and linted
 //   5  every kit the platform has, laid out, built, judged and linted — when
 //      JTK_KITS_API names a platform (JTK_KITS_API=https://api.stg.jtakeit.com
 //      node test/create3.mjs); not in `npm test`, which asks no platform
@@ -87,7 +92,7 @@ function judged(site, packed, said) {
 
 try {
   // ── 1 · the tree ──────────────────────────────────────────────────────────
-  let run = create('plain', '--locale', 'de-CH');
+  let run = create('plain', '--locale', 'de-CH', '--bare');
   if (run.status !== 0) fail(`a default create failed:\n${run.stderr}`);
   const plain = join(dir, 'plain');
   for (const must of ['jtk/schema.json', 'jtk/pages/index.json', 'jtk/shared.json', 'jtk/design.json', 'src/content/blocks.ts', 'src/copy/de-CH.ts', 'README.md', 'BRIEF.md']) {
@@ -138,7 +143,7 @@ try {
   ];
   const kitFile = join(dir, 'salon.json');
   writeFileSync(kitFile, JSON.stringify(kit));
-  run = create('salon', '--locale', 'de-CH', '--kit', kitFile, '--blog', '--name', 'Salon Probe');
+  run = create('salon', '--locale', 'de-CH', '--kit', kitFile, '--blog', '--name', 'Salon Probe', '--bare');
   if (run.status !== 0) fail(`create --kit --blog failed:\n${run.stderr}`);
   const salon = join(dir, 'salon');
   const settings = json(salon, 'jtk/modules/bookings.json');
@@ -158,7 +163,7 @@ try {
   // ── 2 · the same tree as contract 2, moved ────────────────────────────────
   // Two languages: contract 3 lays them out at once; contract 2 in one, the
   // other said in LOCALES by hand, as docs/languages.md says, then moved.
-  const twoRun = create('two', '--locale', 'de-CH', '--locales', 'en', '--name', 'Salon Probe');
+  const twoRun = create('two', '--locale', 'de-CH', '--locales', 'en', '--name', 'Salon Probe', '--bare');
   if (twoRun.status !== 0) fail(`create in two languages failed:\n${twoRun.stderr}`);
   for (const [out, flags, other] of [['plain', ['--locale', 'de-CH']], ['salon', ['--locale', 'de-CH', '--kit', kitFile, '--blog', '--name', 'Salon Probe']], ['two', ['--locale', 'de-CH', '--name', 'Salon Probe'], 'en']]) {
     const moved = join(dir, `${out}-moved`);
@@ -256,7 +261,7 @@ try {
     run = spawnSync('node', [resolve('kit/bin/jtkit.mjs'), 'apply', '--kit', kitFile, '--root', applied, '--locale', 'de-CH'], { encoding: 'utf8' });
     if (run.status !== 0 || !run.stdout.includes(', on contract 3:')) fail(`8 · jtkit apply into an empty tree:\n${run.stdout}\n${run.stderr}`);
     const created = join(dir, 'kit-three');
-    run = create('kit-three', '--locale', 'de-CH', '--kit', kitFile, '--name', 'Salon Probe');
+    run = create('kit-three', '--locale', 'de-CH', '--kit', kitFile, '--name', 'Salon Probe', '--bare');
     if (run.status !== 0) fail(`8 · create --kit:\n${run.stderr}`);
     const a = settled(applied);
     const b = settled(created);
@@ -296,6 +301,69 @@ try {
     if (/Worum es geht|Telefon oder E-Mail|Nachricht|Senden/.test(en.slice(en.indexOf('<form class="lead"'), en.indexOf('</form>', en.indexOf('<form class="lead"'))))) fail('6 · /en\'s form says German');
   }
   console.log('create3: built, jtk schema agrees with the page and jtkit lint finds nothing — plain, a salon with a blog, and a site in two languages');
+
+  // ── 9 · the example ───────────────────────────────────────────────────────
+  {
+    run = create('example', '--locale', 'de-CH', '--locales', 'en', '--name', 'Atelier Probe');
+    if (run.status !== 0) fail(`9 · the example was not laid out:\n${run.stderr}`);
+    if (!run.stdout.includes('design system of Brumy (brumy.ch)')) fail(`9 · create does not say whose design the example is in:\n${run.stdout}`);
+    const example = join(dir, 'example');
+    for (const file of walk(example)) {
+      if (/\.(png|jpe?g|webp|avif|gif|ico|woff2?)$/i.test(file)) continue;
+      const left = readFileSync(file, 'utf8').match(/\{\{[A-Z_]+\}\}/g);
+      if (left) fail(`9 · ${relative(example, file)} still carries ${left.join(', ')}`);
+    }
+    const tables = json(example, 'jtk/schema.json');
+    if (JSON.stringify(tables.shared) !== '["contacts","header","hours","footer"]') fail(`9 · the shared text is not the example's: ${JSON.stringify(tables.shared)}`);
+    if (JSON.stringify(tables.collections.map((one) => one.name)) !== '["services","team"]') fail(`9 · the collections are not the example's two: ${JSON.stringify(tables.collections.map((one) => one.name))}`);
+    if (json(example, 'jtk/design.json').look !== 'brumy') fail('9 · jtk/design.json does not say the look');
+    const home = json(example, 'jtk/pages/index.json');
+    const order = home.blocks.map((one) => one.type).join();
+    if (order !== 'hero,values,services_list,gallery,team_list,testimonials,questions,cta_banner') fail(`9 · the home page is not the example's eight sections in order: ${order}`);
+    if (!ID.test(home.id) || home.blocks.find((one) => one.type === 'hero').title !== 'Gute Arbeit, mit Sorgfalt gemacht.') fail('9 · the home page is not in German');
+    const english = json(example, 'jtk/pages/index.en.json');
+    if (english.of !== home.id || english.blocks.find((one) => one._key === 'hero0001')?.title !== 'Good work, done with care.') fail(`9 · the English home has not the example's words: ${JSON.stringify(english).slice(0, 300)}`);
+    if (english.blocks.find((one) => one._key === 'hero0001')?.image?.src !== undefined) fail('9 · a translation names a picture\'s file');
+    const nav = json(example, 'jtk/shared.json').blocks.find((one) => one.type === 'header').nav.map((one) => one.link).join();
+    if (nav !== '/services,/#team,/#questions,/#contact') fail(`9 · the navigation is not the example's: ${nav}`);
+    for (const must of ['jtk/pages/services.json', 'jtk/pages/services.en.json', 'jtk/pages/imprint.json', 'jtk/entries/services/the-work.json', 'jtk/entries/team/maria-muster.en.json', 'src/assets/example-hero.jpg', 'src/assets/example-team-apron.jpg', 'src/components/sections/TeamList.astro', 'src/components/site/Header.astro', 'src/styles/tokens.css', 'src/pages/[...lang]/imprint.astro']) {
+      if (!existsSync(join(example, must))) fail(`9 · the example has no ${must}`);
+    }
+    if (!/^\s*team_list: TeamList,$/m.test(text(example, 'src/components/sections/index.ts'))) fail('9 · SECTIONS does not draw the team');
+    if (!text(example, 'BRIEF.md').includes('the design: adapted')) fail('9 · BRIEF.md does not ask for the design');
+    for (const pkg of ['@fontsource/space-grotesk', '@fontsource/inter', '@fontsource/jetbrains-mono']) if (!/^\d+\.\d+\.\d+$/.test(json(example, 'package.json').dependencies[pkg] ?? '')) fail(`9 · ${pkg} is not an exact dependency of the scaffold`);
+    if (/fonts\.googleapis|fonts\.gstatic/.test(walk(example).filter((f) => /\.(astro|css|ts|mjs)$/.test(f)).map((f) => readFileSync(f, 'utf8')).join())) fail('9 · the example loads a font from Google');
+
+    // --without: the sections the brief does not name, never laid out.
+    run = create('example-without', '--locale', 'en', '--without', 'team,testimonials', '--name', 'Atelier Probe');
+    if (run.status !== 0) fail(`9 · --without:\n${run.stderr}`);
+    const without = join(dir, 'example-without');
+    const schemaWithout = json(without, 'jtk/schema.json');
+    if (schemaWithout.collections.some((one) => one.name === 'team') || schemaWithout.blocks.some((one) => ['team_list', 'person', 'testimonials'].includes(one.type))) fail('9 · --without team,testimonials declares them');
+    if (existsSync(join(without, 'jtk/entries/team')) || existsSync(join(without, 'src/components/sections/TeamList.astro')) || existsSync(join(without, 'src/assets/example-team-apron.jpg'))) fail('9 · --without team lays its files out');
+    if (json(without, 'jtk/shared.json').blocks.find((one) => one.type === 'header').nav.some((one) => one.link === '/#team')) fail('9 · --without team leaves its item in the navigation');
+    if (existsSync(join(without, 'jtk/pages/index.de.json')) || json(without, 'jtk/pages/index.json').blocks.find((one) => one.type === 'hero').title !== 'Good work, done with care.') fail('9 · an English site is not the English example');
+    run = create('example-nope', '--without', 'pricing');
+    if (run.status === 0 || !run.stderr.includes('is not a section of the example')) fail(`9 · --without a section that is none was not refused: ${run.stderr}`);
+    run = create('example-look', '--look', 'neon');
+    if (run.status === 0 || !run.stderr.includes('brumy')) fail(`9 · --look neon was not refused with the list: ${run.stderr}`);
+
+    // 9 · the example: built, judged and linted, and judged again built under a
+    // path, where every address it writes must stay inside the site.
+    judged(example, packed, 'the example');
+    judged(join(dir, 'example-without'), packed, 'the example without the team and the testimonials');
+    {
+      const prefixed = spawnSync('node', [bin, 'schema', '--root', example], { encoding: 'utf8' });
+      if (prefixed.status !== 0 || !prefixed.stdout.includes('every address it emits stays inside the site')) fail(`9 · the example built under a path:\n${prefixed.stdout}\n${prefixed.stderr}`);
+      const de = text(example, 'dist/index.html');
+      const en = text(example, 'dist/en/index.html');
+      if (!de.includes('Gute Arbeit, mit Sorgfalt gemacht.') || !en.includes('Good work, done with care.')) fail('9 · the example\'s home pages are not in their languages');
+      if (!de.includes('<header class="bar"') || !de.includes('<footer class="foot"') || de.includes('languages--corner')) fail('9 · the example has not its header and footer, or the corner switch');
+      if (!existsSync(join(example, 'dist/services/index.html')) || !text(example, 'dist/services/index.html').includes('id="services-the-work"')) fail('9 · /services does not draw the services at their anchors');
+      if (!existsSync(join(example, 'dist/en/imprint/index.html'))) fail('9 · the example has no English imprint');
+    }
+    console.log('create3: the example — its sections, shared text, pages, entries, photographs and two languages; --without; built under a path, judged and linted');
+  }
 
   // ── 5 · every kit the platform has ────────────────────────────────────────
   const api = process.env.JTK_KITS_API;

@@ -60,6 +60,26 @@ built static with these files makes the same bytes it made before them.
   `jtakeit-meta.mjs`); sharp is imported where the icons are drawn, and the
   icons are drawn once, by the server build.
 
+## The example's sections
+
+The example site's sections (`src/components/sections/`) and frame
+(`src/components/site/`) are written to the same rules, and `test/live.mjs`
+holds every page of the example — in two languages, with each section removed,
+with a blog and a booking kit added — to its built twin:
+
+- **A section reads what it is handed.** `Blocks.astro` hands each section its
+  block, the page and the language from its own frontmatter; a section that
+  reads a collection (`site.entries('services')`) or the shared text does it in
+  its own frontmatter too. `SECTIONS` holds components, never values.
+- **Nothing that differs between two renders.** The footer's year is the
+  build's (`YEAR`, `virtual:jtk/build`); «open now» is a script over the hours'
+  rows, never markup; the gallery's arrangement is the block's.
+- **Pictures through `<Shot>`**, so one uploaded in the panel since the build is
+  the bucket's at its measured size.
+- **The imprint** is `src/pages/[...lang]/imprint.astro`, which reads no
+  `Astro.props` and is rendered by the server as it is; `/services` is the
+  listing's catch-all, which draws its page's sections (`site/Page.astro`).
+
 ## Moving a site
 
 `jtk upgrade contract-3` lays the scaffold's files out where a site's are the

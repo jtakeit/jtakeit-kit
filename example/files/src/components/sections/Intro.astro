@@ -1,0 +1,38 @@
+---
+/**
+ * The head of a page of its own — a line above, a heading at the size of the
+ * page's first screen, a lead — for a page whose first screen is words
+ * (/services). The page's `<h1>`.
+ */
+import type { Block } from '@jtakeit/kit/content';
+
+interface Props {
+  block: Block;
+}
+
+const { block } = Astro.props;
+---
+
+<section class="s intro">
+  <div class="s__in intro__in">
+    {block.text('eyebrow') && <p class="label label--accent" {...block.at('eyebrow')} {...block.lang('eyebrow')}>{block.text('eyebrow')}</p>}
+    {block.text('title') && <h1 class="intro__title" {...block.at('title')} {...block.lang('title')}>{block.text('title')}</h1>}
+    {block.text('lead') && <p class="s__lead" {...block.at('lead')} {...block.lang('lead')}>{block.text('lead')}</p>}
+  </div>
+</section>
+
+<style>
+  .intro {
+    padding-block: clamp(7.5rem, 18vh, 11rem) 0;
+  }
+  .intro__in {
+    display: grid;
+    gap: var(--space-5);
+  }
+  .intro__title {
+    max-inline-size: 14ch;
+    font-size: var(--step-5);
+    font-weight: 700;
+    line-height: var(--leading-display);
+  }
+</style>

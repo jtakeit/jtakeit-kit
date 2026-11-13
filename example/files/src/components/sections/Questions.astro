@@ -1,0 +1,131 @@
+---
+/**
+ * The questions: the heading held beside them while they scroll past, each
+ * answer folded under its question (`<details>`), open to a search engine and
+ * a screen reader as it is to a hand. Each answer has to read on its own,
+ * away from the page — an assistant quotes one paragraph with nothing around
+ * it (docs/pages.md).
+ */
+import type { Block } from '@jtakeit/kit/content';
+
+interface Props {
+  block: Block;
+  first?: boolean;
+}
+
+const { block, first = false } = Astro.props;
+const items = block.rows('items');
+---
+
+<section class="s faq" id={first ? 'questions' : undefined}>
+  <div class="s__in faq__in">
+    <div class="faq__head">
+      {block.text('title') && <h2 class="s__title" {...block.at('title')} {...block.lang('title')}>{block.text('title')}</h2>}
+    </div>
+    {
+      items.length > 0 && (
+        <div class="faq__list">
+          {items.map((row, at) => (
+            <details class="faq__one" open={at === 0 ? true : undefined}>
+              <summary>
+                <span {...row.at('question')} {...row.lang('question')}>{row.text('question')}</span>
+                <span class="faq__sign" aria-hidden="true" />
+              </summary>
+              <p class="faq__answer" {...row.at('answer')} {...row.lang('answer')}>{row.text('answer')}</p>
+            </details>
+          ))}
+        </div>
+      )
+    }
+  </div>
+</section>
+
+<style>
+  .faq__in {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: clamp(2rem, 6vw, 6rem);
+    align-items: start;
+  }
+
+  .faq__head {
+    position: sticky;
+    inset-block-start: 7rem;
+  }
+
+  .faq__list {
+    border-block-start: 1px solid var(--line);
+  }
+
+  .faq__one {
+    border-block-end: 1px solid var(--line);
+  }
+
+  .faq__one summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1.5rem;
+    padding-block: 1.35rem;
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    list-style: none;
+    cursor: pointer;
+  }
+
+  .faq__one summary::-webkit-details-marker {
+    display: none;
+  }
+
+  /* A plus that becomes a minus: two strokes, one of them turned away. */
+  .faq__sign {
+    position: relative;
+    flex: none;
+    inline-size: 2.25rem;
+    block-size: 2.25rem;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+  }
+  .faq__sign::before,
+  .faq__sign::after {
+    content: '';
+    position: absolute;
+    inset: 50% auto auto 50%;
+    inline-size: 0.8rem;
+    block-size: 1.5px;
+    background: var(--ink);
+    translate: -50% -50%;
+    transition: rotate 260ms var(--ease-out);
+  }
+  .faq__sign::after {
+    rotate: 90deg;
+  }
+  .faq__one[open] .faq__sign::after {
+    rotate: 0deg;
+  }
+
+  .faq__answer {
+    margin: 0;
+    padding-block-end: 1.5rem;
+    max-inline-size: 40rem;
+    color: var(--ink-quiet);
+  }
+
+  @media (max-width: 860px) {
+    .faq__in {
+      grid-template-columns: 1fr;
+    }
+    .faq__head {
+      position: static;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .faq__sign::before,
+    .faq__sign::after {
+      transition: none;
+    }
+  }
+</style>

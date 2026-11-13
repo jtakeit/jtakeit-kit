@@ -1,0 +1,119 @@
+/*
+ * ── the look, as tokens ─────────────────────────────────────────────────────
+ *
+ * This site was laid out by `jtk create` as an example in the design system
+ * of Brumy (brumy.ch), the company that makes jtakeit: its palette, its three
+ * typefaces, its glass and its pill buttons. It may be kept. It is meant to
+ * be adapted: a palette and a type pairing from the brief replace this file
+ * and the three font packages, and every component keeps working, because
+ * no component names a colour, a family or a size of its own.
+ *
+ * Every value the example's components use is a custom property here, and
+ * global.css's names (`--paper`, `--ink`, `--accent`…) are kept, so the
+ * template's own pieces — the form, the galleries, the listings — follow.
+ * `jtk/design.json`'s `paper`, `ink` and `accent` still win at runtime (the
+ * studio bar's live accent): Layout.astro writes them on <html>.
+ *
+ * `html:root`, not `:root`: global.css says `:root` too, and which of two
+ * stylesheets a bundler puts first is not a decision this file should rest on.
+ */
+html:root {
+  /* ── colour: Brumy's «snow» ──────────────────────────────────────────── */
+  --paper: #f8f7f4;
+  --paper-lift: #ffffff;
+  --paper-deep: #efece6;
+  --ink: #111110;
+  --ink-quiet: #5f5c58;
+  --line: #e0ddd6;
+  --accent: #e2431f;
+  /* The accent as words on paper: a step deeper, 5:1 and more (WCAG 1.4.3). */
+  --accent-deep: #c4360f;
+  --accent-ink: var(--accent-deep);
+  --accent-hot: #ff8a5c;
+  /* Words on the accent: Layout.astro chooses by its lightness; this is the default. */
+  --on-accent: #16130f;
+  /* The accent as channels, for a glow at a given strength: rgb(var(--glow) / .06). */
+  --glow: 226 67 31;
+  /* A state that is fine: «open now». */
+  --ok: #2f8f4e;
+  /* Whether anything glows: 0 on paper, where a glow reads as a printing fault. */
+  --bloom: 0;
+
+  /* ── type ────────────────────────────────────────────────────────────── */
+  --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-text: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --step--1: clamp(0.82rem, 0.79rem + 0.15vw, 0.9rem);
+  --step-0: clamp(1rem, 0.96rem + 0.2vw, 1.1rem);
+  --step-1: clamp(1.2rem, 1.1rem + 0.5vw, 1.45rem);
+  --step-2: clamp(1.45rem, 1.25rem + 1vw, 2rem);
+  --step-3: clamp(1.8rem, 1.4rem + 2vw, 2.9rem);
+  --step-4: clamp(2.3rem, 1.5rem + 3.6vw, 4.5rem);
+  --step-5: clamp(2.8rem, 1rem + 7vw, 7.5rem);
+  /* The display step: the hero's heading. */
+  --step-6: clamp(3rem, 0.6rem + 8.4vw, 9.5rem);
+  --tracking-display: -0.022em;
+  --tracking-tight: -0.035em;
+  --tracking-label: 0.22em;
+  --leading-display: 0.94;
+
+  /* ── space ───────────────────────────────────────────────────────────── */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2.5rem;
+  --space-7: 4rem;
+  --space-8: 8rem;
+  --section-y: clamp(3.75rem, 9vh, 7rem);
+  --gutter: clamp(1.25rem, 4vw, 3rem);
+  --shell: min(80rem, 100%);
+  --measure: 36rem;
+
+  /* ── radius ──────────────────────────────────────────────────────────── */
+  --r-1: 4px;
+  --r-2: 8px;
+  --r-3: 14px;
+  --r-4: 22px;
+  --r-pill: 999px;
+
+  /* ── motion ──────────────────────────────────────────────────────────── */
+  --dur: 180ms;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out: cubic-bezier(0.22, 0.75, 0.2, 1);
+  --ease-enter: cubic-bezier(0.19, 0.78, 0.18, 1);
+  --sweep-dur: 1150ms;
+
+  /* ── material: the glass ─────────────────────────────────────────────── */
+  --glass-fill:
+    linear-gradient(180deg, rgb(255 255 255 / 0.62), rgb(255 255 255 / 0.28) 62%, rgb(255 255 255 / 0.4)),
+    rgb(255 255 255 / 0.22);
+  --glass-edge:
+    inset 0 1px 0 rgb(255 255 255 / 0.9),
+    inset 0 0 0 1px rgb(255 255 255 / 0.45),
+    inset 0 -1px 0 rgb(17 17 16 / 0.05);
+  --glass-shadow:
+    0 0 0 1px rgb(17 17 16 / 0.06),
+    0 1px 2px rgb(17 17 16 / 0.05),
+    0 18px 40px -24px rgb(17 17 16 / 0.28);
+  --glass-blur: 18px;
+  --glass-saturate: 170%;
+  /* Where nothing is blurred behind it: a card, not a smear. */
+  --glass-solid: rgb(255 255 255 / 0.92);
+}
+
+/* The glass on a dark ground — a section, or a page, that says it is dark. */
+[data-ground='dark'] {
+  --glass-fill:
+    linear-gradient(180deg, rgb(255 255 255 / 0.14), rgb(255 255 255 / 0.05) 62%, rgb(255 255 255 / 0.08)),
+    rgb(20 18 16 / 0.35);
+  --glass-edge:
+    inset 0 1px 0 rgb(255 255 255 / 0.18),
+    inset 0 0 0 1px rgb(255 255 255 / 0.08),
+    inset 0 -1px 0 rgb(0 0 0 / 0.3);
+  --glass-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.3),
+    0 18px 40px -24px rgb(0 0 0 / 0.6);
+  --glass-solid: rgb(24 22 20 / 0.94);
+}

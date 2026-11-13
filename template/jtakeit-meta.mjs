@@ -173,8 +173,8 @@ function catalogueWriter(root, logger) {
 /**
  * ── what the build found on the disk ─────────────────────────────────────────
  *
- * `virtual:jtk/build` (src/live/build.d.ts): the files of `src/pages` and
- * whether `public/icon.png` is there, read once when the build starts. Code
+ * `virtual:jtk/build` (src/live/build.d.ts): the files of `src/pages`,
+ * whether `public/icon.png` is there and the year, read once when the build starts. Code
  * that renders a page asked the disk for both, and a page rendered on request
  * — the panel's live preview, below — has no checkout to ask (jtakeit-core
  * wiki/89 §9.2). Under `astro dev` the module is read again when a page or
@@ -198,7 +198,10 @@ function buildFacts(root) {
       if (id !== resolved) return undefined;
       const pages = filesUnder(join(root, 'src', 'pages'));
       const raster = existsSync(join(root, 'public', 'icon.png'));
-      return `export const PAGE_FILES = ${JSON.stringify(pages)};\nexport const RASTER_MARK = ${raster};\n`;
+      // The year the build was made in: a footer's «©» is the build's, not
+      // the clock's of whoever renders the page later (docs/live.md).
+      const year = new Date().getUTCFullYear();
+      return `export const PAGE_FILES = ${JSON.stringify(pages)};\nexport const RASTER_MARK = ${raster};\nexport const YEAR = ${year};\n`;
     },
     configureServer(server) {
       const again = (file) => {
