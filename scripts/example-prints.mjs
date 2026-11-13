@@ -34,7 +34,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ORDER } from '../lib/units/index.mjs';
 import { SITE, wordsIn } from '../lib/units/units.mjs';
-import { PHOTOS, MEDIA, placeOf } from '../lib/units/photos.mjs';
+import { PHOTOS, MEDIA, slotOf } from '../lib/units/photos.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'example', 'prints.json');
@@ -76,7 +76,7 @@ for (const lang of ['en', 'de']) {
 
 const photos = Object.entries(PHOTOS).map(([name, one]) => {
   const digest = sha(readFileSync(join(MEDIA, one.file)));
-  return { name, slot: placeOf(name).value, sha256: digest, hash16: digest.slice(0, 16), key: `media/jtk-example/${digest.slice(0, 16)}.jpg` };
+  return { name, slot: slotOf(name), sha256: digest, hash16: digest.slice(0, 16), key: `media/jtk-example/${digest.slice(0, 16)}.jpg` };
 });
 
 // Append-only: what an earlier release printed stays.

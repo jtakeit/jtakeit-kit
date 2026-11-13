@@ -43,7 +43,7 @@ page that says when.
 | pages | `jtk/pages/services.json` (an `intro` and `services_all`) | written | deleted, with their translations |
 | entries | `jtk/entries/<collection>/` | the example's | deleted — when still the example's |
 | navigation | `header.nav` in `jtk/shared.json` | an item, before the next unit's | every item whose link is the unit's |
-| photographs | `src/assets/example-<name>.jpg` | copied | deleted where nothing names them and they are still the example's bytes |
+| photographs | `src/assets/media/jtk-example/<hash16>.jpg` (git-ignored), a post's beside it | copied | deleted where nothing names them and they are still the example's bytes |
 
 The site's skeleton — the header, the footer, the shared contacts and hours, the
 privacy page, the imprint and the form's own block (`cta_banner`) — is no unit:
@@ -100,16 +100,20 @@ Every element the kit adds to `blocks.ts` carries a line saying so;
 `remove booking` takes those, puts the example's service and team back, moves the
 hours back into the shared text, and leaves the price list.
 
-## The photographs, now and later
+## The photographs
 
-The example's photographs are files of the site (`src/assets/example-*.jpg`)
-named in the content by their slot, until the media library has a door for an
-agent (jtakeit-core wiki/108, `jtk media push`). Then the one function that
-says where a photograph is and what the content calls it — `placeOf` in
-`lib/units/photos.mjs` — names them by library keys under
-`media/jtk-example/<hash16>.jpg`, and the push adopts the slots already laid.
-`example/prints.json` holds each photograph's hash, so the platform's advice
-recognises it on either side of the move.
+The example's photographs are named in the content as keys of the media
+library, of a reserved pseudo-site: `media/jtk-example/<hash16>.jpg`, the
+first sixteen hex digits of the file's SHA-256 (jtakeit-core wiki/108,
+wiki/110 §2.6). Their files are copied to `src/assets/media/jtk-example/`
+(git-ignored), a post's beside the post, so the site draws them on a laptop.
+`jtk media push` — or `jtk push --media` — puts them in the site's own library
+and writes `media/<site>/<same hash16>.jpg` over them ([media.md](media.md)).
+The one function that says where a photograph is and what the content calls it
+is `placeOf` in `lib/units/photos.mjs`. A site laid out by 0.17.0 named them by
+slot (`example-hero`, `src/assets/example-hero.jpg`); the same push adopts
+those. `example/prints.json` holds each photograph's hash, so the platform's
+advice recognises it on either side of the move.
 
 ## For the platform
 

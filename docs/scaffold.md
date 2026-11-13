@@ -20,7 +20,8 @@ navigation, the language switch and a button, and a footer with the hours, the
 profiles and the legal links. Every word and picture is content, tapped and
 translated in the panel; the words are the example's, in the business's own
 name, in the site's language and English (German and English for a
-German-speaking site); the photographs are the example's own (`example/media/`).
+German-speaking site); the photographs are the example's own (`example/media/`),
+named as keys of the media library from the first line (below).
 The languages are the ones `create` is given: `--locale en` alone (the default)
 is an English site in one language; the first market's is `--locale de-CH
 --locales en`, German with an English translation beside every page and entry.
@@ -66,6 +67,33 @@ kit's door, and only the files that are a contract's own differ — contract 3's
 from `template/contract-3/` in place of contract 2's `src/content/blocks.ts`
 and `jtk/content/`.
 
+## The example's photographs
+
+Every picture of the example is a field, and its value is a key of the media
+library (jtakeit-core wiki/108, wiki/110 §2.6) — of a reserved pseudo-site,
+`jtk-example`, until the site has a library of its own:
+
+```
+jtk/pages/index.json        "image": { "src": "media/jtk-example/a7a52f1ef1b7c2b1.jpg", "alt": "…" }
+src/assets/media/jtk-example/a7a52f1ef1b7c2b1.jpg    the file the dev server draws (git-ignored)
+jtk/entries/blog/media/jtk-example/…                 a post's picture, beside the post
+```
+
+`a7a52f1ef1b7c2b1` is the first sixteen hex digits of the file's SHA-256 — the
+library's own key scheme. The files are copied there by `jtk create` and
+`jtk add`, so the site draws them on a laptop with no network; nothing of them
+is committed.
+
+**Before the first push**, they go into the site's own library:
+`npx @jtakeit/astro push '<url>' --media '<media url>'` (or `media push` before
+a git push) uploads each by its bytes and writes `media/<site>/<same hash>.jpg`
+over `media/jtk-example/…`. The owner then finds them in the library, «used
+on» their pages, and replaces them there. A push without the media step is
+told so: the platform cannot fetch `media/jtk-example/…` for a build.
+
+A site laid out by 0.17.0 named them by slot — `example-hero`, a file in
+`src/assets/`. The same push adopts those.
+
 ## What comes next
 
 It ends by printing the platform's order (`jtakeit:///guides/start.md`), and
@@ -76,9 +104,12 @@ the README it writes says the same:
    `run` command its answer gives — before writing a line.
 3. `src/content/blocks.ts`, then `npx @jtakeit/astro schema`.
 4. `validate_schema` with the schema, the `jtk/` files and the `site_id`.
-5. No GitHub remote in the copy → `push_code`, then
-   `npx @jtakeit/astro push '<url>'`; a GitHub remote → ask the developer
-   once, then our GitHub App on it (a person installs it) and `attach_repo`.
+5. No GitHub remote in the copy → `push_code` and `media_link`, then
+   `npx @jtakeit/astro push '<url>' --media '<media url>'`: the photographs go
+   into the site's media library first ([media.md](media.md)); a GitHub remote
+   → `media_link` and `npx @jtakeit/astro media push '<url>'` before the
+   commit, ask the developer once, then our GitHub App on it (a person
+   installs it) and `attach_repo`.
 6. `commit_and_build` — nothing public; `get_build` until it settles;
    `preflight` before saying done.
 

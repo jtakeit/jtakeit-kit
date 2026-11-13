@@ -24,3 +24,14 @@ jtk/session.json
 # Where this copy stands on jtakeit (jtk push / jtk pull): the sha it was last
 # brought to. A machine's position, not the site's; the kit never sends it.
 .jtakeit/code.json
+
+# The media library's pictures, on this machine (jtakeit-core wiki/108 §6). A
+# picture a field names lives in the site's library, by its key; its file here
+# is a copy — downloaded by `jtk media pull`, `jtk pull` or the dev server, or
+# kept by `jtk media push` — and the build downloads its own. A second copy in
+# git would be a second answer to "what does this site show".
+src/assets/media/
+# What `jtk media push` moved out of src/assets once the library held it and
+# no code named it — never deleted, never committed; and the library's index.
+.jtakeit/adopted/
+.jtakeit/media.json
