@@ -27,6 +27,11 @@
 //      team, the example's photographs and its words in German and English;
 //      `--without` leaves sections out, part by part; `--look` and a section
 //      that is none refused; built, judged — under a path too — and linted
+//  11  every translation the example writes covers every translatable value
+//      of its original — a new site starts at nothing to translate, as
+//      `get_site` counts it (jtkit progress's `missing`) — and is one the
+//      platform takes: German under English, English under German, and with
+//      a blog and a salon kit
 //  10  the content an owner can write, at its edges, as the platform tries it
 //      before it accepts a site's code (JTK_E_CONTENT_VARIANT): the example,
 //      and the example with a blog and a salon kit, built with every optional
@@ -43,6 +48,8 @@ import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, sym
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { adviceOf, varyContent } from './variants.mjs';
+import { readJtk } from '../kit/lib/content/node.mjs';
+import { judgeTranslations, statesOf } from '../kit/lib/translations.mjs';
 
 const bin = resolve('bin/jtk.mjs');
 const dir = mkdtempSync(join(tmpdir(), 'jtk-create3-'));
@@ -390,10 +397,26 @@ try {
     }
     console.log('create3: the example — its sections, shared text, pages, entries, photographs and two languages; --without; built under a path, judged and linted');
 
+    // ── 11 · nothing left to translate ─────────────────────────────────────
+    const translated = async (site, said) => {
+      const files = await readJtk(site);
+      const judged = judgeTranslations(files);
+      if (judged.length > 0) fail(`11 · ${said}: a translation the platform refuses:\n  ${judged.map((one) => `${one.code} ${one.path} ${one.says ?? ''}`).join('\n  ')}`);
+      for (const one of statesOf(files)) {
+        if (one.missing.length > 0) fail(`11 · ${said}: ${one.locale} starts with ${one.missing.length} to translate:\n  ${one.missing.join('\n  ')}`);
+      }
+    };
+    await translated(example, 'the example in German and English');
+    run = create('example-en-de', '--locale', 'en', '--locales', 'de', '--name', 'Atelier Probe');
+    if (run.status !== 0) fail(`11 · an English site with German:\n${run.stderr}`);
+    await translated(join(dir, 'example-en-de'), 'the example in English and German');
+    if (JSON.parse(readFileSync(join(dir, 'example-en-de', 'jtk/pages/index.de.json'), 'utf8')).blocks.find((one) => one._key === 'hero0001')?.title !== 'Gute Arbeit, mit Sorgfalt gemacht.') fail('11 · the German translation of an English site is not the example\'s German');
+
     // ── 10 · at the edges of what an owner can write ────────────────────────
     atTheEdges(example, '10 · the example');
     const modules = create('example-modules', '--locale', 'de-CH', '--locales', 'en', '--name', 'Salon Probe', '--blog', '--kit', kitFile);
     if (modules.status !== 0) fail(`10 · the example with a blog and a kit:\n${modules.stderr}`);
+    await translated(join(dir, 'example-modules'), 'the example with a blog and a salon kit');
     judged(join(dir, 'example-modules'), packed, '10 · the example with a blog and a salon kit');
     atTheEdges(join(dir, 'example-modules'), '10 · the example with a blog and a salon kit');
     console.log('create3: the example, and with a blog and a salon kit — every optional field empty, then filled and long: built, judged, linted, every filled field drawn; no advice');
