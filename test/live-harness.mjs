@@ -56,14 +56,17 @@ export function compare(built, live) {
  * @param {string} site
  * @param {{ url: string; fail: (m: string) => never; said: string }} how
  */
+let builds = 0;
 export async function liveCheck(site, { url, fail, said }) {
+  // A server build of its own each time: Node keeps a module it imported once, by its path.
+  const out = `.jtk-live/dist-${++builds}`;
   const env = { ...process.env, SITE_URL: url, ASTRO_TELEMETRY_DISABLED: '1' };
   let run = spawnSync('npx', ['astro', 'build'], { cwd: site, encoding: 'utf8', env });
   if (run.status !== 0) fail(`${said}: does not build static:\n${run.stdout}\n${run.stderr}`);
-  run = spawnSync('npx', ['astro', 'build', '--outDir', '.jtk-live/dist'], { cwd: site, encoding: 'utf8', env: { ...env, JTK_RENDER: 'live' } });
+  run = spawnSync('npx', ['astro', 'build', '--outDir', out], { cwd: site, encoding: 'utf8', env: { ...env, JTK_RENDER: 'live' } });
   if (run.status !== 0) fail(`${said}: does not build for a server:\n${run.stdout}\n${run.stderr}`);
   const { readJtk } = await import(pathToFileURL(join(site, 'node_modules', '@jtakeit', 'kit', 'lib', 'content', 'node.mjs')).href);
-  const { handler } = await import(pathToFileURL(join(site, '.jtk-live', 'dist', 'server', 'entry.mjs')).href);
+  const { handler } = await import(pathToFileURL(join(site, out, 'server', 'entry.mjs')).href);
   const state = { draft: await readJtk(site), media: {} };
   const server = createServer((req, res) =>
     handler(req, res, () => {
@@ -93,7 +96,7 @@ export async function liveCheck(site, { url, fail, said }) {
     if (live.status !== 200) fail(`${said}: ${path} answered ${live.status} under the server build:\n${live.text.slice(0, 400)}`);
     const differs = compare(built, live.text);
     if (differs !== null) fail(`${said}: ${path} drawn live is not the built page: ${differs}`);
-    const lives = new Set(rulesOf(stylesOf(live.text, join(site, '.jtk-live', 'dist', 'client'))));
+    const lives = new Set(rulesOf(stylesOf(live.text, join(site, out, 'client'))));
     const lacks = rulesOf(stylesOf(built, dist)).find((rule) => !lives.has(rule));
     if (lacks !== undefined) fail(`${said}: ${path} drawn live lacks a rule of the built page's styles: ${lacks.slice(0, 160)}`);
   }

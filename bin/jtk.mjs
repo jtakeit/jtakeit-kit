@@ -8,6 +8,8 @@
  *   jtk upgrade contract-3  move a contract-2 site to contract 3 in one commit (lib/upgrade.mjs)
  *   jtk a11y …              read the built pages against WCAG 2.1 AA (lib/a11y.mjs)
  *   jtk push|pull <url>     move the site's code to and from jtakeit (lib/code.mjs)
+ *   jtk add|remove <unit>   a section or a module of the example site, part by part (lib/units/)
+ *   jtk units               what the site has of the example, what can be added
  */
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -71,6 +73,12 @@ switch (command) {
     }
     break;
   }
+  case 'add':
+  case 'remove':
+  case 'units': {
+    const { main } = await import(pathToFileURL(join(HERE, '..', 'lib', 'units', 'cli.mjs')).href);
+    process.exit(await main(command, rest));
+  }
   case 'push':
   case 'pull': {
     // The command prints its own errors, with the token taken out of them.
@@ -83,6 +91,7 @@ switch (command) {
     const { usage } = await import(pathToFileURL(join(HERE, '..', 'lib', 'create.mjs')).href);
     const upgrade = await import(pathToFileURL(join(HERE, '..', 'lib', 'upgrade.mjs')).href);
     const copies = await import(pathToFileURL(join(HERE, '..', 'lib', 'copies.mjs')).href);
+    const units = await import(pathToFileURL(join(HERE, '..', 'lib', 'units', 'cli.mjs')).href);
     console.error(`@jtakeit/astro — the scaffold and the catalogue tool for a site on jtakeit
 
   jtk create <slug> [options]     scaffold a site into ./<slug>, on contract 3: jtk/schema.json
@@ -95,6 +104,7 @@ switch (command) {
                                   contract 3's: write jtk/schema.json from a blocks.ts that
                                   says CONTRACT = 3, mint the ids and _keys, and check it
                                   against the built pages in the grammar by key
+  ${units.usage()}
   ${upgrade.usage()}
   ${copies.usage()}
   jtk showroom [--photos <dir>] [--port 4330]

@@ -223,6 +223,19 @@ html :focus-visible {
   }
 }
 
+/*
+ * A control filled with the accent carries words: the ember under the ink is
+ * 4.45:1, a hair under AA, so a filled button — the template's `.btn`, the
+ * booking form's steps — is the deep ember under white (5.4:1). The disc of
+ * the pill button carries only an arrow, and keeps the ember.
+ */
+html .btn,
+html jtk-booking,
+html .listing-book {
+  --accent: var(--accent-deep);
+  --on-accent: var(--on-accent-deep);
+}
+
 /* ── a section: its frame, its head ───────────────────────────────────────── */
 
 .s {
