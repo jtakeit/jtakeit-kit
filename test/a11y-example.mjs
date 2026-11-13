@@ -25,7 +25,7 @@ if (!site) {
   scratch = mkdtempSync(join(tmpdir(), 'jtk-a11y-example-'));
   site = join(scratch, 'example');
   execFileSync('node', [join(root, 'bin/jtk.mjs'), 'create', 'example-a11y', '--name', 'Atelier Probe', '--locale', 'de-CH', '--locales', 'en', '--out', site, '--no-git'], { stdio: 'pipe' });
-  execFileSync('npm', ['ci', '--no-audit', '--no-fund'], { cwd: site, stdio: 'pipe' });
+  // The kit of this checkout, as the CI's probe takes it: the template's lockfile may pin one npm has not got yet.
   execFileSync('npm', ['install', '--no-audit', '--no-fund', join(root, 'kit')], { cwd: site, stdio: 'pipe' });
 }
 site = resolve(site);
