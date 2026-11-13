@@ -147,7 +147,7 @@ not fetched again.
 With `media_link`'s URL it also writes the library's index into
 `.jtakeit/media.json` — each file's key, name, words, size in pixels and bytes,
 who put it there, where it is used, and its thumbnails' addresses
-(`<key>.w160.webp`, `.w480.webp`, `.w960.webp` on the media host) — and
+(`<key without extension>.w160.jpg`, `.w480`, `.w960` on the media host — PNG for a transparent picture, as the index's `thumb_ext` says) — and
 downloads the files nothing uses yet. That is how an agent finds the
 photographs the owner uploaded, to place one on a new page: read the index,
 look at a thumbnail, copy the key.

@@ -164,7 +164,7 @@ async function fakePlatform() {
     }
     if (req.method === 'GET' && route === '/v1/media/index') {
       return answer(200, {
-        files: [...library].map(([key, file]) => ({ id: key, key, bytes: file.data.length, content_type: 'image/jpeg', created_at: '2026-11-13T10:00:00Z', alt: file.alt, name: file.name, width: 1600, height: 1200, origin: 'agent', thumbs: [160, 480], uses: [] })),
+        files: [...library].map(([key, file]) => ({ id: key, key, bytes: file.data.length, content_type: 'image/jpeg', created_at: '2026-11-13T10:00:00Z', alt: file.alt, name: file.name, width: 1600, height: 1200, origin: 'agent', thumbs: [160, 480], thumb_ext: 'jpg', uses: [] })),
         used: [...library.values()].reduce((sum, one) => sum + one.data.length, 0),
         quota: 250 * 1024 * 1024,
       });
@@ -515,7 +515,7 @@ test('a pull brings the library\'s pictures the content names to an empty checko
     const index = json(fresh, '.jtakeit/media.json').index;
     const listed = index.files.find((one) => one.key === unused);
     assert.equal(listed.alt, 'Rest des Shootings');
-    assert.equal(listed.thumbs[1].url, `${platform.host}${unused.replace(/\.jpg$/, '')}.w480.webp`);
+    assert.equal(listed.thumbs[1].url, `${platform.host}${unused.replace(/\.jpg$/, '')}.w480.jpg`, 'the thumbnail in its own format, thumb_ext');
   } finally {
     await platform.close();
   }
