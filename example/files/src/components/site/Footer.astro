@@ -69,7 +69,7 @@ const tagline = footer.text('tagline');
       <p class="foot__mark" aria-hidden="true" {...facts.at('name')}>{name}</p>
       {
         tagline && (
-          <p class="foot__tagline" {...footer.at('tagline')} {...footer.lang('tagline')}>
+          <p class="foot__tagline" {...{ ...footer.at('tagline'), ...footer.lang('tagline') }}>
             {tagline}
           </p>
         )
@@ -84,14 +84,14 @@ const tagline = footer.text('tagline');
           {street && <span {...facts.at('street')}>{street}</span>}
           {(postal || city) && (
             <span>
-              {postal && <span {...facts.at('postal_code')}>{postal}</span>} {city && <span {...facts.at('city')} {...contacts.lang('city')}>{city}</span>}
+              {postal && <span {...facts.at('postal_code')}>{postal}</span>} {city && <span {...{ ...facts.at('city'), ...contacts.lang('city') }}>{city}</span>}
             </span>
           )}
           {countryName && <span data-country={country} {...facts.at('country')}>{countryName}</span>}
         </address>
         {maps && (
           <a class="foot__link" href={maps} rel="noopener" target="_blank">
-            {contacts.text('maps_label') ? <span {...contacts.at('maps_label')} {...contacts.lang('maps_label')}>{contacts.text('maps_label')}</span> : <span data-jtk-fixed lang={wordsLang}>{W.directions}</span>} ↗
+            {contacts.text('maps_label') ? <span {...{ ...contacts.at('maps_label'), ...contacts.lang('maps_label') }}>{contacts.text('maps_label')}</span> : <span {...contacts.at('maps_label')} lang={wordsLang}>{W.directions}</span>} ↗
           </a>
         )}
       </div>
@@ -113,7 +113,7 @@ const tagline = footer.text('tagline');
               {social.map((row) =>
                 row.text('label') ? (
                   <a href={row.text('url')} rel="noopener me" target="_blank">
-                    <span {...row.at('label')} {...row.lang('label')}>{row.text('label')}</span> ↗
+                    <span {...{ ...row.at('label'), ...row.lang('label') }}>{row.text('label')}</span> ↗
                   </a>
                 ) : (
                   <a href={row.text('url')} rel="noopener me" target="_blank" data-jtk-fixed>

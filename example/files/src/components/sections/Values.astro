@@ -21,16 +21,16 @@ const items = block.rows('items');
 <section class="s values" id={first ? 'values' : undefined}>
   <div class="s__in values__in">
     <div class="values__head">
-      {block.text('eyebrow') && <p class="label label--accent" {...block.at('eyebrow')} {...block.lang('eyebrow')}>{block.text('eyebrow')}</p>}
-      {block.text('title') && <h2 class="s__title" {...block.at('title')} {...block.lang('title')}>{block.text('title')}</h2>}
+      {block.text('eyebrow') && <p class="label label--accent" {...{ ...block.at('eyebrow'), ...block.lang('eyebrow') }}>{block.text('eyebrow')}</p>}
+      {block.text('title') && <h2 class="s__title" {...{ ...block.at('title'), ...block.lang('title') }}>{block.text('title')}</h2>}
     </div>
     {
       items.length > 0 && (
         <ol class="values__list">
           {items.map((row) => (
             <li class="values__row">
-              {row.text('title') && <h3 class="values__title" {...row.at('title')} {...row.lang('title')}>{row.text('title')}</h3>}
-              {row.text('text') && <p class="values__text" {...row.at('text')} {...row.lang('text')}>{row.text('text')}</p>}
+              {row.text('title') && <h3 class="values__title" {...{ ...row.at('title'), ...row.lang('title') }}>{row.text('title')}</h3>}
+              {row.text('text') && <p class="values__text" {...{ ...row.at('text'), ...row.lang('text') }}>{row.text('text')}</p>}
             </li>
           ))}
         </ol>

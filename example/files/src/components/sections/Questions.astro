@@ -20,7 +20,7 @@ const items = block.rows('items');
 <section class="s faq" id={first ? 'questions' : undefined}>
   <div class="s__in faq__in">
     <div class="faq__head">
-      {block.text('title') && <h2 class="s__title" {...block.at('title')} {...block.lang('title')}>{block.text('title')}</h2>}
+      {block.text('title') && <h2 class="s__title" {...{ ...block.at('title'), ...block.lang('title') }}>{block.text('title')}</h2>}
     </div>
     {
       items.length > 0 && (
@@ -28,10 +28,10 @@ const items = block.rows('items');
           {items.map((row, at) => (
             <details class="faq__one" open={at === 0 ? true : undefined}>
               <summary>
-                <span {...row.at('question')} {...row.lang('question')}>{row.text('question')}</span>
+                <span {...{ ...row.at('question'), ...row.lang('question') }}>{row.text('question')}</span>
                 <span class="faq__sign" aria-hidden="true" />
               </summary>
-              <p class="faq__answer" {...row.at('answer')} {...row.lang('answer')}>{row.text('answer')}</p>
+              <p class="faq__answer" {...{ ...row.at('answer'), ...row.lang('answer') }}>{row.text('answer')}</p>
             </details>
           ))}
         </div>

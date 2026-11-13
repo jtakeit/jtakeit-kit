@@ -38,8 +38,8 @@ const title = block.text('title');
 <section class="hx">
   <div class="hx__in">
     <div class="hx__words">
-      {block.text('eyebrow') && <p class="label hx__eyebrow" {...block.at('eyebrow')} {...block.lang('eyebrow')}>{block.text('eyebrow')}</p>}
-      {title && <h1 class="hx__title" {...block.at('title')} {...block.lang('title')}>{title}</h1>}
+      {block.text('eyebrow') && <p class="label hx__eyebrow" {...{ ...block.at('eyebrow'), ...block.lang('eyebrow') }}>{block.text('eyebrow')}</p>}
+      {title && <h1 class="hx__title" {...{ ...block.at('title'), ...block.lang('title') }}>{title}</h1>}
     </div>
 
     <div class="hx__stage">
@@ -62,7 +62,7 @@ const title = block.text('title');
       {
         (block.text('lead') || block.text('cta_label') || block.text('more_label')) && (
           <div class="hx__plate glass">
-            {block.text('lead') && <p class="hx__lead" {...block.at('lead')} {...block.lang('lead')}>{block.text('lead')}</p>}
+            {block.text('lead') && <p class="hx__lead" {...{ ...block.at('lead'), ...block.lang('lead') }}>{block.text('lead')}</p>}
             <p class="hx__actions">
               {block.text('cta_label') && (
                 <Button href={go(block.text('cta_href') || '#contact')} label={block.text('cta_label')} at={block.at('cta_label')} lang={block.lang('cta_label')} />

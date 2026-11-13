@@ -458,6 +458,64 @@ export async function lint(options = {}) {
  * @param {{ root: string; distDir: string; siteURL?: string; now?: number }} input
  * @returns {Promise<Verdict>}
  */
+/**
+ * A page's text that nothing makes tappable (wiki/111 E2, the platform's
+ * walk): its text nodes outside head, script, style, template, noscript,
+ * textarea and title, outside an element `hidden` or `aria-hidden="true"`,
+ * with no ancestor carrying `data-jtk-path` or `data-jtk-from` — under
+ * `data-jtk-fixed` it still counts — entities read, spaces collapsed.
+ */
+export function unclaimedText(html) {
+  const OPAQUE = new Set(['head', 'script', 'style', 'template', 'noscript', 'textarea', 'title']);
+  const VOID = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
+  const stack = [];
+  let skipping = null;
+  let at = 0;
+  let out = '';
+  while (at < html.length) {
+    const open = html.indexOf('<', at);
+    const text = html.slice(at, open === -1 ? html.length : open);
+    if (skipping === null && !stack.some((frame) => frame.claimed || frame.hidden)) out += ` ${text}`;
+    if (open === -1) break;
+    const close = html.indexOf('>', open);
+    if (close === -1) break;
+    const tag = html.slice(open + 1, close);
+    at = close + 1;
+    if (tag.startsWith('!') || tag.startsWith('?')) continue;
+    if (tag.startsWith('/')) {
+      const name = tag.slice(1).trim().toLowerCase();
+      if (skipping === name) skipping = null;
+      for (let i = stack.length - 1; i >= 0; i--) {
+        if (stack[i].tag === name) {
+          stack.length = i;
+          break;
+        }
+      }
+      continue;
+    }
+    const name = tag.split(/[\s/>]/)[0].toLowerCase();
+    if (skipping !== null) continue;
+    if (OPAQUE.has(name)) {
+      skipping = name;
+      continue;
+    }
+    if (VOID.has(name) || tag.endsWith('/')) continue;
+    stack.push({
+      tag: name,
+      claimed: /\sdata-jtk-(path|from)=/.test(tag),
+      hidden: /\shidden(\s|=|$)/.test(tag) || /\saria-hidden="true"/.test(tag),
+    });
+  }
+  return out
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&#x27;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ');
+}
+
 async function lint3({ root, distDir, siteURL, now }) {
   /** @type {Finding[]} */
   const findings = [];
@@ -681,32 +739,127 @@ async function lint3({ root, distDir, siteURL, now }) {
     }
   }
 
-  // The platform's coming rule (jtakeit-core wiki/111 §3.3, E1): a phone, an
-  // email, a link, a choice, a date, a time, a number the owner edits is
-  // annotated where it is drawn too — said here as a warning, which refuses
-  // nothing, until the platform's gate is an error on contract 3.
+  // The platform's rules of wiki/111 §3.3, as its annotation lint has them.
+  //
+  // E1: a number, a time, a choice, a phone, an email, a link or a date the
+  // owner edits (`ADVISED`), filled and drawn — not `no_tap_target` — is
+  // annotated where it is drawn, `data-jtk-path` (a link may be `data-jtk-href`
+  // instead); missing, it is advice, JTK_W_UNANNOTATED_FIELD, never a fault.
+  //
+  // E2: a value the owner edits — words, a phone, an email, a link, a number,
+  // a choice by its label in the page's language — drawn as text that no
+  // annotation and no `data-jtk-from` claims, `data-jtk-fixed` or not, is
+  // drawn and cannot be tapped: JTK_W_DRAWN_UNTAPPABLE, advice, one finding a
+  // value.
+  //
+  // E3: a `data-jtk-from` names a source in its grammar that exists — refused
+  // as JTK_E_ANNOTATION_UNKNOWN where it does not.
   const warnings = [];
   {
     const wide = placesIn(schema, sharedBlocks, { which: widened3 });
-    const warn = (says) => warnings.push({ code: CODES.UNANNOTATED_FIELD, says: `${says} (a warning until the platform's gate — wiki/111 E1)` });
+    const warn = (says) => warnings.push({ code: 'JTK_W_UNANNOTATED_FIELD', says });
+    const drawnAt = (html, place) => html.includes(`data-jtk-path="${place}"`) || html.includes(`data-jtk-href="${place}"`);
     for (const place of wide.blockPlaces(sharedBlocks, 'shared:')) {
-      if (!everywhere.includes(`data-jtk-path="${place}"`)) warn(`${place} is drawn on no page with its annotation`);
+      if (!drawnAt(everywhere, place)) warn(`${place} is drawn on no page with its annotation`);
     }
     for (const page of pages) {
       const html = htmlByPath.get(page.path);
       if (html === undefined) continue;
-      for (const place of wide.blockPlaces(page.blocks)) if (!html.includes(`data-jtk-path="${place}"`)) warn(`${page.path}: ${place} is not annotated`);
+      for (const place of wide.blockPlaces(page.blocks)) if (!drawnAt(html, place)) warn(`${page.path}: ${place} is not annotated`);
     }
     for (const entry of entries) {
       if (typeof entry.path === 'string') {
         const html = htmlByPath.get(entry.path);
         if (html === undefined) continue;
-        for (const place of wide.entryPlaces(entry)) if (!html.includes(`data-jtk-path="${place}"`)) warn(`${entry.path}: ${place} is not annotated`);
+        for (const place of wide.entryPlaces(entry)) if (!drawnAt(html, place)) warn(`${entry.path}: ${place} is not annotated`);
         continue;
       }
       if (!entry.shown || !ID.test(entry.id ?? '')) continue;
       for (const place of wide.entryPlaces(entry)) {
-        if (!everywhere.includes(`data-jtk-path="entry:${entry.id}:${place}"`)) warn(`${entry.anchor ?? entry.slug}: entry:${entry.id}:${place} is on no page`);
+        if (!drawnAt(everywhere, `entry:${entry.id}:${place}`)) warn(`${entry.anchor ?? entry.slug}: entry:${entry.id}:${place} is on no page`);
+      }
+    }
+  }
+  {
+    // E2: every value the owner edits, where it may be drawn, against the text no annotation claims.
+    const said = new Set();
+    const untapped = new Map();
+    const textOf = (path) => {
+      if (!untapped.has(path)) untapped.set(path, htmlByPath.has(path) ? unclaimedText(htmlByPath.get(path)) : '');
+      return untapped.get(path);
+    };
+    const languageOf = (locale) => (locale === '' ? site.locale : locale);
+    const words = (field, value, locale) => {
+      if (value === undefined || value === null) return '';
+      if (field.kind === 'select') {
+        const option = (Array.isArray(field.options) ? field.options : []).find((one) => (isObject(one) ? one.value : one) === value);
+        const label = isObject(option) ? option.label : undefined;
+        const lang = languageOf(locale);
+        const text = typeof label === 'string' ? label : isObject(label) ? (label[lang] ?? label[lang.split('-')[0]] ?? label.en ?? Object.values(label)[0]) : value;
+        return String(text ?? '');
+      }
+      return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+    };
+    const DRAWN_KINDS = new Set(['text', 'textarea', 'tel', 'email', 'url', 'number', 'select']);
+    /** Every value of `values` the rule asks of, with its place. */
+    const valuesOf = (values, fields, prefix, locale, steps = 0) => {
+      const out = [];
+      for (const field of fields ?? []) {
+        if (!isObject(field) || typeof field.key !== 'string' || field.client_editable !== true) continue;
+        const value = values?.[field.key];
+        if (field.kind === 'list') {
+          if (!Array.isArray(value) || steps >= 2) continue;
+          for (const row of value) if (isObject(row)) out.push(...valuesOf(row, field.of, `${prefix}${field.key}[${row._key ?? '?'}].`, locale, steps + 1));
+          continue;
+        }
+        if (!DRAWN_KINDS.has(field.kind)) continue;
+        const text = words(field, value, locale).replace(/\s+/g, ' ').trim();
+        if (text.length >= 4) out.push({ place: `${prefix}${field.key}`, text });
+      }
+      return out;
+    };
+    const findOn = (paths, values) => {
+      for (const { place, text } of values) {
+        if (said.has(place)) continue;
+        const where = paths.find((path) => textOf(path).includes(text));
+        if (where === undefined) continue;
+        said.add(place);
+        warnings.push({ code: 'JTK_W_DRAWN_UNTAPPABLE', says: `${where}: ${place} («${text.length > 40 ? `${text.slice(0, 39)}…` : text}») is drawn and nothing makes it tappable — annotate it where it is drawn (at()), or name its source on what draws it (from())` });
+      }
+    };
+    const blockValues = (blocks, prefix, locale) =>
+      (Array.isArray(blocks) ? blocks : []).filter(isObject).flatMap((block) => valuesOf(block, types.get(block.type)?.fields, `${prefix}blocks[${block._key ?? '?'}].`, locale));
+    for (const page of pages) if (typeof page.path === 'string') findOn([page.path], blockValues(page.blocks, '', page.locale));
+    for (const shared of site.sharedDocuments()) {
+      const paths = pages.filter((page) => page.locale === shared.locale && typeof page.path === 'string').map((page) => page.path);
+      findOn(paths, blockValues(shared.blocks, 'shared:', shared.locale));
+    }
+    for (const entry of entries) {
+      const fields = types.get(collections.get(entry.collection)?.type)?.fields;
+      const paths = [entry.path, typeof entry.anchor === 'string' ? entry.anchor.split('#')[0] || '/' : undefined]
+        .filter((one) => typeof one === 'string')
+        .concat([...htmlByPath].filter(([, html]) => ID.test(entry.id ?? '') && html.includes(`data-jtk-path="entry:${entry.id}:`)).map(([path]) => path));
+      findOn([...new Set(paths)], valuesOf(entry.fields, fields, `entry:${entry.id}:`, entry.locale));
+    }
+  }
+  {
+    // E3: what a `data-jtk-from` may say, and that it names something.
+    const FROM = /^(?:blocks\[([a-z][a-z0-9-]{0,31})\]|shared:blocks\[([a-z][a-z0-9-]{0,31})\]|(page|entry):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?::blocks\[([a-z][a-z0-9-]{0,31})\])?|module:([a-z][a-z0-9_]{0,39}))$/;
+    const keyed = (blocks, key) => (Array.isArray(blocks) ? blocks : []).some((one) => isObject(one) && one._key === key);
+    for (const [where, html] of htmlByPath) {
+      for (const [, from] of html.matchAll(/data-jtk-from="([^"]*)"/g)) {
+        const found = FROM.exec(from);
+        let ok = false;
+        if (found !== null) {
+          const [, own, shared, kind, id, block, module] = found;
+          if (own !== undefined) ok = keyed(documentAt.get(where)?.document?.blocks, own);
+          else if (shared !== undefined) ok = keyed(sharedBlocks, shared);
+          else if (kind !== undefined) {
+            const document = (kind === 'page' ? pagesById : entriesById).get(id);
+            ok = document !== undefined && (block === undefined || keyed(document.blocks, block));
+          } else if (module !== undefined) ok = isObject(schema.modules) && Object.hasOwn(schema.modules, module);
+        }
+        if (!ok) fault(CODES.ANNOTATION_UNKNOWN, `${where}: names its source ${from}, which ${found === null ? 'is not one the grammar has — blocks[<key>], shared:blocks[<key>], page:<id>[:blocks[<key>]], entry:<id>[:blocks[<key>]], module:<name>' : 'this site has not got'}`);
       }
     }
   }
@@ -952,7 +1105,7 @@ export async function lintCommand(options) {
     console.error(`  not published: ${withheld.join(', ')} — a path starting with a dot is never served (.well-known/ aside). It comes from the repository (usually public/): remove it there, and change any secret it held — it is in the history.`);
   }
   for (const one of out.findings) console.error('  ' + said(one.code, one.says));
-  for (const one of out.warnings ?? []) console.log(`  warning ${said(one.code, one.says)}`);
+  for (const one of out.warnings ?? []) console.log(`  advice ${said(one.code, one.says)}`);
   if (out.line !== '') (out.ok ? console.log : console.error)('  ' + out.line);
   return out.ok ? 0 : 1;
 }

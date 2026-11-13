@@ -42,20 +42,20 @@ const languages = site.languagesOf(page);
 <Layout title={seo('title') || page.name || ''} description={seo('description')} alternates={alternates} languages={languages}>
   <main id="content" class="legal">
     <div class="legal__in">
-      {block.text('title') && <h1 {...block.at('title')} {...block.lang('title')}>{block.text('title')}</h1>}
+      {block.text('title') && <h1 {...{ ...block.at('title'), ...block.lang('title') }}>{block.text('title')}</h1>}
       <address class="legal__who" {...facts.from()}>
         {one('name').text && <span {...one('name').at}>{one('name').text}</span>}
         {one('street').text && <span {...one('street').at}>{one('street').text}</span>}
         {(one('postal_code').text || one('city').text) && (
           <span>
-            {one('postal_code').text && <span {...one('postal_code').at}>{one('postal_code').text}</span>} {one('city').text && <span {...one('city').at} {...contacts.lang('city')}>{one('city').text}</span>}
+            {one('postal_code').text && <span {...one('postal_code').at}>{one('postal_code').text}</span>} {one('city').text && <span {...{ ...one('city').at, ...contacts.lang('city') }}>{one('city').text}</span>}
           </span>
         )}
         {countryName && <span data-country={country} {...facts.at('country')}>{countryName}</span>}
         {one('phone').text && <span {...one('phone').at}>{one('phone').text}</span>}
         {one('email').text && <span {...one('email').at}>{one('email').text}</span>}
       </address>
-      {block.text('body') && <p class="legal__body" {...block.at('body')} {...block.lang('body')}>{block.text('body')}</p>}
+      {block.text('body') && <p class="legal__body" {...{ ...block.at('body'), ...block.lang('body') }}>{block.text('body')}</p>}
     </div>
   </main>
 </Layout>

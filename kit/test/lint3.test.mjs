@@ -183,19 +183,32 @@ test('a shared field the whole site annotates nowhere — a phone is no tap targ
   assert.deepEqual(said(out), [`${CODES.SHARED_NOT_RENDERED} shared:blocks[contacts].name is on no page — a shared field nothing renders is a control that edits nothing`]);
 });
 
-test('the platform\'s coming rule (wiki/111 E1): a phone, an email, a date the owner edits and the page draws without its annotation is a warning, never a fault', async () => {
-  // The tree's phone is annotated in the footer: clean, no warning.
+test('wiki/111 §3.3 as the platform\'s lint has it: E1 and E2 are advice, E3 refuses a source nothing has', async () => {
+  // The tree's phone is annotated in the footer: clean, no advice.
   let out = await lint({ root: tree() });
   assert.deepEqual(out.warnings, []);
-  // Drawn without it: still ok — said as a warning, by its code.
+  // Drawn without it: still ok — advice, by its own code: unannotated (E1), and drawn but untappable (E2).
   const unannotated = Object.fromEntries(Object.entries(PAGES).map(([name, html]) => [name, typeof html === 'string' ? html.replace('<a data-jtk-path="shared:blocks[contacts].phone">', '<a>') : html]));
   out = await lint({ root: tree({ pages: unannotated }) });
   assert.equal(out.ok, true);
-  assert.deepEqual(out.warnings.map((one) => one.code), [CODES.UNANNOTATED_FIELD]);
+  assert.deepEqual(out.warnings.map((one) => one.code), ['JTK_W_UNANNOTATED_FIELD', 'JTK_W_DRAWN_UNTAPPABLE']);
   assert.match(out.warnings[0].says, /shared:blocks\[contacts\]\.phone is drawn on no page with its annotation/);
-  // A date that is `no_tap_target` — not drawn — is asked for nowhere.
-  out = await lint({ root: tree() });
-  assert.ok(!out.warnings.some((one) => one.says.includes('date')));
+  assert.match(out.warnings[1].says, /shared:blocks\[contacts\]\.phone \(«\+41 44 000 00 00»\) is drawn and nothing makes it tappable/);
+  // Under a source named with data-jtk-from it is claimed: no E2; and a source that exists is fine.
+  const claimed = Object.fromEntries(Object.entries(unannotated).map(([name, html]) => [name, typeof html === 'string' ? html.replace('<footer>', '<footer data-jtk-from="shared:blocks[contacts]">') : html]));
+  out = await lint({ root: tree({ pages: claimed }) });
+  assert.equal(out.ok, true);
+  assert.deepEqual(out.warnings.map((one) => one.code), ['JTK_W_UNANNOTATED_FIELD']);
+  // E3: a source the grammar has not got, or the site has not got, is refused.
+  for (const from of ['module:nothing', 'shared:blocks[nowhere]', 'blocks[Hero]', `entry:${NOBODY}`]) {
+    out = await lint({ root: tree({ pages: page('index.html', '<footer>', `<footer data-jtk-from="${from}">`) }) });
+    assert.equal(out.ok, false, from);
+    assert.deepEqual(said(out), [`${CODES.ANNOTATION_UNKNOWN} /: names its source ${from}, which ${from === 'blocks[Hero]' ? 'is not one the grammar has — blocks[<key>], shared:blocks[<key>], page:<id>[:blocks[<key>]], entry:<id>[:blocks[<key>]], module:<name>' : 'this site has not got'}`]);
+  }
+  for (const from of ['shared:blocks[contacts]', 'blocks[hero]', `entry:${OAK}`, `page:${PRICES}:blocks[list]`]) {
+    out = await lint({ root: tree({ pages: page('index.html', '<footer>', `<footer data-jtk-from="${from}">`) }) });
+    assert.equal(out.ok, true, from);
+  }
 });
 
 test('page:<id>: and entry:<id>: name a document by the id its file carries, and a place it declares', async () => {

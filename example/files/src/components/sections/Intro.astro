@@ -15,9 +15,9 @@ const { block } = Astro.props;
 
 <section class="s intro">
   <div class="s__in intro__in">
-    {block.text('eyebrow') && <p class="label label--accent" {...block.at('eyebrow')} {...block.lang('eyebrow')}>{block.text('eyebrow')}</p>}
-    {block.text('title') && <h1 class="intro__title" {...block.at('title')} {...block.lang('title')}>{block.text('title')}</h1>}
-    {block.text('lead') && <p class="s__lead" {...block.at('lead')} {...block.lang('lead')}>{block.text('lead')}</p>}
+    {block.text('eyebrow') && <p class="label label--accent" {...{ ...block.at('eyebrow'), ...block.lang('eyebrow') }}>{block.text('eyebrow')}</p>}
+    {block.text('title') && <h1 class="intro__title" {...{ ...block.at('title'), ...block.lang('title') }}>{block.text('title')}</h1>}
+    {block.text('lead') && <p class="s__lead" {...{ ...block.at('lead'), ...block.lang('lead') }}>{block.text('lead')}</p>}
   </div>
 </section>
 
