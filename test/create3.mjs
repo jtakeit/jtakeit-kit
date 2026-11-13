@@ -36,6 +36,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
+import { placeOf } from '../lib/units/photos.mjs';
 
 const bin = resolve('bin/jtk.mjs');
 const dir = mkdtempSync(join(tmpdir(), 'jtk-create3-'));
@@ -326,7 +327,7 @@ try {
     if (english.blocks.find((one) => one._key === 'hero0001')?.image?.src !== undefined) fail('9 · a translation names a picture\'s file');
     const nav = json(example, 'jtk/shared.json').blocks.find((one) => one.type === 'header').nav.map((one) => one.link).join();
     if (nav !== '/services,/#team,/#questions,/#contact') fail(`9 · the navigation is not the example's: ${nav}`);
-    for (const must of ['jtk/pages/services.json', 'jtk/pages/services.en.json', 'jtk/pages/imprint.json', 'jtk/entries/services/the-work.json', 'jtk/entries/team/maria-muster.en.json', 'src/assets/example-hero.jpg', 'src/assets/example-team-apron.jpg', 'src/components/sections/TeamList.astro', 'src/components/site/Header.astro', 'src/styles/tokens.css', 'src/pages/[...lang]/imprint.astro']) {
+    for (const must of ['jtk/pages/services.json', 'jtk/pages/services.en.json', 'jtk/pages/imprint.json', 'jtk/entries/services/the-work.json', 'jtk/entries/team/maria-muster.en.json', placeOf('hero').file, placeOf('team-apron').file, 'src/components/sections/TeamList.astro', 'src/components/site/Header.astro', 'src/styles/tokens.css', 'src/pages/[...lang]/imprint.astro']) {
       if (!existsSync(join(example, must))) fail(`9 · the example has no ${must}`);
     }
     if (!/^\s*team_list: TeamList,$/m.test(text(example, 'src/components/sections/index.ts'))) fail('9 · SECTIONS does not draw the team');
@@ -340,7 +341,7 @@ try {
     const without = join(dir, 'example-without');
     const schemaWithout = json(without, 'jtk/schema.json');
     if (schemaWithout.collections.some((one) => one.name === 'team') || schemaWithout.blocks.some((one) => ['team_list', 'person', 'testimonials'].includes(one.type))) fail('9 · --without team,testimonials declares them');
-    if (existsSync(join(without, 'jtk/entries/team')) || existsSync(join(without, 'src/components/sections/TeamList.astro')) || existsSync(join(without, 'src/assets/example-team-apron.jpg'))) fail('9 · --without team lays its files out');
+    if (existsSync(join(without, 'jtk/entries/team')) || existsSync(join(without, 'src/components/sections/TeamList.astro')) || existsSync(join(without, placeOf('team-apron').file))) fail('9 · --without team lays its files out');
     if (json(without, 'jtk/shared.json').blocks.find((one) => one.type === 'header').nav.some((one) => one.link === '/#team')) fail('9 · --without team leaves its item in the navigation');
     if (existsSync(join(without, 'jtk/pages/index.de.json')) || json(without, 'jtk/pages/index.json').blocks.find((one) => one.type === 'hero').title !== 'Good work, done with care.') fail('9 · an English site is not the English example');
     run = create('example-nope', '--without', 'pricing');
