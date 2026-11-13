@@ -10,6 +10,7 @@
  * the page drawn live from a draft must be the page the build made.
  */
 import Hours from './Hours.astro';
+import Label from './Label.astro';
 import { frameLang, frameWords } from './words';
 import { site } from '../../lib/site';
 import { copyFor } from '../../copy';
@@ -27,9 +28,12 @@ const W = frameWords(lang);
 const wordsLang = frameLang(lang);
 const facts = site.facts(locale);
 const footer = site.shared(locale).block('footer');
+const contacts = site.shared(locale).block('contacts');
+const hours = site.shared(locale).block('hours');
 const name = facts.text('name');
 const street = facts.text('street');
-const place = [facts.text('postal_code'), facts.text('city')].filter(Boolean).join(' ');
+const postal = facts.text('postal_code');
+const city = facts.text('city');
 const country = facts.text('country');
 const countryName = (() => {
   if (!/^[A-Z]{2}$/.test(country)) return country;
@@ -62,7 +66,7 @@ const tagline = footer.text('tagline');
 <footer class="foot">
   <div class="foot__in">
     <div class="foot__top">
-      <p class="foot__mark" aria-hidden="true" data-jtk-fixed>{name}</p>
+      <p class="foot__mark" aria-hidden="true" {...facts.at('name')}>{name}</p>
       {
         tagline && (
           <p class="foot__tagline" {...footer.at('tagline')} {...footer.lang('tagline')}>
@@ -72,32 +76,36 @@ const tagline = footer.text('tagline');
       }
     </div>
 
-    <div class="foot__card glass">
+    <div class="foot__card glass" {...facts.from()}>
       <div class="foot__col">
-        <p class="label" data-jtk-fixed lang={wordsLang}>{W.address}</p>
+        <Label of={contacts} field="address_label" standIn={W.address} standInLang={wordsLang} />
         <address class="foot__addr">
-          <strong data-jtk-fixed>{name}</strong>
+          <strong {...facts.at('name')}>{name}</strong>
           {street && <span {...facts.at('street')}>{street}</span>}
-          {place && <span data-jtk-fixed>{place}</span>}
-          {countryName && <span data-country={country} data-jtk-fixed>{countryName}</span>}
+          {(postal || city) && (
+            <span>
+              {postal && <span {...facts.at('postal_code')}>{postal}</span>} {city && <span {...facts.at('city')} {...contacts.lang('city')}>{city}</span>}
+            </span>
+          )}
+          {countryName && <span data-country={country} {...facts.at('country')}>{countryName}</span>}
         </address>
         {maps && (
-          <a class="foot__link" href={maps} rel="noopener" target="_blank" data-jtk-fixed lang={wordsLang}>
-            {W.directions} ↗
+          <a class="foot__link" href={maps} rel="noopener" target="_blank">
+            {contacts.text('maps_label') ? <span {...contacts.at('maps_label')} {...contacts.lang('maps_label')}>{contacts.text('maps_label')}</span> : <span data-jtk-fixed lang={wordsLang}>{W.directions}</span>} ↗
           </a>
         )}
       </div>
 
       <div class="foot__col">
-        <p class="label" data-jtk-fixed lang={wordsLang}>{W.hours}</p>
+        <Label of={hours} field="label" standIn={W.hours} standInLang={wordsLang} />
         <Hours locale={locale} />
       </div>
 
       <div class="foot__col">
-        <p class="label" data-jtk-fixed lang={wordsLang}>{W.write}</p>
-        <p class="foot__reach" data-jtk-fixed>
-          {phone && <a href={`tel:${phone.replace(/[^+\d]/g, '')}`}>{phone}</a>}
-          {email && <a href={`mailto:${email}`}>{email}</a>}
+        <Label of={contacts} field="reach_label" standIn={W.write} standInLang={wordsLang} />
+        <p class="foot__reach">
+          {phone && <a href={`tel:${phone.replace(/[^+\d]/g, '')}`} {...facts.at('phone')}>{phone}</a>}
+          {email && <a href={`mailto:${email}`} {...facts.at('email')}>{email}</a>}
         </p>
         {
           social.length > 0 && (
@@ -119,12 +127,12 @@ const tagline = footer.text('tagline');
       </div>
     </div>
 
-    <div class="foot__base" data-jtk-fixed>
-      <span>© {YEAR} {name}</span>
-      <nav class="foot__legal" aria-label={W.legal} lang={wordsLang}>
+    <div class="foot__base">
+      <span><span data-jtk-fixed>© {YEAR}</span> <span {...facts.at('name')}>{name}</span></span>
+      <nav class="foot__legal" aria-label={W.legal} lang={wordsLang} data-jtk-fixed>
         {legal.map((one) => <a href={one.href}>{one.label}</a>)}
       </nav>
-      <span lang={wordsLang}>
+      <span lang={wordsLang} data-jtk-fixed>
         {W.built} <a href="https://jtakeit.com" rel="noopener" target="_blank">jtakeit</a>
       </span>
     </div>

@@ -15,6 +15,7 @@
 import type { Block } from '@jtakeit/kit/content';
 import LeadForm from '../LeadForm.astro';
 import Hours from '../site/Hours.astro';
+import Label from '../site/Label.astro';
 import { frameLang, frameWords } from '../site/words';
 import { site } from '../../lib/site';
 import { langOf } from '../../lib/locale';
@@ -30,8 +31,11 @@ const lang = langOf(locale);
 const W = frameWords(lang);
 const wordsLang = frameLang(lang);
 const facts = site.facts(locale);
+const contacts = site.shared(locale).block('contacts');
+const hours = site.shared(locale).block('hours');
 const street = facts.text('street');
-const place = [facts.text('postal_code'), facts.text('city')].filter(Boolean).join(' ');
+const postal = facts.text('postal_code');
+const city = facts.text('city');
 const maps = facts.text('maps');
 const phone = facts.text('phone');
 const email = facts.text('email');
@@ -53,34 +57,38 @@ const form = block.value('form') === true;
       }
     </div>
 
-    <aside class="reach__card glass">
+    <aside class="reach__card glass" {...facts.from()}>
       {
-        (street || place) && (
+        (street || postal || city) && (
           <div class="reach__part">
-            <p class="label" data-jtk-fixed lang={wordsLang}>{W.address}</p>
+            <Label of={contacts} field="address_label" standIn={W.address} standInLang={wordsLang} />
             <address class="reach__addr">
               {street && <span {...facts.at('street')}>{street}</span>}
-              {place && <span data-jtk-fixed>{place}</span>}
+              {(postal || city) && (
+                <span>
+                  {postal && <span {...facts.at('postal_code')}>{postal}</span>} {city && <span {...facts.at('city')} {...contacts.lang('city')}>{city}</span>}
+                </span>
+              )}
             </address>
             {maps && (
-              <a class="reach__link" href={maps} rel="noopener" target="_blank" data-jtk-fixed lang={wordsLang}>
-                {W.directions} ↗
+              <a class="reach__link" href={maps} rel="noopener" target="_blank">
+                {contacts.text('maps_label') ? <span {...contacts.at('maps_label')} {...contacts.lang('maps_label')}>{contacts.text('maps_label')}</span> : <span data-jtk-fixed lang={wordsLang}>{W.directions}</span>} ↗
               </a>
             )}
           </div>
         )
       }
       <div class="reach__part">
-        <p class="label" data-jtk-fixed lang={wordsLang}>{W.hours}</p>
+        <Label of={hours} field="label" standIn={W.hours} standInLang={wordsLang} />
         <Hours locale={locale} />
       </div>
       {
         (phone || email) && (
           <div class="reach__part">
-            <p class="label" data-jtk-fixed lang={wordsLang}>{W.write}</p>
-            <p class="reach__lines" data-jtk-fixed>
-              {phone && <a href={`tel:${phone.replace(/[^+\d]/g, '')}`}>{phone}</a>}
-              {email && <a href={`mailto:${email}`}>{email}</a>}
+            <Label of={contacts} field="reach_label" standIn={W.write} standInLang={wordsLang} />
+            <p class="reach__lines">
+              {phone && <a href={`tel:${phone.replace(/[^+\d]/g, '')}`} {...facts.at('phone')}>{phone}</a>}
+              {email && <a href={`mailto:${email}`} {...facts.at('email')}>{email}</a>}
             </p>
           </div>
         )

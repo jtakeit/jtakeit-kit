@@ -43,6 +43,23 @@ export function tappable(field) {
 }
 
 /**
+ * Whether a field, filled and drawn, is annotated where it is drawn under the
+ * platform's coming rule (jtakeit-core wiki/111 §3.3, E1): any kind the owner
+ * edits — a phone, an email, a link, a choice, a date, a time, a number, as
+ * well as `TAPPABLE`'s — but a list (annotated by its rows) and a switch
+ * (by what it switches), unless it is `no_tap_target`, which means not drawn
+ * as an element at all. A template draws a value of such a field with its
+ * `at()`; the lint says one drawn without it, as a warning until the
+ * platform's gate is an error.
+ */
+export function annotatable(field) {
+  if (field === undefined || field === null) return false;
+  if (field.kind === 'list' || field.kind === 'bool') return false;
+  if (field.client_editable !== true) return false;
+  return field.no_tap_target !== true;
+}
+
+/**
  * Where a specimen lives under its collection: `_fl-<type>[-<view>]`. The
  * panel asks for exactly this address, in the entry's language, to lift the
  * site's own markup for a block an owner has just added.
@@ -236,6 +253,11 @@ export function factsOf(shared, listed, typeOf) {
     value: (role) => (of(role) === undefined ? undefined : of(role).block.value(of(role).key)),
     rows: (role) => (of(role) === undefined ? [] : of(role).block.rows(of(role).key)),
     at: (role, row, part) => (of(role) === undefined ? {} : of(role).block.at(of(role).key, row, part)),
+    /** `data-jtk-from` naming the shared block the facts are in — `shared:blocks[contacts]` — for a card drawn from several (wiki/111 §3.2). */
+    from: () => {
+      const first = found.values().next().value;
+      return first === undefined || typeof first.block.from !== 'function' ? {} : first.block.from();
+    },
     field: (role) => (of(role) === undefined ? undefined : of(role).block.field(of(role).key)),
   };
 }

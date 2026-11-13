@@ -61,6 +61,22 @@ beyond them the bar is a sentence in the brief that names it; not a vertical it
 would suit, not room in the design, not "for later". See
 [collections.md](collections.md) and [units.md](units.md).
 
+**Everything a page draws answers a tap** (jtakeit-core wiki/111 §3.1). A value
+the owner edits is annotated where it is drawn, whatever its kind — a phone, an
+email, a choice, a date, a time and a number as well as words and pictures —
+with the door's `{...x.at('field')}`. `no_tap_target` means *not drawn as an
+element* (a link behind a button, the hour a countdown counts to), never "drawn,
+but not tappable here". Values drawn side by side are separate spans — «8000»
+and «Zürich», each with its `at()` — and an element drawn from several values,
+or worked out from them, names where they live with the door's `from()`:
+`{...facts.from()}` on the address card (`shared:blocks[contacts]`),
+`{...hours.from()}` on «Open now», `site.settings('bookings').from()` on the
+booking form, `entry.from()` on a tile of an entry. A tap on it opens that
+source. Design text stays `data-jtk-fixed`; inside a `from()` region a tap on it
+opens the region's source. `jtkit lint` warns about a phone, an email, a link, a
+choice, a date, a time or a number drawn without its annotation; the platform's
+gate is a warning first and an error on contract 3 later.
+
 **`npm run check` stays at 0 / 0 / 0.** Not "only warnings". The first
 tolerated warning is the last useful run of that command.
 

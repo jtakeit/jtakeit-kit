@@ -80,6 +80,18 @@ with a blog and a booking kit added — to its built twin:
   `Astro.props` and is rendered by the server as it is; `/services` is the
   listing's catch-all, which draws its page's sections (`site/Page.astro`).
 
+## A tap on everything
+
+The example draws every value it shows as its own annotated element and names
+the source of what it works out — `data-jtk-from`, written by the door's
+`from()` (`facts.from()`, a block's or the hours' `from()`, an entry's,
+`site.settings('bookings').from()`), never typed. Both are attributes of the
+page like any annotation: the live render writes them from the draft as the
+build does, and a tap on a value saved since the build opens the same place.
+The frame's headings over the address and the hours are optional shared fields
+(`contacts.address_label`, `reach_label`, `maps_label`, `hours.label`): the
+business's words where written, the kit's word in each language where empty.
+
 ## Moving a site
 
 `jtk upgrade contract-3` lays the scaffold's files out where a site's are the

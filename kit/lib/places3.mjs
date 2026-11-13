@@ -26,7 +26,7 @@
  * And where a price sits (`pricePaths`), which the lint's currency check and
  * `jtkit progress` both ask of a schema.
  */
-import { TAPPABLE } from './content/index.mjs';
+import { TAPPABLE, annotatable } from './content/index.mjs';
 
 /** A `_key` and an id, as the grammar names them (§15 · 16). */
 export const KEY = /^[a-z][a-z0-9-]{0,31}$/;
@@ -47,6 +47,8 @@ export const isEmpty = (value) => value === undefined || value === null || (type
 export const srcOf = (value) => (typeof value === 'string' ? value.trim() : isObject(value) && typeof value.src === 'string' ? value.src.trim() : '');
 /** Absent is false (§3.3): only what says `client_editable: true` is the owner's to tap. */
 export const tappable3 = (field) => TAPPABLE.has(field.kind) && field.client_editable === true && field.no_tap_target !== true;
+/** What the platform's coming rule adds to `tappable3` (wiki/111 E1): a phone, an email, a link, a choice, a date, a time, a number — said as a warning until its gate. */
+export const widened3 = (field) => annotatable(field) && !tappable3(field);
 
 /**
  * The rules over one schema.
@@ -54,7 +56,7 @@ export const tappable3 = (field) => TAPPABLE.has(field.kind) && field.client_edi
  * @param {any} schema `jtk/schema.json`, contract 3's
  * @param {unknown[]} shared the shared text's blocks a `shared:` place is looked for in
  */
-export function placesIn(schema, shared) {
+export function placesIn(schema, shared, { which = tappable3 } = {}) {
   const types = new Map((Array.isArray(schema?.blocks) ? schema.blocks : []).filter(isObject).map((one) => [one.type, one]));
   const fieldsOfType = (name) => (Array.isArray(types.get(name)?.fields) ? types.get(name).fields.filter(isObject) : []);
   const collections = new Map((Array.isArray(schema?.collections) ? schema.collections : []).filter(isObject).map((one) => [one.name, one]));
@@ -80,7 +82,7 @@ export function placesIn(schema, shared) {
         for (const row of value) if (isObject(row) && KEY.test(row._key ?? '')) places.push(...expected(row, of, `${here}[${row._key}].`, steps + 1));
         continue;
       }
-      if (!tappable3(field)) continue;
+      if (!which(field)) continue;
       if (field.kind === 'media' && field.multiple === true) {
         if (!Array.isArray(value) || steps >= 2) continue;
         for (const item of value) if (isObject(item) && KEY.test(item._key ?? '') && srcOf(item) !== '') places.push(`${here}[${item._key}].src`);

@@ -52,7 +52,7 @@ const cta = header.text('cta_label');
         logo.src ? (
           <Shot name={logo.src} alt={logo.alt || name} path={logo['data-jtk-path']} class="bar__logo" width={320} fit="contain" />
         ) : (
-          <span data-jtk-fixed>{name}</span>
+          <span {...facts.at('name')}>{name}</span>
         )
       }
     </a>

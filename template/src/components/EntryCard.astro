@@ -48,13 +48,19 @@ const day = declared('date') ? new Date(String(date ?? '')) : new Date(Number.Na
 const dated = Number.isNaN(day.getTime()) ? '' : when.format(day);
 
 const excerpt = declared('excerpt') && typeof fields.value('excerpt') === 'string' ? (fields.value('excerpt') as string) : '';
+// A date and an excerpt the owner edits and the type draws (not `no_tap_target`)
+// are tapped on the card, as every value drawn is (jtakeit-core wiki/111 §3.1);
+// one the type keeps from the page stays the design's, as before.
+const drawn = (key: string) => declared(key)?.client_editable === true && declared(key)?.no_tap_target !== true;
+const dateAt = drawn('date') ? fields.at('date') : undefined;
+const excerptAt = drawn('excerpt') ? fields.at('excerpt') : undefined;
 ---
 
 <li class="post-card">
   <a href={href(entry)}>
     {cover && <Image src={cover} alt={picture?.alt ?? ''} data-jtk-path={coverAt} widths={[480, 960]} sizes="(min-width: 900px) 30rem, 92vw" layout="none" />}
-    {dated && <time datetime={String(date)} data-jtk-fixed>{dated}</time>}
+    {dated && (dateAt ? <time datetime={String(date)} {...dateAt}>{dated}</time> : <time datetime={String(date)} data-jtk-fixed>{dated}</time>)}
     <Title {...title.at} data-jtk-fixed={title.fixed ? true : undefined}>{title.text}</Title>
-    {excerpt !== '' && <p data-jtk-fixed>{excerpt}</p>}
+    {excerpt !== '' && (excerptAt ? <p {...excerptAt} {...fields.lang('excerpt')}>{excerpt}</p> : <p data-jtk-fixed>{excerpt}</p>)}
   </a>
 </li>

@@ -103,6 +103,15 @@ export interface Collection {
 /** The annotation of one value: spread it onto the element that draws it. Empty when annotation is off. */
 export type At = { 'data-jtk-path'?: string };
 
+/**
+ * Where an element drawn from several values, or from none of them directly,
+ * lives — a card of the contacts, «Open now» of the hours, the diary's form —
+ * `shared:blocks[hours]`, `entry:<id>`, `module:bookings` (wiki/111 §3.2 of
+ * the platform). A tap on it opens that source. Empty where annotation is
+ * off, on contract 2, for a row and for a document on its own page.
+ */
+export type From = { 'data-jtk-from'?: string };
+
 /** A picture, its words, and its annotation. */
 export interface Picture extends At {
   /** An upload key (`media/<site>/<hash>.jpg`) or a slot the repository ships. `''` where there is none. */
@@ -179,6 +188,8 @@ export interface Values {
   lang(field: string): { lang?: string };
   /** The field's declaration, where the schema has one. */
   field(field: string): Field | undefined;
+  /** Where these values live, as `data-jtk-from`: spread it onto an element drawn from them that is no one value. */
+  from(): From;
   /** Whether the field, filled, must carry a tap target (`TAPPABLE`, `client_editable`, `no_tap_target`). */
   tappable(field: string): boolean;
 }
@@ -264,6 +275,8 @@ export interface Facts {
   at(role: string, row?: number | string, part?: string): At;
   /** The field that says the role. */
   field(role: string): Field | undefined;
+  /** The shared block the facts are in, as `data-jtk-from` — `shared:blocks[contacts]`. */
+  from(): From;
 }
 
 /** An entry of a collection. */
@@ -305,6 +318,8 @@ export interface Entry {
   fromBase?: string[];
   /** Whether the entry is in this language's own words: the original, or one with a translation (contract 3); true on contract 2. */
   translated: boolean;
+  /** The entry as `data-jtk-from`, `entry:<id>`, where it is drawn elsewhere; `{}` on its own page. */
+  from(): From;
   /** Annotated as its own page, where the entry is the document. */
   here: Entry;
   /** Annotated as drawn on another page — a tile, a row, a heading: `page:<address>:…`. The default for an entry. */

@@ -33,6 +33,8 @@ export interface BookingFormProps {
   open?: string[];
   /** The form's look — two steps, the week, the parts of the day, the drawn choice — on by default; `false` for the plain form, or the ones wanted: `'week parts'`. */
   ui?: boolean | string;
+  /** Where the form lives, as `data-jtk-from` on its `<form>` — the door's `site.settings('bookings').from()`, `module:bookings` (wiki/111 §3.2); none for nothing. */
+  from?: string;
 }
 
 /** What the form sends to /api/book, as `data-sends` says it. */

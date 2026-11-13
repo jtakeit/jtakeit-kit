@@ -533,6 +533,24 @@ test('nothing is named by what the grammar cannot parse: no id, no key, a key ou
   assert.deepEqual(row.rows('c').map((one) => path(one.at('src'))), [undefined]);
 });
 
+test('from(): where an element drawn from several values lives (wiki/111 §3.2) — a shared block, a page\'s block, an entry elsewhere, a module, the facts', () => {
+  assert.deepEqual(site.shared().block('contacts').from(), { 'data-jtk-from': 'shared:blocks[contacts]' });
+  assert.deepEqual(site.facts().from(), { 'data-jtk-from': 'shared:blocks[contacts]' });
+  const home = site.page('/');
+  const first = home.blocks[0];
+  assert.deepEqual(first.from(), { 'data-jtk-from': `blocks[${first.key}]` });
+  assert.deepEqual(home.elsewhere.blocks[0].from(), { 'data-jtk-from': `page:${HOME}:blocks[${first.key}]` });
+  const oak = site.entry('works', OAK);
+  assert.deepEqual(oak.from(), { 'data-jtk-from': `entry:${OAK}` });
+  assert.deepEqual(oak.here.from(), {}, 'an entry on its own page is the page');
+  assert.deepEqual(site.settings('bookings').from(), { 'data-jtk-from': 'module:bookings' });
+  assert.deepEqual(site.settings('nothing').from(), {}, 'a module the site has not got names nothing');
+  assert.deepEqual(site.shared().block('contacts').rows('social')[0]?.from?.() ?? {}, {}, 'a row is no source');
+  const quiet = content(files(), { now, annotate: false });
+  assert.deepEqual(quiet.facts().from(), {});
+  assert.deepEqual(quiet.settings('bookings').from(), {});
+});
+
 test('annotate off: the same values, and no annotation anywhere', () => {
   const quiet = content(files(), { now, annotate: false });
   assert.deepEqual(quiet.page('/preise').block('prices').at('items', 'r7k2', 'title'), {});

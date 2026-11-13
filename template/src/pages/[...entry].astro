@@ -284,7 +284,10 @@ for (const field of collection.fields) {
   // A field the owner edits by tapping it carries its annotation, by the
   // platform's one rule (`tappable`, the door's); the rest are edited in the
   // panel beside the page and are drawn plain.
-  const tappable = fields.tappable(field.key);
+  // Tapped where drawn: what the door calls tappable, and — as the platform's
+  // coming rule has it (wiki/111 §3.1) — a date the owner edits and the type
+  // draws too.
+  const tappable = fields.tappable(field.key) || (field.kind === 'date' && field.client_editable === true && field.no_tap_target !== true);
   facts.push({ key: field.key, label, kind: 'text', text, href: link, at: tappable ? fields.at(field.key) : {}, tappable });
 }
 

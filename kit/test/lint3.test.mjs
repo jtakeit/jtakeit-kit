@@ -183,6 +183,21 @@ test('a shared field the whole site annotates nowhere — a phone is no tap targ
   assert.deepEqual(said(out), [`${CODES.SHARED_NOT_RENDERED} shared:blocks[contacts].name is on no page — a shared field nothing renders is a control that edits nothing`]);
 });
 
+test('the platform\'s coming rule (wiki/111 E1): a phone, an email, a date the owner edits and the page draws without its annotation is a warning, never a fault', async () => {
+  // The tree's phone is annotated in the footer: clean, no warning.
+  let out = await lint({ root: tree() });
+  assert.deepEqual(out.warnings, []);
+  // Drawn without it: still ok — said as a warning, by its code.
+  const unannotated = Object.fromEntries(Object.entries(PAGES).map(([name, html]) => [name, typeof html === 'string' ? html.replace('<a data-jtk-path="shared:blocks[contacts].phone">', '<a>') : html]));
+  out = await lint({ root: tree({ pages: unannotated }) });
+  assert.equal(out.ok, true);
+  assert.deepEqual(out.warnings.map((one) => one.code), [CODES.UNANNOTATED_FIELD]);
+  assert.match(out.warnings[0].says, /shared:blocks\[contacts\]\.phone is drawn on no page with its annotation/);
+  // A date that is `no_tap_target` — not drawn — is asked for nowhere.
+  out = await lint({ root: tree() });
+  assert.ok(!out.warnings.some((one) => one.says.includes('date')));
+});
+
 test('page:<id>: and entry:<id>: name a document by the id its file carries, and a place it declares', async () => {
   const tiles = [
     `<i data-jtk-path="page:${NOBODY}:blocks[hero].title">x</i>`,
