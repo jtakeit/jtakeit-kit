@@ -110,12 +110,37 @@ test("every piece's hooks are data or names, never a class", () => {
     assert.match(piece.always[0].hook, /^(form)?\[data-[a-z-]+\]$/, `${name}: the root first`);
     assert.ok(Object.isFrozen(piece) && Object.isFrozen(piece.always) && Object.isFrozen(piece.said), `${name} is not for writing over`);
   }
-  assert.deepEqual(PRODUCT.always.map((one) => one.hook), [
-    'form[data-product]', '[name^="option:"]', '[data-price]', '[data-stock]', '[name=qty]', '[data-add]', '[data-product-error]', '[data-added]',
-  ]);
-  assert.deepEqual(PRODUCT.said.map((one) => one.hook), ['[name^="answer:"]', '[data-from]']);
-  assert.ok(CHECKOUT.always.some((one) => one.hook === 'form[data-checkout]'));
-  assert.ok(LISTING.always.some((one) => one.hook === '[data-product-tile]'));
+  // Each piece's lists exactly as the brief of Task 9.10 gives them, root first: Tasks 9.12 to 9.16 read these as the truth.
+  const pinned = {
+    PRODUCT: [
+      ['form[data-product]', '[name^="option:"]', '[data-price]', '[data-stock]', '[name=qty]', '[data-add]', '[data-product-error]', '[data-added]'],
+      ['[name^="answer:"]', '[data-from]'],
+    ],
+    CART: [
+      ['[data-cart]', '[data-cart-lines]', '[data-cart-empty]', '[name=country]', '[data-methods]', '[data-subtotal]', '[data-cart-error]', '[data-to-checkout]'],
+      ['[data-abroad]', '[data-vat]', '[data-cannot-send]'],
+    ],
+    CHECKOUT: [
+      [
+        'form[data-checkout]', '[name=name]', '[name=email]', '[name=phone]', '[data-address]', '[name=line1]', '[name=line2]', '[name=postal_code]', '[name=city]',
+        '[data-total]', '[data-challenge]', '[data-checkout-error]', '[data-pay]',
+      ],
+      ['[data-abroad]', '[data-vat]', '[data-own-currency]'],
+    ],
+    ORDER: [
+      ['[data-order]', '[data-order-state]', '[data-order-lines]', '[data-order-total]', '[data-pay-again]'],
+      ['[data-order-number]', '[data-order-method]', '[data-back-to-cart]'],
+    ],
+    LISTING: [
+      ['[data-listing]', '[data-product-tile]'],
+      ['[data-listing-group]'],
+    ],
+  };
+  for (const [name, piece] of Object.entries(pieces)) {
+    assert.deepEqual(piece.always.map((one) => one.hook), pinned[name][0], `${name}.always`);
+    assert.deepEqual(piece.said.map((one) => one.hook), pinned[name][1], `${name}.said`);
+  }
+  assert.deepEqual(Object.keys(pinned), Object.keys(pieces), 'all five pieces are pinned');
 });
 
 test("lacking names the hooks a piece's root does not have, and counts the root's own", () => {
@@ -387,7 +412,7 @@ test("a customization's answer is held to what the product asks", async () => {
   assert.deepEqual(answersOf(facts, { body: 'natur', tag: 'Süd' }).answers.tag, 'Süd', 'composed, as the shop keeps it');
   assert.equal(answersOf(facts, { body: 'natur', tag: `${'a'.repeat(20)}   ` }).faults.length, 0, 'the spaces around it are not counted');
   // A text that says nothing is no answer; an optional one is left out without a fault.
-  for (const nothing of ['', '   ', '‍', ' ‌ ‍ ']) assert.deepEqual(answersOf(facts, { body: 'natur', tag: nothing }), { answers: { body: 'natur' }, faults: [] }, JSON.stringify(nothing));
+  for (const nothing of ['', '   ', '\u200d', ' \u200c \u200d ', '\u200d\u200c']) assert.deepEqual(answersOf(facts, { body: 'natur', tag: nothing }), { answers: { body: 'natur' }, faults: [] }, JSON.stringify(nothing));
   assert.deepEqual(answersOf(facts, { body: 'natur', tag: ' Ada ' }).answers.tag, 'Ada');
   // Every question answered once, and one the product does not ask is left out.
   assert.deepEqual(answersOf(facts, { body: 'rot', zipper: true, tag: 'Ada', engraving: 'x' }), { answers: { body: 'rot', zipper: true, tag: 'Ada' }, faults: [] });

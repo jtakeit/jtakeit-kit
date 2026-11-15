@@ -97,7 +97,7 @@ const BASE = {
     'error.total': 'Ціна змінилася. Перевірте нову суму та продовжте',
     'error.refused': 'Дещо в замовленні змінилося. Перевірте кошик',
     'error.short': 'Деяких товарів у кошику залишилось менше, ніж потрібно',
-    'error.lapsed': 'Час оформлення минув. Почніть знову',
+    'error.lapsed': 'Термін цього замовлення минув. Почніть знову',
     'error.too_many': 'Звідси відкрито забагато оформлень. Завершіть одне або спробуйте пізніше',
     'error.too_small': 'Сума менша за мінімальну для онлайн-оплати',
     'error.no_payee': 'Магазин поки не може приймати оплату. Спробуйте пізніше',
@@ -118,6 +118,7 @@ const BASE = {
     'state.stillWaiting': 'Оплату ще не підтверджено. Якщо ви заплатили, підтвердження прийде на пошту; цю сторінку можна закрити',
   },
   de: {
+    // the product page
     soldOut: 'Ausverkauft',
     left: 'Noch {n} verfügbar',
     inStock: 'Auf Lager',
@@ -133,6 +134,7 @@ const BASE = {
     'fault.required': 'Bitte beantworten Sie diese Frage',
     'fault.too_long': 'Höchstens {max} Zeichen',
     'fault.not_a_choice': 'Bitte wählen Sie eine der Möglichkeiten',
+    // the cart
     cartEmpty: 'Ihr Warenkorb ist leer',
     country: 'Land',
     shippingMethod: 'Versandart',
@@ -155,6 +157,7 @@ const BASE = {
     'refused.quantity': 'Diese Menge kann nicht bestellt werden',
     'refused.answer': 'Ihre Angaben zu diesem Artikel passen nicht mehr. Entfernen Sie ihn und legen Sie ihn neu in den Warenkorb',
     'refused.too_large': 'Diese Zeile ergibt mehr, als der Shop annehmen kann. Verringern Sie die Menge',
+    // the checkout step
     details: 'Ihre Angaben',
     delivery: 'Lieferadresse',
     'field.name': 'Name',
@@ -186,6 +189,7 @@ const BASE = {
     'error.try_again': 'Die Zahlungsseite war nicht erreichbar. Bitte versuchen Sie es erneut',
     'error.internal': 'Auf unserer Seite ist etwas schiefgelaufen. Bitte versuchen Sie es später erneut',
     'error.paid': 'Diese Bestellung ist bereits bezahlt',
+    // the page after payment
     orderNumber: 'Bestellung {number}',
     loading: 'Wird geladen…',
     backToCart: 'Zurück zum Warenkorb',
@@ -263,7 +267,7 @@ const BASE = {
     'error.total': 'The price changed in the meantime. Please check the new total and go on',
     'error.refused': 'Something in your order changed. Please check your cart',
     'error.short': 'There is not enough left of some of the items in your cart',
-    'error.lapsed': 'This checkout has expired. Please start again',
+    'error.lapsed': 'This order has expired. Please start again',
     'error.too_many': 'Too many checkouts are open from here. Finish one, or try again later',
     'error.too_small': 'The total is under the least amount that can be paid online',
     'error.no_payee': 'This shop cannot take payments yet. Please try again later',
@@ -284,6 +288,7 @@ const BASE = {
     'state.stillWaiting': 'The payment is not confirmed yet. If you paid, the confirmation will arrive by email; you can close this page',
   },
   ru: {
+    // the product page
     soldOut: 'Распродано',
     left: 'Осталось: {n}',
     inStock: 'В наличии',
@@ -299,6 +304,7 @@ const BASE = {
     'fault.required': 'Ответьте на этот вопрос',
     'fault.too_long': 'Не более {max} символов',
     'fault.not_a_choice': 'Выберите один из вариантов',
+    // the cart
     cartEmpty: 'Ваша корзина пуста',
     country: 'Страна',
     shippingMethod: 'Способ доставки',
@@ -321,6 +327,7 @@ const BASE = {
     'refused.quantity': 'Такое количество заказать нельзя',
     'refused.answer': 'Ваши ответы для этого товара больше не подходят. Удалите его и добавьте снова',
     'refused.too_large': 'Сумма этой позиции больше допустимой. Уменьшите количество',
+    // the checkout step
     details: 'Ваши данные',
     delivery: 'Адрес доставки',
     'field.name': 'Имя',
@@ -345,13 +352,14 @@ const BASE = {
     'error.total': 'Цена изменилась. Проверьте новую сумму и продолжайте',
     'error.refused': 'Что-то в заказе изменилось. Проверьте корзину',
     'error.short': 'Некоторых товаров в корзине осталось меньше, чем нужно',
-    'error.lapsed': 'Время оформления истекло. Начните заново',
+    'error.lapsed': 'Срок этого заказа истёк. Начните заново',
     'error.too_many': 'Отсюда открыто слишком много оформлений. Завершите одно или попробуйте позже',
     'error.too_small': 'Сумма меньше минимальной для оплаты онлайн',
     'error.no_payee': 'Магазин пока не может принимать оплату. Попробуйте позже',
     'error.try_again': 'Не удалось открыть страницу оплаты. Попробуйте ещё раз',
     'error.internal': 'Что-то пошло не так с нашей стороны. Попробуйте позже',
     'error.paid': 'Этот заказ уже оплачен',
+    // the page after payment
     orderNumber: 'Заказ {number}',
     loading: 'Загрузка…',
     backToCart: 'Назад в корзину',
@@ -365,6 +373,7 @@ const BASE = {
     'state.stillWaiting': 'Оплата пока не подтверждена. Если вы заплатили, подтверждение придёт на почту; эту страницу можно закрыть',
   },
   es: {
+    // the product page
     soldOut: 'Agotado',
     left: 'Disponibles: {n}',
     inStock: 'En stock',
@@ -380,6 +389,7 @@ const BASE = {
     'fault.required': 'Responda a esta pregunta',
     'fault.too_long': 'Como máximo {max} caracteres',
     'fault.not_a_choice': 'Elija una de las opciones',
+    // the cart
     cartEmpty: 'Su carrito está vacío',
     country: 'País',
     shippingMethod: 'Método de envío',
@@ -402,6 +412,7 @@ const BASE = {
     'refused.quantity': 'No se puede pedir esta cantidad',
     'refused.answer': 'Sus respuestas para este artículo ya no sirven. Quítelo y vuelva a añadirlo',
     'refused.too_large': 'Esta línea supera el importe que la tienda puede aceptar. Reduzca la cantidad',
+    // the checkout step
     details: 'Sus datos',
     delivery: 'Dirección de entrega',
     'field.name': 'Nombre',
@@ -433,6 +444,7 @@ const BASE = {
     'error.try_again': 'No se pudo llegar a la página de pago. Inténtelo de nuevo',
     'error.internal': 'Algo ha fallado por nuestra parte. Inténtelo más tarde',
     'error.paid': 'Este pedido ya está pagado',
+    // the page after payment
     orderNumber: 'Pedido {number}',
     loading: 'Cargando…',
     backToCart: 'Volver al carrito',
@@ -446,6 +458,7 @@ const BASE = {
     'state.stillWaiting': 'El pago aún no está confirmado. Si ha pagado, la confirmación llegará por correo; puede cerrar esta página',
   },
   it: {
+    // the product page
     soldOut: 'Esaurito',
     left: 'Disponibili: {n}',
     inStock: 'Disponibile',
@@ -461,6 +474,7 @@ const BASE = {
     'fault.required': 'Risponda a questa domanda',
     'fault.too_long': 'Al massimo {max} caratteri',
     'fault.not_a_choice': 'Scelga una delle opzioni',
+    // the cart
     cartEmpty: 'Il carrello è vuoto',
     country: 'Paese',
     shippingMethod: 'Metodo di spedizione',
@@ -483,6 +497,7 @@ const BASE = {
     'refused.quantity': 'Questa quantità non può essere ordinata',
     'refused.answer': 'Le sue risposte per questo articolo non vanno più bene. Lo rimuova e lo aggiunga di nuovo',
     'refused.too_large': 'Questa riga supera l’importo che il negozio può accettare. Riduca la quantità',
+    // the checkout step
     details: 'I suoi dati',
     delivery: 'Indirizzo di consegna',
     'field.name': 'Nome',
@@ -514,6 +529,7 @@ const BASE = {
     'error.try_again': 'Non siamo riusciti a raggiungere la pagina di pagamento. Riprovi',
     'error.internal': 'Qualcosa è andato storto da parte nostra. Riprovi più tardi',
     'error.paid': 'Questo ordine è già stato pagato',
+    // the page after payment
     orderNumber: 'Ordine {number}',
     loading: 'Caricamento…',
     backToCart: 'Torna al carrello',
@@ -527,6 +543,7 @@ const BASE = {
     'state.stillWaiting': 'Il pagamento non è ancora confermato. Se ha pagato, la conferma arriverà via e-mail; può chiudere questa pagina',
   },
   pt: {
+    // the product page
     soldOut: 'Esgotado',
     left: 'Disponíveis: {n}',
     inStock: 'Em stock',
@@ -542,6 +559,7 @@ const BASE = {
     'fault.required': 'Responda a esta pergunta',
     'fault.too_long': 'No máximo {max} caracteres',
     'fault.not_a_choice': 'Escolha uma das opções',
+    // the cart
     cartEmpty: 'O seu carrinho está vazio',
     country: 'País',
     shippingMethod: 'Método de envio',
@@ -564,6 +582,7 @@ const BASE = {
     'refused.quantity': 'Não é possível encomendar esta quantidade',
     'refused.answer': 'As suas respostas para este artigo já não servem. Remova-o e adicione-o de novo',
     'refused.too_large': 'Esta linha excede o valor que a loja pode aceitar. Reduza a quantidade',
+    // the checkout step
     details: 'Os seus dados',
     delivery: 'Morada de entrega',
     'field.name': 'Nome',
@@ -595,6 +614,7 @@ const BASE = {
     'error.try_again': 'Não foi possível chegar à página de pagamento. Tente novamente',
     'error.internal': 'Algo correu mal do nosso lado. Tente mais tarde',
     'error.paid': 'Esta encomenda já está paga',
+    // the page after payment
     orderNumber: 'Encomenda {number}',
     loading: 'A carregar…',
     backToCart: 'Voltar ao carrinho',
@@ -608,6 +628,7 @@ const BASE = {
     'state.stillWaiting': 'O pagamento ainda não está confirmado. Se pagou, a confirmação chegará por e-mail; pode fechar esta página',
   },
   fr: {
+    // the product page
     soldOut: 'Épuisé',
     left: 'Il en reste {n}',
     inStock: 'En stock',
@@ -623,6 +644,7 @@ const BASE = {
     'fault.required': 'Veuillez répondre à cette question',
     'fault.too_long': '{max} caractères au plus',
     'fault.not_a_choice': 'Veuillez choisir l’une des options',
+    // the cart
     cartEmpty: 'Votre panier est vide',
     country: 'Pays',
     shippingMethod: 'Mode de livraison',
@@ -645,6 +667,7 @@ const BASE = {
     'refused.quantity': 'Cette quantité ne peut pas être commandée',
     'refused.answer': 'Vos réponses pour cet article ne conviennent plus. Retirez-le et ajoutez-le de nouveau',
     'refused.too_large': 'Cette ligne dépasse le montant que la boutique peut accepter. Réduisez la quantité',
+    // the checkout step
     details: 'Vos coordonnées',
     delivery: 'Adresse de livraison',
     'field.name': 'Nom',
@@ -676,6 +699,7 @@ const BASE = {
     'error.try_again': 'La page de paiement n’a pas pu être atteinte. Veuillez réessayer',
     'error.internal': 'Un problème est survenu de notre côté. Réessayez plus tard',
     'error.paid': 'Cette commande est déjà payée',
+    // the page after payment
     orderNumber: 'Commande {number}',
     loading: 'Chargement…',
     backToCart: 'Retour au panier',

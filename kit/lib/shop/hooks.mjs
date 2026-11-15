@@ -11,17 +11,17 @@
  * A piece has two kinds, and the first of each is the piece's root:
  *
  *   always  every copy has them, or the piece cannot work — the element says
- *           in the console which is missing, and the platform's preflight
- *           fails a page without them;
+ *           in the console which is missing (`lacking`, below);
  *   said    where the element writes what happened or what is left: the
  *           price «from», the customs notice, the order's number. Left out,
  *           that line is not said and nothing else changes.
  *
  * Five pieces, one per element: `<jtk-product>` (PRODUCT), `<jtk-cart>`
  * (CART), `<jtk-checkout>` (CHECKOUT), `<jtk-order>` (ORDER), `<jtk-listing>`
- * (LISTING). The test (kit/test/shop.test.mjs) holds the hooks to being data
- * or names; the storefront's components are held to carrying each one in the
- * task that writes them.
+ * (LISTING). The test (kit/test/shop.test.mjs) pins every list below and holds
+ * the hooks to being data or names. A copied component that lost one is found
+ * by its element, in the console, through `lacking`: the platform's preflight
+ * reads none of these hooks.
  */
 
 /** @typedef {{ hook: string; says: string }} Hook */

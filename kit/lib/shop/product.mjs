@@ -171,7 +171,7 @@ export function valueStates(facts, stock, chosen) {
  */
 function textOf(raw) {
   const text = typeof raw === 'string' ? raw.normalize('NFC').trim() : '';
-  return text.replace(/[\s‌‍]/g, '') === '' ? '' : text;
+  return text.replace(/[\s\u200c\u200d]/g, '') === '' ? '' : text;
 }
 
 /**
