@@ -14,9 +14,7 @@
  * asked (`ask`, shop-wire.js: `X-Jtk-Shop: 1`, never cached) when the cart is
  * shown, when a line or the country changes, and when the cart changes in
  * another tab (`storage`) or the page says it did (`jtk:cart`, which a
- * product's form dispatches on *Add*). A cart with no line asks nothing. The
- * answer being slow or lost says so (`cartFailed`) and leaves *To checkout*
- * held.
+ * product's form dispatches on *Add*). A cart with no line asks nothing.
  *
  * ── how a page gets it ──────────────────────────────────────────────────────
  *
@@ -35,73 +33,69 @@
  * list) and the words the markup was written in as `data-words`
  * (`shopWordsFor`, which the element reads under them for any the page left
  * out). The element says what it is drawing in `data-state` on the root, for
- * the site's CSS to hide or show a part by: `pricing` until the first answer,
- * `priced`, `empty` for a cart with no line, `failed` where the shop could not
- * be asked.
+ * the site's CSS to hide or show a part by:
+ *
+ *   pricing  the first answer is awaited
+ *   priced   the shop has answered for the cart as it is
+ *   stale    the shop could not be asked again: the last rows stay, held, with
+ *            `[data-cart-retry]` to ask again
+ *   empty    the cart has no line
+ *   failed   the shop could not be asked and there is nothing to keep
+ *
+ * and `aria-busy` while an answer is awaited.
  *
  * ── what it does ────────────────────────────────────────────────────────────
  *
  *   - writes a row for each line into `[data-cart-lines]`: the title, the
  *     labels, the answers and what they add, a quantity box and the line's
  *     total in the site's money, and a button that takes it out. A refused
- *     line says why, beside its box and its button (`aria-describedby`), and
- *     all of them are summed up in `[data-cart-error]` (`role="alert"`);
+ *     line has no title the cart could keep, so it says its place — «Item 2» —
+ *     and why, and its box and its button are named by the place and described
+ *     by the reason; all of them are summed up in `[data-cart-error]`
+ *     (`role="alert"`);
  *   - writes a radio `name="method"` per method the country is offered into
  *     `[data-methods]`, the cart's chosen one where it is still offered, else
  *     the first; the subtotal into `[data-subtotal]`;
  *   - shows `[data-abroad]` (the customs sentence, never for a pick-up),
  *     `[data-vat]` and `[data-cannot-send]` where they hold;
- *   - enables `[data-to-checkout]` only while the cart is ready: every line
- *     priced, nothing refused, a method chosen. Pressed, it writes the country
- *     and the method into the cart's storage and dispatches `jtk:to-checkout`
- *     on the document, the cart's key as its `detail`. No quote goes with it:
- *     the checkout asks the shop again with the stored cart, so the total it
- *     says is what the shop prices at that moment.
+ *   - enables `[data-to-checkout]` only while the cart is ready — every line
+ *     priced, nothing refused, a method chosen — and the shop has answered for
+ *     the cart as it is. Pressed, it writes the country and the method into the
+ *     cart's storage and dispatches `jtk:to-checkout` on the document, the
+ *     cart's key as its `detail`. No quote goes with it: the checkout asks the
+ *     shop again with the stored cart, so the total it says is what the shop
+ *     prices at that moment.
+ *
+ * What the buyer does is never dropped: a quantity or a removal is kept in the
+ * browser's cart at once, the shop is asked again, and the newest answer is
+ * what is shown; a line taken out leaves the page at once and the lines after
+ * it take its place, so the next press is on the line it looks at. A shop that
+ * cannot be asked keeps the rows as they were, held, says so (`cartFailed`) and
+ * offers `[data-cart-retry]`; any change asks again as well.
  *
  * The focus stays where the buyer put it: a changed quantity keeps it on its
  * box, a method chosen by the arrow keys on its radio, a line taken out hands
- * it to the next line's button, or to `[data-cart-empty]` when it was the last.
- * A browser that keeps no cart (site data blocked) is said in
- * `[data-cart-error]` (`cartUnavailable`), and nothing is handed on.
+ * it to the line that takes its place, or the one before it, or to
+ * `[data-cart-empty]` when none is left. A browser that keeps no cart (site
+ * data blocked) is said in `[data-cart-error]` (`cartUnavailable`), and nothing
+ * is handed on.
  */
 import { money } from '../lib/money.mjs';
 import { shopWordsFor } from '../lib/shop/words.mjs';
 import { CART, lacking } from '../lib/shop/hooks.mjs';
 import { MAX_QTY, cartKey, cartView, readCart, removeLine, setQty, shippingBody } from '../lib/shop/cart.mjs';
-import { ask } from './shop-wire.js';
+import { BaseElement, ask, defineOnce, parsed, putBase } from './shop-wire.js';
 import { onAlive } from './alive.js';
 
 export { SHOP_PROTOCOL, ask } from './shop-wire.js';
 
-/**
- * The rules the behaviour cannot work without, whatever the site's CSS says:
- * a state shown and hidden by `hidden`, and a ring on whatever has the focus.
- * First in <head>, at the lowest weight, so a site's own rule wins where it
- * says one.
- */
+/** The rules the behaviour cannot work without: `putBase` in shop-wire.js says what they are for. */
 const BASE = `
 [data-cart] [hidden] { display: none !important; }
 :where([data-cart] :focus-visible) { outline: 2px solid currentColor; outline-offset: 2px; }
 `;
 
-function putBase() {
-  if (document.querySelector('style[data-jtk-cart]')) return;
-  const style = document.createElement('style');
-  style.dataset.jtkCart = '';
-  style.textContent = BASE;
-  document.head.prepend(style);
-}
-
 let wiredCount = 0;
-
-/** JSON from an attribute, or what is given where it is none. */
-function parsed(text, otherwise) {
-  try {
-    return JSON.parse(text ?? '');
-  } catch {
-    return otherwise;
-  }
-}
 
 /** A part the element draws: marked by a data attribute, never a class, so the site's CSS can find it. */
 function part(tag, name, text) {
@@ -111,6 +105,9 @@ function part(tag, name, text) {
   return node;
 }
 
+/** What makes a line this line — the product, the variant and the answers, not how many — so a row can tell it is still the cart's. */
+const identity = (line) => JSON.stringify([line.product, line.variant, Object.entries(line.answers).sort()]);
+
 /**
  * Wires one cart's `[data-cart]`. Idempotent: a cart already wired is left alone.
  * @param {HTMLElement} root
@@ -118,7 +115,7 @@ function part(tag, name, text) {
 export function wireCart(root) {
   if (root.dataset.jtkWired === '1') return;
   root.dataset.jtkWired = '1';
-  putBase();
+  putBase('cart', BASE);
 
   const locale = root.dataset.locale ?? 'en';
   const api = root.dataset.api ?? '/api/';
@@ -143,6 +140,7 @@ export function wireCart(root) {
   /** @type {HTMLElement | null} */ const abroad = root.querySelector('[data-abroad]');
   /** @type {HTMLElement | null} */ const vat = root.querySelector('[data-vat]');
   /** @type {HTMLElement | null} */ const cannot = root.querySelector('[data-cannot-send]');
+  /** @type {HTMLElement | null} */ const retry = root.querySelector('[data-cart-retry]');
 
   // The ARIA the behaviour depends on, whatever the copy kept: the subtotal is read as it changes, a refusal
   // as it appears, the sentences that appear are statuses, and the empty message can take the focus.
@@ -162,15 +160,21 @@ export function wireCart(root) {
   let fault = '';
   /** The request being answered; an older one is dropped when it arrives. */
   let sent = 0;
-  /** Whether the shop has yet to answer for the cart as it is: the rows drawn may be of an older one. */
+  /** Whether the shop has yet to answer for the cart as it stands: what is drawn may be of an older one. */
   let pending = false;
-  /** Where the focus goes once what is drawn is drawn again: a line taken out hands it on. */
-  /** @type {{ kind: 'qty' | 'remove' | 'method' | 'empty'; line?: number; value?: string } | null} */
-  let handOn = null;
+  /** Whether the shop could not be asked again, so that what is drawn is the last it said. */
+  let stale = false;
+  /** Whether the cart's last line was just taken out: the empty message takes the focus. */
+  let focusEmpty = false;
+  /** The rows' lines, as each was drawn: a control is obeyed only while its row is still the cart's line there. */
+  const drawnAs = new WeakMap();
+  let rowCount = 0;
 
   const say = (minor) => money(minor, view?.currency || undefined, locale);
   /** The country asked about: the cart's where it is one the shop sends to, else the first it does. */
   const countryNow = () => (countries.includes(cart.country) ? cart.country : (countries[0] ?? cart.country));
+  /** `li` where the lines are a list, as they are in the copy, else `div`. */
+  const itemTag = () => (lines instanceof HTMLUListElement || lines instanceof HTMLOListElement ? 'li' : 'div');
 
   /** Reads the cart from storage; false where the browser would not say. */
   function load() {
@@ -211,6 +215,8 @@ export function wireCart(root) {
     if (row instanceof HTMLElement && at.matches('[data-line-qty]')) return { kind: /** @type {'qty'} */ ('qty'), line: Number(row.dataset.line) };
     if (row instanceof HTMLElement && at.matches('[data-line-remove]')) return { kind: /** @type {'remove'} */ ('remove'), line: Number(row.dataset.line) };
     if (at instanceof HTMLInputElement && at.matches('[name=method]')) return { kind: /** @type {'method'} */ ('method'), value: at.value };
+    // The button to ask again goes when the shop has answered: the first box of the cart takes its place.
+    if (at === retry) return { kind: /** @type {'qty'} */ ('qty'), line: 0 };
     return null;
   }
 
@@ -218,8 +224,7 @@ export function wireCart(root) {
     /** @type {Element | null | undefined} */
     let target = null;
     if (want === null) return;
-    if (want.kind === 'empty') target = empty;
-    else if (want.kind === 'method') target = [...root.querySelectorAll('[name=method]')].find((one) => /** @type {HTMLInputElement} */ (one).value === want.value);
+    if (want.kind === 'method') target = [...root.querySelectorAll('[name=method]')].find((one) => /** @type {HTMLInputElement} */ (one).value === want.value);
     else target = lines?.querySelector(`[data-cart-line][data-line="${want.line}"] [data-line-${want.kind}]`);
     if (target instanceof HTMLElement) target.focus();
   }
@@ -231,11 +236,26 @@ export function wireCart(root) {
     return `${one.name}: ${value}${Number(one.adds) !== 0 ? ` (+ ${say(Number(one.adds))})` : ''}`;
   }
 
+  /**
+   * The place of a line the cart keeps no title for — «Item 2» — in the row, and in the names of its box and its button,
+   * so that two such lines are told apart by more than their reason. A title is put in as written: `() =>`, so that a
+   * `$&` in it is no pattern.
+   */
+  function place(node, at) {
+    const said = words.itemNumber.replace('{n}', () => String(at + 1));
+    const note = node.querySelector('[data-line-place]');
+    if (note) note.textContent = said;
+    node.querySelector('[data-line-qty]')?.setAttribute('aria-label', `${words.quantity}: ${said}`);
+    node.querySelector('[data-line-remove]')?.setAttribute('aria-label', words.removeNamed.replace('{title}', () => said));
+  }
+
   /** One line of the cart: what the shop priced it at, or why it would not, a box for how many, and a way to take it out. */
   function rowNode(row, item) {
     const node = document.createElement(item);
+    const n = (rowCount += 1);
     node.setAttribute('data-cart-line', '');
     node.dataset.line = String(row.at);
+    drawnAs.set(node, identity(row.line));
     // A line the answer says nothing of is as good as refused: the cart goes no further with it.
     const why = row.refused?.word ?? (row.quoted === undefined ? words['error.refused'] : '');
     node.dataset.state = why === '' ? 'priced' : 'refused';
@@ -249,17 +269,19 @@ export function wireCart(root) {
         for (const text of answers) list.append(part('li', 'line-answer', text));
         node.append(list);
       }
+    } else {
+      node.append(part('p', 'line-place'));
     }
     /** @type {HTMLElement | null} */
     let note = null;
     if (why !== '') {
       note = part('p', 'line-refused', why);
-      note.id = `${prefix}-why-${row.at}`;
+      note.id = `${prefix}-why-${n}`;
       node.append(note);
     }
 
     const box = part('div', 'line-quantity');
-    const id = `${prefix}-qty-${row.at}`;
+    const id = `${prefix}-qty-${n}`;
     const label = document.createElement('label');
     label.htmlFor = id;
     label.textContent = words.quantity;
@@ -275,15 +297,16 @@ export function wireCart(root) {
     const remove = /** @type {HTMLButtonElement} */ (part('button', 'line-remove', words.remove));
     remove.type = 'button';
     // The visible word is in the name, whole: «Remove Mug».
-    if (title !== '') remove.setAttribute('aria-label', words.removeNamed.replace('{title}', title));
+    if (title !== '') remove.setAttribute('aria-label', words.removeNamed.replace('{title}', () => title));
     if (note) remove.setAttribute('aria-describedby', note.id);
     node.append(remove);
+    if (title === '') place(node, row.at);
     return node;
   }
 
   function drawLines() {
     if (!lines || !view) return;
-    const item = lines instanceof HTMLUListElement || lines instanceof HTMLOListElement ? 'li' : 'div';
+    const item = itemTag();
     lines.replaceChildren(...view.rows.map((row) => rowNode(row, item)));
   }
 
@@ -308,6 +331,11 @@ export function wireCart(root) {
     node.hidden = !shown;
   }
 
+  /** *To checkout* is open only for a cart the shop has answered for as it stands, and found ready. */
+  function holdCheckout() {
+    if (checkout) checkout.disabled = view === null || !view.ready || pending || stale;
+  }
+
   /** What the shop's answer says besides the lines: the subtotal, the sentences that hold, and whether the buyer may go on. */
   function drawSummary() {
     if (!view) return;
@@ -316,14 +344,16 @@ export function wireCart(root) {
     note(abroad, view.abroad, words.customs);
     const unsent = !view.sends && countries.length > 0 ? words.doesNotSend : view.cannotSend ? words.cannotSend : '';
     note(cannot, unsent !== '', unsent);
-    if (checkout) checkout.disabled = !view.ready;
+    holdCheckout();
     drawError();
   }
 
   /** `[data-cart-error]`: a cart that could not be kept or priced, else a line refused, said once for all of them. */
   function drawError() {
     if (!error) return;
-    const refused = view !== null && (view.whole !== undefined || view.rows.some((row) => row.refused !== undefined || row.quoted === undefined));
+    // Held with every line priced and a method to send by: the shop refused the cart as a whole, which no row bears.
+    const unbeared = view !== null && !view.ready && view.rows.length > 0 && view.rows.every((row) => row.quoted !== undefined) && view.methods.length > 0;
+    const refused = view !== null && (unbeared || view.rows.some((row) => row.refused !== undefined || row.quoted === undefined));
     const text = fault !== '' ? fault : refused ? words['error.refused'] : '';
     error.textContent = text;
     error.hidden = text === '';
@@ -337,47 +367,60 @@ export function wireCart(root) {
     methods?.replaceChildren();
     if (subtotal) subtotal.textContent = '';
     for (const sentence of [vat, abroad, cannot]) if (sentence) sentence.hidden = true;
-    if (checkout) checkout.disabled = true;
+    holdCheckout();
   }
 
   /** A cart with no line: said, and nothing to ask the shop. */
   function drawEmpty() {
+    const askedAgain = document.activeElement === retry;
     sent += 1;
     pending = false;
+    stale = false;
     root.removeAttribute('aria-busy');
     root.dataset.state = 'empty';
     clearAnswer();
+    if (retry) retry.hidden = true;
     if (empty) {
       empty.textContent = words.cartEmpty;
       empty.hidden = false;
+      if (focusEmpty || askedAgain) empty.focus();
     }
+    focusEmpty = false;
     drawError();
-    refocus(handOn);
-    handOn = null;
   }
 
-  /** The cart could not be priced: said, with nothing drawn that the shop did not say. */
+  /**
+   * The shop could not be asked. What was drawn stays, held, where there was something to keep; where there was not,
+   * nothing is drawn that the shop did not say. Either way it is said, and the buyer may ask again.
+   */
   function drawFailed() {
     pending = false;
-    handOn = null;
     root.removeAttribute('aria-busy');
-    root.dataset.state = 'failed';
-    clearAnswer();
-    if (empty) empty.hidden = true;
     fault = words.cartFailed;
+    if (quote === null) {
+      root.dataset.state = 'failed';
+      clearAnswer();
+      if (empty) empty.hidden = true;
+    } else {
+      root.dataset.state = 'stale';
+      stale = true;
+    }
+    if (retry) retry.hidden = false;
+    holdCheckout();
     drawError();
   }
 
   function draw() {
     const was = focused();
+    stale = false;
     view = cartView(cart, quote, locale);
     root.dataset.state = 'priced';
     if (empty) empty.hidden = true;
+    if (retry) retry.hidden = true;
     drawLines();
     drawMethods();
     drawSummary();
-    refocus(handOn ?? was);
-    handOn = null;
+    refocus(was);
   }
 
   // ── asking the shop ─────────────────────────────────────────────────────
@@ -392,10 +435,12 @@ export function wireCart(root) {
     const mine = (sent += 1);
     pending = true;
     root.setAttribute('aria-busy', 'true');
+    holdCheckout();
     if (country && countries.length > 0) country.value = countryNow();
     if (quote === null) {
       root.dataset.state = 'pricing';
-      if (lines) lines.replaceChildren(part('p', 'cart-pricing', words.pricing));
+      // In the list as one of its items, where the lines are a list.
+      if (lines) lines.replaceChildren(part(itemTag(), 'cart-pricing', words.pricing));
     }
     if (empty) empty.hidden = true;
     const answer = await ask(api, 'shipping', { body: { ...shippingBody(cart, locale), country: countryNow() } });
@@ -414,36 +459,53 @@ export function wireCart(root) {
   }
 
   // ── what the buyer does ─────────────────────────────────────────────────
-  /** How many, as a whole number of 1 to 999; what is no quantity is the line's as it was. */
+  /**
+   * The place in the cart of the line a control's row stands for, or -1 where the cart's line there is another —
+   * the cart changed under the row, in another tab, and an answer is about to draw it again.
+   */
+  function placeOf(control) {
+    const row = control.closest('[data-cart-line]');
+    if (!(row instanceof HTMLElement)) return -1;
+    const at = Number(row.dataset.line);
+    const line = cart.lines[at];
+    return line !== undefined && drawnAs.get(row) === identity(line) ? at : -1;
+  }
+
+  /** How many, as a whole number of 1 to 999; what is no quantity is the line's as it was. Kept at once, and the shop asked again. */
   function onQty(input) {
-    const row = input.closest('[data-cart-line]');
-    const at = row instanceof HTMLElement ? Number(row.dataset.line) : -1;
+    const at = placeOf(input);
     const was = cart.lines[at]?.qty;
-    if (was === undefined || pending) {
-      // The line is not the cart's any more, or the shop has not answered for the cart as it stands: nothing to change.
-      if (was !== undefined) input.value = String(was);
-      return;
-    }
+    if (was === undefined) return;
     const n = Math.trunc(Number(input.value));
     const qty = Number.isFinite(n) && n >= 1 ? Math.min(n, MAX_QTY) : was;
     input.value = String(qty);
     if (qty === was) return;
-    handOn = { kind: 'qty', line: at };
     if (save(setQty(cart, at, qty))) void show();
-    else {
-      handOn = null;
-      input.value = String(was);
-    }
+    else input.value = String(was);
   }
 
+  /**
+   * A line taken out: kept so at once, and gone from the page at once — the lines after it take its place, so the next press
+   * is on the line it looks at — and the focus goes on. The shop is asked again for what is left.
+   */
   function onRemove(button) {
-    const row = button.closest('[data-cart-line]');
-    const at = row instanceof HTMLElement ? Number(row.dataset.line) : -1;
-    if (pending || cart.lines[at] === undefined) return;
+    const at = placeOf(button);
+    if (at < 0) return;
     const rest = removeLine(cart, at);
-    handOn = rest.lines.length === 0 ? { kind: 'empty' } : { kind: 'remove', line: Math.min(at, rest.lines.length - 1) };
-    if (save(rest)) void show();
-    else handOn = null;
+    if (!save(rest)) return;
+    if (rest.lines.length === 0) focusEmpty = true;
+    else {
+      button.closest('[data-cart-line]')?.remove();
+      for (const row of lines?.querySelectorAll('[data-cart-line]') ?? []) {
+        const line = Number(/** @type {HTMLElement} */ (row).dataset.line);
+        if (line <= at) continue;
+        /** @type {HTMLElement} */ (row).dataset.line = String(line - 1);
+        // A line with no title says its place: the place has moved up.
+        if (row.querySelector('[data-line-place]')) place(row, line - 1);
+      }
+      refocus({ kind: 'remove', line: Math.min(at, rest.lines.length - 1) });
+    }
+    void show();
   }
 
   function onCountry(select) {
@@ -459,7 +521,7 @@ export function wireCart(root) {
 
   /** Hands the country and the method on: written into the cart, said on the document, with no quote. */
   function onCheckout() {
-    if (view === null || !view.ready || pending) return;
+    if (view === null || !view.ready || pending || stale) return;
     if (!save({ ...cart, country: countryNow(), method: view.method })) return;
     document.dispatchEvent(new CustomEvent('jtk:to-checkout', { detail: key }));
   }
@@ -475,6 +537,7 @@ export function wireCart(root) {
     const target = event.target instanceof Element ? event.target : null;
     const remove = target?.closest('[data-line-remove]');
     if (remove) onRemove(remove);
+    else if (target?.closest('[data-cart-retry]')) void show();
     else if (target?.closest('[data-to-checkout]')) onCheckout();
   });
 
@@ -489,15 +552,10 @@ export function wireCart(root) {
   window.addEventListener('storage', heard((event) => (event.key === key || event.key === null) && void show()), options);
   // Back to the page from the browser's cache, hours later, or the network back after a failure: priced again.
   window.addEventListener('pageshow', heard((event) => event.persisted && void show()), options);
-  window.addEventListener('online', heard(() => root.dataset.state === 'failed' && void show()), options);
+  window.addEventListener('online', heard(() => (root.dataset.state === 'failed' || root.dataset.state === 'stale') && void show()), options);
 
   void show();
 }
-
-// The element, where there is a document to define it in. Under Node — the
-// tests, a build that imports the module — there is none, and nothing here
-// needs one.
-const BaseElement = typeof HTMLElement === 'undefined' ? class {} : HTMLElement;
 
 /**
  * `<jtk-cart>` wraps the cart `Cart.astro` wrote and wires it when it reaches
@@ -513,8 +571,7 @@ export class JtkCart extends BaseElement {
 
 /** @param {string} [name] */
 export function defineCart(name = 'jtk-cart') {
-  if (typeof customElements === 'undefined' || customElements.get(name)) return;
-  customElements.define(name, JtkCart);
+  defineOnce(name, /** @type {any} */ (JtkCart));
 }
 
 if (typeof document !== 'undefined') {

@@ -54,8 +54,6 @@ export interface CartRow {
 /** What a cart shows once the shop has priced it, as one value for the element to draw. */
 export interface CartView {
   rows: CartRow[];
-  /** Why the whole cart was refused (line `-1`), where it was. */
-  whole?: CartRefusal;
   /** What the priced lines come to, in minor units. */
   subtotal: number;
   /** The site's currency, as the shop says it. */
@@ -69,7 +67,7 @@ export interface CartView {
   ownCurrency: boolean;
   sends: boolean;
   cannotSend: boolean;
-  /** Every line priced, nothing refused, and a method chosen. */
+  /** Every line priced, nothing refused (a refusal of the whole cart, line `-1`, included), and a method chosen. */
   ready: boolean;
 }
 /** The cart and the shop's last shipping answer read together into what the page shows. */

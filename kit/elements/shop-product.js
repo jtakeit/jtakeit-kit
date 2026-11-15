@@ -60,7 +60,7 @@ import { shopWordsFor } from '../lib/shop/words.mjs';
 import { PRODUCT, lacking } from '../lib/shop/hooks.mjs';
 import { answersOf, valueStates, variantFor } from '../lib/shop/product.mjs';
 import { MAX_QTY, addLine, cartKey, readCart } from '../lib/shop/cart.mjs';
-import { ask } from './shop-wire.js';
+import { BaseElement, ask, defineOnce, parsed, putBase } from './shop-wire.js';
 import { onAlive } from './alive.js';
 
 export { SHOP_PROTOCOL, ask } from './shop-wire.js';
@@ -71,35 +71,13 @@ const FEW = 5;
 /** A `_key` the platform's grammar can name, and so the only one an annotation is moved to. */
 const KEY = /^[a-z][a-z0-9-]{0,31}$/;
 
-/**
- * The rules the behaviour cannot work without, whatever the site's CSS says:
- * a state shown and hidden by `hidden`, and a ring on whatever has the focus.
- * First in <head>, at the lowest weight, so a site's own rule wins where it
- * says one.
- */
+/** The rules the behaviour cannot work without: `putBase` in shop-wire.js says what they are for. */
 const BASE = `
 [data-product] [hidden] { display: none !important; }
 :where([data-product] :focus-visible) { outline: 2px solid currentColor; outline-offset: 2px; }
 `;
 
-function putBase() {
-  if (document.querySelector('style[data-jtk-product]')) return;
-  const style = document.createElement('style');
-  style.dataset.jtkProduct = '';
-  style.textContent = BASE;
-  document.head.prepend(style);
-}
-
 let wiredCount = 0;
-
-/** JSON from an attribute, or what is given where it is none. */
-function parsed(text, otherwise) {
-  try {
-    return JSON.parse(text ?? '');
-  } catch {
-    return otherwise;
-  }
-}
 
 /**
  * Wires one product's form. Idempotent: a form already wired is left alone.
@@ -108,7 +86,7 @@ function parsed(text, otherwise) {
 export function wireProduct(form) {
   if (form.dataset.jtkWired === '1') return;
   form.dataset.jtkWired = '1';
-  putBase();
+  putBase('product', BASE);
 
   /** @type {import('../lib/shop/product.mjs').ProductFacts | null} */
   const facts = parsed(form.dataset.facts, null);
@@ -435,11 +413,6 @@ export function wireAll(root = document) {
   for (const form of /** @type {NodeListOf<HTMLFormElement>} */ (root.querySelectorAll('form[data-product]'))) wireProduct(form);
 }
 
-// The element, where there is a document to define it in. Under Node — the
-// tests, a build that imports the module — there is none, and nothing here
-// needs one.
-const BaseElement = typeof HTMLElement === 'undefined' ? class {} : HTMLElement;
-
 /**
  * `<jtk-product>` wraps the form `Product.astro` wrote and wires it when it
  * reaches the document — on load, and when the panel places the markup later.
@@ -452,8 +425,7 @@ export class JtkProduct extends BaseElement {
 
 /** @param {string} [name] */
 export function defineProduct(name = 'jtk-product') {
-  if (typeof customElements === 'undefined' || customElements.get(name)) return;
-  customElements.define(name, JtkProduct);
+  defineOnce(name, /** @type {any} */ (JtkProduct));
 }
 
 if (typeof document !== 'undefined') {

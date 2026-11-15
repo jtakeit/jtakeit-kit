@@ -57,7 +57,7 @@ export const PRODUCT = piece(
 /** The cart: its lines, the country, the methods that country is offered, the subtotal. */
 export const CART = piece(
   [
-    { hook: '[data-cart]', says: 'the cart; `data-api`, `data-locale`, `data-countries` (the countries to choose from) and `data-words` on it, and what it is drawing in `data-state`: `pricing`, `priced`, `empty`, `failed`' },
+    { hook: '[data-cart]', says: 'the cart; `data-api`, `data-locale`, `data-countries` (the countries to choose from) and `data-words` on it, and what it is drawing in `data-state`: `pricing`, `priced`, `stale` (the shop could not be asked again: the last rows, held), `empty`, `failed`' },
     { hook: '[data-cart-lines]', says: 'empty; the element writes a row per line into it' },
     { hook: '[data-cart-empty]', says: 'hidden; shown while the cart has no line' },
     { hook: '[name=country]', says: 'a `<select>` of the countries' },
@@ -70,6 +70,7 @@ export const CART = piece(
     { hook: '[data-abroad]', says: 'hidden; shown where the parcel leaves the business\'s customs area' },
     { hook: '[data-vat]', says: 'hidden; shown where the prices include VAT' },
     { hook: '[data-cannot-send]', says: 'hidden; shown where the business does not send to the country, or no method carries the parcel' },
+    { hook: '[data-cart-retry]', says: 'a button, hidden; shown where the shop could not be asked, and asks again when pressed' },
   ],
 );
 

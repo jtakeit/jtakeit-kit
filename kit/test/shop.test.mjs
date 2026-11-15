@@ -68,6 +68,8 @@ test('the words the spec and the protocol fix are exactly as they are written, a
   assert.equal(en.ownCurrency, 'You can pay in your own currency');
   assert.equal(en.customs, 'Customs duties are paid at the door by the buyer');
   assert.equal(en.payAgain, 'Back to paying');
+  assert.equal(en.itemNumber, 'Item {n}');
+  assert.equal(en.tryAgain, 'Try again');
   assert.equal(en.address, 'Stripe could not work out the tax for this address: check it, and start again');
   // The refusal codes of a line, and the order page's states, by the protocol's names.
   for (const code of ['not_sold', 'off_sale', 'quantity', 'answer', 'too_large']) assert.ok(en[`refused.${code}`], `refused.${code}`);
@@ -118,7 +120,7 @@ test("every piece's hooks are data or names, never a class", () => {
     ],
     CART: [
       ['[data-cart]', '[data-cart-lines]', '[data-cart-empty]', '[name=country]', '[data-methods]', '[data-subtotal]', '[data-cart-error]', '[data-to-checkout]'],
-      ['[data-abroad]', '[data-vat]', '[data-cannot-send]'],
+      ['[data-abroad]', '[data-vat]', '[data-cannot-send]', '[data-cart-retry]'],
     ],
     CHECKOUT: [
       [
@@ -360,12 +362,11 @@ test('a cart is ready only when every line is priced, nothing is refused and a m
   assert.equal(cartView(readCart(null), quoted(), 'en').ready, false, 'an empty cart');
   assert.deepEqual(cartView(readCart(null), quoted(), 'en').rows, []);
 
-  // The whole cart refused — line -1 — is said, and holds it back though every line is priced.
+  // The whole cart refused — line -1 — holds it back though every line is priced, and no row bears it.
   const whole = cartView(cart, { ...both, refused: [{ line: -1, code: 'too_large', says: 'the cart has 101 lines' }] }, 'en');
   assert.equal(whole.ready, false);
-  assert.equal(whole.whole.code, 'too_large');
-  assert.equal(whole.whole.word, shopWordsFor('en')['refused.too_large']);
-  assert.equal(cartView(cart, both, 'en').whole, undefined);
+  assert.equal(whole.rows.every((row) => row.quoted !== undefined && row.refused === undefined), true);
+  assert.equal('whole' in whole, false, 'the view has no sentence of its own for it: the page says the order has changed');
   // A code the kit has no word for is still said: the order has changed.
   const odd = cartView(cart, { ...both, lines: [both.lines[0]], refused: [{ line: 1, code: 'from_a_later_version', says: '' }] }, 'en');
   assert.equal(odd.rows[1].refused.word, shopWordsFor('en')['error.refused']);
@@ -684,6 +685,34 @@ test("the product's element and its wire load without a DOM, and speak shop/1", 
   assert.ok(manifest.files.includes('elements'));
   const types = readFileSync(new URL('../types/elements-shop.d.ts', import.meta.url), 'utf8');
   for (const name of ['SHOP_PROTOCOL', 'ask', 'wireProduct', 'defineProduct', 'JtkProduct', "'jtk:cart'"]) assert.ok(types.includes(name), `elements-shop.d.ts declares ${name}`);
+});
+
+test('the pieces\' shared helpers: JSON from an attribute or what is given, and nothing defined where there is no document', async () => {
+  const wire = await import('../elements/shop-wire.js');
+  assert.deepEqual(wire.parsed('{"a":[1,2]}', null), { a: [1, 2] });
+  assert.equal(wire.parsed('not json', 'otherwise'), 'otherwise');
+  assert.deepEqual(wire.parsed(undefined, []), [], 'an attribute that is not there');
+  assert.equal(wire.parsed('', 7), 7);
+  assert.equal(typeof wire.BaseElement, 'function', 'something for a piece\'s element to extend, with or without a document');
+  // With no custom elements to define it in, defining is nothing.
+  wire.defineOnce('jtk-nothing', class extends wire.BaseElement {});
+  for (const file of ['shop-product.js', 'shop-cart.js']) {
+    const source = readFileSync(new URL(`../elements/${file}`, import.meta.url), 'utf8');
+    // Written once, in the wire: a piece takes them from there.
+    assert.doesNotMatch(source, /^(?:export )?function (?:parsed|putBase)\b/m, `${file} writes its own`);
+    assert.match(source, /from '\.\/shop-wire\.js'/, `${file} takes them from the wire`);
+  }
+  const types = readFileSync(new URL('../types/elements-shop.d.ts', import.meta.url), 'utf8');
+  for (const name of ['parsed', 'putBase', 'BaseElement', 'defineOnce']) assert.ok(types.includes(name), `elements-shop.d.ts declares ${name}`);
+});
+
+test("a shop's title is put into a word as written, never as a replacement pattern", () => {
+  // `'Remove {title}'.replace('{title}', 'Gift $& card')` would say «Remove {title} card»: a title is a shop's free text.
+  assert.equal('Remove {title}'.replace('{title}', () => 'Gift $$ 50 $& card'), 'Remove Gift $$ 50 $& card');
+  for (const file of ['shop-product.js', 'shop-cart.js']) {
+    const source = readFileSync(new URL(`../elements/${file}`, import.meta.url), 'utf8');
+    for (const [call] of source.matchAll(/\.replace\('\{title\}',[^\n]*/g)) assert.match(call, /\{title\}',\s*\(\)\s*=>/, `${file}: ${call}`);
+  }
 });
 
 test("the cart's element loads without a DOM, speaks over the same wire, and is in the package with its types", async () => {

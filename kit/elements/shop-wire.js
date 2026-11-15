@@ -58,3 +58,54 @@ export async function ask(api, path, init = {}) {
     return null;
   }
 }
+
+/**
+ * JSON from an attribute, or what is given where it is none — what a piece
+ * reads off its root: its facts, its words, its countries.
+ *
+ * @param {string | undefined} text
+ * @param {any} otherwise
+ */
+export function parsed(text, otherwise) {
+  try {
+    return JSON.parse(text ?? '');
+  } catch {
+    return otherwise;
+  }
+}
+
+/**
+ * The rules a piece cannot work without, whatever the site's CSS says — a
+ * state shown and hidden by `hidden`, a ring on whatever has the focus — put
+ * once on the page as `<style data-jtk-<name>>`, first in <head> and at the
+ * lowest weight, so a site's own rule wins where it says one.
+ *
+ * @param {string} name `product`, `cart`: the piece's
+ * @param {string} css
+ */
+export function putBase(name, css) {
+  if (document.querySelector(`style[data-jtk-${name}]`)) return;
+  const style = document.createElement('style');
+  style.setAttribute(`data-jtk-${name}`, '');
+  style.textContent = css;
+  document.head.prepend(style);
+}
+
+/**
+ * What a piece's custom element extends: `HTMLElement` where there is a
+ * document. Under Node — the tests, a build that imports the module — there is
+ * none, and nothing in a piece needs one.
+ */
+export const BaseElement = typeof HTMLElement === 'undefined' ? class {} : HTMLElement;
+
+/**
+ * Defines a piece's custom element, where there is a document and the name is
+ * not taken yet.
+ *
+ * @param {string} name
+ * @param {CustomElementConstructor} element
+ */
+export function defineOnce(name, element) {
+  if (typeof customElements === 'undefined' || customElements.get(name)) return;
+  customElements.define(name, element);
+}

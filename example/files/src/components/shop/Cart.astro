@@ -26,8 +26,11 @@
  * draws carries a data attribute (`data-cart-line`, `data-line-title`,
  * `data-line-qty`, `data-line-total`, `data-line-remove`, `data-method-choice`…)
  * and is styled with `:global(...)` below. The root says what it is drawing in
- * `data-state` — `pricing`, `priced`, `empty`, `failed` — and this file's CSS
- * shows each part for its own.
+ * `data-state` — `pricing`, `priced`, `stale` (the shop could not be asked
+ * again: the last rows, held, and a button to ask again), `empty`, `failed` —
+ * and this file's CSS shows each part for its own. A line the shop refuses has
+ * no title to be called by — the cart keeps none — so it says its place, «Item
+ * 2», and why.
  *
  * The countries are those of the shop's zones, from its settings at the build,
  * in their order and each once, named in the page's language — the one
@@ -53,7 +56,7 @@ const W = shopWordsFor(LANG);
 
 // The words the element says as the cart changes, handed over in the page's language.
 const SAID = [
-  'cartEmpty', 'pricing', 'cartFailed', 'cartUnavailable', 'quantity', 'remove', 'removeNamed', 'free', 'yes', 'vat', 'customs', 'doesNotSend', 'cannotSend',
+  'cartEmpty', 'pricing', 'cartFailed', 'tryAgain', 'cartUnavailable', 'quantity', 'remove', 'removeNamed', 'itemNumber', 'free', 'yes', 'vat', 'customs', 'doesNotSend', 'cannotSend',
   'error.refused', 'refused.not_sold', 'refused.off_sale', 'refused.quantity', 'refused.answer', 'refused.too_large',
 ];
 const words = Object.fromEntries(SAID.map((key) => [key, W[key]]));
@@ -120,6 +123,7 @@ const countries = codes.map((code) => ({ code, name: nameOf(code) }));
       <span class="cart__vat" data-vat hidden></span>
     </p>
     <p class="cart__error" data-cart-error role="alert" hidden></p>
+    <button class="cart__retry" type="button" data-cart-retry hidden>{W.tryAgain}</button>
     <button class="cart__go" type="button" data-to-checkout disabled>{W.toCheckout}</button>
   </section>
 </jtk-cart>
@@ -152,10 +156,11 @@ const countries = codes.map((code) => ({ code, name: nameOf(code) }));
     margin: 0;
     color: var(--ink-quiet);
   }
-  /* The shipping and the sum are said once the shop has priced the cart: not for none, not before, not where it failed. */
-  .cart__in:not([data-state='priced']) .cart__ship,
-  .cart__in:not([data-state='priced']) .cart__sum,
-  .cart__in:not([data-state='priced']) .cart__go {
+  /* The shipping and the sum are said once the shop has priced the cart — and while it cannot be asked again, as it last said
+     them, held: not for none, not before, not where it failed with nothing to show. */
+  .cart__in:not([data-state='priced'], [data-state='stale']) .cart__ship,
+  .cart__in:not([data-state='priced'], [data-state='stale']) .cart__sum,
+  .cart__in:not([data-state='priced'], [data-state='stale']) .cart__go {
     display: none;
   }
 
@@ -181,13 +186,15 @@ const countries = codes.map((code) => ({ code, name: nameOf(code) }));
     overflow-wrap: anywhere;
   }
   .cart :global([data-line-title]),
+  .cart :global([data-line-place]),
   .cart :global([data-line-labels]),
   .cart :global([data-line-answers]),
   .cart :global([data-line-refused]) {
     grid-column: 1;
     margin: 0;
   }
-  .cart :global([data-line-title]) {
+  .cart :global([data-line-title]),
+  .cart :global([data-line-place]) {
     font-weight: 600;
   }
   .cart :global([data-line-labels]),
@@ -254,6 +261,7 @@ const countries = codes.map((code) => ({ code, name: nameOf(code) }));
       grid-template-columns: minmax(0, 1fr) auto;
     }
     .cart :global([data-line-title]),
+    .cart :global([data-line-place]),
     .cart :global([data-line-labels]),
     .cart :global([data-line-answers]),
     .cart :global([data-line-refused]) {
@@ -365,6 +373,18 @@ const countries = codes.map((code) => ({ code, name: nameOf(code) }));
   }
   .cart__vat {
     color: var(--ink-quiet);
+  }
+  .cart__retry {
+    justify-self: start;
+    min-height: 2.75rem;
+    padding: 0.5rem 1.1rem;
+    border: 1px solid var(--ink);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
   }
   .cart__go {
     justify-self: start;

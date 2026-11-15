@@ -200,8 +200,10 @@ function refusal(words, code) {
  * first the shop offers — a cart carried to another country, or one whose
  * method was taken off, is never left choosing nothing. `abroad` is the shop's,
  * except that a pick-up crosses no border. `ready` is whether the buyer may go
- * on to pay: every line priced, nothing refused (a line, or the whole cart),
- * and a method to send it by.
+ * on to pay: every line priced, nothing refused, and a method to send it by. A
+ * refusal of the whole cart (line `-1`: more lines than the protocol prices,
+ * which a cart of at most MAX_LINES cannot meet) holds it back too, though no
+ * row bears it.
  *
  * @param {Cart} cart
  * @param {any} quote the shipping answer; anything that is no answer reads as the shop having priced nothing
@@ -229,7 +231,6 @@ export function cartView(cart, quote, locale) {
       },
     };
   });
-  const whole = refused.find((each) => each.line === -1);
   const methods = (Array.isArray(answer.methods) ? answer.methods.filter(isObject) : []).map((one) => ({
     method: String(one.method),
     name: String(one.name ?? ''),
@@ -240,7 +241,6 @@ export function cartView(cart, quote, locale) {
   const chosen = methods.find((one) => one.method === cart.method) ?? methods[0];
   return {
     rows,
-    ...(whole === undefined ? {} : { whole: refusal(words, String(whole.code)) }),
     subtotal: Number(answer.subtotal) || 0,
     currency: typeof answer.currency === 'string' ? answer.currency : '',
     methods,

@@ -13,6 +13,15 @@ export const SHOP_PROTOCOL: number;
  */
 export function ask(api: string, path: string, init?: { method?: 'GET' | 'POST'; body?: unknown }): Promise<{ status: number; body: any } | null>;
 
+/** JSON from an attribute, or what is given where it is none. */
+export function parsed<T>(text: string | undefined, otherwise: T): any | T;
+/** Puts the rules a piece cannot work without on the page, once, as `<style data-jtk-<name>>`, first in <head>. */
+export function putBase(name: string, css: string): void;
+/** What a piece's custom element extends: `HTMLElement` where there is a document, nothing under Node. */
+export const BaseElement: typeof HTMLElement;
+/** Defines a piece's custom element where there is a document and the name is not taken yet. */
+export function defineOnce(name: string, element: CustomElementConstructor): void;
+
 /** Wires one product's `form[data-product]`; a form already wired is left alone. */
 export function wireProduct(form: HTMLFormElement): void;
 /** Wires every product form under a root (the document by default) that is not wired yet. */
