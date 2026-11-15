@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { PRODUCT } from '../lib/shop/hooks.mjs';
+import { PRODUCT, CART } from '../lib/shop/hooks.mjs';
 
 // The hooks are the whole contract between a storefront piece's markup and its
 // element (`@jtakeit/kit/shop/hooks`): what an agent keeps when it copies the
@@ -42,9 +42,26 @@ test('the copied product carries every hook, imports the element and no styleshe
   assert.doesNotMatch(astro, /@jtakeit\/kit\/[^'"]*\.css/, 'the look is the file\'s own, not the kit\'s');
 });
 
+test('the copied cart carries every hook, imports the element and no stylesheet of the kit', () => {
+  const astro = component('Cart.astro');
+  for (const one of [...CART.always, ...CART.said]) assert.match(astro, written(one.hook), `${one.hook} — ${one.says}`);
+  // The root's own: what the element reads off it.
+  const root = /<[a-z]+\b[^>]*\sdata-cart[\s>=][^>]*>/.exec(astro)?.[0] ?? '';
+  for (const attribute of ['data-cart', 'data-api', 'data-locale', 'data-countries', 'data-words']) {
+    assert.match(root, new RegExp(`\\s${attribute}[\\s=>]`), `the cart says ${attribute}`);
+  }
+  assert.match(astro, /<jtk-cart\b/, 'the cart is inside <jtk-cart>');
+  assert.match(astro, /<script>\s*import '@jtakeit\/kit\/elements\/shop-cart';\s*<\/script>/, 'and the element that makes it work');
+  assert.match(astro, /<noscript>/, 'a sentence for a browser with no script');
+  assert.match(astro, /<style>/, 'its own look');
+  assert.doesNotMatch(astro, /@jtakeit\/kit\/[^'"]*\.css/, 'the look is the file\'s own, not the kit\'s');
+  // The country is a select, which the build draws from the shop's zones.
+  assert.match(astro, /<select\b[^>]*\sname="country"/, 'the country is a select');
+});
+
 test("the shop's elements find nothing by a class alone", () => {
   const files = readdirSync(join(here, '../elements')).filter((one) => /^shop-.*\.js$/.test(one));
-  assert.ok(files.includes('shop-product.js') && files.includes('shop-wire.js'), `the shop's elements: ${files}`);
+  assert.ok(files.includes('shop-product.js') && files.includes('shop-wire.js') && files.includes('shop-cart.js'), `the shop's elements: ${files}`);
   for (const file of files) {
     const source = readFileSync(join(here, '../elements', file), 'utf8');
     for (const [, selector] of source.matchAll(/(?:querySelector(?:All)?|closest|matches)\(\s*['"`]([^'"`]+)['"`]/g)) {

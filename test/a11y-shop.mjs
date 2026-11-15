@@ -22,6 +22,23 @@ import { join } from 'node:path';
 import { audit, report } from '../lib/a11y.mjs';
 import { layShop } from './shop-site.mjs';
 
+/** What the cart's drive must have said on each of its pages — the test shop's country and methods give it each of them to do. */
+const CART_DRIVE = [
+  "cart: every line is the shop's own",
+  'cart: a country chosen by the keyboard',
+  'cart: a method chosen by the keyboard',
+  'cart: the customs sentence is said for a parcel that crosses the border, and not for a pick-up',
+  'cart: a quantity changed by the keyboard',
+  'cart: a line the shop refuses is said',
+  'cart: a line taken out by the keyboard is gone',
+  'cart: the last line taken out',
+  'cart: a cart the shop cannot be asked about says so',
+  'cart: To checkout writes the country and the method',
+  'cart: a cart the browser cannot keep is said',
+  'cart: a browser that keeps no cart says so',
+  'shop: every request names the protocol version',
+];
+
 /**
  * The storefront's pieces, in a buyer's order: the pages each adds to the
  * walk, and the checks its drive must have said on each — by the start of
@@ -51,8 +68,19 @@ const PIECES = [
       '/shop/kerzenstaender/': ['product: «added» is said', 'product: a cart the browser cannot keep is said', 'shop: every request names the protocol version'],
     },
   },
+  {
+    // The cart, read in German and then in English: the line the German fox page added is titled by the shop in each.
+    piece: 'the cart',
+    pages: ['/cart/', '/en/cart/'],
+    reaches: {
+      '/cart/': CART_DRIVE,
+      '/en/cart/': [...CART_DRIVE, "cart: a line added on a page in another language is titled in this page's language"],
+    },
+  },
 ];
 const SOLD_OUT = ['FOX-M-BLUE'];
+/** The fox's first variant: what the cart's drive writes into a cart it finds empty. */
+const FOX_LINE = { product: '0193a5c3-6b1c-7d20-9a31-5e4d3c2b1a02', variant: 'v1', qty: 1, answers: {} };
 
 const args = process.argv.slice(2);
 const started = Date.now();
@@ -70,6 +98,7 @@ try {
     schemes: ['light'],
     from: site,
     soldOut: SOLD_OUT,
+    cart: { line: FOX_LINE },
     log: (line) => console.log(`[shop] ${line}`),
   });
   lines = report(results);
@@ -81,8 +110,11 @@ try {
       }
     }
   }
+  // The Review Focus's two languages, by the words: the English cart titles the line the German fox page added «Fox T-shirt».
+  const english = results.find((one) => one.path === '/en/cart/')?.found.find((one) => one.check.startsWith("cart: a line added on a page in another language"));
+  if (english !== undefined && !(english.said ?? '').includes('«Fox T-shirt»')) lines.push(`/en/cart/ — the line the German fox page added is not titled «Fox T-shirt»: ${english.said}`);
   for (const one of results) {
-    for (const said of one.found.filter((each) => /^(product|shop):/.test(each.check))) console.log(`${said.ok ? 'ok  ' : 'FAIL'} ${one.path} ${said.check}`);
+    for (const said of one.found.filter((each) => /^(product|cart|shop):/.test(each.check))) console.log(`${said.ok ? 'ok  ' : 'FAIL'} ${one.path} ${said.check}`);
   }
 } finally {
   if (!args.includes('--keep')) rmSync(scratch, { recursive: true, force: true });

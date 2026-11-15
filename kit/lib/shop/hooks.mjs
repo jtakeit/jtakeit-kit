@@ -57,14 +57,14 @@ export const PRODUCT = piece(
 /** The cart: its lines, the country, the methods that country is offered, the subtotal. */
 export const CART = piece(
   [
-    { hook: '[data-cart]', says: 'the cart; `data-api`, `data-locale` and `data-countries` (the countries to choose from) on it' },
+    { hook: '[data-cart]', says: 'the cart; `data-api`, `data-locale`, `data-countries` (the countries to choose from) and `data-words` on it, and what it is drawing in `data-state`: `pricing`, `priced`, `empty`, `failed`' },
     { hook: '[data-cart-lines]', says: 'empty; the element writes a row per line into it' },
     { hook: '[data-cart-empty]', says: 'hidden; shown while the cart has no line' },
     { hook: '[name=country]', says: 'a `<select>` of the countries' },
     { hook: '[data-methods]', says: 'empty; the element writes a radio `name=method` per method the country is offered' },
     { hook: '[data-subtotal]', says: 'what the lines come to, as the shop priced them' },
     { hook: '[data-cart-error]', says: 'what is wrong, said' },
-    { hook: '[data-to-checkout]', says: 'the button that goes on to the checkout; held while a line is refused' },
+    { hook: '[data-to-checkout]', says: 'the button that goes on to the checkout; held while a line is refused; pressed, it writes the country and method into the cart and says `jtk:to-checkout`' },
   ],
   [
     { hook: '[data-abroad]', says: 'hidden; shown where the parcel leaves the business\'s customs area' },

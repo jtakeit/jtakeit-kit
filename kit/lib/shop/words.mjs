@@ -52,6 +52,7 @@ const BASE = {
     'fault.too_long': 'Не більше {max} символів',
     'fault.not_a_choice': 'Оберіть один із варіантів',
     // the cart
+    cart: 'Кошик',
     cartEmpty: 'Ваш кошик порожній',
     country: 'Країна',
     shippingMethod: 'Спосіб доставки',
@@ -139,6 +140,7 @@ const BASE = {
     'fault.too_long': 'Höchstens {max} Zeichen',
     'fault.not_a_choice': 'Bitte wählen Sie eine der Möglichkeiten',
     // the cart
+    cart: 'Warenkorb',
     cartEmpty: 'Ihr Warenkorb ist leer',
     country: 'Land',
     shippingMethod: 'Versandart',
@@ -226,6 +228,7 @@ const BASE = {
     'fault.too_long': 'At most {max} characters',
     'fault.not_a_choice': 'Please choose one of the options',
     // the cart
+    cart: 'Cart',
     cartEmpty: 'Your cart is empty',
     country: 'Country',
     shippingMethod: 'Shipping method',
@@ -313,6 +316,7 @@ const BASE = {
     'fault.too_long': 'Не более {max} символов',
     'fault.not_a_choice': 'Выберите один из вариантов',
     // the cart
+    cart: 'Корзина',
     cartEmpty: 'Ваша корзина пуста',
     country: 'Страна',
     shippingMethod: 'Способ доставки',
@@ -400,6 +404,7 @@ const BASE = {
     'fault.too_long': 'Como máximo {max} caracteres',
     'fault.not_a_choice': 'Elija una de las opciones',
     // the cart
+    cart: 'Carrito',
     cartEmpty: 'Su carrito está vacío',
     country: 'País',
     shippingMethod: 'Método de envío',
@@ -487,6 +492,7 @@ const BASE = {
     'fault.too_long': 'Al massimo {max} caratteri',
     'fault.not_a_choice': 'Scelga una delle opzioni',
     // the cart
+    cart: 'Carrello',
     cartEmpty: 'Il carrello è vuoto',
     country: 'Paese',
     shippingMethod: 'Metodo di spedizione',
@@ -574,6 +580,7 @@ const BASE = {
     'fault.too_long': 'No máximo {max} caracteres',
     'fault.not_a_choice': 'Escolha uma das opções',
     // the cart
+    cart: 'Carrinho',
     cartEmpty: 'O seu carrinho está vazio',
     country: 'País',
     shippingMethod: 'Método de envio',
@@ -661,6 +668,7 @@ const BASE = {
     'fault.too_long': '{max} caractères au plus',
     'fault.not_a_choice': 'Veuillez choisir l’une des options',
     // the cart
+    cart: 'Panier',
     cartEmpty: 'Votre panier est vide',
     country: 'Pays',
     shippingMethod: 'Mode de livraison',

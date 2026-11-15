@@ -24,9 +24,23 @@ export class JtkProduct extends HTMLElement {
   connectedCallback(): void;
 }
 
+/** Wires one cart's `[data-cart]`; one already wired is left alone. */
+export function wireCart(root: HTMLElement): void;
+/** Defines `<jtk-cart>` (or the name given), where there is a document and it is not defined yet. */
+export function defineCart(name?: string): void;
+/** `<jtk-cart>`: wires the cart inside it when it reaches the document. */
+export class JtkCart extends HTMLElement {
+  connectedCallback(): void;
+}
+
 declare global {
   interface DocumentEventMap {
     /** What a product's form says once a line is added: `jtk:cart` on the document, the cart's key (`jtk:cart:<api>`) in `detail`. */
     'jtk:cart': CustomEvent<string>;
+    /**
+     * What the cart says when the buyer goes on to the checkout: the country and the method chosen are written into the cart
+     * first, and the cart's key is in `detail`. No quote goes with it: the checkout asks the shop again, with the stored cart.
+     */
+    'jtk:to-checkout': CustomEvent<string>;
   }
 }

@@ -12,7 +12,11 @@
  * Pure and framework-free: every function takes a cart and gives a new one,
  * and what is read from storage is held to the shape whatever was written
  * there — by an older kit, by another page of the site, or by hand.
+ *
+ * `cartView` is the other half: the cart and the shop's last shipping answer
+ * read together into what the page shows, as one value the element draws.
  */
+import { shopWordsFor } from './words.mjs';
 
 /** The most lines the protocol takes in a cart. */
 export const MAX_LINES = 100;
@@ -171,4 +175,81 @@ export function setQty(cart, at, qty) {
  */
 export function shippingBody(cart, locale) {
   return { lines: cart.lines.map(copied), country: cart.country, locale };
+}
+
+/**
+ * @typedef {{ code: string; word: string }} Refusal
+ * @typedef {{ at: number; line: CartLine; quoted?: { title: string; labels: string[]; answers: object[]; unit: number; total: number }; refused?: Refusal }} CartRow
+ */
+
+/** What the shop says of a refused line in the page's language; a code the kit has no word for says the order has changed. */
+function refusal(words, code) {
+  return { code, word: words[`refused.${code}`] ?? words['error.refused'] };
+}
+
+/**
+ * What a cart shows once the shop has priced it: the answer of `POST
+ * /api/shipping` for this cart, read against the cart's own lines.
+ *
+ * A row for each line of the cart, in its order — its place `at`, the line as
+ * the cart keeps it, and either what the shop priced it at (`quoted`) or why it
+ * would not (`refused`, in the page's language). The cart holds no title and no
+ * price, so every word and every amount here is the shop's, as of its answer.
+ *
+ * The method is the cart's while the country is still offered it, else the
+ * first the shop offers — a cart carried to another country, or one whose
+ * method was taken off, is never left choosing nothing. `abroad` is the shop's,
+ * except that a pick-up crosses no border. `ready` is whether the buyer may go
+ * on to pay: every line priced, nothing refused (a line, or the whole cart),
+ * and a method to send it by.
+ *
+ * @param {Cart} cart
+ * @param {any} quote the shipping answer; anything that is no answer reads as the shop having priced nothing
+ * @param {string} locale the page's language, a tag such as `en` or `fr-CH`
+ */
+export function cartView(cart, quote, locale) {
+  const words = shopWordsFor(locale);
+  const answer = isObject(quote) ? quote : {};
+  const priced = Array.isArray(answer.lines) ? answer.lines.filter(isObject) : [];
+  const refused = Array.isArray(answer.refused) ? answer.refused.filter(isObject) : [];
+  const rows = cart.lines.map((one, at) => {
+    const row = { at, line: copied(one) };
+    const why = refused.find((each) => each.line === at);
+    const line = priced.find((each) => each.line === at);
+    if (why !== undefined) return { ...row, refused: refusal(words, String(why.code)) };
+    if (line === undefined) return row;
+    return {
+      ...row,
+      quoted: {
+        title: String(line.title ?? ''),
+        labels: Array.isArray(line.labels) ? line.labels.map(String) : [],
+        answers: Array.isArray(line.answers) ? line.answers.filter(isObject).map((each) => ({ ...each })) : [],
+        unit: Number(line.unit),
+        total: Number(line.total),
+      },
+    };
+  });
+  const whole = refused.find((each) => each.line === -1);
+  const methods = (Array.isArray(answer.methods) ? answer.methods.filter(isObject) : []).map((one) => ({
+    method: String(one.method),
+    name: String(one.name ?? ''),
+    pickup: one.pickup === true,
+    price: Number(one.price),
+    free: one.free === true,
+  }));
+  const chosen = methods.find((one) => one.method === cart.method) ?? methods[0];
+  return {
+    rows,
+    ...(whole === undefined ? {} : { whole: refusal(words, String(whole.code)) }),
+    subtotal: Number(answer.subtotal) || 0,
+    currency: typeof answer.currency === 'string' ? answer.currency : '',
+    methods,
+    method: chosen?.method ?? '',
+    abroad: answer.abroad === true && chosen?.pickup !== true,
+    vat: answer.vat_included === true,
+    ownCurrency: answer.own_currency === true,
+    sends: answer.sends === true,
+    cannotSend: answer.cannot_send === true,
+    ready: rows.length > 0 && refused.length === 0 && rows.every((row) => row.quoted !== undefined) && chosen !== undefined,
+  };
 }

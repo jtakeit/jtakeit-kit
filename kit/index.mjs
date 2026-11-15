@@ -26,5 +26,5 @@ export { wordsFor, LOCALES } from './lib/booking/words.mjs';
 export { money } from './lib/money.mjs';
 export { SHOP_LOCALES, shopWordsFor } from './lib/shop/words.mjs';
 export { PRODUCT, CART, CHECKOUT, ORDER, LISTING } from './lib/shop/hooks.mjs';
-export { MAX_LINES, MAX_QTY, cartKey, readCart, addLine, removeLine, setQty, shippingBody } from './lib/shop/cart.mjs';
+export { MAX_LINES, MAX_QTY, cartKey, readCart, addLine, removeLine, setQty, shippingBody, cartView } from './lib/shop/cart.mjs';
 export { productFacts, variantFor, valueStates, answersOf, fromPrice } from './lib/shop/product.mjs';

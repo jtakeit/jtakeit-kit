@@ -1,0 +1,386 @@
+---
+/**
+ * The cart — a working base to copy and dress in the site's design
+ * (jtakeit-core wiki/102 stage 9, decision 6; the booking form's way, wiki/80).
+ *
+ * `jtk add shop` lays this file and the page that draws it
+ * (`src/pages/[...lang]/cart.astro`, at `/cart` and `/<lang>/cart`), and puts
+ * a link to it in the header. Everything here is the site's: the markup, its
+ * order and wrappers, the classes, the styles below. What is not the site's is
+ * the behaviour — `@jtakeit/kit`'s `<jtk-cart>`, imported at the bottom — and
+ * the hooks it finds things by: a `data-*` attribute or a control's `name`,
+ * never a class. Rename every class, move the subtotal, draw the methods as
+ * cards; keep the hooks, and the cart works. The list of them, and what each
+ * is for, is `@jtakeit/kit/shop/hooks` (`CART`); a hook left out is said in
+ * the browser's console.
+ *
+ * ── what is the kit's, and what is the page's ───────────────────────────────
+ *
+ * The cart lives in the browser as the protocol's lines and nothing else: no
+ * title, no price, so one kept for a week can say nothing stale. Every row,
+ * every amount and every method this page shows is what the shop answers when
+ * the page is opened or the cart changes (`POST /api/shipping`) — a line the
+ * shop no longer sells is said with its reason, with a button to take it out,
+ * and *To checkout* waits until nothing is refused. The element writes the
+ * rows into `[data-cart-lines]` and the radios into `[data-methods]`; what it
+ * draws carries a data attribute (`data-cart-line`, `data-line-title`,
+ * `data-line-qty`, `data-line-total`, `data-line-remove`, `data-method-choice`…)
+ * and is styled with `:global(...)` below. The root says what it is drawing in
+ * `data-state` — `pricing`, `priced`, `empty`, `failed` — and this file's CSS
+ * shows each part for its own.
+ *
+ * The countries are those of the shop's zones, from its settings at the build,
+ * in their order and each once, named in the page's language — the one
+ * thing here the build decides; the methods a country is offered are the
+ * shop's, read live. *To checkout* writes the country and the method into the
+ * cart and says `jtk:to-checkout` on the document: the checkout step reads
+ * both from there and prices the cart again, so nothing of this page's
+ * answer is carried over.
+ */
+import { shopWordsFor } from '@jtakeit/kit/shop/words';
+import { site } from '../../lib/site';
+import { under } from '../../lib/under';
+import { langOf } from '../../lib/locale';
+
+interface Props {
+  /** The page's language: `''` for the site's own, the tag of any other. */
+  locale: string;
+}
+
+const { locale } = Astro.props;
+const LANG = langOf(locale);
+const W = shopWordsFor(LANG);
+
+// The words the element says as the cart changes, handed over in the page's language.
+const SAID = [
+  'cartEmpty', 'pricing', 'cartFailed', 'cartUnavailable', 'quantity', 'remove', 'removeNamed', 'free', 'yes', 'vat', 'customs', 'doesNotSend', 'cannotSend',
+  'error.refused', 'refused.not_sold', 'refused.off_sale', 'refused.quantity', 'refused.answer', 'refused.too_large',
+];
+const words = Object.fromEntries(SAID.map((key) => [key, W[key]]));
+
+// The countries the shop sends to: those of its zones, in their order, each once.
+const codes = [
+  ...new Set(
+    site
+      .settings('shop')
+      .rows('zones')
+      .flatMap((zone) => zone.rows('countries').map((row) => row.text('country').trim().toUpperCase()))
+      .filter((code) => /^[A-Z]{2}$/.test(code)),
+  ),
+];
+/** A country said in the page's language: CH, «Schweiz». */
+const nameOf = (code: string): string => {
+  try {
+    return new Intl.DisplayNames([LANG], { type: 'region' }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+};
+const countries = codes.map((code) => ({ code, name: nameOf(code) }));
+---
+
+<jtk-cart class="cart">
+  <section
+    class="cart__in"
+    data-cart
+    data-api={under('/api/')}
+    data-locale={LANG}
+    data-countries={JSON.stringify(codes)}
+    data-words={JSON.stringify(words)}
+    data-jtk-fixed
+    aria-label={W.cart}
+  >
+    <noscript><p class="cart__note">{W.noScript}</p></noscript>
+
+    <p class="cart__empty" data-cart-empty hidden></p>
+    <ul class="cart__lines" data-cart-lines></ul>
+
+    <div class="cart__ship">
+      {
+        countries.length > 0 && (
+          <div class="cart__country">
+            <label class="cart__label" for="cart-country">{W.country}</label>
+            <select class="cart__select" id="cart-country" name="country">
+              {countries.map((one) => <option value={one.code}>{one.name}</option>)}
+            </select>
+          </div>
+        )
+      }
+      <fieldset class="cart__methods">
+        <legend class="cart__label">{W.shippingMethod}</legend>
+        <div class="cart__choices" data-methods></div>
+      </fieldset>
+      <p class="cart__notice" data-cannot-send hidden></p>
+      <p class="cart__notice" data-abroad hidden></p>
+    </div>
+
+    <p class="cart__sum" aria-live="polite" aria-atomic="true">
+      <span class="cart__label">{W.subtotal}</span>
+      <span class="cart__amount" data-subtotal></span>
+      <span class="cart__vat" data-vat hidden></span>
+    </p>
+    <p class="cart__error" data-cart-error role="alert" hidden></p>
+    <button class="cart__go" type="button" data-to-checkout disabled>{W.toCheckout}</button>
+  </section>
+</jtk-cart>
+
+<script>
+  import '@jtakeit/kit/elements/shop-cart';
+</script>
+
+<style>
+  /*
+   * The look — the scaffold's, and the first thing to change, in the site's
+   * tokens. Classes are scoped to this file; what the element draws itself —
+   * a line, a method — carries a data attribute and is styled with
+   * `:global(...)` under the cart. The rules the behaviour needs (`[hidden]`,
+   * a focus ring) the element puts on the page.
+   */
+  .cart {
+    display: block;
+  }
+  .cart__in {
+    display: grid;
+    gap: var(--space-5, 1.5rem);
+    max-width: 46rem;
+  }
+  .cart__in > * {
+    min-width: 0;
+  }
+  .cart__note,
+  .cart__empty {
+    margin: 0;
+    color: var(--ink-quiet);
+  }
+  /* The shipping and the sum are said once the shop has priced the cart: not for none, not before, not where it failed. */
+  .cart__in:not([data-state='priced']) .cart__ship,
+  .cart__in:not([data-state='priced']) .cart__sum,
+  .cart__in:not([data-state='priced']) .cart__go {
+    display: none;
+  }
+
+  /* the lines */
+  .cart__lines {
+    display: grid;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .cart :global([data-cart-pricing]) {
+    margin: 0;
+    color: var(--ink-quiet);
+  }
+  .cart :global([data-cart-line]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 6rem 7rem auto;
+    align-items: start;
+    gap: 0.25rem 1.25rem;
+    padding: var(--space-4, 1rem) 0;
+    border-bottom: 1px solid var(--line);
+    overflow-wrap: anywhere;
+  }
+  .cart :global([data-line-title]),
+  .cart :global([data-line-labels]),
+  .cart :global([data-line-answers]),
+  .cart :global([data-line-refused]) {
+    grid-column: 1;
+    margin: 0;
+  }
+  .cart :global([data-line-title]) {
+    font-weight: 600;
+  }
+  .cart :global([data-line-labels]),
+  .cart :global([data-line-answers]) {
+    color: var(--ink-quiet);
+    font-size: 0.875rem;
+  }
+  .cart :global([data-line-answers]) {
+    padding: 0;
+    list-style: none;
+  }
+  .cart :global([data-line-quantity]) {
+    grid-column: 2;
+    grid-row: 1 / span 4;
+    display: grid;
+    gap: 0.25rem;
+    justify-items: start;
+  }
+  .cart :global([data-line-quantity] label) {
+    font-size: 0.875rem;
+    color: var(--ink-quiet);
+  }
+  .cart :global([data-line-qty]) {
+    font: inherit;
+    width: 5.5rem;
+    min-height: 2.75rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-2, 0.5rem);
+    background: var(--paper);
+    color: var(--ink);
+  }
+  .cart :global([data-line-total]) {
+    grid-column: 3;
+    grid-row: 1;
+    margin: 0;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .cart :global([data-line-remove]) {
+    grid-column: 4;
+    grid-row: 1;
+    min-height: 2.75rem;
+    padding: 0.5rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    cursor: pointer;
+  }
+  .cart :global([data-line-remove]:hover) {
+    border-color: var(--ink);
+  }
+  /* The danger colour mixed with the ink, so it keeps its contrast on any palette (WCAG 1.4.3). */
+  .cart :global([data-line-refused]),
+  .cart__error {
+    margin: 0;
+    font-size: 0.875rem;
+    color: color-mix(in srgb, var(--danger, #b3261e) 55%, var(--ink));
+  }
+  @media (max-width: 40rem) {
+    .cart :global([data-cart-line]) {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+    .cart :global([data-line-title]),
+    .cart :global([data-line-labels]),
+    .cart :global([data-line-answers]),
+    .cart :global([data-line-refused]) {
+      grid-column: 1 / -1;
+    }
+    .cart :global([data-line-quantity]) {
+      grid-column: 1;
+      grid-row: auto;
+    }
+    .cart :global([data-line-total]) {
+      grid-column: 2;
+      grid-row: auto;
+      align-self: end;
+    }
+    .cart :global([data-line-remove]) {
+      grid-column: 1 / -1;
+      grid-row: auto;
+      justify-self: start;
+    }
+  }
+
+  /* the country and the methods */
+  .cart__ship {
+    display: grid;
+    gap: var(--space-4, 1rem);
+  }
+  .cart__country {
+    display: grid;
+    gap: 0.35rem;
+    justify-items: start;
+  }
+  .cart__label {
+    padding: 0;
+    font-size: 0.875rem;
+    color: var(--ink-quiet);
+  }
+  .cart__select {
+    font: inherit;
+    width: min(100%, 20rem);
+    min-height: 2.75rem;
+    padding: 0.5rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-2, 0.5rem);
+    background: var(--paper);
+    color: var(--ink);
+  }
+  .cart__methods {
+    display: grid;
+    gap: var(--space-2, 0.5rem);
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  /* A group with no method — a cart with a line refused is offered none — says nothing. */
+  .cart__methods:has([data-methods]:empty) {
+    display: none;
+  }
+  .cart__choices {
+    display: grid;
+    gap: var(--space-2, 0.5rem);
+  }
+  .cart :global([data-method-choice]) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.6rem;
+    min-height: 2.75rem;
+    padding: 0.45rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-2, 0.5rem);
+    background: var(--paper);
+    cursor: pointer;
+    overflow-wrap: anywhere;
+  }
+  .cart :global([data-method-choice]:has(input:checked)) {
+    border-color: var(--ink);
+    box-shadow: inset 0 0 0 1px var(--ink);
+  }
+  .cart :global([data-method-radio]) {
+    flex: none;
+    margin: 0;
+    accent-color: var(--ink);
+  }
+  .cart :global([data-method-price]) {
+    margin-inline-start: auto;
+    font-weight: 600;
+  }
+  .cart__notice {
+    margin: 0;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-2, 0.5rem);
+    background: var(--panel);
+  }
+
+  /* what it comes to, and the way on */
+  .cart__sum {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.75rem;
+    margin: 0;
+    padding-top: var(--space-4, 1rem);
+    border-top: 1px solid var(--line);
+  }
+  .cart__amount {
+    font-size: var(--step-2, 1.5rem);
+    font-weight: 600;
+  }
+  .cart__vat {
+    color: var(--ink-quiet);
+  }
+  .cart__go {
+    justify-self: start;
+    min-height: 2.75rem;
+    padding: 0.7rem 1.4rem;
+    border: 0;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--paper);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .cart__go:disabled {
+    background: var(--line);
+    color: var(--ink-quiet);
+    cursor: not-allowed;
+  }
+</style>

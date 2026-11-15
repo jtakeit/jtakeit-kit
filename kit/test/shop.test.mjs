@@ -20,7 +20,7 @@ import { content } from '../lib/content/index.mjs';
 import { readJtk } from '../lib/content/node.mjs';
 import { SHOP_LOCALES, shopWordsFor } from '../lib/shop/words.mjs';
 import { PRODUCT, CART, CHECKOUT, ORDER, LISTING, lacking } from '../lib/shop/hooks.mjs';
-import { MAX_LINES, MAX_QTY, cartKey, readCart, addLine, removeLine, setQty, shippingBody } from '../lib/shop/cart.mjs';
+import { MAX_LINES, MAX_QTY, cartKey, readCart, addLine, removeLine, setQty, shippingBody, cartView } from '../lib/shop/cart.mjs';
 import { productFacts, variantFor, valueStates, answersOf, fromPrice } from '../lib/shop/product.mjs';
 import * as barrel from '../index.mjs';
 
@@ -280,6 +280,106 @@ test("the cart is kept under the site's api, and sends the shop its lines, the c
   assert.deepEqual(shippingBody(readCart(null), 'en').lines, []);
   // What was stored reads back as it was written.
   assert.deepEqual(readCart(JSON.stringify(cart)), cart);
+});
+
+// ── what a cart shows ─────────────────────────────────────────────────────
+
+const FOX = '0193a5c3-6b1c-7d20-9a31-5e4d3c2b1a02';
+/** A priced line as `POST /api/shipping` answers it, by the cart's place for it. */
+const priced = (at, extra = {}) => ({ line: at, product: 'mug', variant: 'v1', sku: 'MUG-1', title: 'Mug', labels: ['Blue'], answers: [], unit: 1500, qty: 2, total: 3000, ...extra });
+/** The shipping answer for a cart, as the shop gives it, with what the test says over it. */
+const quoted = (extra = {}) => ({
+  currency: 'chf', lines: [], refused: [], subtotal: 0, country: 'CH', sends: true, cannot_send: false, abroad: false, vat_included: false, own_currency: false,
+  methods: [{ method: 'post', name: 'Post', pickup: false, price: 790, free: false }, { method: 'pickup', name: 'Pick-up', pickup: true, price: 0, free: false }],
+  ...extra,
+});
+
+test('a line the shop refuses is said with its reason, and the rest is priced as the shop prices it now', () => {
+  // The fox's v1 once, and a mug twice — the fox taken off sale since it was put in the cart.
+  let cart = addLine(addLine(readCart(null), line({ qty: 1 })), { product: 'mug', variant: 'v1', qty: 2, answers: {} });
+  cart = { ...cart, country: 'CH', method: 'post' };
+  const answer = quoted({ lines: [priced(1)], refused: [{ line: 0, code: 'off_sale', says: 'the variant v1 (FOX-S-RED) of t-shirt-fox is not on sale' }], subtotal: 3000 });
+  const view = cartView(cart, answer, 'en');
+
+  assert.equal(view.rows.length, 2, 'a row for each line of the cart, in its order');
+  assert.deepEqual(view.rows.map((row) => row.at), [0, 1]);
+  assert.deepEqual(view.rows[0].line, { product: FOX, variant: 'v1', qty: 1, answers: {} }, 'a row keeps the cart\'s line, to change or take out');
+  assert.equal(view.rows[0].refused.word, shopWordsFor('en')['refused.off_sale']);
+  assert.equal(view.rows[0].refused.code, 'off_sale');
+  assert.equal(view.rows[0].quoted, undefined, 'a refused line is not priced');
+  assert.equal(view.rows[1].refused, undefined);
+  assert.equal(view.rows[1].quoted.total, 3000);
+  assert.deepEqual(view.rows[1].quoted, { title: 'Mug', labels: ['Blue'], answers: [], unit: 1500, total: 3000 });
+  assert.equal(view.subtotal, 3000, 'the subtotal is the shop\'s, of what it priced');
+  assert.equal(view.currency, 'chf');
+  assert.equal(view.ready, false, 'a cart with a line refused goes no further');
+  // The page's language chooses the word; one the kit has no words in reads English.
+  assert.equal(cartView(cart, answer, 'de-CH').rows[0].refused.word, shopWordsFor('de')['refused.off_sale']);
+  assert.equal(cartView(cart, answer, 'pl').rows[0].refused.word, shopWordsFor('en')['refused.off_sale']);
+
+  // The buyer takes the line out: the cart sends the shop one line, and priced as the shop prices that, it is ready.
+  const rest = removeLine(cart, view.rows[0].at);
+  const body = shippingBody(rest, 'en');
+  assert.deepEqual(body.lines.map((one) => one.product), ['mug'], 'the shop is asked about one line');
+  const again = cartView(rest, quoted({ lines: [priced(0)], subtotal: 3000 }), 'en');
+  assert.equal(again.ready, true);
+  assert.equal(again.rows[0].quoted.total, 3000);
+  assert.equal(cart.lines.length, 2, 'the cart given is as it was');
+});
+
+test("the method chosen is the cart's while it is offered", () => {
+  const cart = (method, extra = {}) => ({ ...addLine(readCart(null), { product: 'mug', variant: 'v1', qty: 2, answers: {} }), country: 'CH', method, ...extra });
+  const answer = quoted({ lines: [priced(0)], subtotal: 3000 });
+  const view = (method, over = {}) => cartView(cart(method), { ...answer, ...over }, 'en');
+
+  assert.equal(view('pickup').method, 'pickup', 'the cart\'s, where it is offered');
+  assert.equal(view('post').method, 'post');
+  assert.equal(view('express').method, 'post', 'one not offered falls back to the first');
+  assert.equal(view('').method, 'post', 'none chosen is the first');
+  assert.deepEqual(view('post').methods, [
+    { method: 'post', name: 'Post', pickup: false, price: 790, free: false },
+    { method: 'pickup', name: 'Pick-up', pickup: true, price: 0, free: false },
+  ], 'the methods as the shop offers them, in its order');
+  assert.equal(view('', { methods: [] }).method, '', 'no method offered, none chosen');
+
+  // A parcel that crosses the border is abroad — a pick-up crosses none.
+  assert.equal(view('post', { abroad: true }).abroad, true);
+  assert.equal(view('pickup', { abroad: true }).abroad, false, 'abroad is false where the chosen method is a pick-up');
+  assert.equal(view('express', { abroad: true }).abroad, true, 'a method not offered is the first, which is a parcel');
+  assert.equal(view('post', { abroad: false }).abroad, false, 'and a parcel that stays home is not');
+});
+
+test('a cart is ready only when every line is priced, nothing is refused and a method is chosen', () => {
+  const cart = { ...addLine(addLine(readCart(null), { product: 'mug', variant: 'v1', qty: 2, answers: {} }), { product: 'cup', variant: 'v1', qty: 1, answers: {} }), country: 'CH', method: 'post' };
+  const both = quoted({ lines: [priced(0), priced(1, { product: 'cup', title: 'Cup', unit: 900, qty: 1, total: 900 })], subtotal: 3900 });
+  assert.equal(cartView(cart, both, 'en').ready, true);
+
+  assert.equal(cartView(cart, { ...both, methods: [] }, 'en').ready, false, 'no method to choose');
+  assert.equal(cartView(cart, { ...both, lines: [both.lines[0]], subtotal: 3000 }, 'en').ready, false, 'a line the answer says nothing of is not priced');
+  assert.equal(cartView(cart, { ...both, refused: [{ line: 1, code: 'quantity', says: '' }], lines: [both.lines[0]] }, 'en').ready, false);
+  assert.equal(cartView(readCart(null), quoted(), 'en').ready, false, 'an empty cart');
+  assert.deepEqual(cartView(readCart(null), quoted(), 'en').rows, []);
+
+  // The whole cart refused — line -1 — is said, and holds it back though every line is priced.
+  const whole = cartView(cart, { ...both, refused: [{ line: -1, code: 'too_large', says: 'the cart has 101 lines' }] }, 'en');
+  assert.equal(whole.ready, false);
+  assert.equal(whole.whole.code, 'too_large');
+  assert.equal(whole.whole.word, shopWordsFor('en')['refused.too_large']);
+  assert.equal(cartView(cart, both, 'en').whole, undefined);
+  // A code the kit has no word for is still said: the order has changed.
+  const odd = cartView(cart, { ...both, lines: [both.lines[0]], refused: [{ line: 1, code: 'from_a_later_version', says: '' }] }, 'en');
+  assert.equal(odd.rows[1].refused.word, shopWordsFor('en')['error.refused']);
+
+  // What the shop says of the country and the prices, as it says it.
+  const says = cartView(cart, { ...both, vat_included: true, own_currency: true, sends: false, cannot_send: true }, 'en');
+  assert.deepEqual([says.vat, says.ownCurrency, says.sends, says.cannotSend], [true, true, false, true]);
+  const none = cartView(cart, both, 'en');
+  assert.deepEqual([none.vat, none.ownCurrency, none.sends, none.cannotSend], [false, false, true, false]);
+  // An answer that is no answer reads as the shop having priced nothing.
+  const nothing = cartView(cart, null, 'en');
+  assert.equal(nothing.ready, false);
+  assert.equal(nothing.rows.length, 2);
+  assert.equal(nothing.rows.every((row) => row.quoted === undefined && row.refused === undefined), true);
 });
 
 // ── a product's facts ─────────────────────────────────────────────────────
@@ -559,7 +659,7 @@ test('the storefront is in the package under its own entries, and in the barrel'
   }
   // `lib` and `types` are packed whole, so none of it can be left out of a release.
   assert.ok(manifest.files.includes('lib') && manifest.files.includes('types'));
-  for (const name of ['SHOP_LOCALES', 'shopWordsFor', 'PRODUCT', 'CART', 'CHECKOUT', 'ORDER', 'LISTING', 'MAX_LINES', 'MAX_QTY', 'cartKey', 'readCart', 'addLine', 'removeLine', 'setQty', 'shippingBody', 'productFacts', 'variantFor', 'valueStates', 'answersOf', 'fromPrice']) {
+  for (const name of ['SHOP_LOCALES', 'shopWordsFor', 'PRODUCT', 'CART', 'CHECKOUT', 'ORDER', 'LISTING', 'MAX_LINES', 'MAX_QTY', 'cartKey', 'readCart', 'addLine', 'removeLine', 'setQty', 'shippingBody', 'cartView', 'productFacts', 'variantFor', 'valueStates', 'answersOf', 'fromPrice']) {
     assert.ok(name in barrel, `index.mjs exports ${name}`);
   }
 });
@@ -584,6 +684,25 @@ test("the product's element and its wire load without a DOM, and speak shop/1", 
   assert.ok(manifest.files.includes('elements'));
   const types = readFileSync(new URL('../types/elements-shop.d.ts', import.meta.url), 'utf8');
   for (const name of ['SHOP_PROTOCOL', 'ask', 'wireProduct', 'defineProduct', 'JtkProduct', "'jtk:cart'"]) assert.ok(types.includes(name), `elements-shop.d.ts declares ${name}`);
+});
+
+test("the cart's element loads without a DOM, speaks over the same wire, and is in the package with its types", async () => {
+  const wire = await import('../elements/shop-wire.js');
+  const cart = await import('../elements/shop-cart.js');
+  assert.equal(cart.SHOP_PROTOCOL, 1, 'the element names the wire\'s version');
+  assert.equal(cart.ask, wire.ask);
+  for (const name of ['wireCart', 'defineCart']) assert.equal(typeof cart[name], 'function', name);
+  assert.equal(typeof cart.JtkCart, 'function');
+  // With no custom elements to define it in, defining is nothing.
+  cart.defineCart();
+
+  const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  assert.deepEqual(manifest.exports['./elements/shop-cart'], { types: './types/elements-shop.d.ts', default: './elements/shop-cart.js' });
+  const types = readFileSync(new URL('../types/elements-shop.d.ts', import.meta.url), 'utf8');
+  for (const name of ['wireCart', 'defineCart', 'JtkCart', "'jtk:to-checkout'"]) assert.ok(types.includes(name), `elements-shop.d.ts declares ${name}`);
+  const cartTypes = readFileSync(new URL('../types/shop-cart.d.ts', import.meta.url), 'utf8');
+  for (const name of ['CartRow', 'CartView', 'cartView']) assert.ok(cartTypes.includes(name), `shop-cart.d.ts declares ${name}`);
+  assert.match(readFileSync(new URL('../types/index.d.ts', import.meta.url), 'utf8'), /cartView/, 'the barrel\'s types say cartView');
 });
 
 test('ask names the protocol on every request, is never cached, sends JSON, and is null where nothing answered', async () => {

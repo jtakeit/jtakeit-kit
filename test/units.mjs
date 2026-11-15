@@ -281,6 +281,8 @@ try {
     const run = ok(copied, 'schema', '--emit-only');
     return { schema: jsonOf(copied, 'jtk/schema.json'), findings: judgeSchema(read(copied, 'jtk/schema.json')), run };
   };
+  /** The header's links to the cart, in the file given. */
+  const cartLinks = (site, file) => jsonOf(site, file).blocks.find((one) => one.type === 'header').nav.filter((one) => one.link === '/cart');
   const shopAt = copy(base, 'shop');
   {
     // The kit laid over a fresh site in German: its words the site's, the country the locale's.
@@ -298,10 +300,23 @@ try {
     const { schema, findings } = judged(shopAt);
     if (schema.modules?.shop?.products !== 'products') fail(`6 · the schema does not bind the products role: ${JSON.stringify(schema.modules)}`);
     if (findings.length > 0) fail(`6 · the platform's judge finds the shop's schema wanting: ${JSON.stringify(findings)}`);
+    // The header's link to the cart: given once, in the site's words and in the English overlay's.
+    const links = (site) => cartLinks(site, 'jtk/shared.json');
+    if (JSON.stringify(links(shopAt)) !== JSON.stringify([{ _key: 'nav-cart', label: 'Warenkorb', link: '/cart' }])) fail(`6 · add shop did not give the header one link to the cart, in German: ${JSON.stringify(links(shopAt))}`);
+    const overlaid = jsonOf(shopAt, 'jtk/shared.en.json').blocks.find((one) => one._key === jsonOf(shopAt, 'jtk/shared.json').blocks.find((each) => each.type === 'header')._key);
+    if (JSON.stringify(overlaid?.nav?.filter((one) => one._key === 'nav-cart')) !== JSON.stringify([{ _key: 'nav-cart', label: 'Cart' }])) fail(`6 · the English overlay does not say the cart's link in English: ${JSON.stringify(overlaid)}`);
     const twice = copy(shopAt, 'shop-twice');
     const again = ok(twice, 'add', 'shop', '--kit', shopFile);
     if (!again.stdout.includes('already there')) fail(`6 · add shop twice did not say it is already there:\n${again.stdout}`);
     same(twice, shopAt, 'add shop twice');
+    if (links(twice).length !== 1) fail(`6 · add shop twice gave the header another link to the cart: ${JSON.stringify(links(twice))}`);
+    // A site whose header links to /cart already has its own: not given a second.
+    const owned = copy(base, 'shop-own-link');
+    const shared = jsonOf(owned, 'jtk/shared.json');
+    shared.blocks.find((one) => one.type === 'header').nav.push({ _key: 'my-cart', label: 'Korb', link: '/cart' });
+    writeFileSync(join(owned, 'jtk/shared.json'), `${JSON.stringify(shared, null, 2)}\n`);
+    ok(owned, 'add', 'shop', '--kit', shopFile);
+    if (JSON.stringify(links(owned)) !== JSON.stringify([{ _key: 'my-cart', label: 'Korb', link: '/cart' }])) fail(`6 · add shop gave a second link to the cart to a header that had its own: ${JSON.stringify(links(owned))}`);
     // One that is there is not asked of the platform again.
     const offline = ok(copy(shopAt, 'shop-offline'), 'add', 'shop', '--api', 'http://127.0.0.1:1');
     if (!offline.stdout.includes('already there')) fail(`6 · add shop on a site that has it asked the platform:\n${offline.stdout}`);
@@ -390,6 +405,7 @@ try {
     const site = copy(shopAt, 'shop-out');
     const run = ok(site, 'remove', 'shop');
     if (!run.stdout.includes('file(s) changed')) fail(`6 · remove shop said nothing:\n${run.stdout}`);
+    if (cartLinks(site, 'jtk/shared.json').length !== 0 || /nav-cart/.test(read(site, 'jtk/shared.en.json'))) fail(`6 · remove shop left the header's link to the cart, or its English words:\n${run.stdout}`);
     same(site, base, 'add shop then remove shop');
     const again = ok(site, 'remove', 'shop');
     if (!again.stdout.includes('not there')) fail(`6 · remove shop twice did something:\n${again.stdout}`);
@@ -435,7 +451,9 @@ try {
     // example/files is never written.
     const { shop, SHOP_FILES } = await import('../lib/units/shop.mjs');
     const { siteOf, treeOf: treeIn } = await import('../lib/units/index.mjs');
-    if (!SHOP_FILES.includes('src/components/shop/Product.astro')) fail(`6 · the storefront's files do not name the product's page: ${SHOP_FILES}`);
+    for (const path of ['src/components/shop/Product.astro', 'src/components/shop/Cart.astro', 'src/pages/[...lang]/cart.astro']) {
+      if (!SHOP_FILES.includes(path)) fail(`6 · the storefront's files do not name ${path}: ${SHOP_FILES}`);
+    }
     const files = join(dir, 'storefront-files');
     const theExample = (path) => `<p>the example's ${path}</p>\n`;
     for (const path of SHOP_FILES) {
