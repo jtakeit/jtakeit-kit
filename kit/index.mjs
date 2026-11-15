@@ -13,9 +13,18 @@
  *
  * and the enquiry form the same way: `@jtakeit/kit/lead`,
  * `@jtakeit/kit/elements/lead`, `@jtakeit/kit/lead.css`.
+ *
+ * The shop's storefront shares four things between its five pieces, each
+ * with its own entry (`@jtakeit/kit/shop`, `/shop/words`, `/shop/hooks`,
+ * `/shop/cart`): a product's facts, the words in eight languages, the hooks
+ * each piece's markup keeps, and the cart as the protocol's lines.
  */
 export { renderBookingForm, bookingForm, SENDS } from './lib/booking/render.mjs';
 export { ALWAYS, ASKED, SAID, HOOKS } from './lib/booking/hooks.mjs';
 export { renderLeadForm, inputType } from './lib/lead/render.mjs';
 export { wordsFor, LOCALES } from './lib/booking/words.mjs';
 export { money } from './lib/money.mjs';
+export { SHOP_LOCALES, shopWordsFor } from './lib/shop/words.mjs';
+export { PRODUCT, CART, CHECKOUT, ORDER, LISTING } from './lib/shop/hooks.mjs';
+export { MAX_LINES, MAX_QTY, cartKey, readCart, addLine, removeLine, setQty, shippingBody } from './lib/shop/cart.mjs';
+export { productFacts, variantFor, valueStates, answersOf, fromPrice } from './lib/shop/product.mjs';

@@ -28,6 +28,22 @@
       "types": "./types/hooks.d.ts",
       "default": "./lib/booking/hooks.mjs"
     },
+    "./shop": {
+      "types": "./types/shop.d.ts",
+      "default": "./lib/shop/product.mjs"
+    },
+    "./shop/words": {
+      "types": "./types/shop-words.d.ts",
+      "default": "./lib/shop/words.mjs"
+    },
+    "./shop/hooks": {
+      "types": "./types/shop-hooks.d.ts",
+      "default": "./lib/shop/hooks.mjs"
+    },
+    "./shop/cart": {
+      "types": "./types/shop-cart.d.ts",
+      "default": "./lib/shop/cart.mjs"
+    },
     "./lead": {
       "types": "./types/lead.d.ts",
       "default": "./lib/lead/render.mjs"
