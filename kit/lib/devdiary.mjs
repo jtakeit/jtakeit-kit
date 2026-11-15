@@ -73,7 +73,11 @@ async function read(root) {
   return { settings, services, people, currency: site.currency, file };
 }
 
-const send = (res, status, body) => {
+/**
+ * A JSON answer, never cached — the diary's and the shop's stand-in's alike
+ * (devshop.mjs shares it rather than copying it).
+ */
+export const send = (res, status, body) => {
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Cache-Control', 'no-store');
@@ -81,7 +85,8 @@ const send = (res, status, body) => {
   res.end(JSON.stringify(body));
 };
 
-const bodyOf = (req) =>
+/** The request's body as JSON, `{}` for one that is none — shared with devshop.mjs. */
+export const bodyOf = (req) =>
   new Promise((done) => {
     let raw = '';
     req.on('data', (chunk) => (raw += chunk));

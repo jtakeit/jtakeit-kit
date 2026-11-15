@@ -10,6 +10,7 @@ import { writeMeta } from '@jtakeit/kit/meta';
 import { keepByName } from '@jtakeit/kit/kept';
 import { readProgress } from '@jtakeit/kit/progress';
 import { devDiary } from '@jtakeit/kit/devdiary';
+import { devShop } from '@jtakeit/kit/devshop';
 
 /**
  * `_meta.json` — what the edge needs to know that the HTML cannot say.
@@ -445,6 +446,10 @@ export function jtakeitMeta() {
         // be walked on localhost (@jtakeit/kit/devdiary). Nothing reaches the
         // platform; a booking lasts until the server stops.
         server.middlewares.use('/api', devDiary(process.cwd()));
+        // The shop beside it, where the site has one (@jtakeit/kit/devshop):
+        // stock, shipping, the checkout and the order from the site's own
+        // files, paid on a local page. Nothing reaches Stripe or the platform.
+        server.middlewares.use('/api', devShop(process.cwd()));
         server.middlewares.use('/_jtk/state.json', async (req, res) => {
           res.setHeader('Cache-Control', 'no-store');
           res.setHeader('Content-Type', 'application/json');

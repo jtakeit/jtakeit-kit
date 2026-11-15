@@ -330,6 +330,22 @@ try {
     if (shopSettings(over).settings.zones[0].countries[0].country !== 'LI') fail('6 · --country did not beat the locale');
   }
   {
+    // The dev server answers the shop from the site's own files (devShop): a site laid out by this release has it
+    // mounted, and the unit says nothing; one laid out before is told the two lines — and its jtakeit-meta.mjs,
+    // which the scaffold owns, is left as it is.
+    if (!/devShop/.test(read(base, 'jtakeit-meta.mjs'))) fail('6 · a site create lays out does not mount devShop beside devDiary');
+    const fresh = ok(copy(base, 'shop-dev'), 'add', 'shop', '--kit', shopFile);
+    if (fresh.stdout.includes('devShop')) fail(`6 · add shop told a site that mounts devShop to add it:\n${fresh.stdout}`);
+    const older = copy(base, 'shop-older');
+    const meta = read(older, 'jtakeit-meta.mjs').split('\n').filter((one) => !one.includes('devShop')).join('\n');
+    writeFileSync(join(older, 'jtakeit-meta.mjs'), meta);
+    const run = ok(older, 'add', 'shop', '--kit', shopFile);
+    for (const line of ["import { devShop } from '@jtakeit/kit/devshop';", "server.middlewares.use('/api', devShop(process.cwd()));"]) {
+      if (!run.stdout.includes(line)) fail(`6 · add shop on a site with no devShop did not say «${line}»:\n${run.stdout}`);
+    }
+    if (read(older, 'jtakeit-meta.mjs') !== meta) fail('6 · add shop changed the scaffold\'s jtakeit-meta.mjs');
+  }
+  {
     // A block type or a collection by the kit's names is refused, naming it, with nothing written.
     for (const [name, replace, says] of [
       ['type', "export const BLOCKS: Block[] = [", "the block type «product»"],

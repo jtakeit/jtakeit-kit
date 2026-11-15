@@ -74,6 +74,7 @@
       "default": "./lib/upgrade3.mjs"
     },
     "./devdiary": "./lib/devdiary.mjs",
+    "./devshop": "./lib/devshop.mjs",
     "./codes": "./lib/codes.mjs",
     "./elements/booking": {
       "types": "./types/elements-booking.d.ts",
