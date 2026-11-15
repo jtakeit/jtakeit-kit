@@ -158,6 +158,11 @@ export interface SkuField extends FieldBase, Bounds {
   kind: 'sku';
 }
 
+/** A variant's choice among its product's options, by key (contract 3's alone). */
+export interface PicksField extends FieldBase {
+  kind: 'picks';
+}
+
 /** Whole minutes: a length, or a time of day from midnight — bounded as a number is (a service takes 5 to 480). */
 export interface MinutesField extends FieldBase, Bounds {
   kind: 'duration' | 'time_of_day';
@@ -174,9 +179,9 @@ export interface PlainField extends FieldBase {
 }
 
 /** One field of a block, a row, a form's asks or the page's SEO (§3.3). */
-export type Field = TextField | NumberField | MoneyField | SelectField | RefField | MediaField | ListField | UrlField | SkuField | MinutesField | ContactField | PlainField;
+export type Field = TextField | NumberField | MoneyField | SelectField | RefField | MediaField | ListField | UrlField | SkuField | PicksField | MinutesField | ContactField | PlainField;
 
-/** The kinds, eighteen (§3.4). */
+/** The kinds, nineteen (§3.4). */
 export type Kind = Field['kind'];
 
 /** One arrangement of a block's one gallery, and how many pictures it takes in what frame. */

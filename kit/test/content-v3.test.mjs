@@ -404,6 +404,49 @@ test('values: money as { minor }, a picture as { src, alt, focus }, a gallery by
   assert.deepEqual(['lead', 'link', 'title'].map((key) => contact.value(key)), [undefined, undefined, 'Kontakt']);
 });
 
+test("a variant's picks are read as option to value, the same in every language, and nothing for a malformed one", () => {
+  const FOX = '0193a5c3-6b1c-7d20-9a31-5e4d3c2b1b03';
+  const ODD = '0193a5c3-6b1c-7d20-9a31-5e4d3c2b1b04';
+  // Each malformed value is a variant of its own: an object a key of which is not an option's
+  // (`Size`), a value that is not a key (`1`), and what is no object at all.
+  const malformed = [{ Size: 's' }, { size: 1 }, { size: 's', colour: null }, { size: 'S' }, [], 's', null];
+  const read = content({
+    '/jtk/schema.json': {
+      contract: 3, locale: 'de', locales: ['en'],
+      blocks: [{ type: 'product', v: 1, fields: [
+        { key: 'title', kind: 'text', required: true },
+        { key: 'variants', kind: 'list', of: [{ key: 'sku', kind: 'sku' }, { key: 'picks', kind: 'picks' }] },
+      ] }],
+      collections: [{ name: 'products', type: 'product', route: { detail: '/produkte/{slug}' } }],
+      modules: { shop: { products: 'products' } },
+    },
+    '/jtk/entries/products/fuchs.json': {
+      id: FOX, collection: 'products', slug: 'fuchs', visible: true,
+      fields: { title: 'Fuchs-Shirt', variants: [{ _key: 'v1', sku: 'FOX-S-RED', picks: { size: 's', colour: 'red' } }, { _key: 'v2', sku: 'FOX-M', picks: {} }, { _key: 'v3', sku: 'FOX' }] },
+    },
+    // A translation that gives the title and no picks.
+    '/jtk/entries/products/fuchs.en.json': { of: FOX, locale: 'en', slug: 'fox', fields: { title: 'Fox shirt' } },
+    '/jtk/entries/products/seltsam.json': {
+      id: ODD, collection: 'products', slug: 'seltsam', visible: true,
+      fields: { title: 'Seltsam', variants: malformed.map((picks, i) => ({ _key: `m${i}`, sku: `ODD-${i}`, picks })) },
+    },
+  }, { now });
+
+  const original = read.entry('products', 'fuchs').fields.rows('variants');
+  assert.deepEqual(original.map((one) => one.picks('picks')), [{ size: 's', colour: 'red' }, {}, {}], 'as written; none, for an empty object and for a variant without any');
+  const english = read.entry('products', 'fuchs', 'en').fields.rows('variants');
+  assert.equal(read.entry('products', 'fuchs', 'en').fields.text('title'), 'Fox shirt');
+  assert.deepEqual(english.map((one) => one.picks('picks')), [{ size: 's', colour: 'red' }, {}, {}], 'the same in every language: the original\'s, which a translation gives no picks of');
+  assert.deepEqual(english[0].picks('nothing_declared'), {}, 'a key the row does not have is nothing picked');
+
+  const odd = read.entry('products', 'seltsam').fields.rows('variants');
+  assert.deepEqual(odd.map((one) => one.picks('picks')), malformed.map(() => ({})), 'a malformed value reads as nothing picked — the platform\'s judge says the fault (JTK_E_PICKS_INVALID)');
+  // What is handed out is the door's own, never the file's object.
+  const given = original[0].picks('picks');
+  given.size = 'x';
+  assert.deepEqual(original[0].picks('picks'), { size: 's', colour: 'red' });
+});
+
 test('the schema as a template reads it: a select\'s options and their labels, a reference\'s collections', () => {
   const fields = site.collection('works').fields;
   const section = fields.find((one) => one.key === 'section');

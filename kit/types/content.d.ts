@@ -151,6 +151,13 @@ export interface Values {
   refs(field: string): Entry[];
   /** A list's rows, each read the same way. */
   rows(field: string): Row[];
+  /**
+   * A variant's picks: an option's `_key` to the `_key` of one of its values,
+   * the same in every language. `{}` for none — and for a value that is not
+   * such an object, which the door reads as nothing picked and the platform's
+   * judge refuses (JTK_E_PICKS_INVALID, `jtk schema --judge`, `validate_schema`).
+   */
+  picks(field: string): Record<string, string>;
   /** A single picture. */
   picture(field: string): Picture;
   /** A gallery: its pictures, the empty ones left out, each annotated by its place in the field it was read from. */

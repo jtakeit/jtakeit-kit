@@ -66,13 +66,13 @@ const PHOTOS_MAX = 7;
 const SLUG = '{slug}';
 const MEDIA_FOLDER = 'media';
 
-/** `AllKinds`, and `sku`, which only contract 3 knows. */
+/** `AllKinds`, and `sku` and `picks`, which only contract 3 knows. */
 const KINDS = new Set([
   'text', 'textarea', 'richtext_lite', 'number', 'tel', 'url', 'email', 'date', 'select', 'bool',
   'media', 'list', 'markdown', 'money', 'duration', 'time_of_day', 'ref',
 ]);
 const knownKind = (kind) => KINDS.has(kind);
-const knows = (kind) => knownKind(kind) || kind === 'sku';
+const knows = (kind) => knownKind(kind) || kind === 'sku' || kind === 'picks';
 
 const ENQUIRY_KEYS = new Set(['name', 'contact', 'phone', 'email', 'message', 'website']);
 const ASK_KINDS = new Set(['text', 'textarea', 'number', 'bool', 'select', 'tel', 'email', 'url', 'date', 'time_of_day']);
@@ -86,8 +86,13 @@ export const ROLES = ['name', 'phone', 'email', 'street', 'postal_code', 'city',
 // ── the modules, as far as a schema is concerned (`modules.go`) ────────────
 //
 // Only what `validateModules` reads: the roles, which are required, and what
-// each reads from an entry, by key and kind. The settings' own fields are the
-// module's, judged in `jtk/modules/<module>.json` by the platform.
+// each reads from an entry, by key and kind — and, of a list, the rows it
+// reads of it, at any depth (`of` inside `of`). The settings' own fields are
+// the module's, judged in `jtk/modules/<module>.json` by the platform. A read
+// says what it `means` only where it is required, as the platform's does when
+// it refuses a type without it; the prose of the others is not repeated here.
+// A module's rule beyond its roles — what the platform keeps in its
+// `Validate.Schema` — is `schema`, asked after the roles.
 
 const weekRow = [
   { key: 'day', kind: 'select', required: true },
@@ -102,6 +107,37 @@ const rateRow = [
   { key: 'from_unit', kind: 'number', required: false },
   { key: 'until_unit', kind: 'number', required: false },
 ];
+/**
+ * `modules/shop`'s `optionRows`, `variantRows` and `customizationRows`: what
+ * the shop reads of a product's three lists, by key and kind. An option's
+ * `values` and a customization's `choices` are lists inside the rows. What
+ * the rows must say beyond their kind — required, whole, one amount, a
+ * select's options — is `LIST_RULES`.
+ */
+const optionRows = [
+  { key: 'name', kind: 'text', required: true },
+  { key: 'values', kind: 'list', required: true, of: [{ key: 'label', kind: 'text', required: true }] },
+];
+const variantRows = [
+  { key: 'sku', kind: 'sku', required: true },
+  { key: 'price', kind: 'money', required: true },
+  { key: 'weight', kind: 'number' },
+  { key: 'picks', kind: 'picks' },
+  { key: 'on_sale', kind: 'bool' },
+];
+/** `customizationKinds`: the three ways a buyer may be asked something. */
+const CUSTOMIZATION_KINDS = ['choice', 'yes_no', 'text'];
+const customizationRows = [
+  { key: 'name', kind: 'text', required: true },
+  { key: 'kind', kind: 'select', required: true },
+  { key: 'required', kind: 'bool' },
+  { key: 'max', kind: 'number' },
+  { key: 'choices', kind: 'list', of: [{ key: 'label', kind: 'text', required: true }, { key: 'adds', kind: 'money' }] },
+  { key: 'adds', kind: 'money' },
+];
+/** `sizeClasses`: what the shipping rates are told a parcel is. */
+const SIZE_CLASSES = ['letter', 'parcel', 'bulky'];
+
 const MODULES = new Map([
   ['bookings', {
     roles: [
@@ -134,6 +170,36 @@ const MODULES = new Map([
       },
       { name: 'classes', required: false, means: 'The collection of classes the resources are grouped in.', reads: [{ key: 'costs', kind: 'money' }] },
     ],
+  }],
+  // `modules/shop`: one role, what the shop sells (`productReads`). The prose of
+  // `means` is the platform's, word for word, on the role and the two reads a
+  // type cannot be without.
+  ['shop', {
+    roles: [
+      {
+        name: 'products',
+        required: true,
+        means: 'what the shop sells: an entry a product, its variants priced and stocked by SKU; a hidden product (`visible: false`) is held only to its SKUs and its 2,000 variants until it is shown',
+        reads: [
+          { key: 'title', kind: 'text', required: true, means: "What the product is called, in every language of the site — required, as every entry's title is." },
+          { key: 'options', kind: 'list', of: optionRows },
+          {
+            key: 'variants',
+            kind: 'list',
+            required: true,
+            of: variantRows,
+            means: "What is sold: rows of a `sku`, a `price`, and — when there are options — the `picks` that say which value of each. A simple product is one variant without picks. The SKU is unique on the site and is what stock and orders are kept by; the `price` is one amount, with no `qualifiers`; `weight` is whole grams; `on_sale` takes a variant off sale without deleting it — without it, on sale. A SKU an order named stays its variant's: the save and the import refuse a draft that changes it or gives it to another variant (`JTK_E_SKU_ORDERED`); a variant removed, like a product deleted, keeps its SKUs from every other. At most 2,000 a product. Never `localized`: SKUs, prices and picks are the original's.",
+          },
+          { key: 'customizations', kind: 'list', of: customizationRows },
+          { key: 'tracked', kind: 'bool' },
+          { key: 'size_class', kind: 'select', options: SIZE_CLASSES },
+          { key: 'tax_code', kind: 'text' },
+          { key: 'tariff_number', kind: 'text' },
+          { key: 'made_in', kind: 'text' },
+        ],
+      },
+    ],
+    schema: validateShopSchema,
   }],
 ]);
 
@@ -1150,6 +1216,8 @@ function validateModules(say, reg) {
       if (!Object.hasOwn(use, 'classes')) say(E.MODULE_ROLE, at, `${at} is a class, and the ${name} module has no collection bound as its classes — add "classes": ${q(field.ref)} to modules.${name}`);
       else if (field.ref !== use.classes) say(E.MODULE_ROLE, at, `${at} points at ${q(field.ref)}, and the ${name} module's classes are ${q(use.classes)}`);
     }
+    // What a module asks of a schema beyond its roles (`Validate.Schema`).
+    def.schema?.(say, reg, use);
   }
 }
 
@@ -1178,17 +1246,125 @@ function validateReads(say, reg, module, role, col) {
     for (const option of read.options === undefined ? [] : field.options) {
       if (!read.options.includes(option)) say(E.MODULE_ROLE, at, `${at} offers ${q(option)}, and the ${module} module reads ${q(read.key)} as one of ${q(read.options)}`);
     }
-    for (const want of read.of ?? []) {
-      const sub = fieldIn(field.of, want.key);
-      if (sub === undefined) {
-        if (!want.required) continue;
-        say(E.MODULE_ROLE, at, `${at} has no ${q(want.key)} row field — the ${module} module reads ${q(read.key)} rows as ${read.of.map((one) => `${q(one.key)} ${one.kind}`).join(', ')}`);
-        continue;
-      }
-      if (sub.kind !== want.kind && !(want.kind === 'text' && sub.kind === 'ref')) {
-        say(E.MODULE_ROLE, `${at}.${want.key}`, `${at}.${want.key} is ${q(sub.kind)}, and the ${module} module reads it as ${q(want.kind)}`);
-      }
+    validateRows(say, module, read.key, at, field.of, read.of ?? []);
+  }
+}
+
+/**
+ * `validateRows`: the rows a schema declares for a list held to the rows the
+ * module reads of it, and the rows inside a row to what it reads of those, at
+ * any depth (the platform's Ruling 25): a row's row is read as a row is.
+ * `read` names the list as the module reads it — `options`, `options.values` —
+ * and `at` is where it is declared.
+ */
+function validateRows(say, module, read, at, declared, wanted) {
+  for (const want of wanted) {
+    const sub = fieldIn(declared, want.key);
+    if (sub === undefined) {
+      // A row field the module reads when it is there is not one a schema has
+      // to declare: a schema written before the field existed is whole without it.
+      if (!want.required) continue;
+      say(E.MODULE_ROLE, at, `${at} has no ${q(want.key)} row field — the ${module} module reads ${q(read)} rows as ${wanted.map((one) => `${q(one.key)} ${one.kind}`).join(', ')}`);
+      continue;
     }
+    // A reference is read as the slug it holds: a `does` row naming a service
+    // may be a ref into the services collection, or the text it always was.
+    if (sub.kind !== want.kind && !(want.kind === 'text' && sub.kind === 'ref')) {
+      say(E.MODULE_ROLE, `${at}.${want.key}`, `${at}.${want.key} is ${q(sub.kind)}, and the ${module} module reads it as ${q(want.kind)}`);
+      continue;
+    }
+    if (want.of !== undefined) validateRows(say, module, `${read}.${want.key}`, `${at}.${want.key}`, sub.of, want.of);
+  }
+}
+
+/**
+ * `listRules`: the lists of a products type the shop holds to more than the
+ * registry does (`modules/shop/schema.go`), and what each says of its rows —
+ * `required` the row fields a product cannot be sold without, `whole` those
+ * that are whole numbers (grams, characters), `unqualified` those that are one
+ * amount (never `from` or `on_request`), `within` a select's options the shop
+ * knows — and the lists inside them as `nested`.
+ */
+const LIST_RULES = [
+  { key: 'options', required: ['name', 'values'], nested: [{ key: 'values', required: ['label'] }] },
+  { key: 'variants', required: ['sku', 'price'], whole: ['weight'], unqualified: ['price'] },
+  {
+    key: 'customizations',
+    required: ['name', 'kind'],
+    within: { kind: CUSTOMIZATION_KINDS },
+    whole: ['max'],
+    unqualified: ['adds'],
+    nested: [{ key: 'choices', required: ['label'], unqualified: ['adds'] }],
+  },
+];
+
+/**
+ * `modules/shop`'s `validateSchema`: the products type held to what the shop
+ * needs of it beyond what the roles' reads refuse — that where a list is
+ * declared its rows declare as required what a product cannot be sold
+ * without, that a price the shop reads is one amount, that a weight and a
+ * length are whole, that a customization is one of the three the shop knows,
+ * and that the lists are the original's in every language (a SKU, a price, a
+ * pick and what a choice adds are not translated: a list said per language
+ * would let a translation carry its own, which the shop never sees).
+ */
+function validateShopSchema(say, reg, use) {
+  const col = reg.collections.find((one) => one.name === use.products);
+  if (col === undefined) return;
+  const entry = typeOf(reg, col.type);
+  if (entry === undefined) return;
+  for (const rule of LIST_RULES) {
+    const list = fieldIn(entry.fields, rule.key);
+    if (list === undefined || list.kind !== 'list') continue;
+    const at = `blocks.${col.type}.${rule.key}`;
+    perLanguage(say, at, rule.key, list);
+    rowFaults(say, at, rule.key, list.of, rule);
+  }
+}
+
+/** `perLanguage`: a list of a product said per language. */
+function perLanguage(say, at, name, list) {
+  if (list.localized !== true) return;
+  say(E.MODULE_ROLE, at, `${at}: ${q(name)} is the original's in every language — a product's SKUs, prices, picks and what a choice adds are not translated: take out "localized": true`);
+}
+
+/**
+ * `rowFaults`: each row field a list has to declare required and does not, a
+ * price that may say more than its amount, a whole number declared as any, a
+ * select offering what the shop does not read — in the list's rows and in the
+ * lists inside them, all at the product's list. A row field that is not
+ * declared at all is `validateRows`'s to say, at any depth.
+ */
+function rowFaults(say, at, name, rows, rule) {
+  for (const key of rule.required ?? []) {
+    const row = fieldIn(rows, key);
+    if (row === undefined || row.required) continue;
+    say(E.MODULE_ROLE, at, `${at}: the shop module sells nothing without a ${q(key)} on every row of ${q(name)}, and its rows do not declare it required`);
+  }
+  for (const key of rule.unqualified ?? []) {
+    const row = fieldIn(rows, key);
+    if (row !== undefined && row.kind === 'money' && row.qualifiers.length > 0) {
+      say(E.MODULE_ROLE, at, `${at}: ${q(key)} on every row of ${q(name)} is one amount, never from or on request — take out "qualifiers"`);
+    }
+  }
+  for (const key of rule.whole ?? []) {
+    const row = fieldIn(rows, key);
+    if (row !== undefined && row.kind === 'number' && !row.integer) {
+      say(E.MODULE_ROLE, at, `${at}: ${q(key)} on every row of ${q(name)} is a whole number — declare it with "integer": true`);
+    }
+  }
+  for (const [key, known] of Object.entries(rule.within ?? {})) {
+    const row = fieldIn(rows, key);
+    if (row === undefined || row.kind !== 'select') continue;
+    for (const option of row.options) {
+      if (!known.includes(option)) say(E.MODULE_ROLE, at, `${at}: ${q(key)} of ${q(name)} offers ${q(option)}, and the shop module reads it as one of ${q(known)}`);
+    }
+  }
+  for (const inner of rule.nested ?? []) {
+    const list = fieldIn(rows, inner.key);
+    if (list === undefined || list.kind !== 'list') continue;
+    perLanguage(say, at, `${name}.${inner.key}`, list);
+    rowFaults(say, at, `${name}.${inner.key}`, list.of, inner);
   }
 }
 
