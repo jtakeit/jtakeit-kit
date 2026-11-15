@@ -43,13 +43,17 @@
  *     left» (a count of FEW or fewer, where the shop tells one), «Sold out» —
  *     and holds `[data-add]` while it cannot be bought;
  *   - writes the chosen variant's price into `[data-price]` and moves the
- *     annotation's `[<key>]` to it, so a tap edits the price that is shown;
+ *     annotation's `[<key>]` to it, so a tap edits the price that is shown —
+ *     and the build's words and annotation back where no variant with a price
+ *     is chosen;
  *   - on *Add*, holds the answers to `answersOf`: each fault said beside its
  *     field (`aria-invalid`, `aria-describedby`) and in `[data-product-error]`,
  *     the first faulty field focused; with none, the line added to the cart
  *     (`localStorage["jtk:cart:" + api]`, `addLine`), `[data-added]` shown and
  *     focused, and `jtk:cart` dispatched on the document with the cart's key
- *     as its `detail`.
+ *     as its `detail`. A browser that keeps no cart (site data blocked) is
+ *     said in `[data-product-error]` (`cartUnavailable`), as a line that adds
+ *     nothing is (`refused.quantity`).
  */
 import { money } from '../lib/money.mjs';
 import { shopWordsFor } from '../lib/shop/words.mjs';
@@ -140,6 +144,8 @@ export function wireProduct(form) {
   /** @type {HTMLButtonElement | null} */ const add = form.querySelector('[data-add]');
   /** @type {HTMLElement | null} */ const error = form.querySelector('[data-product-error]');
   /** @type {HTMLElement | null} */ const added = form.querySelector('[data-added]');
+  // What the build wrote there, said again where no variant with a price is chosen.
+  const built = { text: price?.textContent ?? '', at: price?.getAttribute('data-jtk-path') ?? null };
 
   // The ARIA the behaviour depends on, whatever the copy kept: what is left is
   // read as it changes, a refusal as it appears, «added» takes the focus.
@@ -247,6 +253,10 @@ export function wireProduct(form) {
       price.textContent = money(variant.price, facts.currency, locale);
       const at = price.getAttribute('data-jtk-path');
       if (at && KEY.test(variant.key)) price.setAttribute('data-jtk-path', at.replace(/\[[^\]]*\](?=[^[]*$)/, `[${variant.key}]`));
+    } else if (price) {
+      // No variant chosen, or one with no price: the build's words, not the last one's price.
+      price.textContent = built.text;
+      if (built.at !== null) price.setAttribute('data-jtk-path', built.at);
     }
 
     let said = '';
@@ -268,8 +278,14 @@ export function wireProduct(form) {
   }
 
   // ── what is wrong ───────────────────────────────────────────────────────
-  /** @type {{ field: HTMLElement; note: HTMLElement }[]} */
+  /** @type {{ field: HTMLElement; note: HTMLElement; line: string }[]} */
   let blamed = [];
+  /** `[data-product-error]` said again from the faults that remain, or hidden where none does. */
+  function sum() {
+    if (!error) return;
+    error.textContent = blamed.map((one) => one.line).join(' · ');
+    error.hidden = blamed.length === 0;
+  }
   function unblame(field) {
     for (const one of blamed.filter((each) => field === undefined || each.field === field)) {
       one.field.removeAttribute('aria-invalid');
@@ -279,13 +295,10 @@ export function wireProduct(form) {
       one.note.remove();
     }
     blamed = field === undefined ? [] : blamed.filter((each) => each.field !== field);
-    if (blamed.length === 0 && error) {
-      error.textContent = '';
-      error.hidden = true;
-    }
+    sum();
   }
-  /** A fault said beside its field, and the field described by it. */
-  function blame(field, text) {
+  /** A fault said beside its field, the field described by it, and `line` its part of the summary. */
+  function blame(field, text, line) {
     const note = document.createElement('span');
     note.dataset.fault = '';
     note.id = `${prefix}-fault-${blamed.length + 1}`;
@@ -293,7 +306,7 @@ export function wireProduct(form) {
     field.insertAdjacentElement('afterend', note);
     field.setAttribute('aria-invalid', 'true');
     field.setAttribute('aria-describedby', [field.getAttribute('aria-describedby'), note.id].filter(Boolean).join(' '));
-    blamed.push({ field, note });
+    blamed.push({ field, note, line });
   }
 
   /** How many, as a whole number of 1 to 999 — written back where the field said another. */
@@ -334,18 +347,13 @@ export function wireProduct(form) {
     }
     const { answers, faults } = answersOf(facts, given);
     if (faults.length > 0) {
-      const lines = [];
       for (const fault of faults) {
         const one = facts.customizations.find((each) => each.key === fault.key);
         const text = (words[`fault.${fault.word}`] ?? '').replace('{max}', String(one?.max ?? ''));
         const [field] = controls(`answer:${fault.key}`);
-        if (field) blame(field, text);
-        lines.push(one?.name ? `${one.name}: ${text}` : text);
+        if (field) blame(field, text, one?.name ? `${one.name}: ${text}` : text);
       }
-      if (error) {
-        error.textContent = lines.join(' · ');
-        error.hidden = false;
-      }
+      sum();
       blamed[0]?.field.focus();
       return;
     }
@@ -361,11 +369,16 @@ export function wireProduct(form) {
       after = addLine(before, { product: facts.id, variant: variant.key, qty, answers });
       localStorage.setItem(key, JSON.stringify(after));
     } catch (why) {
+      // Storage refused — site data blocked, a private window that keeps none: the buyer is told, not left pressing.
       console.error(`product: the browser kept no cart (${why instanceof Error ? why.message : String(why)})`);
+      if (error) {
+        error.textContent = words.cartUnavailable;
+        error.hidden = false;
+      }
       return;
     }
     // A line at 999 already, or a cart of a hundred lines, takes no more.
-    const count = (cart) => cart.lines.reduce((sum, line) => sum + line.qty, 0);
+    const count = (cart) => cart.lines.reduce((total, line) => total + line.qty, 0);
     if (count(after) === count(before)) {
       if (error) {
         error.textContent = words['refused.quantity'];

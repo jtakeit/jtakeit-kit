@@ -26,7 +26,9 @@ import { judgeTranslations } from '../lib/translations.mjs';
 
 const KITS = fileURLToPath(new URL('./fixtures/kits/', import.meta.url));
 // The shop's kit (shop.json) is in the folder too, and is no kind of business's: it is the shop module's, in
-// contract 3's words, laid by `jtk add shop` (test/units.mjs) and refused here (meta-kits.test.mjs).
+// contract 3's words, laid by `jtk add shop` (test/units.mjs) and refused here (meta-kits.test.mjs). It is
+// jtakeit-core's backend/api/kits/sets/shop.json, copied read-only at 0e150d8a (wiki/102 stage 9, Ruling 217:
+// the tax code and the customs tariff number `no_tap_target`).
 const KINDS = readdirSync(KITS).filter((one) => one.endsWith('.json') && one !== 'shop.json').map((one) => one.slice(0, -'.json'.length)).sort();
 const kitOf = (kind) => readKit(join(KITS, `${kind}.json`));
 const jtkit = fileURLToPath(new URL('../bin/jtkit.mjs', import.meta.url));

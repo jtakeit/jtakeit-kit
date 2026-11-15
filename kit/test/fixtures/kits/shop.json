@@ -3,7 +3,7 @@
   "module": "shop",
   "contract": 3,
   "version": 1,
-  "sum": "b4dfbe47e60f",
+  "sum": "8e2e16ea7500",
   "about": "A shop: products with options, variants and customizations, stocked by SKU and sent by the owner's zones and rates.",
   "ask": [
     "the catalogue: what it sells and roughly how many products — a spreadsheet, or a WooCommerce or Shopify export, with the SKUs and the stock it already has",
@@ -524,7 +524,8 @@
               "fr": "Code de taxe"
             },
             "kind": "text",
-            "client_editable": true
+            "client_editable": true,
+            "no_tap_target": true
           },
           {
             "key": "tariff_number",
@@ -539,7 +540,8 @@
               "fr": "Code douanier"
             },
             "kind": "text",
-            "client_editable": true
+            "client_editable": true,
+            "no_tap_target": true
           },
           {
             "key": "made_in",

@@ -14,13 +14,17 @@
 //      site's code (JTK_E_CONTENT_VARIANT, test/variants.mjs): every optional
 //      field of every product empty, then every one filled and long — each
 //      built, judged and linted, with nothing found
+//   4  what is the owner's and never the buyer's is drawn nowhere: a product's
+//      tax code and customs tariff number (`no_tap_target`, Ruling 217) are on
+//      no product page, filled by the owner or at the edge — while where it is
+//      made is drawn, and annotated
 //
 // Every built page of the shop is held as test/create3.mjs holds the
 // example's: no element says an attribute twice, no heading skips a level.
 // The kit is this checkout's, packed. The walk in a real Chrome is
 // test/a11y-shop.mjs's, outside `npm test`.
 import { spawnSync } from 'node:child_process';
-import { cpSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { money } from '../kit/lib/money.mjs';
@@ -30,9 +34,10 @@ import { varyContent } from './variants.mjs';
 const bin = resolve(import.meta.dirname, '../bin/jtk.mjs');
 const dir = mkdtempSync(join(tmpdir(), 'jtk-shop-'));
 const FOX = '0193a5c3-6b1c-7d20-9a31-5e4d3c2b1a02';
+/** A fault that stops the run: thrown, so the `finally` takes the site away, and said once at the end. */
+class Failure extends Error {}
 const fail = (m) => {
-  console.error(`shop: ${m}`);
-  process.exit(1);
+  throw new Failure(m);
 };
 const faults = [];
 const check = (ok, said) => {
@@ -72,8 +77,40 @@ function judged(site, said) {
   }
 }
 
+/**
+ * 4 · On every product page of a built site, in every language: nothing of the tax code or the tariff number —
+ * no annotation, no label, no value of a product's — and where it is made drawn and annotated where a product says it.
+ */
+function ownersOnly(site, said) {
+  const schema = JSON.parse(readFileSync(join(site, 'jtk/schema.json'), 'utf8'));
+  const fieldsOf = schema.blocks.find((one) => one.type === 'product').fields;
+  const labelOf = (key) => fieldsOf.find((one) => one.key === key)?.label;
+  for (const key of ['tax_code', 'tariff_number']) check(fieldsOf.find((one) => one.key === key)?.no_tap_target === true, `${said}: the site's product type does not say ${key} is no tap target`);
+  const entries = walk(join(site, 'jtk/entries/products')).filter((one) => /\/[^/.]+\.json$/.test(one)).map((one) => JSON.parse(readFileSync(one, 'utf8')));
+  for (const product of entries) {
+    for (const prefix of ['', 'en/']) {
+      const where = `/${prefix}shop/${product.slug}/`;
+      const html = readFileSync(join(site, 'dist', where, 'index.html'), 'utf8');
+      for (const key of ['tax_code', 'tariff_number']) {
+        check(!html.includes(`data-jtk-path="${key}"`) && !html.includes(`>${labelOf(key)}<`), `${said}: ${where} draws ${key}, the owner's fact and never the buyer's`);
+      }
+      check(!/txcd_/.test(html) && !html.includes('6109.1000'), `${said}: ${where} shows a tax code or a tariff number`);
+      const made = product.fields?.made_in;
+      if (typeof made === 'string' && made.trim() !== '') {
+        const at = new RegExp(`<dd[^>]*\\sdata-jtk-path="made_in"[^>]*>${made.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}</dd>`);
+        check(at.test(html), `${said}: ${where} does not draw where it is made, annotated`);
+      }
+    }
+  }
+}
+
 try {
   const site = await layShop(dir);
+  // The owner's facts on the fox, as the panel's card writes them: a tax code, a tariff number, where it is made.
+  const foxFile = join(site, 'jtk/entries/products/t-shirt-fox.json');
+  const fox = JSON.parse(readFileSync(foxFile, 'utf8'));
+  Object.assign(fox.fields, { tax_code: 'txcd_99999999', tariff_number: '6109.1000', made_in: 'Portugal' });
+  writeFileSync(foxFile, `${JSON.stringify(fox, null, 2)}\n`);
   judged(site, 'the test shop');
   const page = (address) => readFileSync(join(site, 'dist', address, 'index.html'), 'utf8');
 
@@ -131,6 +168,11 @@ try {
   }
   settle('the product\'s page');
 
+  // ── 4 · the owner's, never the buyer's ───────────────────────────────────
+  ownersOnly(site, 'the test shop');
+  check(page('shop/t-shirt-fox').includes('data-jtk-path="made_in"'), 'the fox does not draw where it is made');
+  settle('the owner\'s facts');
+
   // ── 3 · at the edges of the content ──────────────────────────────────────
   for (const variant of ['empty', 'full']) {
     const copy = `${site}-${variant}`;
@@ -138,9 +180,17 @@ try {
     symlinkSync(join(site, 'node_modules'), join(copy, 'node_modules'));
     varyContent(copy, variant);
     judged(copy, `every optional field of every product ${variant === 'full' ? 'filled and long' : 'empty'}`);
+    if (variant === 'full') {
+      ownersOnly(copy, 'every optional field filled and long');
+      settle('the owner\'s facts, at the edge');
+    }
   }
 
   console.log('shop: the product\'s page is the site\'s own — its form, its facts and every option, the first price annotated, in German and English — and judged and linted clean, at the edges of the content too');
+} catch (why) {
+  if (!(why instanceof Failure)) throw why;
+  console.error(`shop: ${why.message}`);
+  process.exitCode = 1;
 } finally {
   if (!process.env.KEEP_SHOP) rmSync(dir, { recursive: true, force: true });
   else console.log(`shop: kept ${dir}`);

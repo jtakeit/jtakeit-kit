@@ -36,8 +36,11 @@
  * `[data-price]`, which the element moves to the variant chosen; all of them
  * are in the list of variants below the form, where a buyer reads what each
  * combination costs and the owner taps any of them. The words fields the
- * page does not otherwise draw — where it is made, its customs tariff number
- * — are said at the end, under the labels the schema gives them.
+ * page does not otherwise draw — where it is made — are said at the end,
+ * under the labels the schema gives them; a field that says `no_tap_target`
+ * is the owner's and never the buyer's — the tax code Stripe reads, the
+ * customs tariff number — edited on the product's card in the panel, and
+ * drawn nowhere here.
  */
 import { Image } from 'astro:assets';
 import type { Collection, Entry, Row } from '@jtakeit/kit/content';
@@ -69,7 +72,7 @@ const id = `product-${facts.id.slice(0, 8) || entry.slug}`;
 const cart = `${under(withLocale(locale, '/cart'))}/`;
 
 // The words the element says as the buyer chooses, handed over in the page's language.
-const SAID = ['soldOut', 'left', 'inStock', 'notAvailable', 'chooseEach', 'refused.quantity', 'fault.required', 'fault.too_long', 'fault.not_a_choice'];
+const SAID = ['soldOut', 'left', 'inStock', 'notAvailable', 'chooseEach', 'refused.quantity', 'cartUnavailable', 'fault.required', 'fault.too_long', 'fault.not_a_choice'];
 const words = Object.fromEntries(SAID.map((key) => [key, W[key]]));
 
 /** A list's row by the key the facts name it by: its `_key`, or its place. */
@@ -106,10 +109,11 @@ const picksOf = (picks: Record<string, string>) =>
   });
 const variantsLabel = fields.field('variants')?.label;
 
-// The words fields of the product this page draws nowhere above: said last, under the schema's labels.
+// The words fields of the product this page draws nowhere above: said last, under the schema's labels — but
+// not one that is no tap target, which is the owner's fact for Stripe or customs and never drawn for a buyer.
 const DRAWN = new Set(['title', 'description', 'cover', 'pictures', 'options', 'variants', 'customizations']);
 const details = collection.fields
-  .filter((field) => !DRAWN.has(field.key) && (field.kind === 'text' || field.kind === 'textarea') && fields.text(field.key) !== '')
+  .filter((field) => !DRAWN.has(field.key) && field.no_tap_target !== true && (field.kind === 'text' || field.kind === 'textarea') && fields.text(field.key) !== '')
   .map((field) => ({
     label: site.words(field.label, LANG),
     labelLang: site.wordsLang(field.label, LANG) || undefined,

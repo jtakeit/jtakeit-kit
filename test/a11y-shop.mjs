@@ -34,12 +34,21 @@ const PIECES = [
     reaches: {
       '/shop/t-shirt-fox/': [
         "product: each option's value chosen by the keyboard",
+        "product: the price shown is the chosen variant's",
         'product: a variant sold out is said in words',
         'product: «added» is said',
+        'product: a cart the browser cannot keep is said',
         'shop: every request names the protocol version',
       ],
-      '/shop/tasche-nach-mass/': ['product: a question left unanswered is said', 'product: «added» is said', 'shop: every request names the protocol version'],
-      '/shop/kerzenstaender/': ['product: «added» is said', 'shop: every request names the protocol version'],
+      '/shop/tasche-nach-mass/': [
+        "product: each option's value chosen by the keyboard",
+        "product: the price shown is the chosen variant's",
+        'product: a question left unanswered is said',
+        'product: «added» is said',
+        'product: a cart the browser cannot keep is said',
+        'shop: every request names the protocol version',
+      ],
+      '/shop/kerzenstaender/': ['product: «added» is said', 'product: a cart the browser cannot keep is said', 'shop: every request names the protocol version'],
     },
   },
 ];
@@ -53,11 +62,8 @@ let results = [];
 try {
   const site = await layShop(scratch);
   const built = spawnSync('npm', ['run', 'build'], { cwd: site, encoding: 'utf8' });
-  if (built.status !== 0) {
-    console.error(built.stdout, built.stderr);
-    console.error('a11y-shop: the shop does not build');
-    process.exit(1);
-  }
+  // Thrown, not exited: the `finally` below takes the site away either way.
+  if (built.status !== 0) throw new Error(`a11y-shop: the shop does not build:\n${built.stdout}\n${built.stderr}`);
   results = await audit({
     dist: join(site, 'dist'),
     pages: PIECES.flatMap((one) => one.pages),
