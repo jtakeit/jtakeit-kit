@@ -1,0 +1,648 @@
+{
+  "kind": "shop",
+  "module": "shop",
+  "contract": 3,
+  "version": 1,
+  "sum": "b4dfbe47e60f",
+  "about": "A shop: products with options, variants and customizations, stocked by SKU and sent by the owner's zones and rates.",
+  "ask": [
+    "the catalogue: what it sells and roughly how many products — a spreadsheet, or a WooCommerce or Shopify export, with the SKUs and the stock it already has",
+    "variants and customizations: whether any product has variants (sizes, colours) or customizations (a name on a tag) — and only then *Advanced* is opened",
+    "the country it sends from: the zone the kit starts with — from the address; say it back rather than asking",
+    "where it ships, and each method's price: flat or by weight, and free above a total",
+    "pick-up: whether the business offers it, and where to collect",
+    "VAT: which products are not ordinary goods — books, food, children's clothing — where the business charges it"
+  ],
+  "catalogue": {
+    "blocks": [
+      {
+        "type": "product",
+        "v": 1,
+        "label": {
+          "uk": "Товар",
+          "en": "Product",
+          "de": "Produkt",
+          "ru": "Товар",
+          "es": "Producto",
+          "it": "Prodotto",
+          "pt": "Produto",
+          "fr": "Produit"
+        },
+        "fields": [
+          {
+            "key": "title",
+            "label": {
+              "uk": "Назва",
+              "en": "Name",
+              "de": "Name",
+              "ru": "Название",
+              "es": "Nombre",
+              "it": "Nome",
+              "pt": "Nome",
+              "fr": "Nom"
+            },
+            "kind": "text",
+            "required": true,
+            "max": 120,
+            "client_editable": true
+          },
+          {
+            "key": "description",
+            "label": {
+              "uk": "Опис",
+              "en": "Description",
+              "de": "Beschreibung",
+              "ru": "Описание",
+              "es": "Descripción",
+              "it": "Descrizione",
+              "pt": "Descrição",
+              "fr": "Description"
+            },
+            "kind": "textarea",
+            "max": 4000,
+            "client_editable": true
+          },
+          {
+            "key": "cover",
+            "label": {
+              "uk": "Обкладинка",
+              "en": "Cover",
+              "de": "Titelbild",
+              "ru": "Обложка",
+              "es": "Portada",
+              "it": "Copertina",
+              "pt": "Capa",
+              "fr": "Couverture"
+            },
+            "kind": "media",
+            "client_editable": true
+          },
+          {
+            "key": "pictures",
+            "label": {
+              "uk": "Фотографії",
+              "en": "Pictures",
+              "de": "Bilder",
+              "ru": "Фотографии",
+              "es": "Imágenes",
+              "it": "Immagini",
+              "pt": "Imagens",
+              "fr": "Images"
+            },
+            "kind": "media",
+            "multiple": true,
+            "client_editable": true
+          },
+          {
+            "key": "options",
+            "label": {
+              "uk": "Параметри",
+              "en": "Options",
+              "de": "Optionen",
+              "ru": "Параметры",
+              "es": "Opciones",
+              "it": "Opzioni",
+              "pt": "Opções",
+              "fr": "Options"
+            },
+            "kind": "list",
+            "of": [
+              {
+                "key": "name",
+                "label": {
+                  "uk": "Назва",
+                  "en": "Name",
+                  "de": "Name",
+                  "ru": "Название",
+                  "es": "Nombre",
+                  "it": "Nome",
+                  "pt": "Nome",
+                  "fr": "Nom"
+                },
+                "kind": "text",
+                "required": true,
+                "client_editable": true
+              },
+              {
+                "key": "values",
+                "label": {
+                  "uk": "Значення",
+                  "en": "Values",
+                  "de": "Werte",
+                  "ru": "Значения",
+                  "es": "Valores",
+                  "it": "Valori",
+                  "pt": "Valores",
+                  "fr": "Valeurs"
+                },
+                "kind": "list",
+                "required": true,
+                "of": [
+                  {
+                    "key": "label",
+                    "label": {
+                      "uk": "Підпис",
+                      "en": "Label",
+                      "de": "Bezeichnung",
+                      "ru": "Подпись",
+                      "es": "Etiqueta",
+                      "it": "Etichetta",
+                      "pt": "Etiqueta",
+                      "fr": "Libellé"
+                    },
+                    "kind": "text",
+                    "required": true,
+                    "client_editable": true
+                  }
+                ],
+                "client_editable": true
+              }
+            ],
+            "client_editable": true
+          },
+          {
+            "key": "variants",
+            "label": {
+              "uk": "Варіанти",
+              "en": "Variants",
+              "de": "Varianten",
+              "ru": "Варианты",
+              "es": "Variantes",
+              "it": "Varianti",
+              "pt": "Variantes",
+              "fr": "Variantes"
+            },
+            "kind": "list",
+            "required": true,
+            "of": [
+              {
+                "key": "sku",
+                "label": {
+                  "uk": "Артикул",
+                  "en": "SKU",
+                  "de": "Artikelnummer",
+                  "ru": "Артикул",
+                  "es": "Referencia",
+                  "it": "Codice articolo",
+                  "pt": "Referência",
+                  "fr": "Référence"
+                },
+                "kind": "sku",
+                "required": true,
+                "client_editable": true
+              },
+              {
+                "key": "price",
+                "label": {
+                  "uk": "Ціна",
+                  "en": "Price",
+                  "de": "Preis",
+                  "ru": "Цена",
+                  "es": "Precio",
+                  "it": "Prezzo",
+                  "pt": "Preço",
+                  "fr": "Prix"
+                },
+                "kind": "money",
+                "required": true,
+                "client_editable": true
+              },
+              {
+                "key": "weight",
+                "label": {
+                  "uk": "Вага, г",
+                  "en": "Weight (g)",
+                  "de": "Gewicht (g)",
+                  "ru": "Вес, г",
+                  "es": "Peso (g)",
+                  "it": "Peso (g)",
+                  "pt": "Peso (g)",
+                  "fr": "Poids (g)"
+                },
+                "kind": "number",
+                "integer": true,
+                "client_editable": true
+              },
+              {
+                "key": "picks",
+                "label": {
+                  "uk": "Комбінація",
+                  "en": "Combination",
+                  "de": "Auswahl",
+                  "ru": "Комбинация",
+                  "es": "Combinación",
+                  "it": "Combinazione",
+                  "pt": "Combinação",
+                  "fr": "Combinaison"
+                },
+                "kind": "picks",
+                "client_editable": true
+              },
+              {
+                "key": "on_sale",
+                "label": {
+                  "uk": "У продажу",
+                  "en": "On sale",
+                  "de": "Im Verkauf",
+                  "ru": "В продаже",
+                  "es": "A la venta",
+                  "it": "In vendita",
+                  "pt": "À venda",
+                  "fr": "En vente"
+                },
+                "kind": "bool",
+                "client_editable": true
+              }
+            ],
+            "client_editable": true
+          },
+          {
+            "key": "customizations",
+            "label": {
+              "uk": "Персоналізація",
+              "en": "Customizations",
+              "de": "Personalisierungen",
+              "ru": "Персонализация",
+              "es": "Personalizaciones",
+              "it": "Personalizzazioni",
+              "pt": "Personalizações",
+              "fr": "Personnalisations"
+            },
+            "kind": "list",
+            "of": [
+              {
+                "key": "name",
+                "label": {
+                  "uk": "Що питають у покупця",
+                  "en": "What the buyer is asked",
+                  "de": "Was der Käufer gefragt wird",
+                  "ru": "О чём спрашивают покупателя",
+                  "es": "Lo que se pregunta al comprador",
+                  "it": "Cosa si chiede all’acquirente",
+                  "pt": "O que se pergunta ao comprador",
+                  "fr": "Ce que l’on demande à l’acheteur"
+                },
+                "kind": "text",
+                "required": true,
+                "client_editable": true
+              },
+              {
+                "key": "kind",
+                "label": {
+                  "uk": "Вид",
+                  "en": "Kind",
+                  "de": "Art",
+                  "ru": "Вид",
+                  "es": "Tipo",
+                  "it": "Tipo",
+                  "pt": "Tipo",
+                  "fr": "Type"
+                },
+                "kind": "select",
+                "required": true,
+                "options": [
+                  {
+                    "value": "choice",
+                    "label": {
+                      "uk": "Один зі списку",
+                      "en": "One of a list",
+                      "de": "Eines aus einer Liste",
+                      "ru": "Один из списка",
+                      "es": "Uno de una lista",
+                      "it": "Uno di un elenco",
+                      "pt": "Um de uma lista",
+                      "fr": "Un choix dans une liste"
+                    }
+                  },
+                  {
+                    "value": "yes_no",
+                    "label": {
+                      "uk": "Так чи ні",
+                      "en": "Yes or no",
+                      "de": "Ja oder Nein",
+                      "ru": "Да или нет",
+                      "es": "Sí o no",
+                      "it": "Sì o no",
+                      "pt": "Sim ou não",
+                      "fr": "Oui ou non"
+                    }
+                  },
+                  {
+                    "value": "text",
+                    "label": {
+                      "uk": "Короткий текст",
+                      "en": "A short text",
+                      "de": "Ein kurzer Text",
+                      "ru": "Короткий текст",
+                      "es": "Un texto breve",
+                      "it": "Un testo breve",
+                      "pt": "Um texto curto",
+                      "fr": "Un texte court"
+                    }
+                  }
+                ],
+                "client_editable": true
+              },
+              {
+                "key": "required",
+                "label": {
+                  "uk": "Покупець має відповісти",
+                  "en": "The buyer must answer",
+                  "de": "Der Käufer muss antworten",
+                  "ru": "Покупатель должен ответить",
+                  "es": "El comprador debe responder",
+                  "it": "L’acquirente deve rispondere",
+                  "pt": "O comprador tem de responder",
+                  "fr": "L’acheteur doit répondre"
+                },
+                "kind": "bool",
+                "client_editable": true
+              },
+              {
+                "key": "max",
+                "label": {
+                  "uk": "Найбільше символів",
+                  "en": "Most characters",
+                  "de": "Höchstzahl der Zeichen",
+                  "ru": "Максимум символов",
+                  "es": "Máximo de caracteres",
+                  "it": "Massimo di caratteri",
+                  "pt": "Máximo de caracteres",
+                  "fr": "Nombre maximal de caractères"
+                },
+                "kind": "number",
+                "integer": true,
+                "client_editable": true
+              },
+              {
+                "key": "choices",
+                "label": {
+                  "uk": "Що можна обрати",
+                  "en": "Choices",
+                  "de": "Auswahl",
+                  "ru": "Что можно выбрать",
+                  "es": "Qué se puede elegir",
+                  "it": "Scelte",
+                  "pt": "Escolhas",
+                  "fr": "Choix"
+                },
+                "kind": "list",
+                "of": [
+                  {
+                    "key": "label",
+                    "label": {
+                      "uk": "Підпис",
+                      "en": "Label",
+                      "de": "Bezeichnung",
+                      "ru": "Подпись",
+                      "es": "Etiqueta",
+                      "it": "Etichetta",
+                      "pt": "Etiqueta",
+                      "fr": "Libellé"
+                    },
+                    "kind": "text",
+                    "required": true,
+                    "client_editable": true
+                  },
+                  {
+                    "key": "adds",
+                    "label": {
+                      "uk": "Додає до ціни",
+                      "en": "Adds to the price",
+                      "de": "Kommt zum Preis hinzu",
+                      "ru": "Добавляет к цене",
+                      "es": "Suma al precio",
+                      "it": "Si aggiunge al prezzo",
+                      "pt": "Acresce ao preço",
+                      "fr": "S’ajoute au prix"
+                    },
+                    "kind": "money",
+                    "client_editable": true
+                  }
+                ],
+                "client_editable": true
+              },
+              {
+                "key": "adds",
+                "label": {
+                  "uk": "Додає до ціни",
+                  "en": "Adds to the price",
+                  "de": "Kommt zum Preis hinzu",
+                  "ru": "Добавляет к цене",
+                  "es": "Suma al precio",
+                  "it": "Si aggiunge al prezzo",
+                  "pt": "Acresce ao preço",
+                  "fr": "S’ajoute au prix"
+                },
+                "kind": "money",
+                "client_editable": true
+              }
+            ],
+            "client_editable": true
+          },
+          {
+            "key": "tracked",
+            "label": {
+              "uk": "Рахується",
+              "en": "Counted",
+              "de": "Gezählt",
+              "ru": "Учитывается",
+              "es": "Con recuento",
+              "it": "Conteggiato",
+              "pt": "Com contagem",
+              "fr": "Compté"
+            },
+            "kind": "bool",
+            "client_editable": true
+          },
+          {
+            "key": "size_class",
+            "label": {
+              "uk": "Розмір для доставки",
+              "en": "Shipping size",
+              "de": "Versandgrösse",
+              "ru": "Размер для доставки",
+              "es": "Tamaño para el envío",
+              "it": "Dimensione per la spedizione",
+              "pt": "Tamanho para o envio",
+              "fr": "Format pour la livraison"
+            },
+            "kind": "select",
+            "options": [
+              {
+                "value": "letter",
+                "label": {
+                  "uk": "Лист",
+                  "en": "Letter",
+                  "de": "Brief",
+                  "ru": "Письмо",
+                  "es": "Carta",
+                  "it": "Lettera",
+                  "pt": "Carta",
+                  "fr": "Lettre"
+                }
+              },
+              {
+                "value": "parcel",
+                "label": {
+                  "uk": "Посилка",
+                  "en": "Parcel",
+                  "de": "Paket",
+                  "ru": "Посылка",
+                  "es": "Paquete",
+                  "it": "Pacco",
+                  "pt": "Volume",
+                  "fr": "Colis"
+                }
+              },
+              {
+                "value": "bulky",
+                "label": {
+                  "uk": "Громіздкі товари",
+                  "en": "Bulky goods",
+                  "de": "Sperrgut",
+                  "ru": "Громоздкие товары",
+                  "es": "Artículos voluminosos",
+                  "it": "Articoli ingombranti",
+                  "pt": "Artigos volumosos",
+                  "fr": "Articles volumineux"
+                }
+              }
+            ],
+            "client_editable": true
+          },
+          {
+            "key": "tax_code",
+            "label": {
+              "uk": "Податковий код",
+              "en": "Tax code",
+              "de": "Steuercode",
+              "ru": "Налоговый код",
+              "es": "Código de impuestos",
+              "it": "Codice imposta",
+              "pt": "Código de imposto",
+              "fr": "Code de taxe"
+            },
+            "kind": "text",
+            "client_editable": true
+          },
+          {
+            "key": "tariff_number",
+            "label": {
+              "uk": "Митний код",
+              "en": "Customs tariff number",
+              "de": "Zolltarifnummer",
+              "ru": "Таможенный код",
+              "es": "Código arancelario",
+              "it": "Codice doganale",
+              "pt": "Código aduaneiro",
+              "fr": "Code douanier"
+            },
+            "kind": "text",
+            "client_editable": true
+          },
+          {
+            "key": "made_in",
+            "label": {
+              "uk": "Країна виробництва",
+              "en": "Made in",
+              "de": "Herkunftsland",
+              "ru": "Страна производства",
+              "es": "País de fabricación",
+              "it": "Paese di produzione",
+              "pt": "País de fabrico",
+              "fr": "Pays de fabrication"
+            },
+            "kind": "text",
+            "client_editable": true
+          }
+        ]
+      }
+    ],
+    "collections": [
+      {
+        "name": "products",
+        "label": {
+          "uk": "Товари",
+          "en": "Products",
+          "de": "Produkte",
+          "ru": "Товары",
+          "es": "Productos",
+          "it": "Prodotti",
+          "pt": "Produtos",
+          "fr": "Produits"
+        },
+        "one": {
+          "uk": "товар",
+          "en": "product",
+          "de": "Produkt",
+          "ru": "товар",
+          "es": "producto",
+          "it": "prodotto",
+          "pt": "produto",
+          "fr": "produit"
+        },
+        "type": "product",
+        "route": {
+          "detail": "/shop/{slug}",
+          "listing": "/shop"
+        }
+      }
+    ],
+    "modules": {
+      "shop": {
+        "products": "products"
+      }
+    }
+  },
+  "settings": {
+    "zones": [
+      {
+        "_key": "home",
+        "name": {
+          "uk": "Всередині країни",
+          "en": "Domestic",
+          "de": "Inland",
+          "ru": "По стране",
+          "es": "Nacional",
+          "it": "Nazionale",
+          "pt": "Nacional",
+          "fr": "National"
+        },
+        "countries": []
+      }
+    ],
+    "methods": [
+      {
+        "_key": "post",
+        "zone": "home",
+        "name": {
+          "uk": "Пошта",
+          "en": "Post",
+          "de": "Post",
+          "ru": "Почта",
+          "es": "Correo",
+          "it": "Posta",
+          "pt": "Correio",
+          "fr": "Poste"
+        }
+      },
+      {
+        "_key": "pickup",
+        "zone": "home",
+        "name": {
+          "uk": "Самовивіз",
+          "en": "Pick-up",
+          "de": "Abholung",
+          "ru": "Самовывоз",
+          "es": "Recogida en tienda",
+          "it": "Ritiro in sede",
+          "pt": "Recolha no local",
+          "fr": "Retrait sur place"
+        },
+        "pickup": true
+      }
+    ]
+  },
+  "entries": []
+}

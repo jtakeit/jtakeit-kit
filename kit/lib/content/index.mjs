@@ -303,6 +303,8 @@ export function content(files, options = {}) {
       field,
       // Contract 2 names no source of a value (wiki/111 §3.2 is contract 3's grammar).
       from: () => ({}),
+      // Contract 2 has no picks kind (a variant's picks are the shop's, contract 3's): nothing is picked.
+      picks: () => ({}),
       tappable: (key) => tappable(field(key)),
       minor: (key) => minorOf(values[key]),
       refs: (key) => resolved(field(key), values[key], how.locale ?? ''),

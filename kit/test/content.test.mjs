@@ -310,6 +310,14 @@ test('empty is absent: null, "" and [] are no value; text is always words', () =
   assert.deepEqual(block.rows('c'), []);
 });
 
+test('contract 2 has no picks kind: every value reads as nothing picked, in a block and in its rows', () => {
+  const quiet = content({ '/jtk/content/index.json': { path: '/', blocks: [{ type: 'x', picks: { size: 's' }, rows: [{ picks: { size: 's' } }] }] } });
+  const block = quiet.page('/').block('x');
+  assert.deepEqual(block.picks('picks'), {});
+  assert.deepEqual(block.picks('nothing'), {});
+  assert.deepEqual(block.rows('rows')[0].picks('picks'), {});
+});
+
 test("money, in the site's currency, from minor units or `{ minor }`", () => {
   assert.equal(site.money(4500, 'de'), site.money({ minor: 4500 }, 'de'));
   assert.match(site.money(4550, 'de'), /45,50/);

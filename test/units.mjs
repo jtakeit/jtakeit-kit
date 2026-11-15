@@ -19,13 +19,16 @@
 //   5  `jtk units` says what is there
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
+import { judgeSchema } from '../kit/lib/judge3.mjs';
+import { loadShopKit } from '../kit/lib/kits.mjs';
 import { placeOf } from '../lib/units/photos.mjs';
 
 const bin = resolve('bin/jtk.mjs');
 const kitFile = resolve('test/fixtures/kit-salon.json');
+const shopFile = resolve('kit/test/fixtures/kits/shop.json');
 const dir = mkdtempSync(join(tmpdir(), 'jtk-units-'));
 const fail = (m) => {
   console.error(`units: ${m}`);
@@ -236,7 +239,7 @@ try {
     for (const [args, says] of [
       [['remove', 'header'], 'the header is the site\'s own'],
       [['remove', 'footer'], 'the footer is the site\'s own'],
-      [['add', 'shop'], 'wiki/97'],
+      [['add', 'events'], 'wiki/106'],
       [['add', 'pricing'], 'is none of the example\'s units'],
       [['add', 'booking'], 'which kit?'],
       [['add', 'hero', '--page', '/about'], 'the example\'s sections are the home page\'s'],
@@ -261,8 +264,201 @@ try {
     ok(site, 'remove', 'team');
     const run = ok(site, 'units');
     if (!/● hero/.test(run.stdout) || !/○ team/.test(run.stdout) || !/○ blog/.test(run.stdout)) fail(`5 · jtk units does not say what is there:\n${run.stdout}`);
+    if (!/○ shop/.test(run.stdout)) fail(`5 · jtk units does not list the shop as a unit that can be added:\n${run.stdout}`);
+    ok(site, 'add', 'shop', '--kit', shopFile);
+    if (!/● shop/.test(ok(site, 'units').stdout)) fail('5 · jtk units does not say the shop is there once it is added');
   }
   console.log('units: jtk units says what the site has and what can be added');
+
+  // ── 6 · the shop ──────────────────────────────────────────────────────────
+  const MARK = '// The shop kit (npx @jtakeit/astro add shop): yours from here on.';
+  const shopKit = JSON.parse(readFileSync(shopFile, 'utf8'));
+  const read = (site, file) => readFileSync(join(site, file), 'utf8');
+  const jsonOf = (site, file) => JSON.parse(read(site, file));
+  const shopSettings = (site) => jsonOf(site, 'jtk/modules/shop.json');
+  const judged = (site) => {
+    const copied = copy(site, `${site.split('/').at(-1)}-judged`);
+    const run = ok(copied, 'schema', '--emit-only');
+    return { schema: jsonOf(copied, 'jtk/schema.json'), findings: judgeSchema(read(copied, 'jtk/schema.json')), run };
+  };
+  const shopAt = copy(base, 'shop');
+  {
+    // The kit laid over a fresh site in German: its words the site's, the country the locale's.
+    const run = ok(shopAt, 'add', 'shop', '--kit', shopFile);
+    if (!/CH, from the locale/.test(run.stdout)) fail(`6 · add shop did not say it took CH from the locale:\n${run.stdout}`);
+    if (!run.stdout.includes(shopKit.ask[0])) fail(`6 · add shop did not print the kit's asks:\n${run.stdout}`);
+    for (const next of ['npx @jtakeit/astro schema', 'import products', 'set_stock', 'Stripe']) if (!run.stdout.includes(next)) fail(`6 · add shop's next steps do not say «${next}»:\n${run.stdout}`);
+    const blocks = read(shopAt, 'src/content/blocks.ts');
+    if (blocks.split(MARK).length - 1 !== 3) fail(`6 · add shop did not mark its three elements: ${blocks.split(MARK).length - 1}`);
+    if (!/shop: \{ products: 'products' \}/.test(blocks) || !/"label": "Produkt"/.test(blocks) || !/"label": "Produkte"/.test(blocks) || /"label": \{/.test(blocks.slice(blocks.indexOf(MARK), blocks.indexOf(MARK) + 400))) fail('6 · add shop did not lay the product type and the products collection in the site\'s language, and turn the shop on');
+    const { settings } = shopSettings(shopAt);
+    if (settings.zones.length !== 1 || settings.zones[0].name !== 'Inland' || JSON.stringify(settings.zones[0].countries) !== JSON.stringify([{ _key: 'c1', country: 'CH' }])) fail(`6 · the zone is not the site's country, in the site's words: ${JSON.stringify(settings.zones)}`);
+    if (settings.methods.map((one) => one._key).join() !== 'post,pickup' || settings.methods.some((one) => 'price' in one || 'bands' in one || 'free_above' in one) || settings.methods[0].name !== 'Post') fail(`6 · the methods are not the kit's, without a price: ${JSON.stringify(settings.methods)}`);
+    if (settings.kit !== 'shop' || settings.kit_version !== '1' || Object.keys(settings).join() !== 'zones,methods,kit,kit_version') fail(`6 · the kit's version is not text: ${JSON.stringify(settings)}`);
+    const { schema, findings } = judged(shopAt);
+    if (schema.modules?.shop?.products !== 'products') fail(`6 · the schema does not bind the products role: ${JSON.stringify(schema.modules)}`);
+    if (findings.length > 0) fail(`6 · the platform's judge finds the shop's schema wanting: ${JSON.stringify(findings)}`);
+    const twice = copy(shopAt, 'shop-twice');
+    const again = ok(twice, 'add', 'shop', '--kit', shopFile);
+    if (!again.stdout.includes('already there')) fail(`6 · add shop twice did not say it is already there:\n${again.stdout}`);
+    same(twice, shopAt, 'add shop twice');
+    // One that is there is not asked of the platform again.
+    const offline = ok(copy(shopAt, 'shop-offline'), 'add', 'shop', '--api', 'http://127.0.0.1:1');
+    if (!offline.stdout.includes('already there')) fail(`6 · add shop on a site that has it asked the platform:\n${offline.stdout}`);
+  }
+  {
+    // The country: --country, else the locale's region, else the shared contacts — and always said.
+    const en = create('shop-en', '--locale', 'en');
+    const run = ok(en, 'add', 'shop', '--kit', shopFile);
+    if (!/CH, from the shared contacts/.test(run.stdout) || shopSettings(en).settings.zones[0].countries[0].country !== 'CH') fail(`6 · an en site did not take CH from the shared contacts, said:\n${run.stdout}`);
+    if (shopSettings(en).settings.zones[0].name !== 'Domestic') fail(`6 · an en site's zone is not in English: ${JSON.stringify(shopSettings(en).settings.zones[0])}`);
+    const bare = create('shop-bare', '--locale', 'en');
+    const shared = jsonOf(bare, 'jtk/shared.json');
+    delete shared.blocks.find((one) => one.type === 'contacts').country;
+    writeFileSync(join(bare, 'jtk/shared.json'), `${JSON.stringify(shared, null, 2)}\n`);
+    const before = settled(bare);
+    const none = at(bare, 'add', 'shop', '--kit', shopFile);
+    if (none.status === 0 || !none.stderr.includes('--country') || !none.stderr.includes('Nothing was written')) fail(`6 · a site with no country anywhere was not refused, naming --country:\n${none.stdout}\n${none.stderr}`);
+    if (JSON.stringify(settled(bare)) !== JSON.stringify(before)) fail('6 · a refused add shop wrote something');
+    const named = ok(bare, 'add', 'shop', '--kit', shopFile, '--country', 'DE');
+    if (!/DE, from --country/.test(named.stdout) || shopSettings(bare).settings.zones[0].countries[0].country !== 'DE') fail(`6 · --country DE was not the zone's country, said:\n${named.stdout}`);
+    const low = at(create('shop-low', '--locale', 'en'), 'add', 'shop', '--kit', shopFile, '--country', 'ch');
+    if (low.status === 0 || !low.stderr.includes('two capital letters')) fail(`6 · --country ch was not refused:\n${low.stderr}`);
+    // --country beats the locale's region.
+    const over = copy(base, 'shop-over');
+    ok(over, 'add', 'shop', '--kit', shopFile, '--country', 'LI');
+    if (shopSettings(over).settings.zones[0].countries[0].country !== 'LI') fail('6 · --country did not beat the locale');
+  }
+  {
+    // A block type or a collection by the kit's names is refused, naming it, with nothing written.
+    for (const [name, replace, says] of [
+      ['type', "export const BLOCKS: Block[] = [", "the block type «product»"],
+      ['collection', "export const COLLECTIONS: Collection[] = [", "the collection «products»"],
+    ]) {
+      const site = copy(base, `shop-own-${name}`);
+      const file = join(site, 'src/content/blocks.ts');
+      const own = name === 'type' ? "{ type: 'product', v: 1, label: 'Mine', fields: [] }," : "{ name: 'products', label: 'Mine', type: 'text', route: 'none' },";
+      writeFileSync(file, readFileSync(file, 'utf8').replace(replace, `${replace}\n  ${own}`));
+      const before = settled(site);
+      const run = at(site, 'add', 'shop', '--kit', shopFile);
+      if (run.status === 0 || !run.stderr.includes(says) || !run.stderr.includes('Nothing was written')) fail(`6 · a site with its own ${name} by the kit's name was not refused, naming it:\n${run.stdout}\n${run.stderr}`);
+      if (JSON.stringify(settled(site)) !== JSON.stringify(before)) fail('6 · a refused add shop wrote something');
+    }
+  }
+  {
+    // Beside a booking kit, in either order; each taken out leaves the other.
+    const both = copy(base, 'shop-booking');
+    ok(both, 'add', 'shop', '--kit', shopFile);
+    ok(both, 'add', 'booking', '--kit', kitFile);
+    const { schema, findings } = judged(both);
+    if (!schema.modules?.shop || !schema.modules?.bookings || findings.length > 0) fail(`6 · the shop beside bookings is not a clean schema: ${JSON.stringify(schema.modules)} ${JSON.stringify(findings)}`);
+    const other = copy(base, 'booking-shop');
+    ok(other, 'add', 'booking', '--kit', kitFile);
+    ok(other, 'add', 'shop', '--kit', shopFile);
+    const second = judged(other);
+    if (!second.schema.modules?.shop || !second.schema.modules?.bookings || second.findings.length > 0) fail(`6 · bookings then the shop is not a clean schema: ${JSON.stringify(second.findings)}`);
+    ok(both, 'remove', 'booking');
+    if (!/shop: \{ products: 'products' \}/.test(read(both, 'src/content/blocks.ts')) || !existsSync(join(both, 'jtk/modules/shop.json'))) fail('6 · remove booking took the shop out');
+    ok(both, 'remove', 'shop');
+    same(both, base, 'add shop, add booking, remove booking, remove shop');
+    // A booking kit is no shop's, and a shop's kit is no booking's.
+    const refused = at(copy(base, 'booking-with-shop-kit'), 'add', 'booking', '--kit', shopFile);
+    if (refused.status === 0 || !refused.stderr.includes('add shop')) fail(`6 · add booking --kit <the shop's kit> was not refused, naming add shop:\n${refused.stderr}`);
+    const wrong = at(copy(base, 'shop-with-booking-kit'), 'add', 'shop', '--kit', kitFile);
+    if (wrong.status === 0 || !wrong.stderr.includes('add booking')) fail(`6 · add shop --kit <a booking kit> was not refused, naming add booking:\n${wrong.stderr}`);
+    const created = jtk('create', 'units-probe', '--out', join(dir, 'create-with-shop-kit'), '--no-git', '--kit', shopFile);
+    if (created.status === 0 || !created.stderr.includes('add shop')) fail(`6 · create --kit <the shop's kit> was not refused, naming add shop:\n${created.stderr}`);
+  }
+  {
+    // Removal: the tree create left; refused while a product is there; the settings the owner priced kept.
+    const site = copy(shopAt, 'shop-out');
+    const run = ok(site, 'remove', 'shop');
+    if (!run.stdout.includes('file(s) changed')) fail(`6 · remove shop said nothing:\n${run.stdout}`);
+    same(site, base, 'add shop then remove shop');
+    const again = ok(site, 'remove', 'shop');
+    if (!again.stdout.includes('not there')) fail(`6 · remove shop twice did something:\n${again.stdout}`);
+    ok(site, 'add', 'shop', '--kit', shopFile);
+    same(site, shopAt, 'remove shop then add shop');
+
+    const stocked = copy(shopAt, 'shop-stocked');
+    mkdirSync(join(stocked, 'jtk/entries/products'), { recursive: true });
+    writeFileSync(join(stocked, 'jtk/entries/products/fox.json'), `${JSON.stringify({ id: '0193a5c3-6b1c-7d20-9a31-5e4d3c2b1b03', collection: 'products', slug: 'fox', visible: true, fields: { title: 'Fuchs' } }, null, 2)}\n`);
+    const before = settled(stocked);
+    for (const flags of [[], ['--force']]) {
+      const refused = at(stocked, 'remove', 'shop', ...flags);
+      if (refused.status === 0 || !refused.stderr.includes('jtk/entries/products') || !refused.stderr.includes('the products are the business\'s: move or delete them first') || !refused.stderr.includes('Nothing was written')) fail(`6 · remove shop ${flags.join(' ')} with a product there was not refused:\n${refused.stdout}\n${refused.stderr}`);
+    }
+    if (JSON.stringify(settled(stocked)) !== JSON.stringify(before)) fail('6 · a refused remove shop took something out');
+
+    const priced = copy(shopAt, 'shop-priced');
+    const settings = shopSettings(priced);
+    settings.settings.methods[0].price = { minor: 900 };
+    writeFileSync(join(priced, 'jtk/modules/shop.json'), `${JSON.stringify(settings, null, 2)}\n`);
+    const kept = ok(priced, 'remove', 'shop');
+    if (!kept.stdout.includes('jtk/modules/shop.json: yours now') || !existsSync(join(priced, 'jtk/modules/shop.json')) || read(priced, 'src/content/blocks.ts').includes(MARK)) fail(`6 · the owner's rates were not kept and named, or the elements stayed:\n${kept.stdout}`);
+  }
+  {
+    // The kit's settings are kept where the site already has zones: said, and not written over.
+    const site = copy(base, 'shop-zoned');
+    mkdirSync(join(site, 'jtk/modules'), { recursive: true });
+    const own = { v: 1, settings: { zones: [{ _key: 'z1', name: 'Europa', countries: [{ _key: 'c1', country: 'DE' }] }], methods: [] } };
+    writeFileSync(join(site, 'jtk/modules/shop.json'), `${JSON.stringify(own, null, 2)}\n`);
+    const run = ok(site, 'add', 'shop', '--kit', shopFile);
+    if (JSON.stringify(shopSettings(site)) !== JSON.stringify(own) || !/jtk\/modules\/shop\.json: .*zones.*kept/.test(run.stdout)) fail(`6 · a settings file with zones was written over, or not said:\n${run.stdout}`);
+    // One `jtk schema` seeded empty is not anybody's yet.
+    const seeded = copy(base, 'shop-seeded');
+    mkdirSync(join(seeded, 'jtk/modules'), { recursive: true });
+    writeFileSync(join(seeded, 'jtk/modules/shop.json'), `${JSON.stringify({ v: 1, settings: {} }, null, 2)}\n`);
+    ok(seeded, 'add', 'shop', '--kit', shopFile);
+    if (shopSettings(seeded).settings.zones?.[0]?.countries?.[0]?.country !== 'CH') fail('6 · an empty settings file was not filled');
+  }
+  {
+    // The storefront's files: laid where the site has none, taken out only while the scaffold's. SHOP_FILES is
+    // empty until each piece of the storefront comes, so a file of the example's stands in for one.
+    const { addUnit, removeUnit, treeOf: treeIn, UNITS } = await import('../lib/units/index.mjs');
+    const { SHOP_FILES } = await import('../lib/units/shop.mjs');
+    const probe = 'src/components/shop/ShopProbe.astro';
+    const own = resolve('example/files', probe);
+    const made = !existsSync(resolve('example/files/src/components/shop'));
+    mkdirSync(resolve('example/files/src/components/shop'), { recursive: true });
+    writeFileSync(own, '<p>the example\'s</p>\n');
+    SHOP_FILES.push(probe);
+    try {
+      const site = copy(base, 'shop-files');
+      const laid = treeIn(site);
+      const did = addUnit(laid, UNITS.shop, { kit: await loadShopKit(shopFile) });
+      laid.commit();
+      if (read(site, probe) !== '<p>the example\'s</p>\n' || !did.some((one) => one === `${probe}: written`)) fail(`6 · a storefront file was not laid: ${did}`);
+      writeFileSync(join(site, probe), '<p>mine</p>\n');
+      const kept = removeUnit(treeIn(site), UNITS.shop, { force: false });
+      if (!kept.kept.some((one) => one.startsWith(`${probe}: yours now`))) fail(`6 · a changed storefront file was not kept and named: ${JSON.stringify(kept)}`);
+      const forced = treeIn(site);
+      removeUnit(forced, UNITS.shop, { force: true });
+      forced.commit();
+      if (existsSync(join(site, probe))) fail('6 · --force did not delete a changed storefront file');
+      // Untouched, it goes without --force; one the site had of its own before the kit is left where it is.
+      const clean = copy(base, 'shop-files-clean');
+      const cleaned = treeIn(clean);
+      addUnit(cleaned, UNITS.shop, { kit: await loadShopKit(shopFile) });
+      cleaned.commit();
+      const out = treeIn(clean);
+      removeUnit(out, UNITS.shop, { force: false });
+      out.commit();
+      if (existsSync(join(clean, probe))) fail('6 · an untouched storefront file was not taken out');
+      const theirs = copy(base, 'shop-files-theirs');
+      mkdirSync(join(theirs, 'src/components/shop'), { recursive: true });
+      writeFileSync(join(theirs, probe), '<p>theirs</p>\n');
+      const added = treeIn(theirs);
+      addUnit(added, UNITS.shop, { kit: await loadShopKit(shopFile) });
+      added.commit();
+      if (read(theirs, probe) !== '<p>theirs</p>\n') fail('6 · a storefront file the site had was written over');
+    } finally {
+      SHOP_FILES.pop();
+      rmSync(own, { force: true });
+      if (made) rmSync(resolve('example/files/src/components/shop'), { recursive: true, force: true });
+    }
+  }
+  console.log('units: the shop laid over a contract-3 site — the country said, the kit beside a booking kit, refused where the site has the names, taken out while no product is there');
 } finally {
   if (!process.env.KEEP_UNITS) rmSync(dir, { recursive: true, force: true });
   else console.log(`units: kept ${dir}`);

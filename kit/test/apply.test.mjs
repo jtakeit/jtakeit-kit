@@ -25,7 +25,9 @@ import { unnamed } from '../lib/content/identity.mjs';
 import { judgeTranslations } from '../lib/translations.mjs';
 
 const KITS = fileURLToPath(new URL('./fixtures/kits/', import.meta.url));
-const KINDS = readdirSync(KITS).filter((one) => one.endsWith('.json')).map((one) => one.slice(0, -'.json'.length)).sort();
+// The shop's kit (shop.json) is in the folder too, and is no kind of business's: it is the shop module's, in
+// contract 3's words, laid by `jtk add shop` (test/units.mjs) and refused here (meta-kits.test.mjs).
+const KINDS = readdirSync(KITS).filter((one) => one.endsWith('.json') && one !== 'shop.json').map((one) => one.slice(0, -'.json'.length)).sort();
 const kitOf = (kind) => readKit(join(KITS, `${kind}.json`));
 const jtkit = fileURLToPath(new URL('../bin/jtkit.mjs', import.meta.url));
 const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -127,7 +129,7 @@ for (const kind of KINDS) {
       const services = kit.catalogue.collections.find((one) => one.name === kit.catalogue.modules.bookings.services);
       assert.equal(settings.v, 1);
       assert.equal(settings.settings.kit, kind);
-      assert.equal(settings.settings.kit_version, kit.version);
+      assert.equal(settings.settings.kit_version, String(kit.version), 'a file says a number, the settings say text');
       assert.equal(settings.settings.page, services.prefix);
 
       const files = await readJtk(dir);

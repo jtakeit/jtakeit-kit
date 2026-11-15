@@ -46,6 +46,8 @@ const TOOL_VERSION = JSON.parse(readFileSync(new URL('../package.json', import.m
 /** Where the platform is, for a kit asked by its kind. */
 export const API = 'https://api.jtakeit.com';
 
+const ADD_SHOP = 'npx @jtakeit/astro add shop';
+
 /** A kit, read from a file and checked. @param {string} file */
 export function readKit(file) {
   let kit;
@@ -113,6 +115,8 @@ export async function loadKit(asked, api) {
  * @param {string} from
  */
 export function checkKit(kit, from) {
+  // The shop's kit is a module's, in contract 3's words, and is laid by `jtk add shop` (checkShopKit).
+  if (kit?.module === 'shop' || kit?.kind === 'shop') throw new Error(`--kit ${from}: that is the shop's kit: ${ADD_SHOP}`);
   const bookings = kit?.catalogue?.modules?.bookings;
   if (typeof kit?.kind !== 'string' || !/^[a-z][a-z_]*$/.test(kit.kind)
     || !Array.isArray(kit.catalogue?.blocks) || !Array.isArray(kit.catalogue?.collections)
@@ -132,6 +136,80 @@ export function checkKit(kit, from) {
   return kit;
 }
 
+// ── the shop's kit ─────────────────────────────────────────────────────────
+
+/**
+ * The platform's shop kit, from a file or asked of the platform
+ * (`GET <api>/v1/kits/shop`): the shop module's, in contract 3's words, laid
+ * over a contract-3 site by `jtk add shop` — never a booking kit's way. Its
+ * `version` is text, as the platform answers it and as the settings record it
+ * (`kit_version`): a file says a number, made text here.
+ *
+ * @param {string} [file]
+ * @param {string} [api]
+ */
+export async function loadShopKit(file, api = process.env.JTK_API_URL || API) {
+  if (file !== undefined) {
+    let kit;
+    try {
+      kit = JSON.parse(readFileSync(resolve(file), 'utf8'));
+    } catch (why) {
+      throw new Error(`--kit ${file} is not a kit: ${why.message}`);
+    }
+    return checkShopKit(kit, file);
+  }
+  const url = `${api.replace(/\/+$/, '')}/v1/kits/shop`;
+  let answer;
+  try {
+    answer = await fetch(url, { headers: { accept: 'application/json' } });
+  } catch (why) {
+    throw new Error(`the shop kit: the platform did not answer at ${url} (${why.message}) — pass --api, or a file: --kit <file>`);
+  }
+  if (!answer.ok) throw new Error(`the shop kit: the platform answered ${answer.status} at ${url}${answer.status === 404 ? ' — it has no shop kit yet; pass a file: --kit <file>' : ''}`);
+  const body = await answer.json();
+  return checkShopKit({ ...body.kit, version: body.version ?? body.kit?.version }, 'the platform\'s');
+}
+
+/**
+ * A kit checked for the shop's shape, wherever it came from — what `jtk add
+ * shop` lays out — and the same kit with its version as text. A booking kit
+ * is told where it goes; whatever else is wrong is said with the kit's name,
+ * and nothing is made of it.
+ *
+ * @param {any} kit
+ * @param {string} from
+ */
+export function checkShopKit(kit, from) {
+  if (kit === null || typeof kit !== 'object' || Array.isArray(kit)) {
+    throw new Error(`--kit ${from} is not a kit — save the JSON under «The kit, whole» on the shop kit's page, jtakeit:///kits/shop.md`);
+  }
+  if (typeof kit.catalogue?.modules?.bookings?.services === 'string') {
+    throw new Error(`--kit ${from}: that is a booking kit («${kit.kind}»), laid by npx @jtakeit/astro add booking — the shop's is ${ADD_SHOP}`);
+  }
+  if (kit.kind !== 'shop' || kit.module !== 'shop' || kit.contract !== 3) {
+    throw new Error(`--kit ${from} is not the shop's kit (kind «shop», module «shop», contract 3) — save the JSON under «The kit, whole» on jtakeit:///kits/shop.md`);
+  }
+  if ((typeof kit.version !== 'number' && typeof kit.version !== 'string') || String(kit.version) === '') {
+    throw new Error(`--kit ${from} has no version: the platform's kit always says one, and the settings record it`);
+  }
+  const { blocks, collections, modules } = kit.catalogue ?? {};
+  const products = modules?.shop?.products;
+  if (!Array.isArray(blocks) || !Array.isArray(collections) || typeof products !== 'string') {
+    throw new Error(`--kit ${from} is not the shop's kit: its catalogue has no blocks, collections and the shop's products role`);
+  }
+  const collection = collections.find((one) => one?.name === products);
+  if (collection === undefined || !blocks.some((one) => one?.type === collection.type)) {
+    throw new Error(`--kit ${from}: the products role names «${products}», which the kit does not declare as a collection of a block type it has`);
+  }
+  if (!Array.isArray(kit.settings?.zones) || !Array.isArray(kit.settings?.methods)) {
+    throw new Error(`--kit ${from} is not the shop's kit: its settings have no zones and methods`);
+  }
+  if (!Array.isArray(kit.entries) || kit.entries.length > 0) {
+    throw new Error(`--kit ${from} carries entries: the products are the business's, and the shop's kit has none`);
+  }
+  return { ...kit, version: String(kit.version) };
+}
+
 /** The language a kit's words are taken in: the site's, or English where the kit has not got it. */
 export function kitLanguage(locale) {
   const lang = String(locale ?? '').slice(0, 2);
@@ -141,14 +219,17 @@ export function kitLanguage(locale) {
 /**
  * The diary's settings for a kit, as `jtk/bookings.json` holds them: one
  * block of type `bookings_config`, `page` at the services' listing, and
- * which kit and which version they came from.
+ * which kit and which version they came from. The version is text, as the
+ * platform's settings say it and `GET /v1/kits/<kind>` answers it: a kit
+ * read from a file says a number, which the platform refuses as the wrong
+ * type and never tells behind (JTK_W_KIT_BEHIND).
  * @param {any} kit
  */
 export function kitSettings(kit) {
   const services = kit.catalogue.collections.find((one) => one.name === kit.catalogue.modules.bookings.services);
   return {
     type: 'bookings_config', v: 1, ...kit.settings, page: services.prefix,
-    kit: kit.kind, ...(kit.version ? { kit_version: kit.version } : {}),
+    kit: kit.kind, ...(kit.version ? { kit_version: String(kit.version) } : {}),
   };
 }
 

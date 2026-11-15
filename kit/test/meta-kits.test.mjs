@@ -4,9 +4,11 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { content } from '../lib/content/index.mjs';
 import { specimenId, specimenAddresses, hiddenEntries, buildMeta, writeMeta, draftsOf } from '../lib/meta.mjs';
-import { checkKit, kitSettings, kitEntries, mergeKitIntoCatalogue, layKitFiles, kitLanguage, catalogueIn2, CONTRACT_3_ONLY } from '../lib/kits.mjs';
+import { createServer } from 'node:http';
+import { checkKit, checkShopKit, fetchKit, loadKit, loadShopKit, kitSettings, kitEntries, mergeKitIntoCatalogue, layKitFiles, kitLanguage, catalogueIn2, CONTRACT_3_ONLY } from '../lib/kits.mjs';
 
 const blocks = [
   { type: 'gallery', views: [{ key: 'row' }, { key: 'pile' }] },
@@ -151,6 +153,72 @@ test('a kit is checked for its shape, and its settings and entries are the platf
   // A list is the value, not words per language: a master's `does`, a post's tags.
   const listed = { ...kit, entries: [{ collection: 'cars', slug: 'combi', fields: { title: 'Combi', does: [{ service: 'day' }] } }] };
   assert.deepEqual(kitEntries(listed, 'uk')[0][1].blocks[0].does, [{ service: 'day' }]);
+});
+
+test('a kit read from a file records kit_version as text, as GET /v1/kits/<kind> says it', () => {
+  assert.equal(kitSettings({ ...kit, version: 3 }).kit_version, '3', 'a file says a number; the platform\'s settings say text');
+  assert.equal(kitSettings({ ...kit, version: 'abc123' }).kit_version, 'abc123', 'what the platform answered is kept as it is');
+  assert.equal('kit_version' in kitSettings({ ...kit, version: undefined }), false, 'a kit without a version records none');
+  const written = JSON.parse(JSON.stringify(kitSettings({ ...kit, version: 3 })));
+  assert.equal(typeof written.kit_version, 'string', 'and so it is written');
+});
+
+const SHOP_FILE = new URL('./fixtures/kits/shop.json', import.meta.url);
+const shopKit = () => JSON.parse(readFileSync(SHOP_FILE, 'utf8'));
+
+test('the platform\'s shop kit is read from a file with its version as text, and refused where it is no shop kit', async () => {
+  const file = fileURLToPath(SHOP_FILE);
+  const kit = await loadShopKit(file);
+  assert.equal(kit.kind, 'shop');
+  assert.equal(kit.version, '1', 'a file\'s number made text, as the platform answers it');
+  assert.equal(kit.catalogue.modules.shop.products, 'products');
+  assert.equal(shopKit().version, 1, 'the file itself says a number');
+
+  // A booking kit, wherever it came from, is told to go to `add booking`.
+  assert.throws(() => checkShopKit(bookingKitOf('salon'), 'salon.json'), /booking kit.*add booking/);
+  // What is wrong with a shop kit is said with its name and nothing is made of it.
+  assert.throws(() => checkShopKit({ ...shopKit(), module: 'bookings' }, 'x.json'), /is not the shop's kit/);
+  assert.throws(() => checkShopKit({ ...shopKit(), contract: 2 }, 'x.json'), /is not the shop's kit/);
+  assert.throws(() => checkShopKit({ ...shopKit(), version: undefined }, 'x.json'), /no version/);
+  assert.throws(() => checkShopKit({ ...shopKit(), catalogue: { ...shopKit().catalogue, modules: { shop: { products: 'goods' } } } }, 'x.json'), /«goods»/);
+  assert.throws(() => checkShopKit({ ...shopKit(), settings: { zones: [] } }, 'x.json'), /zones and methods/);
+  assert.throws(() => checkShopKit({ ...shopKit(), entries: [{ collection: 'products', slug: 'x', fields: {} }] }, 'x.json'), /products are the business's/);
+  assert.throws(() => checkShopKit(null, 'x.json'), /is not a kit/);
+
+  // The shop's kit is no booking kit: `jtk create --kit` and `add booking` say where it goes.
+  assert.throws(() => checkKit(shopKit(), 'shop.json'), /that is the shop's kit: npx @jtakeit\/astro add shop/);
+  await assert.rejects(() => loadKit(file), /add shop/);
+});
+
+function bookingKitOf(kind) {
+  return JSON.parse(readFileSync(new URL(`./fixtures/kits/${kind}.json`, import.meta.url), 'utf8'));
+}
+
+test('the shop kit asked of the platform is the kit with the version the platform answers, and a booking kit is never asked as one', async () => {
+  const seen = [];
+  const server = createServer((request, response) => {
+    seen.push(request.url);
+    const kind = request.url.replace('/v1/kits/', '');
+    if (kind === 'shop') response.end(JSON.stringify({ kind: 'shop', version: '7', kit: { ...shopKit(), version: 7 } }));
+    else if (kind === 'salon') response.end(JSON.stringify({ kind: 'salon', version: '3', kit: bookingKitOf('salon') }));
+    else {
+      response.statusCode = 404;
+      response.end('{}');
+    }
+  });
+  await new Promise((done) => server.listen(0, '127.0.0.1', done));
+  const api = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const kit = await loadShopKit(undefined, api);
+    assert.deepEqual(seen, ['/v1/kits/shop']);
+    assert.equal(kit.version, '7', 'the version the platform answers, text');
+    assert.equal(kit.catalogue.collections[0].name, 'products');
+    await assert.rejects(() => fetchKit('shop', api), /add shop/, 'the shop is no kind: a booking kit\'s way of asking is told where it goes');
+    assert.equal((await fetchKit('salon', api)).version, '3');
+    await assert.rejects(() => loadShopKit(undefined, 'http://127.0.0.1:1'), /did not answer/);
+  } finally {
+    server.close();
+  }
 });
 
 test('a kit goes into a catalogue file without writing over what the site already has', () => {
