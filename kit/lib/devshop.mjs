@@ -281,7 +281,7 @@ function stockOf(product, soldOut) {
   return product.variants.map((variant) => {
     const one = { key: variant.key, sku: variant.sku, state: 'in_stock' };
     if (!forSale(product, variant)) one.state = 'off_sale';
-    else if (product.tracked && soldOut.has(variant.sku)) one.state = 'sold_out';
+    else if (product.tracked && soldOut.has(variant.sku.toLowerCase())) one.state = 'sold_out';
     return one;
   });
 }
@@ -342,13 +342,16 @@ function priceLine(find, line) {
     const wrong = (why) => refuse('answer', `${product.slug}: «${one.name}»: ${why}`);
     if (one.kind === 'yes_no') {
       if (value !== undefined && value !== null && typeof value !== 'boolean') return wrong('is answered with true or false');
-    } else if (!unanswered) {
+    } else if (unanswered) {
+      // Nothing, `false` or a text of white space is no answer, as the platform reads it: refused only where it is required.
+      if (one.mustAnswer) return wrong('is required and was not answered');
+      continue;
+    } else {
       if (!isText) return wrong(one.kind === 'choice' ? 'is answered with the key of a choice' : 'is answered with a text');
       if (one.kind === 'text' && breaks(trimmed)) return wrong('is one line, with no line break, control or format character');
     }
     const fault = faults.find((found) => found.key === one.key);
     if (fault !== undefined) {
-      if (fault.word === 'required') return wrong('is required and was not answered');
       if (fault.word === 'too_long') return wrong(`is ${lengthOf(trimmed)} characters and at most ${one.max} are taken`);
       return wrong(`"${value}" is not one of its choices`);
     }
@@ -782,7 +785,8 @@ async function read(root) {
  * @returns {(req: any, res: any, next: () => void) => Promise<void>}
  */
 export function devShop(root, options = {}) {
-  const soldOut = new Set(options.soldOut ?? []);
+  // A SKU is keyed in lower case, as the platform's ledger keys it (`SKUKey`): the walk may name it either way.
+  const soldOut = new Set((options.soldOut ?? []).map((sku) => sku.toLowerCase()));
   /** token → order; kept until the server stops */
   const orders = new Map();
   /** a press's attempt → its order's token */
@@ -822,8 +826,9 @@ export function devShop(root, options = {}) {
 
     // ── POST /shipping ────────────────────────────────────────────────────
     async '/shipping'({ req, res, served }) {
-      const body = await bodyOf(req);
-      if (!isObject(body)) return json(res, 400, { error: 'invalid_body' });
+      // The edge refuses what does not parse to a JSON object, before anything is asked.
+      const body = await bodyOf(req, { strict: true });
+      if (body === undefined) return json(res, 400, { error: 'invalid_body' });
       const find = served.productsIn(localeOf(served.site, body.locale));
       const quote = quoteOf(find, served.shipping, cartOf(body.lines), typeof body.country === 'string' ? body.country : '', served.home);
       return json(res, 200, quoteAnswer(quote, served.site.currency));
@@ -831,8 +836,9 @@ export function devShop(root, options = {}) {
 
     // ── POST /checkout ────────────────────────────────────────────────────
     async '/checkout'({ req, res, served }) {
-      const body = await bodyOf(req);
-      if (!isObject(body)) return json(res, 400, { error: 'invalid_body' });
+      // The edge refuses what does not parse to a JSON object, before anything is asked.
+      const body = await bodyOf(req, { strict: true });
+      if (body === undefined) return json(res, 400, { error: 'invalid_body' });
 
       // A second ask: an order, and no cart.
       if (typeof body.order === 'string' && body.order.trim() !== '' && (body.lines === undefined || body.lines === null)) {
@@ -879,7 +885,7 @@ export function devShop(root, options = {}) {
       // The last item goes to the first who goes on to pay: a SKU the walk named sold out is short.
       const wanted = new Map();
       for (const line of quote.priced.lines) if (line.tracked) wanted.set(line.sku, (wanted.get(line.sku) ?? 0) + line.qty);
-      const short = [...wanted].filter(([sku]) => soldOut.has(sku)).map(([sku, qty]) => ({ sku, wanted: qty, available: 0 }));
+      const short = [...wanted].filter(([sku]) => soldOut.has(sku.toLowerCase())).map(([sku, qty]) => ({ sku, wanted: qty, available: 0 }));
       if (short.length > 0) return json(res, 409, { error: 'short', short, quote: answer });
 
       const order = {

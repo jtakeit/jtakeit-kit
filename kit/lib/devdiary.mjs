@@ -85,12 +85,31 @@ export const send = (res, status, body) => {
   res.end(JSON.stringify(body));
 };
 
-/** The request's body as JSON, `{}` for one that is none — shared with devshop.mjs. */
-export const bodyOf = (req) =>
+/**
+ * The request's body as JSON, `{}` for one that is none — shared with
+ * devshop.mjs. `strict` is the shop's: the body must parse to a JSON object
+ * (as the edge's `objectOf` holds a shop page's body to), and anything else —
+ * text that is not JSON, a form, nothing at all, `null`, a list — is `undefined`
+ * for the caller to refuse. The diary's own calls are not strict.
+ *
+ * @param {any} req
+ * @param {{ strict?: boolean }} [options]
+ * @returns {Promise<any>}
+ */
+export const bodyOf = (req, { strict = false } = {}) =>
   new Promise((done) => {
     let raw = '';
     req.on('data', (chunk) => (raw += chunk));
     req.on('end', () => {
+      if (strict) {
+        try {
+          const body = JSON.parse(raw);
+          done(body !== null && typeof body === 'object' && !Array.isArray(body) ? body : undefined);
+        } catch {
+          done(undefined);
+        }
+        return;
+      }
       try {
         done(JSON.parse(raw || '{}'));
       } catch {

@@ -19,7 +19,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DEV_PAY_WORDS, devShop } from '../lib/devshop.mjs';
 import { money } from '../lib/money.mjs';
-import { devDiary } from '../lib/devdiary.mjs';
+import { bodyOf, devDiary } from '../lib/devdiary.mjs';
 import { SHOP_LOCALES, shopWordsFor } from '../lib/shop/words.mjs';
 
 const fixture = fileURLToPath(new URL('./fixtures/shop/jtk/', import.meta.url));
@@ -124,6 +124,14 @@ test('a SKU the walk names is sold out — and only a tracked product has a coun
   product(root, 't-shirt-fox', (fields) => (fields.variants[3].on_sale = false));
   assert.deepEqual(states(await stock(shop, CANDLE), CANDLE), { v1: 'in_stock' });
   assert.deepEqual(states(await stock(shop, FOX), FOX), { v1: 'in_stock', v2: 'in_stock', v3: 'in_stock', v4: 'off_sale' });
+});
+
+test('a SKU is named as the platform keys it, in lower case: the walk may say it either way', async (t) => {
+  const shop = await serving(t, shopSite(), { soldOut: ['fox-m-blue', 'Fox-S-Red'] });
+  assert.deepEqual(states(await stock(shop, FOX), FOX), { v1: 'sold_out', v2: 'in_stock', v3: 'in_stock', v4: 'sold_out' });
+  const short = await go(shop, { lines: [line(FOX, 'v1', 1), line(FOX, 'v4', 2)], total: 8970 + 900 });
+  assert.equal(short.status, 409);
+  assert.deepEqual(short.body.short, [{ sku: 'FOX-S-RED', wanted: 1, available: 0 }, { sku: 'FOX-M-BLUE', wanted: 2, available: 0 }]);
 });
 
 test('a product the files hide, or one that is nobody\'s, is not served', async (t) => {
@@ -414,6 +422,26 @@ test('the bag with its red body and the zipper is 134.00, and the economy post i
   assert.equal(tagged.body.lines[0].unit, 8900);
 });
 
+test('a choice answered with white space is no answer: an optional one is sold, a required one is refused as left alone', async (t) => {
+  const root = shopSite();
+  const shop = await serving(t, root);
+  const refused = async (answers) => (await ship(shop, [line(BAG, 'v1', 1, answers)])).body.refused;
+  // `body` is the bag's required choice.
+  for (const blank of [' ', '   ', '\t', '\n', '\u00a0']) {
+    const [one] = await refused({ body: blank });
+    assert.deepEqual([one.code, /«Farbe des Körpers»: is required and was not answered/.test(one.says)], ['answer', true], JSON.stringify(blank));
+  }
+  product(root, 'tasche-nach-mass', (fields) => (fields.customizations[0].required = false));
+  for (const blank of [' ', '   ', '\t', '\n', '\u00a0', '']) {
+    const answer = await ship(shop, [line(BAG, 'v1', 1, { body: blank })]);
+    assert.deepEqual(answer.body.refused, [], JSON.stringify(blank));
+    assert.deepEqual(answer.body.lines[0].answers, [], 'it is no answer, so the line keeps none');
+    assert.equal(answer.body.lines[0].unit, 8900);
+  }
+  // A choice that is not white space is still held to its choices, trimmed or not.
+  assert.deepEqual((await refused({ body: ' natur ' })).map((r) => r.code), ['answer']);
+});
+
 test('a line the shop will not sell is refused with the protocol\'s code, and no method is offered while any is', async (t) => {
   const root = shopSite();
   product(root, 't-shirt-fox', (fields) => (fields.variants[1].on_sale = false));
@@ -484,6 +512,47 @@ test('the cart as a whole may not come to more than one amount may be: the line 
   const second = await ship(shop, [line(FOX, 'v1', 1), line(CANDLE, 'v1', 1), line(CANDLE, 'v1', 1)]);
   assert.deepEqual(second.body.refused.map((r) => [r.line, r.code]), [[1, 'too_large'], [2, 'too_large']]);
   assert.equal(second.body.subtotal, 2990);
+});
+
+// The edge refuses whatever does not parse to a JSON object (`objectOf` of backend/edge/src/shop.ts), so a page that
+// posts FormData, forgets JSON.stringify or posts nothing is told on localhost, not in production.
+test('a body that does not parse to a JSON object is refused invalid_body on shipping and on checkout', async (t) => {
+  const shop = await serving(t, shopSite());
+  for (const path of ['/api/shipping', '/api/checkout']) {
+    for (const [what, body, type] of [
+      ['text that is not JSON', '{nope', 'application/json'],
+      ['a form', 'country=CH&method=pickup', 'application/x-www-form-urlencoded'],
+      ['nothing at all', '', 'application/json'],
+      ['null', 'null', 'application/json'],
+      ['a list', '[{"product":"x"}]', 'application/json'],
+      ['a number', '5', 'application/json'],
+    ]) {
+      const answer = await shop.call(path, { method: 'POST', headers: { 'content-type': type }, body: body === '' ? undefined : body });
+      assert.deepEqual([answer.status, answer.body], [400, { error: 'invalid_body' }], `${path} with ${what}`);
+    }
+    // And a body that is an object is read, whatever it holds: the empty object is an empty cart.
+    assert.notEqual((await shop.post(path, {})).status, 400, `${path} with {}`);
+  }
+});
+
+test('the shared bodyOf reads a body as the diary always has, and a strict read says nothing for what is no JSON object', async () => {
+  const body = (raw, ...options) => {
+    const listeners = {};
+    const req = { on: (event, fn) => ((listeners[event] = fn), req) };
+    const read = bodyOf(req, ...options);
+    if (raw !== undefined) listeners.data(raw);
+    listeners.end();
+    return read;
+  };
+  // The diary's: anything that parses as it parses, an empty body and garbage as {}.
+  assert.deepEqual(await body('{"a":1}'), { a: 1 });
+  assert.deepEqual(await body(undefined), {});
+  assert.deepEqual(await body('{nope'), {});
+  assert.deepEqual(await body('[1]'), [1]);
+  // Strict: an object, or nothing.
+  assert.deepEqual(await body('{"a":1}', { strict: true }), { a: 1 });
+  assert.deepEqual(await body('{}', { strict: true }), {});
+  for (const raw of [undefined, '', '{nope', 'null', '[1]', '"x"', '5', 'a=b']) assert.equal(await body(raw, { strict: true }), undefined, String(raw));
 });
 
 test('a body that is not an object is refused invalid_body, and a call of the wrong method is not allowed', async (t) => {
