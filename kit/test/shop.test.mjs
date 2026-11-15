@@ -563,3 +563,60 @@ test('the storefront is in the package under its own entries, and in the barrel'
     assert.ok(name in barrel, `index.mjs exports ${name}`);
   }
 });
+
+// ── the elements ──────────────────────────────────────────────────────────
+
+test("the product's element and its wire load without a DOM, and speak shop/1", async () => {
+  const wire = await import('../elements/shop-wire.js');
+  const product = await import('../elements/shop-product.js');
+  assert.equal(wire.SHOP_PROTOCOL, 1);
+  assert.equal(product.SHOP_PROTOCOL, 1, 'the element names the wire\'s version');
+  assert.equal(product.ask, wire.ask);
+  for (const name of ['wireProduct', 'wireAll', 'defineProduct']) assert.equal(typeof product[name], 'function', name);
+  assert.equal(typeof product.JtkProduct, 'function');
+  // With no custom elements to define it in, defining is nothing.
+  product.defineProduct();
+
+  const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  for (const [entry, file] of [['./elements/shop-wire', './elements/shop-wire.js'], ['./elements/shop-product', './elements/shop-product.js']]) {
+    assert.deepEqual(manifest.exports[entry], { types: './types/elements-shop.d.ts', default: file }, entry);
+  }
+  assert.ok(manifest.files.includes('elements'));
+  const types = readFileSync(new URL('../types/elements-shop.d.ts', import.meta.url), 'utf8');
+  for (const name of ['SHOP_PROTOCOL', 'ask', 'wireProduct', 'defineProduct', 'JtkProduct', "'jtk:cart'"]) assert.ok(types.includes(name), `elements-shop.d.ts declares ${name}`);
+});
+
+test('ask names the protocol on every request, is never cached, sends JSON, and is null where nothing answered', async () => {
+  const { createServer } = await import('node:http');
+  const { ask } = await import('../elements/shop-wire.js');
+  const heard = [];
+  const server = createServer((req, res) => {
+    let body = '';
+    req.on('data', (chunk) => (body += chunk));
+    req.on('end', () => {
+      heard.push({ method: req.method, url: req.url, shop: req.headers['x-jtk-shop'], type: req.headers['content-type'], cache: req.headers['cache-control'], body });
+      if (req.url.startsWith('/api/stock')) return res.end(JSON.stringify({ products: [] }));
+      if (req.url === '/api/shipping') {
+        res.statusCode = 400;
+        return res.end('lines is not a list');
+      }
+      res.statusCode = 204;
+      res.end();
+    });
+  });
+  await new Promise((done) => server.listen(0, '127.0.0.1', done));
+  const base = `http://127.0.0.1:${server.address().port}/api/`;
+  try {
+    assert.deepEqual(await ask(base, 'stock?product=p1'), { status: 200, body: { products: [] } });
+    assert.deepEqual(await ask(base, '/shipping', { body: { lines: 'no' } }), { status: 400, body: 'lines is not a list' }, 'a sentence is the sentence; a leading slash is the same address');
+    assert.deepEqual(await ask(base.slice(0, -1), 'order', { method: 'GET' }), { status: 204, body: null }, 'a base without its slash is the same base');
+    assert.deepEqual(heard.map((one) => [one.method, one.url, one.shop]), [['GET', '/api/stock?product=p1', '1'], ['POST', '/api/shipping', '1'], ['GET', '/api/order', '1']]);
+    assert.equal(heard[0].type, undefined, 'a GET says no body');
+    assert.equal(heard[1].type, 'application/json');
+    assert.deepEqual(JSON.parse(heard[1].body), { lines: 'no' });
+    assert.ok(heard.every((one) => /no-cache/.test(one.cache ?? '')), 'never from a cache');
+  } finally {
+    await new Promise((done) => server.close(done));
+  }
+  assert.equal(await ask(base, 'stock?product=p1'), null, 'nothing answering is null, never a throw');
+});

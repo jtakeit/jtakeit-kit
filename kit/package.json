@@ -92,6 +92,14 @@
       "types": "./types/alive.d.ts",
       "default": "./elements/alive.js"
     },
+    "./elements/shop-wire": {
+      "types": "./types/elements-shop.d.ts",
+      "default": "./elements/shop-wire.js"
+    },
+    "./elements/shop-product": {
+      "types": "./types/elements-shop.d.ts",
+      "default": "./elements/shop-product.js"
+    },
     "./booking.css": "./booking.css",
     "./lead.css": "./lead.css",
     "./lint": {

@@ -1,0 +1,587 @@
+---
+/**
+ * A product's page — a working base to copy and dress in the site's design
+ * (jtakeit-core wiki/102 stage 9, decision 6; the booking form's way, wiki/80).
+ *
+ * `jtk add shop` lays this file, and the entry page draws every product of
+ * the collection the shop's `products` role names with it, in place of its
+ * generic fields (`src/pages/[...entry].astro`). Everything here is the
+ * site's: the markup, its order and wrappers, the classes, the styles below.
+ * What is not the site's is the behaviour — `@jtakeit/kit`'s `<jtk-product>`,
+ * imported at the bottom — and the hooks it finds things by: a `data-*`
+ * attribute or a control's `name`, never a class. Rename every class, draw
+ * the options as swatches or as a select, move the price; keep the hooks, and
+ * the form sells. The list of them, and what each is for, is
+ * `@jtakeit/kit/shop/hooks` (`PRODUCT`); a hook left out is said in the
+ * browser's console.
+ *
+ * ── what is the kit's, and what is the page's ───────────────────────────────
+ *
+ * The product's facts — its options, its variants and what each picks, its
+ * questions — are `productFacts`, carried on the form as `data-facts`; the
+ * words are `shopWordsFor`, in the page's language, the same ones handed to
+ * the element as `data-words`, so the markup and the element say one thing.
+ * What is left of each variant is the shop's, read live by the element
+ * (`/api/stock`): nothing about stock is in this file or in the content, and
+ * a product the owner sells out of says so the next minute, with no rebuild.
+ * The shop prices every line again at the cart, so a price here is what the
+ * buyer is shown, never what is charged.
+ *
+ * ── every value the owner taps, annotated ───────────────────────────────────
+ *
+ * Every filled value the owner may tap is drawn with its `data-jtk-path`, or
+ * the platform's build refuses the page (`jtkit lint`): the title, the
+ * pictures, the description, each option's name and values, each question's
+ * words and what it adds — and every variant's price. The chosen one's is
+ * `[data-price]`, which the element moves to the variant chosen; all of them
+ * are in the list of variants below the form, where a buyer reads what each
+ * combination costs and the owner taps any of them. The words fields the
+ * page does not otherwise draw — where it is made, its customs tariff number
+ * — are said at the end, under the labels the schema gives them.
+ */
+import { Image } from 'astro:assets';
+import type { Collection, Entry, Row } from '@jtakeit/kit/content';
+import { fromPrice, productFacts } from '@jtakeit/kit/shop';
+import { shopWordsFor } from '@jtakeit/kit/shop/words';
+import { money, priceWords } from '@jtakeit/kit/money';
+import { site } from '../../lib/site';
+import { under } from '../../lib/under';
+import { langOf, withLocale } from '../../lib/locale';
+import { isUpload, uploaded } from '../../lib/uploads';
+import { photo } from '../../lib/photos';
+
+interface Props {
+  /** The product, annotated as its own page's document (`entry.here`). */
+  entry: Entry;
+  /** Its collection, the one the shop's `products` role names. */
+  collection: Collection;
+  /** The page's language: `''` for the site's own, the tag of any other. */
+  locale: string;
+}
+
+const { entry, collection, locale } = Astro.props;
+const { fields } = entry;
+const LANG = langOf(locale);
+const W = shopWordsFor(LANG);
+const facts = productFacts(entry, site.currency);
+const say = (minor: number): string => money(minor, site.currency, LANG);
+const id = `product-${facts.id.slice(0, 8) || entry.slug}`;
+const cart = `${under(withLocale(locale, '/cart'))}/`;
+
+// The words the element says as the buyer chooses, handed over in the page's language.
+const SAID = ['soldOut', 'left', 'inStock', 'notAvailable', 'chooseEach', 'refused.quantity', 'fault.required', 'fault.too_long', 'fault.not_a_choice'];
+const words = Object.fromEntries(SAID.map((key) => [key, W[key]]));
+
+/** A list's row by the key the facts name it by: its `_key`, or its place. */
+const rowOf = (rows: Row[], key: string): Row | undefined => rows.find((row) => (row.key ?? String(row.index)) === key);
+const optionRows = fields.rows('options');
+const variantRows = fields.rows('variants');
+const askRows = fields.rows('customizations');
+
+/** The words of a value and its annotation and language, as one spread: an element with two spreads says its class twice. */
+const tapped = (values: Row | undefined, key: string) => ({ ...values?.at(key), ...values?.lang(key) });
+
+// The pictures: the cover first, then the gallery; a picture with no file is none.
+const fileOf = (src: string): ImageMetadata | undefined => (src === '' ? undefined : isUpload(src) ? uploaded(src) : photo(src));
+const cover = fields.picture('cover');
+const pictures = [cover, ...fields.gallery('pictures')].flatMap((one) => {
+  const file = fileOf(one.src);
+  return file === undefined ? [] : [{ file, alt: one.alt, at: one['data-jtk-path'], lang: one.lang }];
+});
+
+// The price shown before the element has chosen: the first variant on sale's, or the first with a price.
+const shown = facts.variants.find((one) => one.onSale && one.price !== undefined) ?? facts.variants.find((one) => one.price !== undefined);
+// «from CHF 89» where the variants on sale are not all one price.
+const least = fromPrice(facts);
+const prices = new Set(facts.variants.filter((one) => one.onSale && one.price !== undefined).map((one) => one.price));
+const cheapest = prices.size > 1 ? facts.variants.find((one) => one.onSale && one.price === least) : undefined;
+
+/** A variant's combination in words, each value annotated where it is the owner's. */
+const picksOf = (picks: Record<string, string>) =>
+  facts.options.flatMap((option) => {
+    const value = option.values.find((one) => one.key === picks[option.key]);
+    if (value === undefined) return [];
+    const own = rowOf(rowOf(optionRows, option.key)?.rows('values') ?? [], value.key);
+    return [{ label: value.label, at: tapped(own, 'label') }];
+  });
+const variantsLabel = fields.field('variants')?.label;
+
+// The words fields of the product this page draws nowhere above: said last, under the schema's labels.
+const DRAWN = new Set(['title', 'description', 'cover', 'pictures', 'options', 'variants', 'customizations']);
+const details = collection.fields
+  .filter((field) => !DRAWN.has(field.key) && (field.kind === 'text' || field.kind === 'textarea') && fields.text(field.key) !== '')
+  .map((field) => ({
+    label: site.words(field.label, LANG),
+    labelLang: site.wordsLang(field.label, LANG) || undefined,
+    text: fields.text(field.key),
+    tappable: fields.tappable(field.key),
+    at: { ...fields.at(field.key), ...fields.lang(field.key) },
+  }));
+---
+
+<article class="product">
+  <header class="product__head">
+    <h1 class="product__title" {...{ ...fields.at('title'), ...fields.lang('title') }}>{fields.text('title')}</h1>
+    {
+      cheapest !== undefined && least !== undefined && (
+        <p class="product__from" data-from {...rowOf(variantRows, cheapest.key)?.at('price')}>{priceWords(LANG).from.replace('{amount}', say(least))}</p>
+      )
+    }
+  </header>
+
+  {
+    pictures.length > 0 && (
+      <div class="product__pictures">
+        {pictures.map((one, i) => (
+          <Image
+            class="product__picture"
+            src={one.file}
+            alt={one.alt}
+            data-jtk-path={one.at}
+            lang={one.lang}
+            widths={[640, 1280]}
+            sizes="(min-width: 900px) 36rem, 92vw"
+            layout="none"
+            loading={i === 0 ? 'eager' : 'lazy'}
+          />
+        ))}
+      </div>
+    )
+  }
+
+  <div class="product__body">
+    {fields.text('description') && <p class="product__about" {...{ ...fields.at('description'), ...fields.lang('description') }}>{fields.text('description')}</p>}
+
+    <jtk-product class="product__buy">
+      <form
+        class="buy"
+        data-product={facts.id}
+        data-api={under('/api/')}
+        data-locale={LANG}
+        data-facts={JSON.stringify(facts)}
+        data-words={JSON.stringify(words)}
+        data-jtk-fixed
+        novalidate
+      >
+        <noscript><p class="buy__note">{W.noScript}</p></noscript>
+
+        {
+          facts.options.map((option) => {
+            const row = rowOf(optionRows, option.key);
+            const values = row?.rows('values') ?? [];
+            return (
+              <fieldset class="pick">
+                <legend class="pick__name" {...tapped(row, 'name')}>{option.name}</legend>
+                <div class="pick__values">
+                  {option.values.map((value) => (
+                    <label class="pick__value">
+                      <input type="radio" name={`option:${option.key}`} value={value.key} />
+                      <span {...tapped(rowOf(values, value.key), 'label')}>{value.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            );
+          })
+        }
+
+        <div class="buy__state">
+          <p class="buy__price"><span data-price {...(shown === undefined ? {} : rowOf(variantRows, shown.key)?.at('price'))}>{shown?.price === undefined ? '' : say(shown.price)}</span></p>
+          <p class="buy__stock" data-stock aria-live="polite"></p>
+        </div>
+
+        {
+          facts.customizations.map((one) => {
+            const row = rowOf(askRows, one.key);
+            const control = `${id}-answer-${one.key}`;
+            const adds = one.adds !== undefined && <span class="ask__adds" {...row?.at('adds')}>+ {say(one.adds)}</span>;
+            // What a choice adds, said under the field: an option holds its words alone. A question that is no
+            // choice has no choices to offer, and says any it was given there too, as the owner wrote them.
+            const choiceRows = row?.rows('choices') ?? [];
+            const noted = choiceRows.filter((own) => (one.kind === 'choice' ? own.minor('adds') !== undefined : own.text('label') !== '' || own.minor('adds') !== undefined));
+            const note = noted.length > 0 && (
+              <p class="ask__note">
+                {noted.map((own) => (
+                  <span class="ask__surcharge">
+                    {own.text('label') && <span {...tapped(own, 'label')}>{own.text('label')}</span>}
+                    {own.minor('adds') !== undefined && <span {...own.at('adds')}>+ {say(own.minor('adds') ?? 0)}</span>}
+                  </span>
+                ))}
+              </p>
+            );
+            if (one.kind === 'yes_no') {
+              return (
+                <div class="ask">
+                  <label class="ask--yes">
+                    <input type="checkbox" name={`answer:${one.key}`} value="yes" />
+                    <span {...tapped(row, 'name')}>{one.name}</span>
+                    {adds}
+                  </label>
+                  {note}
+                </div>
+              );
+            }
+            return (
+              <div class="ask">
+                <label class="ask__name" for={control}>
+                  <span {...tapped(row, 'name')}>{one.name}</span>
+                  {one.required && <span aria-hidden="true"> *</span>}
+                  {adds}
+                </label>
+                {one.kind === 'choice' ? (
+                  <select class="ask__input" id={control} name={`answer:${one.key}`} required={one.required}>
+                    <option value="">{W.choose}</option>
+                    {one.choices.map((choice) => <option value={choice.key} {...tapped(rowOf(choiceRows, choice.key), 'label')}>{choice.label}</option>)}
+                  </select>
+                ) : (
+                  <input class="ask__input" id={control} name={`answer:${one.key}`} type="text" maxlength={one.max} required={one.required} autocomplete="off" />
+                )}
+                {note}
+              </div>
+            );
+          })
+        }
+
+        <div class="buy__qty">
+          <label class="ask__name" for={`${id}-qty`}>{W.quantity}</label>
+          <input class="ask__input buy__count" id={`${id}-qty`} name="qty" type="number" inputmode="numeric" min="1" max="999" step="1" value="1" />
+        </div>
+
+        <p class="buy__error" data-product-error role="alert" hidden></p>
+        <button class="buy__add" type="submit" data-add>{W.addToCart}</button>
+        <p class="buy__added" data-added role="status" tabindex="-1" hidden>{W.added} · <a href={cart}>{W.viewCart}</a></p>
+      </form>
+    </jtk-product>
+
+    {
+      facts.variants.length > 1 && (
+        <details class="product__variants">
+          <summary data-jtk-fixed lang={site.wordsLang(variantsLabel, LANG) || undefined}>{site.words(variantsLabel, LANG)}</summary>
+          <ul class="variants">
+            {facts.variants.map((variant) => (
+              <li class="variants__row" data-jtk-fixed>
+                <span class="variants__picks">
+                  {picksOf(variant.picks).map((one, i) => (
+                    <>
+                      {i > 0 && ' · '}
+                      <span {...one.at}>{one.label}</span>
+                    </>
+                  ))}
+                </span>
+                {variant.price !== undefined && <span class="variants__price" {...rowOf(variantRows, variant.key)?.at('price')}>{say(variant.price)}</span>}
+                {!variant.onSale && <span class="variants__off">{W.notAvailable}</span>}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )
+    }
+
+    {
+      details.length > 0 && (
+        <dl class="product__details">
+          {details.map((one) => (
+            <div class="product__detail">
+              <dt data-jtk-fixed lang={one.labelLang}>{one.label}</dt>
+              <dd {...(one.tappable ? one.at : { 'data-jtk-fixed': true })}>{one.text}</dd>
+            </div>
+          ))}
+        </dl>
+      )
+    }
+  </div>
+</article>
+
+<script>
+  import '@jtakeit/kit/elements/shop-product';
+</script>
+
+<style>
+  /*
+   * The look — the scaffold's, and the first thing to change, in the site's
+   * tokens. Classes are scoped to this file; what the element draws itself —
+   * a value's state beside it, a fault beside its field — carries a data
+   * attribute and is styled with `:global(...)` under the form. The rules the
+   * behaviour needs (`[hidden]`, a focus ring) the element puts on the page.
+   */
+  .product {
+    display: grid;
+    gap: var(--space-5, 1.5rem) clamp(1.5rem, 4vw, 3.5rem);
+    width: min(var(--shell, 72rem), 100%);
+    margin: 0 auto;
+    /* Clear of the header that floats over the page, as the example's entries are (look.css, `.entry`). */
+    padding: clamp(7rem, 16vh, 10rem) var(--gutter, 1.25rem) clamp(2.5rem, 6vw, 4.5rem);
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'head' 'pictures' 'body';
+  }
+  @media (min-width: 900px) {
+    .product:has(.product__pictures) {
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+      grid-template-areas: 'pictures head' 'pictures body';
+      align-items: start;
+    }
+  }
+  .product > * {
+    min-width: 0;
+  }
+  .product__head {
+    grid-area: head;
+    display: grid;
+    gap: var(--space-2, 0.5rem);
+  }
+  .product__title {
+    margin: 0;
+    font-size: var(--step-3, 2rem);
+    line-height: 1.05;
+    overflow-wrap: anywhere;
+  }
+  .product__from {
+    margin: 0;
+    color: var(--ink-quiet);
+  }
+  .product__pictures {
+    grid-area: pictures;
+    display: grid;
+    gap: var(--space-3, 0.75rem);
+  }
+  .product__picture {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: var(--r-3, 1rem);
+    background: var(--paper-deep, var(--panel));
+  }
+  .product__body {
+    grid-area: body;
+    display: grid;
+    gap: var(--space-5, 1.5rem);
+    align-content: start;
+  }
+  .product__about {
+    margin: 0;
+    max-width: var(--measure, 36rem);
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+  }
+
+  /* the form */
+  .product__buy {
+    display: block;
+  }
+  .buy {
+    display: grid;
+    gap: var(--space-4, 1rem);
+    padding: clamp(1.25rem, 3vw, 1.75rem);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--r-3, 1rem);
+  }
+  .buy > * {
+    min-width: 0;
+  }
+  .buy__note {
+    margin: 0;
+    color: var(--ink-quiet);
+  }
+  .pick {
+    display: grid;
+    gap: var(--space-2, 0.5rem);
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .pick__name,
+  .ask__name {
+    padding: 0;
+    font-size: 0.875rem;
+    color: var(--ink-quiet);
+    overflow-wrap: anywhere;
+  }
+  .pick__values {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2, 0.5rem);
+  }
+  .pick__value {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    max-width: 100%;
+    padding: 0.45rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--paper);
+    cursor: pointer;
+    overflow-wrap: anywhere;
+  }
+  .pick__value:has(input:checked) {
+    border-color: var(--ink);
+    box-shadow: inset 0 0 0 1px var(--ink);
+  }
+  .pick__value:has(input:disabled) {
+    cursor: default;
+    border-style: dashed;
+  }
+  .pick__value input {
+    flex: none;
+    margin: 0;
+    accent-color: var(--ink);
+  }
+  .pick__value :global([data-value-state]) {
+    font-size: 0.8125rem;
+    color: var(--ink-quiet);
+  }
+  .buy__state {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-2, 0.5rem) var(--space-4, 1rem);
+  }
+  .buy__price {
+    margin: 0;
+    font-size: var(--step-2, 1.5rem);
+    font-weight: 600;
+  }
+  .buy__stock {
+    margin: 0;
+    color: var(--ink-quiet);
+  }
+  .ask {
+    display: grid;
+    gap: 0.35rem;
+    justify-items: start;
+  }
+  .ask--yes {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    cursor: pointer;
+    overflow-wrap: anywhere;
+  }
+  .ask--yes input {
+    flex: none;
+    width: 1.15rem;
+    height: 1.15rem;
+    margin: 0;
+    accent-color: var(--ink);
+  }
+  .ask__adds {
+    color: var(--ink-quiet);
+    white-space: nowrap;
+  }
+  .ask__input {
+    font: inherit;
+    width: min(100%, 26rem);
+    min-height: 2.75rem;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-2, 0.5rem);
+    background: var(--paper);
+    color: var(--ink);
+  }
+  .ask__note {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--ink-quiet);
+    overflow-wrap: anywhere;
+  }
+  .ask__surcharge {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0 0.35rem;
+  }
+  .buy__qty {
+    display: grid;
+    gap: 0.35rem;
+    justify-items: start;
+  }
+  .ask__input.buy__count {
+    width: 6.5rem;
+  }
+  /* The danger colour mixed with the ink, so it keeps its contrast on any palette (WCAG 1.4.3). */
+  .buy__error,
+  .buy :global([data-fault]) {
+    margin: 0;
+    font-size: 0.875rem;
+    color: color-mix(in srgb, var(--danger, #b3261e) 55%, var(--ink));
+  }
+  .buy :global([data-fault]) {
+    display: block;
+  }
+  .buy :global([aria-invalid='true']) {
+    border-color: color-mix(in srgb, var(--danger, #b3261e) 55%, var(--ink));
+  }
+  .buy__add {
+    justify-self: start;
+    min-height: 2.75rem;
+    padding: 0.7rem 1.4rem;
+    border: 0;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--paper);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .buy__add:disabled {
+    background: var(--line);
+    color: var(--ink-quiet);
+    cursor: not-allowed;
+  }
+  .buy__added {
+    margin: 0;
+  }
+  .buy__added a {
+    color: var(--accent-ink, var(--ink));
+    font-weight: 600;
+  }
+
+  /* what each combination costs, and the rest of the product */
+  .product__variants summary {
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .variants {
+    display: grid;
+    gap: 0;
+    margin: var(--space-2, 0.5rem) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .variants__row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--line);
+    overflow-wrap: anywhere;
+  }
+  .variants__picks {
+    flex: 1 1 12rem;
+  }
+  .variants__off {
+    color: var(--ink-quiet);
+  }
+  .product__details {
+    display: grid;
+    gap: var(--space-2, 0.5rem);
+    margin: 0;
+  }
+  .product__detail {
+    display: grid;
+    gap: 0.1rem;
+  }
+  .product__detail dt {
+    font-size: 0.875rem;
+    color: var(--ink-quiet);
+  }
+  .product__detail dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+</style>

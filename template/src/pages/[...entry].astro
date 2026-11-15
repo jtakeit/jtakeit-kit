@@ -98,6 +98,18 @@ const languages = site.languagesOf(entry);
 const hasBody = collection.fields.some((field) => field.key === 'body');
 const { Content, texts } = await bodyOf(entry);
 
+/*
+ * ── a product, drawn by the shop's own page ─────────────────────────────────
+ *
+ * An entry of the collection the shop's `products` role names is drawn by the
+ * site's `src/components/shop/Product.astro` — the storefront's product page,
+ * which `jtk add shop` lays and the site makes its own — in place of the
+ * generic fields below. A site without that file matches nothing here (the
+ * glob is `{}`), and every entry is drawn as it always was.
+ */
+const productPages = import.meta.glob<{ default: any }>('../components/shop/Product.astro', { eager: true });
+const Product = collection.name === site.rolesOf('shop')?.products ? Object.values(productPages)[0]?.default : undefined;
+
 const title = fields.text('title');
 const excerpt = fields.text('excerpt');
 const coverPicture = fields.picture('cover');
@@ -236,7 +248,7 @@ type Fact =
 const fileOf = (src: string): ImageMetadata | undefined => (isUpload(src) ? uploaded(src) : photo(src));
 
 const facts: Fact[] = [];
-for (const field of collection.fields) {
+for (const field of Product === undefined ? collection.fields : []) {
   if (DRAWN.has(field.key)) continue;
   const value = fields.value(field.key);
   if (value === undefined) continue;
@@ -345,6 +357,9 @@ const schema = hasBody
 
 <Layout title={said('title') || title} description={said('description') || excerpt} schema={schema} alternates={alternates} languages={languages}>
   <main id="content">
+    {/* A product, where the site has its own page for one; any other entry, the fields its type declares. */}
+    {Product !== undefined && <Product entry={entry} collection={collection} locale={locale} />}
+    {Product === undefined && (
     <article class="entry">
       {
         tree.trail.length > 0 && (
@@ -487,6 +502,7 @@ const schema = hasBody
         })
       }
     </article>
+    )}
 
     {/*
       What points here, under each collection's name — the catalogue's, so

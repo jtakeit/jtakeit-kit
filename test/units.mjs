@@ -429,50 +429,79 @@ try {
     if (shopSettings(seeded).settings.zones?.[0]?.countries?.[0]?.country !== 'CH') fail('6 · an empty settings file was not filled');
   }
   {
-    // The storefront's files: laid where the site has none, taken out only while the scaffold's. SHOP_FILES is
-    // empty until each piece of the storefront comes, so a file of the example's stands in for one.
-    const { addUnit, removeUnit, treeOf: treeIn, UNITS } = await import('../lib/units/index.mjs');
-    const { SHOP_FILES } = await import('../lib/units/shop.mjs');
-    const probe = 'src/components/shop/ShopProbe.astro';
-    const own = resolve('example/files', probe);
-    const made = !existsSync(resolve('example/files/src/components/shop'));
-    mkdirSync(resolve('example/files/src/components/shop'), { recursive: true });
-    writeFileSync(own, '<p>the example\'s</p>\n');
-    SHOP_FILES.push(probe);
-    try {
-      const site = copy(base, 'shop-files');
-      const laid = treeIn(site);
-      const did = addUnit(laid, UNITS.shop, { kit: await loadShopKit(shopFile) });
-      laid.commit();
-      if (read(site, probe) !== '<p>the example\'s</p>\n' || !did.some((one) => one === `${probe}: written`)) fail(`6 · a storefront file was not laid: ${did}`);
-      writeFileSync(join(site, probe), '<p>mine</p>\n');
-      const kept = removeUnit(treeIn(site), UNITS.shop, { force: false });
-      if (!kept.kept.some((one) => one.startsWith(`${probe}: yours now`))) fail(`6 · a changed storefront file was not kept and named: ${JSON.stringify(kept)}`);
-      const forced = treeIn(site);
-      removeUnit(forced, UNITS.shop, { force: true });
-      forced.commit();
-      if (existsSync(join(site, probe))) fail('6 · --force did not delete a changed storefront file');
-      // Untouched, it goes without --force; one the site had of its own before the kit is left where it is.
-      const clean = copy(base, 'shop-files-clean');
-      const cleaned = treeIn(clean);
-      addUnit(cleaned, UNITS.shop, { kit: await loadShopKit(shopFile) });
-      cleaned.commit();
-      const out = treeIn(clean);
-      removeUnit(out, UNITS.shop, { force: false });
-      out.commit();
-      if (existsSync(join(clean, probe))) fail('6 · an untouched storefront file was not taken out');
-      const theirs = copy(base, 'shop-files-theirs');
-      mkdirSync(join(theirs, 'src/components/shop'), { recursive: true });
-      writeFileSync(join(theirs, probe), '<p>theirs</p>\n');
-      const added = treeIn(theirs);
-      addUnit(added, UNITS.shop, { kit: await loadShopKit(shopFile) });
-      added.commit();
-      if (read(theirs, probe) !== '<p>theirs</p>\n') fail('6 · a storefront file the site had was written over');
-    } finally {
-      SHOP_FILES.pop();
-      rmSync(own, { force: true });
-      if (made) rmSync(resolve('example/files/src/components/shop'), { recursive: true, force: true });
+    // The storefront's files: laid where the site has none, from the files the unit is handed; taken out only
+    // while the scaffold's, and one the site had of its own before the kit is left where it is. The unit is
+    // driven with a files directory of this test's own and a stub of `scaffolds`, so the repository's
+    // example/files is never written.
+    const { shop, SHOP_FILES } = await import('../lib/units/shop.mjs');
+    const { siteOf, treeOf: treeIn } = await import('../lib/units/index.mjs');
+    if (!SHOP_FILES.includes('src/components/shop/Product.astro')) fail(`6 · the storefront's files do not name the product's page: ${SHOP_FILES}`);
+    const files = join(dir, 'storefront-files');
+    const theExample = (path) => `<p>the example's ${path}</p>\n`;
+    for (const path of SHOP_FILES) {
+      mkdirSync(join(files, path, '..'), { recursive: true });
+      writeFileSync(join(files, path), theExample(path));
     }
+    const scaffolds = (path, text) => text === theExample(path);
+    const kit = await loadShopKit(shopFile);
+    const laid = (site) => {
+      const tree = treeIn(site);
+      const did = shop.add(tree, { site: siteOf(tree), did: [], options: { kit }, engine: { files } });
+      tree.commit();
+      return did;
+    };
+    const taken = (site, force, commit = true) => {
+      const tree = treeIn(site);
+      const out = shop.remove(tree, { did: [], kept: [], faults: [], force, scaffolds });
+      if (commit) tree.commit();
+      return out;
+    };
+    const [probe] = SHOP_FILES;
+
+    const site = copy(base, 'shop-files');
+    const did = laid(site);
+    for (const path of SHOP_FILES) if (read(site, path) !== theExample(path) || !did.includes(`${path}: written`)) fail(`6 · a storefront file was not laid from the files the unit is handed: ${path} — ${did}`);
+    writeFileSync(join(site, probe), '<p>mine</p>\n');
+    const kept = taken(site, false, false);
+    if (!kept.kept.some((one) => one.startsWith(`${probe}: yours now`)) || kept.did.some((one) => one === `${probe}: deleted`)) fail(`6 · a changed storefront file was not kept and named: ${JSON.stringify(kept)}`);
+    taken(site, true);
+    if (existsSync(join(site, probe))) fail('6 · --force did not delete a changed storefront file');
+    // Untouched, it goes without --force.
+    const clean = copy(base, 'shop-files-clean');
+    laid(clean);
+    const out = taken(clean, false);
+    if (existsSync(join(clean, probe)) || !out.did.includes(`${probe}: deleted`)) fail(`6 · an untouched storefront file was not taken out: ${JSON.stringify(out)}`);
+    // One the site had before the kit is not written over.
+    const theirs = copy(base, 'shop-files-theirs');
+    mkdirSync(join(theirs, probe, '..'), { recursive: true });
+    writeFileSync(join(theirs, probe), '<p>theirs</p>\n');
+    const left = laid(theirs);
+    if (read(theirs, probe) !== '<p>theirs</p>\n' || left.includes(`${probe}: written`)) fail('6 · a storefront file the site had was written over');
+
+    // Through the command, the example's own: the product's page laid as example/files has it, and gone again with the shop.
+    const real = copy(base, 'shop-files-real');
+    const run = ok(real, 'add', 'shop', '--kit', shopFile);
+    for (const path of SHOP_FILES) {
+      if (!existsSync(join(real, path)) || read(real, path) !== readFileSync(resolve('example/files', path), 'utf8') || !run.stdout.includes(`${path}: written`)) fail(`6 · add shop did not lay ${path} as the example has it:\n${run.stdout}`);
+    }
+    ok(real, 'remove', 'shop');
+    for (const path of SHOP_FILES) if (existsSync(join(real, path))) fail(`6 · remove shop left the scaffold's ${path}`);
+  }
+  {
+    // The entry page hands a product to the site's own page: a site laid out by this release has the lines and is
+    // told nothing; one laid out before is told them — and its entry page, which the scaffold owns, is left as it is.
+    const page = 'src/pages/[...entry].astro';
+    if (!read(base, page).includes("import.meta.glob<{ default: any }>('../components/shop/Product.astro', { eager: true })")) fail('6 · the entry page create lays out does not draw a product by the site\'s Product.astro');
+    const fresh = ok(copy(base, 'shop-entry-fresh'), 'add', 'shop', '--kit', shopFile);
+    if (fresh.stdout.includes('draws a product as any entry')) fail(`6 · add shop told a site whose entry page draws its products to change it:\n${fresh.stdout}`);
+    const older = copy(base, 'shop-entry-older');
+    const before = read(older, page).split('\n').filter((one) => !/Product/.test(one)).join('\n');
+    writeFileSync(join(older, page), before);
+    const run = ok(older, 'add', 'shop', '--kit', shopFile);
+    for (const line of ["const Product = collection.name === site.rolesOf('shop')?.products", '<Product entry={entry} collection={collection} locale={locale} />']) {
+      if (!run.stdout.includes(line)) fail(`6 · add shop on a site with an older entry page did not say «${line}»:\n${run.stdout}`);
+    }
+    if (read(older, page) !== before) fail('6 · add shop changed the scaffold\'s entry page');
   }
   console.log('units: the shop laid over a contract-3 site — the country said, the kit beside a booking kit, refused where the site has the names, taken out while no product is there');
 } finally {

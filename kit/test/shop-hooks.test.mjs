@@ -1,0 +1,55 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { PRODUCT } from '../lib/shop/hooks.mjs';
+
+// The hooks are the whole contract between a storefront piece's markup and its
+// element (`@jtakeit/kit/shop/hooks`): what an agent keeps when it copies the
+// scaffold's component and dresses it in a design of its own. The component
+// `jtk add shop` lays carries every one, and the elements find nothing by a
+// class, as the booking form's do (hooks.test.mjs).
+
+const here = import.meta.dirname;
+const component = (path) => readFileSync(join(here, '../../example/files/src/components/shop', path), 'utf8');
+
+/**
+ * How a hook is written in a component's source: `data-x`; `name="x"`; a
+ * name with a key after its prefix, `name={`x:${…}`}`.
+ */
+function written(hook) {
+  const name = /^\[name=([a-z0-9_]+)\]$/.exec(hook);
+  if (name) return new RegExp(`\\sname="${name[1]}"`);
+  const prefix = /^\[name\^="([a-z]+:)"\]$/.exec(hook);
+  if (prefix) return new RegExp(`\\sname=(?:"${prefix[1]}|\\{\`${prefix[1]}\\$\\{)`);
+  const data = /\[(data-[a-z-]+)\]$/.exec(hook);
+  assert.ok(data, `a hook is a data attribute or a name: ${hook}`);
+  return new RegExp(`\\s${data[1]}[\\s=>{]`);
+}
+
+test('the copied product carries every hook, imports the element and no stylesheet of the kit', () => {
+  const astro = component('Product.astro');
+  for (const one of [...PRODUCT.always, ...PRODUCT.said]) assert.match(astro, written(one.hook), `${one.hook} — ${one.says}`);
+  // The form's own: what the element reads off it.
+  const form = /<form\b[^>]*>/.exec(astro)?.[0] ?? '';
+  for (const attribute of ['data-product', 'data-api', 'data-locale', 'data-facts', 'data-words', 'data-jtk-fixed', 'novalidate']) {
+    assert.match(form, new RegExp(`\\s${attribute}[\\s=>]`), `the form says ${attribute}`);
+  }
+  assert.match(astro, /<jtk-product\b/, 'the form is inside <jtk-product>');
+  assert.match(astro, /<script>\s*import '@jtakeit\/kit\/elements\/shop-product';\s*<\/script>/, 'and the element that makes it work');
+  assert.match(astro, /<noscript>/, 'a sentence for a browser with no script');
+  assert.match(astro, /<style>/, 'its own look');
+  assert.doesNotMatch(astro, /@jtakeit\/kit\/[^'"]*\.css/, 'the look is the file\'s own, not the kit\'s');
+});
+
+test("the shop's elements find nothing by a class alone", () => {
+  const files = readdirSync(join(here, '../elements')).filter((one) => /^shop-.*\.js$/.test(one));
+  assert.ok(files.includes('shop-product.js') && files.includes('shop-wire.js'), `the shop's elements: ${files}`);
+  for (const file of files) {
+    const source = readFileSync(join(here, '../elements', file), 'utf8');
+    for (const [, selector] of source.matchAll(/(?:querySelector(?:All)?|closest|matches)\(\s*['"`]([^'"`]+)['"`]/g)) {
+      // A hook, or an element the element drew itself and marked with a data attribute — never a class.
+      assert.doesNotMatch(selector, /\.[a-z_-]/i, `${file}: ${selector}`);
+    }
+  }
+});
