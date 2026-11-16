@@ -5,3 +5,5 @@ ID,Type,SKU,Name,Name (EN),Published,Description,Weight (kg),Regular price,Stock
 22,variation,FOX-M-RED,"T-Shirt Fox - M, Red",,1,,0.18,29.90,7,id:20,Size,M,Colour,Red,
 23,variation,FOX-S-BLUE,"T-Shirt Fox - S, Blue",,1,,0.18,29.90,0,id:20,Size,S,Colour,Blue,
 24,variation,,"T-Shirt Fox - M, Blue",,1,,0.18,29.90,3,id:20,Size,M,Colour,Blue,
+30,grouped,SET-1,Becher und T-Shirt,Mug and T-shirt,1,<p>A set.</p>,,,,,,,,,
+31,external,AFF-1,Partnerprodukt,Partner product,1,<p>Sold elsewhere.</p>,,19.90,,,,,,,

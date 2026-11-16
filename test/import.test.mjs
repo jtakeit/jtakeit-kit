@@ -481,14 +481,15 @@ test('a price is an amount of the currency or it is refused, never rounded', () 
   assert.equal(price('12').minor, 1200);
   assert.equal(price('12.5').minor, 1250);
   assert.equal(price('0').minor, 0, 'free is an amount');
-  assert.equal(price('12.500').minor, 1250, 'zeros past the digits are no fraction');
-  for (const bad of ['12.505', '12.999', '-3', '+3', '1,250.00', 'CHF 12.50', '12.50 CHF', '12,50', '1e3', '.5', '12.', '']) {
+  // More digits than the currency has are refused, zeros included (Ruling 236): 12.500 is no 12.50 and 12,500 no 12.50 either.
+  for (const bad of ['12.500', '12.505', '12.999', '-3', '+3', '1,250.00', 'CHF 12.50', '12.50 CHF', '12,50', '1e3', '.5', '12.', '']) {
     const refused = price(bad);
     assert.equal(refused.result.status, 1, `${bad}: ${said(refused.result)}`);
     assert.match(refused.result.stderr, /row 2, column «Price»/, bad);
     assert.deepEqual(entriesOf(refused.site), [], `${bad}: nothing written`);
   }
-  assert.match(price('12.505').result.stderr, /more decimals than CHF has \(2\) — nothing is rounded/);
+  assert.match(price('12.505').result.stderr, /has 3 digits after the point and CHF has 2 — nothing is rounded/);
+  assert.match(price('12.500').result.stderr, /has 3 digits after the point and CHF has 2 — nothing is rounded, and a zero at the end is no way round it/);
 });
 
 test('the currency is the site\'s: said by --currency or by jtk/site.json, and never one that contradicts the other', () => {
@@ -551,7 +552,7 @@ test('a variant that has no price, or picks no value of an option, is refused wi
   const twins = freshSite();
   const same = run(twins.site, twins.dir, `${header}\nhemd,Hemd,H-S,10,S\nhemd,,H-X,12,S\n`, mapping);
   assert.equal(same.status, 1, said(same));
-  assert.match(same.stderr, /rows 2 and 3: pick the same values \(S\)/);
+  assert.match(same.stderr, /rows 2 and 3, column «Size»: pick the same values \(S\)/);
   assert.deepEqual(entriesOf(twins.site), []);
 });
 
@@ -693,12 +694,14 @@ test('made SKUs and slugs never take one that is held, by the collection or by t
   const result = run(site, dir, sheet, mapping);
   assert.equal(result.status, 0, said(result));
   // A name that makes `media` is numbered: no entry may be named so, the folder beside it is the build's pictures.
-  assert.deepEqual(entriesOf(site), ['alpha.json', 'grosse-a.json', 'kerze-2.json', 'kerze-3.json', 'kerze.json', 'media-2.json']);
+  assert.deepEqual(entriesOf(site), ['alpha.json', 'groesse-ae.json', 'kerze-2.json', 'kerze-3.json', 'kerze.json', 'media-2.json']);
   const sku = (slug) => entry(site, slug).fields.variants[0].sku;
-  assert.deepEqual(['kerze', 'kerze-2', 'kerze-3', 'grosse-a', 'alpha'].map(sku), ['KERZE', 'KERZE-2-2', 'KERZE-2', 'GROSSE-A', 'kerze-rot']);
+  assert.deepEqual(['kerze', 'kerze-2', 'kerze-3', 'groesse-ae', 'alpha'].map(sku), ['KERZE', 'KERZE-2-2', 'KERZE-2', 'GROESSE-AE', 'kerze-rot']);
   // Ranks follow the sheet.
-  const ranks = ['kerze', 'kerze-2', 'kerze-3', 'grosse-a', 'alpha'].map((slug) => entry(site, slug).rank);
+  const ranks = ['kerze', 'kerze-2', 'kerze-3', 'groesse-ae', 'alpha'].map((slug) => entry(site, slug).rank);
   assert.deepEqual(ranks, [...ranks].sort());
+
+  const kerze = structuredClone(entry(site, 'kerze'));
 
   // A second sheet: a made SKU steps round one the collection holds, in any case — and a name the collection has is
   // a product with SKUs of its own, so it is another one, numbered past what is there.
@@ -707,8 +710,8 @@ test('made SKUs and slugs never take one that is held, by the collection or by t
   assert.equal(sku('kerze-rot'), 'KERZE-ROT-2');
   assert.equal(sku('kerze-4'), 'NEW-1');
   assert.ok(entry(site, 'kerze-4').rank > ranks.at(-1), 'after the last of the collection');
-  assert.deepEqual(entry(site, 'kerze'), entry(site, 'kerze'));
-  assert.equal(sku('kerze'), 'KERZE', 'the Kerze the collection has is as it was');
+  assert.deepEqual(entry(site, 'kerze'), kerze, 'the Kerze the collection has is as it was, every field');
+  assert.equal(sku('kerze'), 'KERZE');
 });
 
 test('an address the sheet gives is the product\'s own or it is refused: one the platform takes, on one product', () => {
@@ -781,10 +784,376 @@ test('the starting stock is written 5,000 lines to a file, a file of an earlier 
 });
 
 test('a description holding HTML is made text, and one that holds none is kept as it is', async () => {
-  const { htmlText } = await import('../lib/import/products.mjs');
+  const { htmlText } = await import('../lib/import/sheet.mjs');
   assert.equal(htmlText('<p>One &amp; two</p><p>Three<br/>four<br />five</p>'), 'One & two\nThree\nfour\nfive');
   assert.equal(htmlText('<h2>Titel</h2>\n<ul>\n<li>Ein</li>\n<li>Zwei &euro; 5</li>\n</ul>'), 'Titel\nEin\nZwei € 5');
   assert.equal(htmlText('<p>a &lt;b&gt; &#65;&#x42; &unknown; <em>c</em></p><script>x()</script><style>p{}</style>'), 'a <b> AB &unknown; c');
   assert.equal(htmlText('Line one\r\nLine two: a < b & c'), 'Line one\nLine two: a < b & c', 'text already: its line breaks and its characters as they are');
   assert.equal(htmlText('<p></p>'), '');
+  // Entities are read where there is no tag too, and an angle bracket that starts no element is a character.
+  assert.equal(htmlText('Tom &amp; Jerry'), 'Tom & Jerry');
+  assert.equal(htmlText('Write to <info@shop.ch> or call'), 'Write to <info@shop.ch> or call');
+  assert.equal(htmlText('<p>Write to <info@shop.ch> &amp; <strong>call</strong></p>'), 'Write to <info@shop.ch> & call');
+  assert.equal(htmlText('<a href="x">link</a> and <abc> and <3'), 'link and <abc> and <3');
+});
+
+// ── fix round 1: the options of a WooCommerce product, the panel's addresses, what a sheet may skip and inherit ──
+
+/** Rows of a WooCommerce sheet, with the columns that give a variation its attributes by name and three pairs of them. */
+const THREE = 'ID,Type,SKU,Name,Published,Regular price,Parent,Attribute 1 name,Attribute 1 value(s),Attribute 2 name,Attribute 2 value(s),Attribute 3 name,Attribute 3 value(s)';
+const threeMapping = () => {
+  const mapping = fixtureMapping('woocommerce.json');
+  mapping.fields = { title: 'Name', sku: 'SKU', price: 'Regular price', options: [1, 2, 3].map((n) => ({ name: `Attribute ${n} name`, value: `Attribute ${n} value(s)` })) };
+  return mapping;
+};
+
+test('a variation\'s values are paired to the product\'s options by the names in its own row, never by the column they are in', () => {
+  // WooCommerce numbers a variation's attributes from 1 over its own, so with a descriptive attribute (Brand) first on the
+  // parent, the variation's first pair is the parent's second: pairing by position made «Brand: S» and «Size: Red».
+  const sheet = `${THREE}
+20,variable,TEE,Tee,1,,,Brand,Acme,Size,"S, M",Colour,"Red, Blue"
+21,variation,TEE-S-R,Tee S R,1,10,id:20,Size,S,Colour,Red,,
+22,variation,TEE-M-B,Tee M B,1,10,id:20,Colour,Blue,Size,M,,
+`;
+  const { dir, site } = freshSite();
+  const result = run(site, dir, sheet, threeMapping());
+  assert.equal(result.status, 0, said(result));
+  const tee = entry(site, 'tee');
+  assert.deepEqual(tee.fields.options, [
+    { _key: 'size', name: 'Size', values: [{ _key: 's', label: 'S' }, { _key: 'm', label: 'M' }] },
+    { _key: 'colour', name: 'Colour', values: [{ _key: 'red', label: 'Red' }, { _key: 'blue', label: 'Blue' }] },
+  ], 'the parent\'s order, the attribute no variation uses left out');
+  assert.deepEqual(tee.fields.variants.map((one) => [one.sku, one.picks]), [
+    ['TEE-S-R', { size: 's', colour: 'red' }],
+    ['TEE-M-B', { size: 'm', colour: 'blue' }],
+  ], 'a variation that lists Colour first is paired by name all the same');
+  assert.match(result.stdout, /tee: «Brand», named on row 2, is valued by no variation: left out of the options/);
+  assert.equal(result.stdout.match(/«Brand»/g).length, 1, 'said once for the product');
+
+  // A variation that names an attribute its parent has not got is refused with its row and the column of the name.
+  const odd = freshSite();
+  const refused = run(odd.site, odd.dir, sheet.replace('22,variation,TEE-M-B,Tee M B,1,10,id:20,Colour,Blue,Size,M,,', '22,variation,TEE-M-B,Tee M B,1,10,id:20,Colour,Blue,Material,Cotton,,'), threeMapping());
+  assert.equal(refused.status, 1, said(refused));
+  assert.match(refused.stderr, /row 4, column «Attribute 2 name»: names the option «Material», and the product's first row \(row 2\) names «Brand», «Size», «Colour»/);
+  assert.deepEqual(entriesOf(odd.site), []);
+
+  // And one that has the name and no value picks nothing of that option: refused, not guessed.
+  const any = freshSite();
+  const anySize = run(any.site, any.dir, sheet.replace('22,variation,TEE-M-B,Tee M B,1,10,id:20,Colour,Blue,Size,M,,', '22,variation,TEE-M-B,Tee M B,1,10,id:20,Colour,Blue,Size,,,'), threeMapping());
+  assert.equal(anySize.status, 1, said(anySize));
+  assert.match(anySize.stderr, /row 4, column «Attribute 2 value\(s\)»: has no value of the option «Size»/);
+});
+
+test('a simple product\'s attributes describe it and are no options, and the import says what it left out, once', () => {
+  const { dir, site } = freshSite();
+  const sheet = withCell(withCell(fixture('woocommerce.csv'), 2, 'Attribute 1 name', 'Material'), 2, 'Attribute 1 value(s)', 'Ceramic, Glass');
+  const result = run(site, dir, sheet, fixtureMapping('woocommerce.json'));
+  assert.equal(result.status, 0, said(result));
+  const mug = entry(site, 'becher');
+  assert.equal('options' in mug.fields, false, 'no Material to pick, ceramic or glass');
+  assert.equal('picks' in mug.fields.variants[0], false);
+  assert.match(result.stdout, /becher: row 2 gives «Material» as attributes, which describe a product with no variations and are no options \(an option is an attribute its variations name\): left out/);
+  assert.equal(result.stdout.match(/«Material»/g).length, 1);
+  assert.doesNotMatch(result.stdout, /t-shirt-fox: row/, 'the fox\'s Size and Colour are what its variations name: options');
+});
+
+test('an address is made as the panel makes it, and a Ukrainian catalogue imports', async () => {
+  const { slugify } = await import('../lib/import/slug.mjs');
+  // The panel's own cases (frontend/admin/src/lib/slug.test.ts at jtakeit-core 0e150d8a), and what its slugify answers to others.
+  const panel = [
+    ['Догляд після сеансу', 'dohlyad-pislya-seansu'], ['Їжак і ґанок', 'yizhak-i-ganok'], ['Що робити', 'shcho-robyty'],
+    ['aftercare-week-one', 'aftercare-week-one'], ['Café Kraków', 'cafe-krakow'], ['Grüße', 'gruesse'],
+    ['', ''], ['   ', ''], ['!!!', ''], ['  ---  ', ''],
+    ['Grösse Ä', 'groesse-ae'], ['Müller Tasse', 'mueller-tasse'], ['Кружка', 'kruzhka'], ['Щука й ЄВРО', 'shchuka-y-yevro'],
+    ['Ёлка, ъ и ы', 'elka-y-y'], ['Łódź Żółć', 'lodz-zolc'], ['Ceské Řeka Čaj', 'ceske-reka-caj'], ['Ö1 Ä2 Ü3', 'oe1-ae2-ue3'],
+    ['Ville Crème Brûlée', 'ville-creme-brulee'], ['🥐🥐🥐 круасани', 'kruasany'], ['Ціна — 2 000 ₴', 'tsina-2-000'], ['Fuß', 'fuss'],
+    ['ǅ', ''], ['a'.repeat(70), 'a'.repeat(60)], ['ab '.repeat(30), 'ab-'.repeat(19) + 'ab'],
+  ];
+  for (const [title, slug] of panel) assert.equal(slugify(title), slug, JSON.stringify(title));
+
+  // A sheet in Ukrainian, with no slug column (a WooCommerce export has none): every product has its address and its SKU.
+  const { dir, site } = freshSite();
+  const sheet = 'Назва,Ціна\nКружка,12.50\nЇжак і ґанок,8\n';
+  const mapping = { v: 1, decimal: '.', fields: { title: 'Назва', price: 'Ціна' } };
+  const result = run(site, dir, sheet, mapping);
+  assert.equal(result.status, 0, said(result));
+  assert.deepEqual(entriesOf(site), ['kruzhka.json', 'yizhak-i-ganok.json']);
+  assert.equal(entry(site, 'kruzhka').fields.title, 'Кружка');
+  assert.equal(entry(site, 'kruzhka').fields.variants[0].sku, 'KRUZHKA');
+  assert.equal(entry(site, 'yizhak-i-ganok').fields.variants[0].sku, 'YIZHAK-I-GANOK');
+  // A second import of the same names, SKU-less, finds the same entries by the same addresses and makes none.
+  const again = run(site, dir, sheet, mapping);
+  assert.equal(again.status, 0, said(again));
+  assert.deepEqual(entriesOf(site), ['kruzhka.json', 'yizhak-i-ganok.json']);
+  assert.match(again.stdout, /0 made, 0 updated, 2 left as they are/);
+
+  // A name with no letter an address is made of is refused, with its row and column.
+  const none = freshSite();
+  const refused = run(none.site, none.dir, 'Назва,Ціна\n!!!,1\n', mapping);
+  assert.equal(refused.status, 1, said(refused));
+  assert.match(refused.stderr, /row 2, column «Назва»: «!!!» has no letter or digit an address can be made of/);
+});
+
+test('a variation\'s empty weight is its parent row\'s, as WooCommerce reads «same as parent»; its size class and tax code are the product\'s', () => {
+  const sheet = withCell(withCell(withCell(fixture('woocommerce.csv'), 3, 'Weight (kg)', '0.2'), 4, 'Weight (kg)', ''), 5, 'Weight (kg)', '0.25');
+  const { dir, site } = freshSite();
+  const result = run(site, dir, sheet, fixtureMapping('woocommerce.json'));
+  assert.equal(result.status, 0, said(result));
+  // The first variation has none and takes the parent's 0.2 kg, the second its own, the others theirs.
+  assert.deepEqual(entry(site, 't-shirt-fox').fields.variants.map((one) => one.weight), [200, 250, 180, 180]);
+  // The parent row's own weight is read as the weights are, and refused where it is no whole gram, with the parent's row.
+  const bad = freshSite();
+  const refused = run(bad.site, bad.dir, withCell(withCell(fixture('woocommerce.csv'), 3, 'Weight (kg)', '0.1805'), 4, 'Weight (kg)', ''), fixtureMapping('woocommerce.json'));
+  assert.equal(refused.status, 1, said(refused));
+  assert.match(refused.stderr, /row 3, column «Weight \(kg\)»: «0\.1805» kg is 180\.5 g, not whole grams/);
+
+  // Size class and tax code are the product's: the parent row's cell is the product's, and a variation's own is that or refused.
+  const withTwo = (cells) => `${fixture('woocommerce.csv').trimEnd().split('\n').map((row, i) => `${row},${cells[i] ?? ''}`).join('\n')}\n`;
+  const mapping = fixtureMapping('woocommerce.json');
+  mapping.fields.size_class = 'Class';
+  mapping.fields.tax_code = 'Tax';
+  // The parent row says bulky and the tax code; a variation says the same, or nothing, or is refused.
+  const header = 'Class,Tax';
+  const sized = freshSite();
+  const ok = run(sized.site, sized.dir, withTwo([header, ',', 'bulky,txcd_35010000', ',', 'bulky,', ',txcd_35010000', ',', ',', ',']), mapping);
+  assert.equal(ok.status, 0, said(ok));
+  const fox = entry(sized.site, 't-shirt-fox').fields;
+  assert.equal(fox.size_class, 'bulky');
+  assert.equal(fox.tax_code, 'txcd_35010000');
+  const clash = freshSite();
+  const differs = run(clash.site, clash.dir, withTwo([header, ',', 'bulky,txcd_35010000', ',', 'letter,', ',', ',', ',', ',']), mapping);
+  assert.equal(differs.status, 1, said(differs));
+  assert.match(differs.stderr, /row 5, column «Class»: «letter» is not the product's shipping size \(«bulky»\)/);
+  assert.deepEqual(entriesOf(clash.site), []);
+});
+
+test('a row the mapping skips is no product, no variant and no parent, and each is said', () => {
+  const { dir, site } = freshSite();
+  const result = run(site, dir, fixture('woocommerce.csv'), fixtureMapping('woocommerce.json'));
+  assert.equal(result.status, 0, said(result));
+  assert.match(result.stdout, /row 8 skipped: «Type» is «grouped»/);
+  assert.match(result.stdout, /row 9 skipped: «Type» is «external»/);
+  assert.deepEqual(entriesOf(site), ['becher.en.json', 'becher.json', 't-shirt-fox.en.json', 't-shirt-fox.json']);
+  assert.doesNotMatch(readFileSync(join(site, '.jtakeit/stock.txt'), 'utf8'), /SET-1|AFF-1/);
+
+  // Without the key the grouped row is a variant with no price, and the import stops there, as it should.
+  const bare = freshSite();
+  const mapping = fixtureMapping('woocommerce.json');
+  delete mapping.skip;
+  const refused = run(bare.site, bare.dir, fixture('woocommerce.csv'), mapping);
+  assert.equal(refused.status, 1, said(refused));
+  assert.match(refused.stderr, /row 8, column «Regular price»: is empty on a row that is a variant \(it has the SKU SET-1\)/);
+  assert.deepEqual(entriesOf(bare.site), []);
+
+  // A variation of a skipped row has no product to be a variant of: refused, naming the skip.
+  const orphan = freshSite();
+  const sheet = `${fixture('woocommerce.csv')}32,variation,SET-X,x,,1,,,9.90,,id:30,,,,,\n`;
+  const lost = run(orphan.site, orphan.dir, sheet, fixtureMapping('woocommerce.json'));
+  assert.equal(lost.status, 1, said(lost));
+  assert.match(lost.stderr, /row 10, column «Parent»: names row 8, which the mapping's `skip` leaves out/);
+
+  // The key is `{ column, values }` with a column the sheet has; the values are compared without regard to case.
+  const wrong = freshSite();
+  const sheetOnly = 'Type,Name,Price\nGrouped,Set,\nsimple,Becher,5\n';
+  const shaped = (skip) => ({ v: 1, decimal: '.', skip, fields: { title: 'Name', price: 'Price' } });
+  const cased = run(wrong.site, wrong.dir, sheetOnly, shaped({ column: 'Type', values: ['grouped'] }));
+  assert.equal(cased.status, 0, said(cased));
+  assert.deepEqual(entriesOf(wrong.site), ['becher.json']);
+  for (const skip of [{ column: 'Kind', values: ['x'] }, { column: 'Type', values: [] }, { column: 'Type' }, 'Type']) {
+    const bad = run(wrong.site, wrong.dir, sheetOnly, shaped(skip));
+    assert.equal(bad.status, 1, JSON.stringify(skip));
+    assert.match(bad.stderr, /skip/);
+  }
+});
+
+test('a number with more digits after the separator than its currency or unit has is refused, zeros included, and never read as a thousand', () => {
+  const mapping = (decimal, weight) => ({ v: 1, decimal, fields: { title: 'Name', sku: 'SKU', price: 'Price', weight } });
+  const tries = [
+    // [price, weight, decimal, unit, what is refused]
+    ['1,250', undefined, ',', 'g', 'Price', /«1,250» has 3 digits after the comma and CHF has 2 — nothing is rounded, and a zero at the end is no way round it: it could as well be a thousands separator/],
+    ['1.250', undefined, '.', 'g', 'Price', /«1\.250» has 3 digits after the point and CHF has 2/],
+    ['12,50', '0,1800', ',', 'kg', 'Weight', /«0,1800» has 4 digits after the comma and a weight in kilograms has 3/],
+    ['12,50', '180,0', ',', 'g', 'Weight', /«180,0» has 1 digit after the comma and a weight in grams has none/],
+    ['12,50', '1,000', ',', 'g', 'Weight', /«1,000» has 3 digits after the comma and a weight in grams has none/],
+  ];
+  for (const [price, weight, decimal, unit, column, why] of tries) {
+    const { dir, site } = freshSite();
+    const sheet = `Name,SKU,Price,Weight\nBecher,MUG-1,"${price}","${weight ?? ''}"\n`;
+    const refused = run(site, dir, sheet, mapping(decimal, { column: 'Weight', unit }));
+    assert.equal(refused.status, 1, `${price} ${weight}: ${said(refused)}`);
+    assert.match(refused.stderr, new RegExp(`row 2, column «${column}»`), `${price} ${weight}`);
+    assert.match(refused.stderr, why);
+    assert.deepEqual(entriesOf(site), [], 'nothing written, and nothing read as 1.25 or 1250');
+  }
+  // What is within the digits is exact: 0.180 kg is 180 g, however many zeros a person would not have written.
+  const { dir, site } = freshSite();
+  const ok = run(site, dir, 'Name,SKU,Price,Weight\nBecher,MUG-1,"12,5","0,180"\n', mapping(',', { column: 'Weight', unit: 'kg' }));
+  assert.equal(ok.status, 0, said(ok));
+  assert.deepEqual(entry(site, 'becher').fields.variants[0], { _key: 'v1', sku: 'MUG-1', price: { minor: 1250 }, weight: 180 });
+});
+
+test('the picks of a second import are said only where the sheet\'s differ on the options the sheet knows', () => {
+  const { dir, site } = firstImport();
+  // The owner added an option in the panel, which the sheet does not know, and every variant picks it.
+  const fox = entry(site, 't-shirt-fox');
+  fox.fields.options.push({ _key: 'material', name: 'Material', values: [{ _key: 'cotton', label: 'Cotton' }] });
+  for (const variant of fox.fields.variants) variant.picks.material = 'cotton';
+  write(site, 'jtk/entries/products/t-shirt-fox.json', fox);
+  const edited = snapshot(site);
+  // Every variant has its SKU in this sheet (the one without is matched by its picks, which the owner's option would change).
+  const sheet = withCell(fixture('woocommerce.csv'), 7, 'SKU', 'T-SHIRT-FOX-M-BLUE');
+  const same = run(site, dir, sheet, fixtureMapping('woocommerce.json'));
+  assert.equal(same.status, 0, said(same));
+  assert.doesNotMatch(same.stdout, /another combination/, 'the owner\'s Material is not the sheet\'s to name');
+  assert.deepEqual(snapshot(site)['jtk/entries/products/t-shirt-fox.json'], edited['jtk/entries/products/t-shirt-fox.json']);
+
+  // The colours of two variants swapped in the sheet: that is a difference on options it knows, said, and the picks kept.
+  const swapped = withCell(withCell(sheet, 4, 'Attribute 2 value(s)', 'Blue'), 6, 'Attribute 2 value(s)', 'Red');
+  const second = run(site, dir, swapped, fixtureMapping('woocommerce.json'));
+  assert.equal(second.status, 0, said(second));
+  assert.match(second.stdout, /row 4: FOX-S-RED is Size S, Colour Blue in the sheet and another combination in t-shirt-fox — its picks are kept/);
+  assert.match(second.stdout, /row 6: FOX-S-BLUE is Size S, Colour Red in the sheet and another combination in t-shirt-fox — its picks are kept/);
+  assert.deepEqual(snapshot(site)['jtk/entries/products/t-shirt-fox.json'], edited['jtk/entries/products/t-shirt-fox.json']);
+});
+
+test('what an import says is capped and counted, as its changes are', () => {
+  const mapping = { v: 1, decimal: '.', fields: { title: 'Name', sku: 'SKU', price: 'Price' } };
+  const rows = Array.from({ length: 45 }, (_, n) => `Ding ${n + 1},D-${n + 1},5`);
+  const sheet = `Name,SKU,Price\n${rows.join('\n')}\n`;
+  const { dir, site } = freshSite();
+  assert.equal(run(site, dir, sheet, mapping).status, 0);
+  // The owner renamed every one in the panel: forty-five words kept, and each said — as many as fit, and then how many more.
+  for (let n = 1; n <= 45; n++) {
+    const file = `jtk/entries/products/ding-${n}.json`;
+    const one = read(site, file);
+    one.fields.title = `Mein Ding ${n}`;
+    write(site, file, one);
+  }
+  const second = run(site, dir, sheet, mapping);
+  assert.equal(second.status, 0, said(second));
+  assert.equal(second.stdout.match(/title kept/g).length, 40);
+  assert.match(second.stdout, /… and 5 more said \(--dry-run says each\)/);
+  assert.equal(run(site, dir, sheet, mapping, '--dry-run').stdout.match(/title kept/g).length, 45, 'the dry run says each');
+});
+
+test('a second import\'s other paths: a parent named by SKU, a «no value» word among real values, the words of a translation, an empty group cell, two rows of one entry', () => {
+  // A variation names its parent by the parent's SKU as well as by id.
+  const bySku = freshSite();
+  let sheet = fixture('woocommerce.csv');
+  for (const line of [4, 5, 6, 7]) sheet = withCell(sheet, line, 'Parent', 'T-SHIRT-FOX');
+  const ok = run(bySku.site, bySku.dir, sheet, fixtureMapping('woocommerce.json'));
+  assert.equal(ok.status, 0, said(ok));
+  assert.equal(entry(bySku.site, 't-shirt-fox').fields.variants.length, 4);
+
+  // Shopify's «Default Title» for one variant of a product whose others have a value: it is no value, and the row says so.
+  const mixed = freshSite();
+  const refused = run(mixed.site, mixed.dir, withCell(fixture('shopify.csv'), 4, 'Option1 Value', 'Default Title'), fixtureMapping('shopify.json'));
+  assert.equal(refused.status, 1, said(refused));
+  assert.match(refused.stderr, /row 4, column «Option1 Value»: says «Default Title», which is no value of the option «Size» — and the product's other variants have one/);
+
+  // A row of a sheet grouped by a column that has no value there belongs to no product.
+  const empty = freshSite();
+  const rows = fixture('shopify.csv').trimEnd().split('\n');
+  rows.push(`,Handleless${','.repeat(12)}`);
+  const handleless = run(empty.site, empty.dir, `${rows.join('\n')}\n`, fixtureMapping('shopify.json'));
+  assert.equal(handleless.status, 1, said(handleless));
+  assert.match(handleless.stderr, /row 8, column «Handle»: is empty: the row belongs to no product/);
+
+  // The words of a translation are kept like the original's, and --words takes the sheet's.
+  const { dir, site } = firstImport();
+  const english = entry(site, 't-shirt-fox', 'en');
+  english.fields.title = 'Fox shirt, our way';
+  write(site, 'jtk/entries/products/t-shirt-fox.en.json', english);
+  const kept = run(site, dir, fixture('woocommerce.csv'), fixtureMapping('woocommerce.json'));
+  assert.equal(kept.status, 0, said(kept));
+  assert.match(kept.stdout, /t-shirt-fox: en title kept «Fox shirt, our way», the sheet says «Fox T-shirt»/);
+  assert.equal(entry(site, 't-shirt-fox', 'en').fields.title, 'Fox shirt, our way');
+  assert.equal(run(site, dir, fixture('woocommerce.csv'), fixtureMapping('woocommerce.json'), '--words').status, 0);
+  assert.deepEqual(entry(site, 't-shirt-fox', 'en'), { of: entry(site, 't-shirt-fox').id, locale: 'en', fields: { title: 'Fox T-shirt' } });
+
+  // Two rows of a sheet that are one entry of the site are refused, naming both.
+  const twice = freshSite();
+  const simple = { v: 1, decimal: '.', fields: { title: 'Name', price: 'Price' } };
+  assert.equal(run(twice.site, twice.dir, 'Name,Price\nBecher,5\n', simple).status, 0);
+  const both = run(twice.site, twice.dir, 'Name,Price\nBecher,5\nBecher,6\n', simple);
+  assert.equal(both.status, 1, said(both));
+  assert.match(both.stderr, /rows 2 and 3: are one product of the site, becher, twice/);
+});
+
+test('the command in the site\'s own directory, a .gitignore that has the line already or is not there, a site\'s schema that says no shop', () => {
+  const mapping = { v: 1, decimal: '.', fields: { title: 'Name', price: 'Price', stock: 'Stock' } };
+  const sheet = 'Name,Price,Stock\nBecher,5,3\n';
+
+  // No --root: the working directory is the site.
+  const here = freshSite();
+  writeFileSync(join(here.dir, 'sheet.csv'), sheet);
+  writeFileSync(join(here.dir, 'mapping.json'), JSON.stringify(mapping));
+  const result = spawnSync('node', [bin, 'import', 'products', join(here.dir, 'sheet.csv'), '--map', join(here.dir, 'mapping.json')], { encoding: 'utf8', cwd: here.site });
+  assert.equal(result.status, 0, said(result));
+  assert.deepEqual(entriesOf(here.site), ['becher.json']);
+
+  // A .gitignore that says it already is left as it is, and one that is not there is made with no blank first line.
+  const said_ = freshSite();
+  writeFileSync(join(said_.site, '.gitignore'), 'dist/\n.jtakeit/stock*.txt\n');
+  assert.equal(run(said_.site, said_.dir, sheet, mapping).status, 0);
+  assert.equal(readFileSync(join(said_.site, '.gitignore'), 'utf8'), 'dist/\n.jtakeit/stock*.txt\n');
+  const none = freshSite();
+  rmSync(join(none.site, '.gitignore'));
+  assert.equal(run(none.site, none.dir, sheet, mapping).status, 0);
+  assert.match(readFileSync(join(none.site, '.gitignore'), 'utf8'), /^# The starting stock `jtk import products` writes for set_stock/);
+  const unended = freshSite();
+  writeFileSync(join(unended.site, '.gitignore'), 'dist/');
+  assert.equal(run(unended.site, unended.dir, sheet, mapping).status, 0);
+  assert.match(readFileSync(join(unended.site, '.gitignore'), 'utf8'), /^dist\/\n\n# The starting stock/);
+
+  // A schema without the shop, or without the collection a mapping names: refused with the one command that writes it.
+  const noShop = freshSite();
+  const schema = read(noShop.site, 'jtk/schema.json');
+  delete schema.modules;
+  write(noShop.site, 'jtk/schema.json', schema);
+  const stale = run(noShop.site, noShop.dir, sheet, mapping);
+  assert.equal(stale.status, 1, said(stale));
+  assert.match(stale.stderr, /the site: has no products collection: jtk\/schema\.json says no `modules\.shop\.products`\. `jtk schema` writes it from the declaration/);
+  const other = freshSite();
+  const wrongCollection = run(other.site, other.dir, sheet, { ...mapping, collection: 'wares' });
+  assert.equal(wrongCollection.status, 1, said(wrongCollection));
+  assert.match(wrongCollection.stderr, /has no collection «wares» in jtk\/schema\.json \(its collections: services, team, products\) — `jtk schema` writes/);
+
+  // An entry the sheet is matched to that has no id is refused with the sheet's row and column.
+  const idless = freshSite();
+  assert.equal(run(idless.site, idless.dir, sheet, mapping).status, 0);
+  const becher = entry(idless.site, 'becher');
+  delete becher.id;
+  write(idless.site, 'jtk/entries/products/becher.json', becher);
+  const noId = run(idless.site, idless.dir, 'Name,Price,Stock\nBecher,6,3\n', mapping);
+  assert.equal(noId.status, 1, said(noId));
+  assert.match(noId.stderr, /row 2, column «Name»: the entry it matches, jtk\/entries\/products\/becher\.json, has no id/);
+});
+
+test('the stock files are the import\'s, replaced whole: one of an earlier import is never left to be set as this sheet\'s', () => {
+  const withStock = { v: 1, decimal: '.', fields: { title: 'Name', sku: 'SKU', price: 'Price', stock: 'Stock' } };
+  const withoutStock = { v: 1, decimal: '.', fields: { title: 'Name', sku: 'SKU', price: 'Price' } };
+  const { dir, site } = freshSite();
+  assert.equal(run(site, dir, 'Name,SKU,Price,Stock\nBecher,MUG-1,5,3\n', withStock).status, 0);
+  writeFileSync(join(site, '.jtakeit/stock-2.txt'), 'OLD-1 9\n');
+
+  // A sheet with no stock column: the files stay, and are said to be an earlier sheet's.
+  const none = run(site, dir, 'Name,SKU,Price\nBecher,MUG-1,6\n', withoutStock);
+  assert.equal(none.status, 0, said(none));
+  assert.match(none.stdout, /\.jtakeit\/stock\.txt and \.jtakeit\/stock-2\.txt are an earlier import's, and the mapping names no `stock` column: they hold that sheet's counts, not this one's/);
+  assert.equal(readFileSync(join(site, '.jtakeit/stock.txt'), 'utf8'), 'MUG-1 3\n');
+
+  // A stock column that is empty on every row replaces them with nothing: the files go, and it says so.
+  const empty = run(site, dir, 'Name,SKU,Price,Stock\nBecher,MUG-1,6,\n', withStock);
+  assert.equal(empty.status, 0, said(empty));
+  assert.match(empty.stdout, /no row of the sheet has a stock: \.jtakeit\/stock\.txt and \.jtakeit\/stock-2\.txt of an earlier import are taken away/);
+  assert.equal(existsSync(join(site, '.jtakeit/stock.txt')) || existsSync(join(site, '.jtakeit/stock-2.txt')), false);
+  assert.doesNotMatch(empty.stdout, /set_stock, with the text/);
+
+  // A stock file of the sheet's replaces the first whole, and a second file beyond its lines is taken away (the stock test above has 5,001).
+  mkdirSync(join(site, '.jtakeit'), { recursive: true });
+  writeFileSync(join(site, '.jtakeit/stock-2.txt'), 'OLD-2 1\n');
+  assert.equal(run(site, dir, 'Name,SKU,Price,Stock\nBecher,MUG-1,6,4\n', withStock).status, 0);
+  assert.equal(readFileSync(join(site, '.jtakeit/stock.txt'), 'utf8'), 'MUG-1 4\n');
+  assert.equal(existsSync(join(site, '.jtakeit/stock-2.txt')), false);
 });
