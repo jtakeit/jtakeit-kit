@@ -8,13 +8,15 @@
 // held with the tree left as it was, and nothing is ever rounded.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync, spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { execFileSync, spawn, spawnSync } from 'node:child_process';
+import { createHash, randomBytes } from 'node:crypto';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { content } from '@jtakeit/kit/content';
 import { readJtk } from '@jtakeit/kit/content/node';
+import { TIMEOUT, fetchPictures } from '../lib/import/pictures.mjs';
 
 const bin = resolve('bin/jtk.mjs');
 const KIT = resolve('kit/test/fixtures/kits/shop.json');
@@ -51,13 +53,31 @@ test.after(() => {
   if (laid !== undefined) rmSync(join(laid, '..'), { recursive: true, force: true });
 });
 
-/** The command, run as a person runs it. */
-function run(site, dir, sheet, mapping, ...flags) {
+/** The sheet and the mapping written beside each other, and the command line that imports them. */
+function commandOf(site, dir, sheet, mapping, flags) {
   const sheetFile = join(dir, 'sheet.csv');
   const mapFile = join(dir, 'mapping.json');
   writeFileSync(sheetFile, sheet);
   writeFileSync(mapFile, typeof mapping === 'string' ? mapping : `${JSON.stringify(mapping, null, 2)}\n`);
-  return spawnSync('node', [bin, 'import', 'products', sheetFile, '--map', mapFile, '--root', site, ...flags], { encoding: 'utf8' });
+  return [bin, 'import', 'products', sheetFile, '--map', mapFile, '--root', site, ...flags];
+}
+
+/** The command, run as a person runs it. */
+function run(site, dir, sheet, mapping, ...flags) {
+  return spawnSync('node', commandOf(site, dir, sheet, mapping, flags), { encoding: 'utf8' });
+}
+
+/** The same, for a command that talks to a server of this process: the child must not stop the loop that answers it. */
+function runAsync(site, dir, sheet, mapping, ...flags) {
+  return new Promise((done, fail) => {
+    const child = spawn('node', commandOf(site, dir, sheet, mapping, flags), { stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (chunk) => (stdout += chunk));
+    child.stderr.on('data', (chunk) => (stderr += chunk));
+    child.on('error', fail);
+    child.on('close', (status) => done({ status, stdout, stderr }));
+  });
 }
 const said = (result) => `${result.stdout}${result.stderr}`;
 const fixture = (name) => readFileSync(join(FIXTURES, name), 'utf8');
@@ -460,11 +480,10 @@ test('a mapping that names a column the sheet has not got is refused, naming the
   assert.match(misspelt.stderr, /fields\.prize: is not a field of a product the import reads/);
   assert.match(misspelt.stderr, /extra: is not a key of a mapping/);
 
-  // The decimal is never guessed; the pictures wait for the step that sends them.
-  const undecided = run(site, dir, sheet, { v: 1, fields: { title: 'Name', price: 'Price', pictures: 'Price' } });
+  // The decimal is never guessed.
+  const undecided = run(site, dir, sheet, { v: 1, fields: { title: 'Name', price: 'Price' } });
   assert.equal(undecided.status, 1);
   assert.match(undecided.stderr, /decimal: .*"decimal": "\."/);
-  assert.match(undecided.stderr, /fields\.pictures: the pictures are not read by this version/);
   assert.match(run(site, dir, sheet, '{ not json').stderr, /the mapping is not JSON/);
   assert.deepEqual(snapshot(site), before, 'nothing was written');
 });
@@ -1234,4 +1253,546 @@ test('a variation\'s attribute name is the product\'s option without regard to c
   const clash = run(twice.site, twice.dir, `${THREE}\n20,variable,TEE,Tee,1,,,Size,"S, M",size,"Red, Blue",,\n21,variation,TEE-S-R,Tee S R,1,10,id:20,Size,S,,,,\n`, threeMapping());
   assert.equal(clash.status, 1, said(clash));
   assert.match(clash.stderr, /row 2, column «Attribute 2 name»: the option «size» is named twice/);
+});
+
+// ── the pictures (Task 9.19) ──────────────────────────────────────────────
+//
+// A sheet's pictures are fetched on this machine — never by the platform — from the addresses and paths its rows name, and
+// are named in the entries as slots, files of src/assets/products/; `--media` then sends them through `media push`, which
+// writes the library's keys in their place. Everything here runs against 127.0.0.1: a server of this process for the
+// pictures, and a stand-in for the platform's media wire as test/media.test.mjs has one. No request leaves the machine.
+
+const SITE_ID = '7fd4aa8c-1111-4222-8333-444455556666';
+const sha256 = (data) => createHash('sha256').update(data).digest('hex');
+const FOX = { 'fox-1.jpg': readFileSync(join(FIXTURES, 'fox-1.jpg')), 'fox-2.jpg': readFileSync(join(FIXTURES, 'fox-2.jpg')) };
+const MB = 1024 * 1024;
+
+/**
+ * The pictures' server: the two foxes, a 404, a page that is named like a picture, a picture over the most a file may be,
+ * a body that never ends, an answer that stops in its body, and an address that never answers. `requests` is every path asked for.
+ */
+async function pictureServer(t) {
+  const requests = [];
+  const server = createServer((req, res) => {
+    requests.push(req.url);
+    const name = req.url.slice(1);
+    if (Object.hasOwn(FOX, name)) {
+      res.writeHead(200, { 'content-type': 'image/jpeg' });
+      return res.end(FOX[name]);
+    }
+    if (req.url === '/gone.jpg') {
+      res.writeHead(404, { 'content-type': 'text/plain' });
+      return res.end('nothing here');
+    }
+    if (req.url === '/page.jpg') {
+      res.writeHead(200, { 'content-type': 'text/html' });
+      return res.end('<!doctype html><title>Sign in</title><p>Your session has ended.</p>');
+    }
+    if (req.url === '/big.jpg') {
+      res.writeHead(200, { 'content-type': 'image/jpeg' });
+      return res.end(Buffer.concat([FOX['fox-1.jpg'], Buffer.alloc(9 * MB)]));
+    }
+    if (req.url === '/endless.jpg') {
+      // No length said, and no end: only a client that stops reading ends it.
+      res.writeHead(200, { 'content-type': 'image/jpeg' });
+      res.write(FOX['fox-1.jpg']);
+      const chunk = Buffer.alloc(64 * 1024);
+      const pump = () => {
+        while (!res.destroyed && res.write(chunk)) {
+          // until the socket is full
+        }
+        if (!res.destroyed) res.once('drain', pump);
+      };
+      return pump();
+    }
+    if (req.url === '/exact.jpg' || req.url === '/over.jpg') {
+      // No length said: the body is counted as it comes. Exactly the most, or a byte more.
+      const size = 8 * MB + (req.url === '/over.jpg' ? 1 : 0);
+      const body = Buffer.concat([FOX['fox-1.jpg'], Buffer.alloc(size - FOX['fox-1.jpg'].length)]);
+      res.writeHead(200, { 'content-type': 'image/jpeg', 'transfer-encoding': 'chunked' });
+      for (let at = 0; at < body.length; at += 64 * 1024) res.write(body.subarray(at, at + 64 * 1024));
+      return res.end();
+    }
+    if (req.url === '/cut.jpg') {
+      // A length it does not keep to: the connection goes in the middle of the body.
+      res.writeHead(200, { 'content-type': 'image/jpeg', 'content-length': 100000 });
+      res.write(FOX['fox-1.jpg']);
+      return void setTimeout(() => res.destroy(), 20);
+    }
+    if (req.url === '/error.jpg') {
+      res.writeHead(500);
+      return res.end('oops');
+    }
+    if (req.url === '/hang.jpg') return undefined; // the answer never comes
+    if (req.url === '/stall.jpg') {
+      // The head, and a part of the body, and then nothing.
+      res.writeHead(200, { 'content-type': 'image/jpeg' });
+      return void res.write(FOX['fox-1.jpg']);
+    }
+    res.writeHead(404);
+    return res.end();
+  });
+  await new Promise((done) => server.listen(0, '127.0.0.1', done));
+  t.after(() => {
+    server.closeAllConnections();
+    return new Promise((done) => server.close(done));
+  });
+  return { origin: `http://127.0.0.1:${server.address().port}`, requests };
+}
+
+/**
+ * The platform's media wire, as test/media.test.mjs stands it in, to what `media push` asks: a link, a manifest by the hash
+ * of the bytes, the parts it names, the words kept only for a file that has none, the index. `library` is the keys it holds.
+ */
+async function mediaLibrary(t) {
+  /** @type {Map<string, { data: Buffer, sha: string, alt: string }>} */
+  const library = new Map();
+  const links = new Map();
+  const requests = [];
+  const server = createServer(async (req, res) => {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const body = Buffer.concat(chunks);
+    requests.push(`${req.method} ${req.url}`);
+    const answer = (status, value) => {
+      res.writeHead(status, { 'content-type': 'application/json' });
+      res.end(JSON.stringify(value));
+    };
+    const link = links.get((req.headers.authorization ?? '').replace(/^Bearer /, ''));
+    if (!link || link.dead) return answer(401, { code: 'unauthenticated', message: 'this link is not good (any more) — ask media_link for a new one' });
+    const words = (key, alt) => {
+      const file = library.get(key);
+      if (file && alt && !file.alt) file.alt = alt;
+      return file?.alt ?? '';
+    };
+    if (req.method === 'POST' && req.url === '/v1/media/manifest') {
+      link.manifest = JSON.parse(body.toString());
+      const items = link.manifest.map((item, i) => {
+        const key = [...library].find(([, file]) => file.sha === item.sha256)?.[0];
+        return key ? { sha256: item.sha256, held: true, key, alt: words(key, item.alt) } : { sha256: item.sha256, held: false, n: i + 1 };
+      });
+      return answer(200, { items, part_bytes: 8 * MB });
+    }
+    const part = /^\/v1\/media\/parts\/(\d+)$/.exec(req.url);
+    if (req.method === 'PUT' && part) {
+      const item = link.manifest?.[Number(part[1]) - 1];
+      if (!item || sha256(body) !== item.sha256) return answer(400, { code: 'invalid_argument', message: 'these bytes are not the ones the manifest named' });
+      const key = `media/${SITE_ID}/${item.sha256.slice(0, 16)}.jpg`;
+      if (!library.has(key)) library.set(key, { data: body, sha: item.sha256, alt: '' });
+      return answer(200, { key, bytes: body.length, content_type: 'image/jpeg', deduplicated: false, alt: words(key, item.alt), n: Number(part[1]), sha256: item.sha256 });
+    }
+    if (req.method === 'POST' && req.url === '/v1/media/alt') {
+      return answer(200, { items: JSON.parse(body.toString()).map(({ key, alt }) => ({ key, alt: words(key, alt), taken: false })) });
+    }
+    if (req.method === 'GET' && req.url === '/v1/media/index') {
+      return answer(200, { files: [...library].map(([key, file]) => ({ id: key, key, bytes: file.data.length, alt: file.alt })), used: 0, quota: 250 * MB });
+    }
+    return answer(404, { code: 'not_found', message: `no ${req.method} ${req.url}` });
+  });
+  await new Promise((done) => server.listen(0, '127.0.0.1', done));
+  t.after(() => {
+    server.closeAllConnections();
+    return new Promise((done) => server.close(done));
+  });
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  return {
+    library,
+    requests,
+    /** A new link, good until `end` is called. */
+    mint() {
+      const token = randomBytes(24).toString('base64url');
+      links.set(token, { manifest: [], dead: false });
+      return `${origin}/v1/media#t=${token}`;
+    },
+    end: () => links.forEach((one) => (one.dead = true)),
+  };
+}
+
+/** The fixture's sheet, its addresses made the server's. */
+const picturesSheet = (origin) => fixture('pictures.csv').replaceAll('{{origin}}', origin);
+/** A directory for the sheet, with the picture the sheet names by a path beside it. */
+function sheetDir() {
+  const here = freshSite();
+  cpSync(join(FIXTURES, 'fox-2.jpg'), join(here.dir, 'fox-2.jpg'));
+  return here;
+}
+const assetsOf = (site) => (existsSync(join(site, 'src/assets/products')) ? readdirSync(join(site, 'src/assets/products')).sort() : []);
+/** What the import says of the slots that are files here and nowhere else, for `n` of them. */
+const WAITING = (n) => new RegExp(`${n === 1 ? '1 picture is a file' : `${n} pictures are files`} on this machine only: push ${n === 1 ? 'it' : 'them'} \\(\`--media\` with a new link from \`media_link\`\\) before you commit — the platform builds from git, and a picture still a file here is not on the site`);
+const KEY = new RegExp(`^media/${SITE_ID}/[0-9a-f]{16}\\.jpg$`);
+
+test('a product\'s pictures are fetched here and named as slots', async (t) => {
+  const pictures = await pictureServer(t);
+  const { dir, site } = sheetDir();
+  const result = await runAsync(site, dir, picturesSheet(pictures.origin), fixtureMapping('pictures.json'));
+  assert.equal(result.status, 1, `two pictures are files on this machine only, so the exit says so:\n${said(result)}`);
+
+  // The first is the cover, the rest the pictures, each a row with its key; their words the product's name.
+  const fox = entry(site, 't-shirt-fox');
+  assert.deepEqual(fox.fields.cover, { src: 'products/t-shirt-fox-1', alt: 'T-Shirt Fox' });
+  assert.deepEqual(fox.fields.pictures.map(({ _key, ...row }) => row), [{ src: 'products/t-shirt-fox-2', alt: 'T-Shirt Fox' }]);
+  assert.match(fox.fields.pictures[0]._key, /^k[0-9a-f]{7}$/);
+  assert.deepEqual(Object.keys(fox.fields).slice(0, 4), ['title', 'cover', 'pictures', 'options'], 'where the product\'s fields say them');
+
+  // Both are files under src/assets/products/, the bytes that came: the address's and the path's.
+  assert.deepEqual(assetsOf(site), ['t-shirt-fox-1.jpg', 't-shirt-fox-2.jpg']);
+  assert.deepEqual(readFileSync(join(site, 'src/assets/products/t-shirt-fox-1.jpg')), FOX['fox-1.jpg']);
+  assert.deepEqual(readFileSync(join(site, 'src/assets/products/t-shirt-fox-2.jpg')), FOX['fox-2.jpg']);
+  assert.deepEqual(pictures.requests, ['/fox-1.jpg'], 'an address that two rows name is fetched once');
+
+  // Never in git, and said: the platform builds from git, so a slot is not yet on the site.
+  assert.ok(readFileSync(join(site, '.gitignore'), 'utf8').split('\n').includes('src/assets/products/'));
+  assert.match(result.stdout, WAITING(2));
+
+  // The door reads what was written as it reads any product's pictures.
+  const door = content(await readJtk(site)).entry('products', 't-shirt-fox');
+  assert.equal(door.fields.picture('cover').src, 'products/t-shirt-fox-1');
+  assert.deepEqual(door.fields.gallery('pictures').map((one) => one.src), ['products/t-shirt-fox-2']);
+});
+
+test('a picture that cannot be fetched is said, and its product written without it', async (t) => {
+  const pictures = await pictureServer(t);
+  const { dir, site } = sheetDir();
+  const sheet = picturesSheet(pictures.origin).replaceAll(`${pictures.origin}/fox-1.jpg`, `${pictures.origin}/gone.jpg`);
+  const result = await runAsync(site, dir, sheet, fixtureMapping('pictures.json'));
+
+  // Said with its row, its column and its address, once — the two rows that name it are one picture.
+  assert.match(result.stdout, new RegExp(`row 2, column «Images»: «${pictures.origin}/gone\\.jpg» answered 404 — left out of t-shirt-fox`));
+  assert.equal(result.stdout.match(/gone\.jpg/g).length, 1);
+  assert.deepEqual(pictures.requests, ['/gone.jpg']);
+
+  // The product is written with the picture it has, as its cover; the file the first would have been is not.
+  const fox = entry(site, 't-shirt-fox');
+  assert.deepEqual(fox.fields.cover, { src: 'products/t-shirt-fox-1', alt: 'T-Shirt Fox' });
+  assert.equal('pictures' in fox.fields, false);
+  assert.deepEqual(readFileSync(join(site, 'src/assets/products/t-shirt-fox-1.jpg')), FOX['fox-2.jpg']);
+  assert.deepEqual(assetsOf(site), ['t-shirt-fox-1.jpg']);
+  assert.match(result.stdout, WAITING(1));
+  assert.equal(result.status, 1);
+
+  // A product none of whose pictures can be had is written with none, and a second import tries them again.
+  const bare = sheetDir();
+  const none = await runAsync(bare.site, bare.dir, picturesSheet(pictures.origin).replaceAll(`${pictures.origin}/fox-1.jpg`, `${pictures.origin}/gone.jpg`).replace(', fox-2.jpg', ''), fixtureMapping('pictures.json'));
+  assert.equal(none.status, 0, said(none));
+  assert.equal('cover' in entry(bare.site, 't-shirt-fox').fields, false);
+  assert.equal(existsSync(join(bare.site, 'src/assets/products')), false, 'no file, no folder');
+  assert.equal(readFileSync(join(bare.site, '.gitignore'), 'utf8').includes('src/assets/products/'), false, 'and no line about it');
+  const again = await runAsync(bare.site, bare.dir, picturesSheet(pictures.origin), fixtureMapping('pictures.json'));
+  assert.equal(entry(bare.site, 't-shirt-fox').fields.cover.src, 'products/t-shirt-fox-1', 'a product with neither a cover nor pictures takes them');
+  assert.match(again.stdout, /t-shirt-fox: cover none → «products\/t-shirt-fox-1»/);
+});
+
+test('--media sends them, and the entries name the library\'s keys', async (t) => {
+  const pictures = await pictureServer(t);
+  const library = await mediaLibrary(t);
+  const { dir, site } = sheetDir();
+  const link = library.mint();
+  const result = await runAsync(site, dir, picturesSheet(pictures.origin), fixtureMapping('pictures.json'), '--media', link);
+  assert.equal(result.status, 0, said(result));
+
+  // Each slot is the library's key now, the product's name the picture's words, and a row keeps its `_key`.
+  const fox = entry(site, 't-shirt-fox');
+  assert.match(fox.fields.cover.src, KEY);
+  assert.equal(fox.fields.cover.alt, 'T-Shirt Fox');
+  assert.match(fox.fields.pictures[0].src, KEY);
+  assert.match(fox.fields.pictures[0]._key, /^k[0-9a-f]{7}$/);
+  assert.deepEqual(library.library.get(fox.fields.cover.src).data, FOX['fox-1.jpg']);
+  assert.deepEqual(library.library.get(fox.fields.pictures[0].src).data, FOX['fox-2.jpg']);
+  assert.equal(library.library.get(fox.fields.cover.src).alt, 'T-Shirt Fox', 'the library is given the product\'s name as the picture\'s words');
+
+  // The push adopted the files out of src/assets, never deleted them; nothing is left to be said.
+  assert.deepEqual(assetsOf(site), [], 'src/assets/products/ is emptied by the push\'s adoption');
+  assert.ok(existsSync(join(site, '.jtakeit/adopted/products/t-shirt-fox-1.jpg')));
+  assert.ok(existsSync(join(site, '.jtakeit/adopted/products/t-shirt-fox-2.jpg')));
+  assert.doesNotMatch(said(result), /files on this machine only/);
+  assert.doesNotMatch(said(result), new RegExp(link.split('#t=')[1]), 'the token is printed nowhere');
+  assert.match(result.stdout, /jtk media push: /, 'the push says what it did');
+  assert.ok(library.requests.every((line) => !line.includes('#')), 'the token goes as a bearer');
+  assert.ok(pictures.requests.every((one) => one.startsWith('/fox-')), 'the platform asked this machine for nothing');
+});
+
+test('a second import leaves a product\'s pictures alone', async (t) => {
+  const pictures = await pictureServer(t);
+  const library = await mediaLibrary(t);
+  const { dir, site } = sheetDir();
+  const first = await runAsync(site, dir, picturesSheet(pictures.origin), fixtureMapping('pictures.json'), '--media', library.mint());
+  assert.equal(first.status, 0, said(first));
+  const file = join(site, 'jtk/entries/products/t-shirt-fox.json');
+  const before = readFileSync(file, 'utf8');
+  const fetched = pictures.requests.length;
+
+  // The same sheet again, with a new link: the keys as they were, and nothing fetched.
+  const again = await runAsync(site, dir, picturesSheet(pictures.origin), fixtureMapping('pictures.json'), '--media', library.mint());
+  assert.equal(again.status, 0, said(again));
+  assert.equal(readFileSync(file, 'utf8'), before);
+  assert.equal(pictures.requests.length, fetched, 'nothing was fetched');
+  assert.deepEqual(assetsOf(site), []);
+  assert.match(again.stdout, /1 product keeps the pictures it has: the sheet's are not fetched again/);
+  assert.match(again.stdout, /0 made, 0 updated, 1 left as they are/);
+});
+
+test('a picture over the most a file may be is said', async (t) => {
+  const pictures = await pictureServer(t);
+  const { dir, site } = sheetDir();
+  const sheet = picturesSheet(pictures.origin).replaceAll(`${pictures.origin}/fox-1.jpg`, `${pictures.origin}/big.jpg`);
+  const result = await runAsync(site, dir, sheet, fixtureMapping('pictures.json'));
+  assert.match(result.stdout, new RegExp(`row 2, column «Images»: «${pictures.origin}/big\\.jpg» is more than 8 MB, and the library takes at most 8 MB a file — left out of t-shirt-fox`));
+  assert.deepEqual(assetsOf(site), ['t-shirt-fox-1.jpg']);
+  assert.deepEqual(readFileSync(join(site, 'src/assets/products/t-shirt-fox-1.jpg')), FOX['fox-2.jpg'], 'the other picture is the cover');
+
+  // The path of a file over it is said as the address is, and is not read whole.
+  const huge = sheetDir();
+  writeFileSync(join(huge.dir, 'huge.jpg'), Buffer.concat([FOX['fox-1.jpg'], Buffer.alloc(9 * MB)]));
+  const pathed = await runAsync(huge.site, huge.dir, 'Handle,Title,SKU,Price,Size,Images\nt-shirt-fox,T-Shirt Fox,FOX-S,29.90,S,"huge.jpg, fox-2.jpg"\n', fixtureMapping('pictures.json'));
+  assert.match(pathed.stdout, /row 2, column «Images»: «huge\.jpg» is more than 8 MB, and the library takes at most 8 MB a file — left out of t-shirt-fox/);
+});
+
+// ── Ruling 240: a picture is what its bytes are ───────────────────────────
+
+test('a picture is taken by its first bytes: a .jpg path of text and an address answering text/html are said and left out', async (t) => {
+  const pictures = await pictureServer(t);
+  const { dir, site } = sheetDir();
+  const secret = '-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAA\n-----END OPENSSH PRIVATE KEY-----\n';
+  writeFileSync(join(dir, 'id_rsa.jpg'), secret);
+  // A path may name any file on the machine, by its place and not only beside the sheet: it is read, and it is judged by what it holds.
+  const elsewhere = mkdtempSync(join(tmpdir(), 'jtk-import-key-'));
+  scratch.push(elsewhere);
+  writeFileSync(join(elsewhere, 'key.jpg'), secret);
+  const sheet = `Handle,Title,SKU,Price,Size,Images\nt-shirt-fox,T-Shirt Fox,FOX-S,29.90,S,"id_rsa.jpg, ${join(elsewhere, 'key.jpg')}, ${pictures.origin}/page.jpg, fox-2.jpg"\n`;
+  const result = await runAsync(site, dir, sheet, fixtureMapping('pictures.json'));
+
+  const tail = 'its first bytes are none of a JPEG, PNG, WebP, AVIF or SVG';
+  assert.match(result.stdout, new RegExp(`row 2, column «Images»: «id_rsa\\.jpg» is not a picture: ${tail} — taken for what it holds, never for its name or its type — left out of t-shirt-fox`));
+  assert.ok(result.stdout.includes(`row 2, column «Images»: «${join(elsewhere, 'key.jpg')}» is not a picture: ${tail} — taken for what it holds, never for its name or its type — left out of t-shirt-fox`));
+  assert.match(result.stdout, new RegExp(`row 2, column «Images»: «${pictures.origin}/page\\.jpg» answered text/html, and ${tail} — taken for what it holds, never for its name or its type — left out of t-shirt-fox`));
+  // Nothing of either is on the machine's assets or in the entry: the one picture the sheet has is the cover.
+  assert.deepEqual(assetsOf(site), ['t-shirt-fox-1.jpg']);
+  assert.deepEqual(readFileSync(join(site, 'src/assets/products/t-shirt-fox-1.jpg')), FOX['fox-2.jpg']);
+  assert.equal(JSON.stringify(entry(site, 't-shirt-fox')).includes('BEGIN OPENSSH'), false);
+  assert.equal('pictures' in entry(site, 't-shirt-fox').fields, false);
+
+  // A kind the library does not take, and a clip, are no picture of a product either.
+  const other = sheetDir();
+  writeFileSync(join(other.dir, 'loop.gif'), Buffer.from('GIF89a-a loop'));
+  writeFileSync(join(other.dir, 'clip.jpg'), Buffer.concat([Buffer.from([0, 0, 0, 0x18]), Buffer.from('ftypisom'), Buffer.from('clip')]));
+  const kinds = await runAsync(other.site, other.dir, 'Handle,Title,SKU,Price,Size,Images\nt-shirt-fox,T-Shirt Fox,FOX-S,29.90,S,"loop.gif, clip.jpg, fox-2.jpg"\n', fixtureMapping('pictures.json'));
+  assert.match(kinds.stdout, /«loop\.gif» is a GIF, which the library does not take/);
+  assert.match(kinds.stdout, /«clip\.jpg» is a video, and a product's picture is a still image/);
+  assert.deepEqual(assetsOf(other.site), ['t-shirt-fox-1.jpg']);
+});
+
+test('the file a picture is kept as has the extension of what its bytes are, whatever its name says', async () => {
+  const { dir, site } = sheetDir();
+  writeFileSync(join(dir, 'photo.jpg'), Buffer.concat([Buffer.from('\x89PNG\r\n\x1a\n', 'latin1'), Buffer.from('a png named jpg')]));
+  writeFileSync(join(dir, 'shape.png'), '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"><rect width="4" height="4"/></svg>');
+  writeFileSync(join(dir, 'modern.gif'), Buffer.concat([Buffer.from([0, 0, 0, 0x1c]), Buffer.from('ftypavif'), Buffer.from('....')]));
+  const result = run(site, dir, 'Handle,Title,SKU,Price,Size,Images\nt-shirt-fox,T-Shirt Fox,FOX-S,29.90,S,"photo.jpg, shape.png, modern.gif, fox-2.jpg"\n', fixtureMapping('pictures.json'));
+  assert.equal(result.status, 1, said(result));
+  assert.deepEqual(assetsOf(site), ['t-shirt-fox-1.png', 't-shirt-fox-2.svg', 't-shirt-fox-3.avif', 't-shirt-fox-4.jpg']);
+  const fox = entry(site, 't-shirt-fox');
+  assert.equal(fox.fields.cover.src, 'products/t-shirt-fox-1', 'a slot has no extension: the file has the kind\'s');
+  assert.deepEqual(fox.fields.pictures.map((one) => one.src), ['products/t-shirt-fox-2', 'products/t-shirt-fox-3', 'products/t-shirt-fox-4']);
+
+  // A file of an earlier run with another extension would be the slot's by `jpg`'s turn: it goes when the slot is written again.
+  const stale = sheetDir();
+  mkdirSync(join(stale.site, 'src/assets/products'), { recursive: true });
+  writeFileSync(join(stale.site, 'src/assets/products/t-shirt-fox-1.jpg'), FOX['fox-1.jpg']);
+  const sheet = 'Handle,Title,SKU,Price,Size,Images\nt-shirt-fox,T-Shirt Fox,FOX-S,29.90,S,photo.jpg\n';
+  cpSync(join(dir, 'photo.jpg'), join(stale.dir, 'photo.jpg'));
+  assert.equal(run(stale.site, stale.dir, sheet, fixtureMapping('pictures.json')).status, 1);
+  assert.deepEqual(assetsOf(stale.site), ['t-shirt-fox-1.png'], 'the slot names one file');
+});
+
+test('an address is fetched only over http or https, and a path only where it is a file', async (t) => {
+  const pictures = await pictureServer(t);
+  const { dir, site } = sheetDir();
+  mkdirSync(join(dir, 'folder.jpg'));
+  const refs = ['file:///etc/hostname', 'ftp://127.0.0.1/x.jpg', '//127.0.0.1/x.jpg', 'data:image/gif;base64,R0lGODlhAQABAAAAACw=', 'folder.jpg', 'nowhere.jpg', 'fox-2.jpg'];
+  const sheet = `Handle,Title,SKU,Price,Size,Images\nt-shirt-fox,T-Shirt Fox,FOX-S,29.90,S,"${refs.join('|')}"\n`;
+  const mapping = fixtureMapping('pictures.json');
+  mapping.fields.pictures = { column: 'Images', split: '|' };
+  const result = await runAsync(site, dir, sheet, mapping);
+
+  const left = (ref) => `row 2, column «Images»: «${ref}» `;
+  assert.match(result.stdout, new RegExp(`${left('file:///etc/hostname')}uses «file:», and only http: and https: addresses are fetched — left out of t-shirt-fox`));
+  assert.match(result.stdout, new RegExp(`${left('ftp://127.0.0.1/x.jpg')}uses «ftp:», and only http: and https:`));
+  assert.match(result.stdout, new RegExp(`${left('//127.0.0.1/x.jpg').replaceAll('/', '\\/')}has no scheme: only http: and https: addresses are fetched, so write the whole address`));
+  assert.match(result.stdout, /«data:image\/gif;base64,R0lGODlhAQABAAAAACw=» uses «data:»/);
+  assert.match(result.stdout, new RegExp(`${left('folder.jpg')}is not a file: only a file is read`));
+  assert.match(result.stdout, new RegExp(`${left('nowhere.jpg')}is not a file here`));
+  assert.deepEqual(pictures.requests, [], 'nothing was asked of any server');
+  assert.deepEqual(assetsOf(site), ['t-shirt-fox-1.jpg'], 'the one picture it could have is the cover');
+});
+
+test('a body is read up to the most a file may be and stopped there, never fetched whole and then measured', async (t) => {
+  const pictures = await pictureServer(t);
+  const { dir, site } = sheetDir();
+  const sheet = `Handle,Title,SKU,Price,Size,Images\nt-shirt-fox,T-Shirt Fox,FOX-S,29.90,S,"${pictures.origin}/endless.jpg, fox-2.jpg"\n`;
+  const started = Date.now();
+  const result = await runAsync(site, dir, sheet, fixtureMapping('pictures.json'));
+  // A body that has no end cannot be fetched whole: the read is stopped at the most, and is said.
+  assert.match(result.stdout, new RegExp(`«${pictures.origin}/endless\\.jpg» is more than 8 MB, and the library takes at most 8 MB a file — left out of t-shirt-fox`));
+  assert.ok(Date.now() - started < 15000, 'it did not wait for the end of the body, nor for the time of the address');
+  assert.deepEqual(assetsOf(site), ['t-shirt-fox-1.jpg']);
+  assert.deepEqual(readFileSync(join(site, 'src/assets/products/t-shirt-fox-1.jpg')), FOX['fox-2.jpg']);
+});
+
+test('an address that does not answer is left out when its time is up, one time for each address', async (t) => {
+  assert.equal(TIMEOUT, 20000, 'twenty seconds an address');
+  const pictures = await pictureServer(t);
+  const root = mkdtempSync(join(tmpdir(), 'jtk-pictures-'));
+  scratch.push(root);
+  const calls = [];
+  const spy = (url, init) => (calls.push(init), fetch(url, init));
+  const planned = [{
+    slug: 'fox',
+    pictures: [
+      { ref: `${pictures.origin}/hang.jpg`, line: 2, column: 'Images' },
+      { ref: `${pictures.origin}/stall.jpg`, line: 2, column: 'Images' },
+      { ref: `${pictures.origin}/fox-1.jpg`, line: 3, column: 'Images' },
+    ],
+  }];
+  const started = Date.now();
+  const { slots, said: lines } = await fetchPictures(planned, { root, from: root, fetch: spy, timeout: 150 });
+
+  // The first never answers, the second answers its head and stops: each is left out at its own time, the third is had.
+  assert.deepEqual([...slots], [['fox', ['products/fox-1']]]);
+  assert.deepEqual(lines, [
+    `row 2, column «Images»: «${pictures.origin}/hang.jpg» took more than 0.15 seconds — left out of fox`,
+    `row 2, column «Images»: «${pictures.origin}/stall.jpg» took more than 0.15 seconds — left out of fox`,
+  ]);
+  assert.ok(Date.now() - started < 5000);
+  assert.ok(calls.every((init) => init.cache === 'no-store' && init.signal instanceof AbortSignal), 'no-store, and a signal');
+  assert.equal(new Set(calls.map((init) => init.signal)).size, 3, 'a time of its own for each address');
+  assert.deepEqual(readFileSync(join(root, 'src/assets/products/fox-1.jpg')), FOX['fox-1.jpg']);
+});
+
+test('a body of exactly the most is taken and one byte more is not; an address that is cut, errs or is not there is said with why', async (t) => {
+  const pictures = await pictureServer(t);
+  const closed = await new Promise((done) => {
+    const probe = createServer();
+    probe.listen(0, '127.0.0.1', () => {
+      const { port } = probe.address();
+      probe.close(() => done(port));
+    });
+  });
+  const root = mkdtempSync(join(tmpdir(), 'jtk-pictures-'));
+  scratch.push(root);
+  const at = (path, line) => ({ ref: `${pictures.origin}${path}`, line, column: 'Images' });
+  const planned = [{ slug: 'fox', pictures: [at('/over.jpg', 2), at('/exact.jpg', 3), at('/cut.jpg', 4), at('/error.jpg', 5), { ref: `http://127.0.0.1:${closed}/x.jpg`, line: 6, column: 'Images' }] }];
+  const { slots, said: lines } = await fetchPictures(planned, { root, from: root });
+  assert.deepEqual([...slots], [['fox', ['products/fox-1']]], 'the one of exactly the most');
+  assert.equal(statSync(join(root, 'src/assets/products/fox-1.jpg')).size, 8 * MB);
+  assert.equal(lines.length, 4, lines.join('\n'));
+  assert.match(lines[0], /row 2, column «Images»: «.*\/over\.jpg» is more than 8 MB, and the library takes at most 8 MB a file — left out of fox$/);
+  assert.match(lines[1], /row 4, column «Images»: «.*\/cut\.jpg» was cut off while it was read \(\w+\) — left out of fox$/);
+  assert.match(lines[2], /row 5, column «Images»: «.*\/error\.jpg» answered 500 — left out of fox$/);
+  assert.match(lines[3], /row 6, column «Images»: «http:\/\/127\.0\.0\.1:\d+\/x\.jpg» could not be reached \(ECONNREFUSED\) — left out of fox$/);
+});
+
+// ── the mapping's pictures, the products that take them, what --media needs ─
+
+test('the mapping\'s pictures name a column the sheet has, and the split their cell is cut by', () => {
+  const { dir, site } = freshSite();
+  const before = snapshot(site);
+  const sheet = 'Name,Price,Bilder\nBecher,5,a.jpg\n';
+  const base = { v: 1, decimal: '.' };
+  const none = run(site, dir, sheet, { ...base, fields: { title: 'Name', price: 'Price', pictures: 'Fotos' } });
+  assert.equal(none.status, 1, said(none));
+  assert.match(none.stderr, /fields\.pictures: names the column «Fotos» and the sheet has not got one \(its columns: Name, Price, Bilder\)/);
+  for (const pictures of [{ column: 'Bilder', split: '' }, { column: 'Bilder', split: 1 }, { column: 'Bilder', cut: ',' }, { split: ',' }, 7, []]) {
+    const bad = run(site, dir, sheet, { ...base, fields: { title: 'Name', price: 'Price', pictures } });
+    assert.equal(bad.status, 1, `${JSON.stringify(pictures)}\n${said(bad)}`);
+    assert.match(bad.stderr, /fields\.pictures(\.column)?: /);
+  }
+  assert.deepEqual(snapshot(site), before, 'nothing was written');
+});
+
+test('pictures are taken for a product the import makes, or one with neither a cover nor pictures; one that has its pictures keeps them', async (t) => {
+  const pictures = await pictureServer(t);
+  const { dir, site } = sheetDir();
+  const sheet = picturesSheet(pictures.origin);
+  const plain = fixtureMapping('pictures.json');
+  const without = structuredClone(plain);
+  delete without.fields.pictures;
+
+  // A product made with no pictures, then the sheet's with them: it has neither, so it takes them and changes nothing else.
+  assert.equal(run(site, dir, sheet, without).status, 0);
+  const made = entry(site, 't-shirt-fox');
+  assert.equal('cover' in made.fields, false);
+  const taken = await runAsync(site, dir, sheet, plain);
+  assert.match(taken.stdout, /t-shirt-fox: cover none → «products\/t-shirt-fox-1»/);
+  assert.match(taken.stdout, /0 made, 1 updated, 0 left as they are/);
+  const fox = entry(site, 't-shirt-fox');
+  assert.equal(fox.id, made.id);
+  assert.equal(fox.rank, made.rank);
+  assert.deepEqual(fox.fields.variants, made.fields.variants, 'the variants as they were');
+  assert.deepEqual(fox.fields.cover, { src: 'products/t-shirt-fox-1', alt: 'T-Shirt Fox' });
+  assert.equal(fox.fields.pictures.length, 1);
+
+  // One with a cover of the owner's keeps it, and the sheet's pictures are not fetched; so does one with pictures and no cover.
+  const owner = { src: `media/${SITE_ID}/0123456789abcdef.jpg`, alt: 'Fox, worn' };
+  for (const kept of [{ cover: owner }, { pictures: [{ _key: 'k0000001', ...owner }] }]) {
+    const { cover, pictures: rows, ...rest } = fox.fields;
+    write(site, 'jtk/entries/products/t-shirt-fox.json', { ...fox, fields: { ...rest, ...kept } });
+    rmSync(join(site, 'src/assets/products'), { recursive: true, force: true });
+    const asked = pictures.requests.length;
+    const result = await runAsync(site, dir, sheet, plain);
+    assert.equal(result.status, 0, said(result));
+    assert.equal(pictures.requests.length, asked, 'nothing was fetched');
+    assert.deepEqual(entry(site, 't-shirt-fox').fields.cover, kept.cover);
+    assert.deepEqual(entry(site, 't-shirt-fox').fields.pictures, kept.pictures);
+    assert.deepEqual(assetsOf(site), []);
+  }
+});
+
+test('--dry-run says what it would fetch and fetches nothing', async (t) => {
+  const pictures = await pictureServer(t);
+  const { dir, site } = sheetDir();
+  const before = snapshot(site);
+  const result = await runAsync(site, dir, picturesSheet(pictures.origin), fixtureMapping('pictures.json'), '--dry-run');
+  assert.equal(result.status, 0, said(result));
+  assert.match(result.stdout, /would make t-shirt-fox[^\n]*\n(?:.*\n)*?\s+would fetch 2 pictures into src\/assets\/products\/ and name them as the cover and the pictures/);
+  assert.match(result.stdout, /would add src\/assets\/products\/ to \.gitignore/);
+  assert.deepEqual(pictures.requests, [], 'nothing was fetched');
+  assert.deepEqual(snapshot(site), before, 'and nothing was written');
+});
+
+test('--media is judged before anything is written, and a push that cannot go on leaves the pictures said', async (t) => {
+  const pictures = await pictureServer(t);
+  const library = await mediaLibrary(t);
+  const { dir, site } = sheetDir();
+  const before = snapshot(site);
+  const sheet = picturesSheet(pictures.origin);
+
+  // Not a link, a link that is not media_link's, and a mapping with no pictures to send: refused, the tree as it was.
+  const notLink = await runAsync(site, dir, sheet, fixtureMapping('pictures.json'), '--media', 'a link');
+  assert.equal(notLink.status, 1, said(notLink));
+  assert.match(notLink.stderr, /--media: that is not a URL — give the one media_link returned, in quotes/);
+  const plain = fixtureMapping('pictures.json');
+  delete plain.fields.pictures;
+  const noPictures = await runAsync(site, dir, sheet, plain, '--media', library.mint());
+  assert.equal(noPictures.status, 1, said(noPictures));
+  assert.match(noPictures.stderr, /--media sends the pictures the sheet names, and the mapping names no `pictures` column/);
+  assert.deepEqual(snapshot(site), before);
+  assert.deepEqual(pictures.requests, []);
+
+  // A link that has ended: the entries are written, the files are kept, and what waits is said with how to carry on.
+  const link = library.mint();
+  library.end();
+  const ended = await runAsync(site, dir, sheet, fixtureMapping('pictures.json'), '--media', link);
+  assert.equal(ended.status, 1, said(ended));
+  assert.match(ended.stderr, /jtk import products: the pictures were not sent — unauthenticated — this link is not good \(any more\) — ask media_link for a new one/);
+  assert.match(ended.stdout, WAITING(2));
+  assert.doesNotMatch(said(ended), new RegExp(link.split('#t=')[1]), 'the token is printed nowhere');
+  assert.equal(entry(site, 't-shirt-fox').fields.cover.src, 'products/t-shirt-fox-1');
+  assert.deepEqual(assetsOf(site), ['t-shirt-fox-1.jpg', 't-shirt-fox-2.jpg']);
+
+  // The same command with a new link carries on: nothing is fetched again, the keys are written.
+  const asked = pictures.requests.length;
+  const carried = await runAsync(site, dir, sheet, fixtureMapping('pictures.json'), '--media', library.mint());
+  assert.equal(carried.status, 0, said(carried));
+  assert.equal(pictures.requests.length, asked);
+  assert.match(entry(site, 't-shirt-fox').fields.cover.src, KEY);
+  assert.deepEqual(assetsOf(site), []);
 });
