@@ -76,11 +76,20 @@
  * with `ref` the one collection where `to` names one. The rest of a
  * declaration is passed as the schema writes it.
  *
- * Imports nothing outside the kit's content and money: the door runs in a
- * Vite build, in Node and in a test alike.
+ * **An entry may go by its own date** (`ends_by` on its collection, the
+ * owner, 16 November 2026): its `hide_at` is then the date's moment — the
+ * date at its time, on the zone's clock, and `after` minutes — as the
+ * platform writes it on every save, whatever the file says. A night that is
+ * over is left out of `site.entries(…)` on the dev server and in a local
+ * build before the platform has ever saved it, and a template has no
+ * comparison of its own with today to make (endsBy.mjs).
+ *
+ * Imports nothing outside the kit's content, money and dates: the door runs
+ * in a Vite build, in Node and in a test alike.
  */
 import { money as priced, priceWords } from '../money.mjs';
 import { shownAt } from '../schedule.mjs';
+import { endsByOf, hideAtOf } from '../endsBy.mjs';
 import { ancestors, capped, descendants, grouped, groupField, selectHeadings } from './groups.mjs';
 import { canonicalLocale, baseAddressOf, inLocale, languagesOf, localeArg, localeOfAddress, sharedLocaleOf } from './locale.mjs';
 import { byRank, factsOf, labelLang, labelWords, minorOf, namesIn, specimenId, tappable } from './rules.mjs';
@@ -281,6 +290,10 @@ export function contract3(byPath, names, { annotate, now }) {
       untranslated: one.untranslated === 'hide' ? 'hide' : 'base',
       prefix: '',
     };
+    // That its entries go by their own date (endsBy.mjs): the door leaves
+    // out one whose moment has passed.
+    const ends = endsByOf(one.ends_by);
+    if (ends !== undefined) collection.ends_by = ends;
     collections.set(one.name, collection);
     // Contract 2's word for where a collection's entries live, kept for a
     // template that reads it: the listing it declares, in the site's own
@@ -467,7 +480,14 @@ export function contract3(byPath, names, { annotate, now }) {
     if (merged !== null) {
       const theirBody = over !== undefined && Array.isArray(over.raw.blocks) && over.raw.blocks.length > 0;
       const held = merged.visible === false && file.raw.visible !== false;
-      const shownBy = (at) => shownAt(file.raw, at) && !held;
+      // A collection that goes by its entries' date: the moment is the
+      // date's, as the platform writes hide_at from it on every save — a
+      // hide_at in the file is written over, and an entry with no date has
+      // none (registry.EndsBy, sites/endsBy.go). The original's values: a
+      // translation's moments are its original's.
+      const ends = collections.get(file.collection)?.ends_by;
+      const moments = ends === undefined ? file.raw : { visible: file.raw.visible, show_at: file.raw.show_at, hide_at: hideAtOf(ends, isObject(file.raw.fields) ? file.raw.fields : undefined) };
+      const shownBy = (at) => shownAt(moments, at) && !held;
       doc = {
         kind: 'entry',
         file: over?.file ?? file.file,

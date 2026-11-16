@@ -218,6 +218,28 @@ export type Pattern = string | Record<string, string>;
  */
 export type Route = 'none' | { detail: Pattern; listing?: Pattern; per_page?: number };
 
+/**
+ * That a collection's entries go from the site by their own date (the owner,
+ * 16 November 2026): the platform writes each entry's `hide_at` from it on
+ * every save, and the door leaves out one whose moment has passed — so a
+ * template never compares the date with today itself.
+ *
+ *   { date: 'date', time: 'starts', after: 480, zone: 'Europe/Zurich' }
+ *
+ * The moment is the date at the time (the start of the day without one) on
+ * the zone's clock, and `after` minutes.
+ */
+export interface EndsBy {
+  /** A field of kind `date` of the entry type. An entry with no date stays. */
+  date: string;
+  /** A field of kind `time_of_day` (minutes from midnight); absent is the start of the day. */
+  time?: string;
+  /** Minutes after that moment, 0 to 10080 (a week); absent is 0 with a time, 1440 without one. */
+  after?: number;
+  /** The IANA zone the date and the time are on the clock of: `Europe/Zurich`. */
+  zone: string;
+}
+
 /** A set of entries of one block type (§3.5). */
 export interface Collection {
   /** Its entries' directory, `jtk/entries/<name>/`; fixed once it has entries. */
@@ -241,6 +263,8 @@ export interface Collection {
   blocks?: string[];
   /** What a language with no translation does with an entry: shows the original, or leaves it out. */
   untranslated?: 'base' | 'hide';
+  /** That its entries go by their own date: the platform writes each one's `hide_at` from it. */
+  ends_by?: EndsBy;
 }
 
 /** The domain modules the site turns on, each pointed at its collections by role: `{ bookings: { services: 'services', resources: 'masters' } }`. */

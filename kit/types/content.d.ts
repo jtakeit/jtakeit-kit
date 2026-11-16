@@ -98,6 +98,12 @@ export interface Collection {
   shown_on?: (string | Record<string, string>)[];
   /** Contract 3: what a language without a translation does with an entry: shows the original, or hides it there (built, listed nowhere, as a language held back is). */
   untranslated?: 'base' | 'hide';
+  /**
+   * Contract 3: that its entries go by their own date — `{ date, time?,
+   * after?, zone }`. The door leaves out an entry whose moment has passed, as
+   * the platform's `hide_at` written from the date does.
+   */
+  ends_by?: { date: string; time?: string; after?: number; zone: string };
 }
 
 /** The annotation of one value: spread it onto the element that draws it. Empty when annotation is off. */

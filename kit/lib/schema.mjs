@@ -44,6 +44,13 @@
  * whatever order the exports come in, so a declaration that says the same
  * thing writes the same bytes.
  *
+ * ── what it advises ──────────────────────────────────────────────────────────
+ *
+ * A template that compares an entry's date with today to choose what it
+ * shows (`JTK_W_DATE_HIDES`, dateHides.mjs): the collection's `ends_by` says
+ * it once, for the site, the panel and the build. Said in every mode, with
+ * `--emit-only` too, and counted in no exit code.
+ *
  * ── what it never writes ────────────────────────────────────────────────────
  *
  * `jtk/catalogue.json`: the platform refuses a tree holding both (§16), and
@@ -52,7 +59,7 @@
  * asked about a file this copy turned down.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -61,6 +68,7 @@ import { unnamed } from './content/identity.mjs';
 import { content } from './content/index.mjs';
 import { contractOf, mintJtk, readJtk } from './content/node.mjs';
 import { canonicalTag, judgeSchema } from './judge3.mjs';
+import { CODE_FILE, dateHides } from './dateHides.mjs';
 import { filesBeside, judgeRequest } from './judgeFiles.mjs';
 import { copiesMissing, copyMissingSays, judgeTranslations } from './translations.mjs';
 import { BY_INDEX, DOCUMENT_ID, ID, drawnOn, isEmpty, KEY, placesIn, seenOn, tappable3 } from './places3.mjs';
@@ -463,6 +471,32 @@ the rule here into line, or add the one it is missing.`);
  * @param {string[]} argv
  * @returns {Promise<number>} the exit code
  */
+/**
+ * The site's own code under `src/`, by its path from the root — what a
+ * template may compare an entry's date with the clock in.
+ * @param {string} root
+ * @returns {Record<string, string>}
+ */
+export function codeFiles(root) {
+  const out = {};
+  const walk = (dir) => {
+    let entries;
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+      const file = join(dir, entry.name);
+      if (entry.isDirectory()) walk(file);
+      else if (CODE_FILE.test(entry.name)) out[relative(root, file).split(sep).join('/')] = readFileSync(file, 'utf8');
+    }
+  };
+  walk(join(root, 'src'));
+  return out;
+}
+
 export async function main(argv) {
   const has = (name) => argv.includes(`--${name}`);
   const flag = (name, fallback) => {
@@ -594,6 +628,11 @@ studio's preview arrangement, which the schema has nothing to say about.`);
       console.log(`jtk/modules/${module}.json — seeded with empty settings: fill them in (the platform's modules reference lists them) and commit it`);
     }
   }
+
+  // A template that chooses what it shows by comparing an entry's date with
+  // the clock (dateHides.mjs): advice, counted nowhere.
+  const dated = dateHides(codeFiles(root), schema);
+  for (const one of dated) console.log(`  ~ ${one.code}  ${one.path}: ${one.says}`);
 
   const before = nameless.length + (stray ? 1 : 0) + exam.ofFiles + translations;
   if (problems.length > 0) return capped(problems.length + before);
