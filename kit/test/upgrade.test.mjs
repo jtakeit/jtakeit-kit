@@ -11,7 +11,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { content } from '../lib/content/index.mjs';
 import { judgeSchema, schemaOf, schemaText } from '../lib/schema.mjs';
-import { collection3, contactsOf, documentsOf, field3, fields3, rankBetween, rankSpread, stateOf, tablesOf } from '../lib/upgrade3.mjs';
+import { collection3, contactsOf, documentsOf, field3, fields3, hintOf, nameOfPage, rankBetween, rankSpread, stateOf, tablesOf } from '../lib/upgrade3.mjs';
 
 const ce = { client_editable: true };
 
@@ -211,10 +211,48 @@ test('documents: each at its §2 place, the ids kept, the rest minted; contract 
   assert.deepEqual(write['/jtk/pages/services.json'], { id: id(101), path: '/services', name: 'Services' });
 });
 
+test('documents: a page made to back a shown_on is said as such, for the caller to ask whether its route reads it (the KAIF move, B15)', () => {
+  const { backing } = moved();
+  assert.deepEqual(backing, [{ path: '/services', file: '/jtk/pages/services.json', collection: 'services' }]);
+});
+
+test('the home page is named by the word for it in the site\'s language, before its SEO title and its first heading; a navigation label still wins (the KAIF move, B11)', () => {
+  const home = { seo: { title: 'KAIF — вечеринки в Цюрихе для своих' }, blocks: [{ title: 'KAIF' }] };
+  assert.equal(nameOfPage(home, '/', 'ru'), 'Главная');
+  assert.equal(nameOfPage(home, '/', 'de-CH'), 'Startseite');
+  assert.equal(nameOfPage(home, '/', 'ja'), 'Home');
+  assert.equal(nameOfPage({ ...home, nav_label: 'Start' }, '/', 'de'), 'Start');
+  // Any other page keeps its own: the SEO title, then its heading.
+  assert.equal(nameOfPage(home, '/afisha', 'ru'), 'KAIF — вечеринки в Цюрихе для своих');
+});
+
+test('the contacts\' hints are in the site\'s language, as their label is: one string for a site in one language, a map for more (the KAIF move, B8)', () => {
+  assert.equal(hintOf('phone', ['ru']), 'Номер для звонка, записанный так, как его набирают; сайт показывает его отформатированным.');
+  assert.equal(hintOf('city', ['de-CH']), 'Der Ort dieser Adresse.');
+  assert.deepEqual(Object.keys(hintOf('name', ['de-CH', 'fr', 'en'])), ['de', 'fr', 'en']);
+  // A language the kit has no words in: English.
+  assert.equal(hintOf('email', ['ja']), 'Where a visitor writes to.');
+  assert.deepEqual(hintOf('email', ['ja', 'uk']), { uk: 'Куди пише відвідувач.' });
+  for (const language of ['ru', 'de', 'en', 'uk', 'fr', 'it', 'es', 'pt', 'pl']) {
+    for (const role of ['name', 'phone', 'email', 'street', 'postal_code', 'city', 'region', 'country', 'maps', 'social', 'price_range', 'business_type', 'hours']) {
+      assert.equal(typeof hintOf(role, [language]), 'string', `${language} ${role}`);
+    }
+  }
+  const { block } = contactsOf([{ key: 'name', label: 'Название', kind: 'text', no_tap_target: true, client_editable: true }], 'ru');
+  assert.equal(block.fields[0].hint, 'Название заведения, каким его знают поисковые системы и ассистенты.');
+  const two = contactsOf([{ key: 'name', label: 'Firmenname', kind: 'text', no_tap_target: true, client_editable: true }], 'de-CH', ['en']);
+  assert.deepEqual(Object.keys(two.block.fields[0].hint), ['de', 'en']);
+  // The scaffold's own English label keeps its English hint beside it, as jtk create writes it on contract 3.
+  assert.equal(contactsOf([{ key: 'city', label: 'City', kind: 'text', no_tap_target: true }], 'de-CH').block.fields[0].hint, 'The town of that address.');
+  // A hint the developer wrote is theirs.
+  assert.equal(contactsOf([{ key: 'name', label: 'Name', kind: 'text', hint: 'Mine', no_tap_target: true }], 'ru').block.fields[0].hint, 'Mine');
+});
+
 test('documents: a page named once, empty folded away, a key the grammar cannot name minted again, words folded into the picture', () => {
   const { write } = moved();
   const page = write['/jtk/pages/index.json'];
-  assert.equal(page.name, 'Willkommen');
+  // The home page by the site's word for it, before its heading (B11).
+  assert.equal(page.name, 'Startseite');
   assert.equal(page.seo, undefined);
   const [hero, gallery] = page.blocks;
   assert.match(hero._key, /^k[0-9a-f]{7}$/);
