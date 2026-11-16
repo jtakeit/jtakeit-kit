@@ -265,6 +265,42 @@ test('a bind and a link name a place by key in the page\'s own document or the s
   ]);
 });
 
+test('a link set on another document names it by id, as a tile does — accepted where that document declares the field, refused where it does not or is not there (the KAIF move, B4)', async () => {
+  const links = [
+    // The ticket's link on the home page is the entry's own field.
+    `<a href="https://x.ch" data-jtk-href="entry:${OAK}:title">x</a>`,
+    `<a href="https://x.ch" data-jtk-href="page:${PRICES}:blocks[list].title">x</a>`,
+    `<a href="https://x.ch" data-jtk-href="entry:${OAK}:subtitle">x</a>`,
+    `<a href="https://x.ch" data-jtk-href="entry:${NOBODY}:title">x</a>`,
+    `<a href="https://x.ch" data-jtk-href="page:${PRICES}:blocks[hero].link">x</a>`,
+    '<a href="https://x.ch" data-jtk-href="page:/preise:blocks[0].title">x</a>',
+  ].join('');
+  const out = await lint({ root: tree({ pages: page('index.html', '</body>', `${links}</body>`) }) });
+  assert.deepEqual(said(out), [
+    `${CODES.ANNOTATION_UNKNOWN} /: leads a link to subtitle on entry:${OAK}, which that entry's document has no field for`,
+    `${CODES.ANNOTATION_UNKNOWN} /: leads a link to where entry:${NOBODY}:title says, and this site has no such entry`,
+    `${CODES.ANNOTATION_UNKNOWN} /: leads a link to blocks[hero].link on page:${PRICES}, which that page's document has no field for`,
+    `${CODES.ANNOTATION_UNKNOWN} /: leads a link to where page:/preise:blocks[0].title says, which names no document by its id — contract 3 names another page or an entry by its id: page:<id>:… and entry:<id>:…`,
+  ]);
+});
+
+test('a filled value this build does not draw at all is advice, and one drawn without its annotation is refused (the KAIF move, B9)', async () => {
+  // The lead hidden by a condition in the template: neither its annotation nor its words on the page.
+  const hidden = await lint({ root: tree({ pages: page('index.html', '<p data-jtk-path="blocks[hero].lead">Ein Laden.</p>', '') }) });
+  assert.deepEqual(said(hidden), []);
+  assert.equal(hidden.ok, true);
+  assert.ok(
+    hidden.warnings.some((one) => one.code === 'JTK_W_UNANNOTATED_FIELD' && one.says === '/: blocks[hero].lead is filled and this build does not draw it at all — a condition in the template hides it; where it is drawn, annotate it'),
+    JSON.stringify(hidden.warnings),
+  );
+  // Drawn, its words on the page, and nothing to tap: refused as before.
+  const drawn = await lint({ root: tree({ pages: page('index.html', '<p data-jtk-path="blocks[hero].lead">Ein Laden.</p>', '<p>Ein Laden.</p>') }) });
+  assert.deepEqual(said(drawn), [`${CODES.UNANNOTATED_FIELD} /: blocks[hero].lead is not annotated`]);
+  // A picture is drawn as something else than its key: never said to be hidden.
+  const picture = await lint({ root: tree({ pages: page('index.html', '<img data-jtk-path="blocks[hero].image.src" src="a.jpg">', '') }) });
+  assert.deepEqual(said(picture), [`${CODES.UNANNOTATED_FIELD} /: blocks[hero].image.src is not annotated`]);
+});
+
 test('names: a page or an entry without its id, a block or a row without its _key — JTK_E_UNNAMED with the file and the fix, and the rest still read', async () => {
   const home = structuredClone(FILES['jtk/pages/index.json']);
   delete home.id;

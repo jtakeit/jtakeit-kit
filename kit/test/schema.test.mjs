@@ -409,6 +409,46 @@ test('a sentence nobody claimed is said, as jtk catalogue says it', () => {
   assert.equal(status, 1);
 });
 
+test('a filled value this build does not draw at all is advice, not a disagreement — a condition in the template hides it (the KAIF move, B9)', () => {
+  const { status, out } = checked(HOME_PAGE.replace('<h1 data-jtk-path="blocks[hero].title">Hallo</h1>', ''), OAK_PAGE);
+  assert.match(out, /~ \/: blocks\[hero\]\.title is filled and this build does not draw it at all — a condition in the template hides it; where it is drawn, annotate it/);
+  assert.match(out, /the schema and the page agree/);
+  assert.equal(status, 0, out);
+});
+
+test('a link set on another document is resolved in that document, as a tile is: accepted where it declares the field, refused where it does not or is not there (the KAIF move, B4)', () => {
+  const NOBODY = '0193a5c3-0000-7000-8000-000000000000';
+  const home = `${HOME_PAGE}<a href="https://x.ch" data-jtk-fixed data-jtk-href="entry:${CUT}:title">→</a><a href="https://x.ch" data-jtk-fixed data-jtk-href="entry:${CUT}:link">→</a><a href="https://x.ch" data-jtk-fixed data-jtk-href="entry:${NOBODY}:title">→</a>`;
+  const oak = `${OAK_PAGE}<a href="https://x.ch" data-jtk-fixed data-jtk-href="page:${HOME}:blocks[hero].title">→</a>`;
+  const { status, out } = checked(home, oak);
+  assert.doesNotMatch(out, new RegExp(`entry:${CUT}:title says`));
+  assert.doesNotMatch(out, /page:[^ ]*:blocks\[hero\]\.title says/);
+  assert.match(out, new RegExp(`✗ /: leads a link to where entry:${CUT}:link says, which that entry's document has no field for`));
+  assert.match(out, new RegExp(`✗ /: leads a link to where entry:${NOBODY}:title says, and this site has no such entry`));
+  assert.equal(status, 2, out);
+});
+
+test('dist/_meta.json in the shape the platform\'s build reads: contract 2\'s drafts refused, as the build refuses them (the KAIF move, B3)', () => {
+  const root = site(HOME_PAGE, OAK_PAGE);
+  try {
+    writeFileSync(join(root, 'dist/_meta.json'), JSON.stringify({ redirects: [], drafts: ['/afisha/novaya/'] }));
+    const said = run(root, '--dist', join(root, 'dist'));
+    const out = `${said.stdout}\n${said.stderr}`;
+    assert.match(out, /✗ JTK_E_META_INVALID {2}dist\/_meta\.json: "drafts" is contract 2's/);
+    assert.equal(said.status, 1, out);
+    writeFileSync(join(root, 'dist/_meta.json'), JSON.stringify({ redirects: [{ from: '/alt', to: '/' }], immutable: ['/_astro/'] }));
+    assert.equal(run(root, '--dist', join(root, 'dist')).status, 0);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('a picture of the library drawn as its key, because this machine has not got it, says to pull the library (the KAIF move, manual fix 13)', () => {
+  const { status, out } = checked(`${HOME_PAGE}<div>media/0848daf4-6c94-4932-b797-f9081bff1ce7/d25d2166ff3026b1.jpg</div>`, OAK_PAGE);
+  assert.match(out, /a picture of the site's media library drawn as its key: this machine has not got the file\.\n\s+Run npx jtk media pull/);
+  assert.equal(status, 1);
+});
+
 // ── --judge ────────────────────────────────────────────────────────────────
 
 /** A judge on localhost that answers `verdict` and keeps what it was sent. */

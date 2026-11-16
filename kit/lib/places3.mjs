@@ -129,7 +129,86 @@ export function placesIn(schema, shared, { which = tappable3 } = {}) {
     return part === undefined || here.kind === 'media';
   }
 
-  return { types, collections, fieldsOfType, fieldsOfEntry, expected, blockPlaces, entryPlaces, declares };
+  /**
+   * The field a place names in a document and the value it holds there — the
+   * page's own blocks, the shared text's (`shared:`), or an entry's own
+   * values — or undefined where the document has no such place. A row and a
+   * gallery's picture by their `_key`, a picture's part last.
+   */
+  function valueAt(document, path, entry) {
+    const found = /^(shared:)?(?:blocks\[([a-z][a-z0-9-]{0,31})\]\.)?(.+)$/.exec(path);
+    if (found === null) return undefined;
+    let fields;
+    let values;
+    if (found[2] === undefined) {
+      if (found[1] !== undefined || !entry || document === undefined) return undefined;
+      fields = fieldsOfEntry(document);
+      values = isObject(document.fields) ? document.fields : {};
+    } else {
+      const blocks = found[1] !== undefined ? sharedBlocks : Array.isArray(document?.blocks) ? document.blocks : [];
+      const block = blocks.find((one) => isObject(one) && one._key === found[2]);
+      if (block === undefined) return undefined;
+      fields = fieldsOfType(block.type);
+      values = block;
+    }
+    let field;
+    let value = values;
+    for (const step of found[3].split('.')) {
+      if (field?.kind === 'media' && PICTURE.has(step)) return isObject(value) ? { field, value: value[step], part: step } : undefined;
+      const named = /^([a-z][a-z0-9_]{0,39})(?:\[([a-z][a-z0-9-]{0,31})\])?$/.exec(step);
+      if (named === null || !isObject(value)) return undefined;
+      field = (field === undefined ? fields : Array.isArray(field.of) ? field.of.filter(isObject) : []).find((one) => one.key === named[1]);
+      if (field === undefined) return undefined;
+      value = value[named[1]];
+      if (named[2] !== undefined) {
+        const row = Array.isArray(value) ? value.find((one) => isObject(one) && one._key === named[2]) : undefined;
+        if (row === undefined) return undefined;
+        if (field.kind === 'media') return { field, value: row, part: undefined };
+        value = row;
+      }
+    }
+    return field === undefined ? undefined : { field, value };
+  }
+
+  return { types, collections, fieldsOfType, fieldsOfEntry, expected, blockPlaces, entryPlaces, declares, valueAt };
+}
+
+/** The kinds whose value a page draws as it is stored, in its words, an attribute or a link — so a page can be searched for it. */
+const SEARCHABLE = new Set(['text', 'textarea', 'tel', 'email', 'url', 'number', 'select']);
+
+/** A page's markup with the entities a build writes put back, its spaces as one. */
+export function searchable(html) {
+  return html
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(Number.parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(Number(dec)))
+    .replace(/&(quot|apos|lt|gt|nbsp|amp);/g, (_, name) => ({ quot: '"', apos: "'", lt: '<', gt: '>', nbsp: ' ', amp: '&' })[name])
+    .replace(/\s+/g, ' ');
+}
+
+/**
+ * Whether a filled value a page does not annotate is on that page at all —
+ * the line between a field this build does not draw (a template condition
+ * hides it: KAIF's footer draws `tickets_label` only when the next night has
+ * a ticket link, B9) and one drawn and left untappable. Asked of the page's
+ * markup, words and attributes, for a value drawn as it is stored; a picture
+ * or a body is drawn as something else, and is never said to be absent.
+ *
+ * @param {string} page `searchable(html)` of the built page
+ * @param {any} field @param {unknown} value
+ * @returns {boolean | undefined} true drawn, false not drawn, undefined not known
+ */
+export function drawnOn(page, field, value) {
+  if (!isObject(field) || !SEARCHABLE.has(field.kind)) return undefined;
+  let said;
+  if (field.kind === 'select') {
+    const option = (Array.isArray(field.options) ? field.options : []).find((one) => (isObject(one) ? one.value : one) === value);
+    const label = isObject(option) ? option.label : undefined;
+    said = [value, ...(typeof label === 'string' ? [label] : isObject(label) ? Object.values(label) : [])];
+  } else said = [value];
+  const words = said.filter((one) => typeof one === 'string' || typeof one === 'number').map((one) => String(one).replace(/\s+/g, ' ').trim()).filter((one) => one !== '');
+  if (words.length === 0) return undefined;
+  if (words.some((one) => page.includes(one))) return true;
+  return field.kind === 'tel' && words.some((one) => page.includes(one.replace(/[\s().\-/]/g, ''))) ? true : false;
 }
 
 /**
