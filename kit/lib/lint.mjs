@@ -694,7 +694,9 @@ async function lint3({ root, distDir, siteURL, now }) {
       }
       continue;
     }
-    if (!entry.shown || !ID.test(entry.id ?? '')) continue;
+    // Over and kept (ends_by, then keep): the template places it or not —
+    // an archive, or the coming ones only — as the platform's lint says.
+    if (!entry.shown || entry.ended === true || !ID.test(entry.id ?? '')) continue;
     for (const place of entryPlaces(entry)) {
       const tile = `entry:${entry.id}:${place}`;
       if (!everywhere.includes(`data-jtk-path="${tile}"`)) {
@@ -805,7 +807,7 @@ async function lint3({ root, distDir, siteURL, now }) {
         for (const place of wide.entryPlaces(entry)) if (!drawnAt(html, place)) warn(`${entry.path}: ${place} is not annotated`);
         continue;
       }
-      if (!entry.shown || !ID.test(entry.id ?? '')) continue;
+      if (!entry.shown || entry.ended === true || !ID.test(entry.id ?? '')) continue;
       for (const place of wide.entryPlaces(entry)) {
         if (!drawnAt(everywhere, `entry:${entry.id}:${place}`)) warn(`${entry.anchor ?? entry.slug}: entry:${entry.id}:${place} is on no page`);
       }
