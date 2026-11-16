@@ -1,6 +1,7 @@
 /**
- * The storefront's elements (`@jtakeit/kit/elements/shop-*`) and the one wire
- * they speak `shop/1` over (`@jtakeit/kit/elements/shop-wire`).
+ * The storefront's elements (`@jtakeit/kit/elements/shop-*`: the product, the
+ * cart, the checkout) and the one wire they speak `shop/1` over
+ * (`@jtakeit/kit/elements/shop-wire`).
  */
 
 /** The shop protocol's version: 1, named on every request as `X-Jtk-Shop`. */
@@ -42,13 +43,24 @@ export class JtkCart extends HTMLElement {
   connectedCallback(): void;
 }
 
+/** Wires one checkout's `form[data-checkout]`; one already wired is left alone. */
+export function wireCheckout(form: HTMLFormElement): void;
+/** Defines `<jtk-checkout>` (or the name given), where there is a document and it is not defined yet. */
+export function defineCheckout(name?: string): void;
+/** `<jtk-checkout>`: wires the checkout form inside it when it reaches the document. */
+export class JtkCheckout extends HTMLElement {
+  connectedCallback(): void;
+}
+
 declare global {
   interface DocumentEventMap {
     /** What a product's form says once a line is added: `jtk:cart` on the document, the cart's key (`jtk:cart:<api>`) in `detail`. */
     'jtk:cart': CustomEvent<string>;
     /**
      * What the cart says when the buyer goes on to the checkout: the country and the method chosen are written into the cart
-     * first, and the cart's key is in `detail`. No quote goes with it: the checkout asks the shop again, with the stored cart.
+     * first, and the cart's key is in `detail`. No quote goes with it: the checkout asks the shop again, with the stored cart,
+     * and shows itself (`<jtk-checkout>`). The checkout says `jtk:cart` in turn where the shop answered a press with a new
+     * price, so the cart above is priced again with it.
      */
     'jtk:to-checkout': CustomEvent<string>;
   }

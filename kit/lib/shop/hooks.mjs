@@ -77,7 +77,7 @@ export const CART = piece(
 /** The checkout step: the buyer, the address unless a pick-up, the total, then Stripe's page. */
 export const CHECKOUT = piece(
   [
-    { hook: 'form[data-checkout]', says: 'the form; `data-api`, `data-locale` and `data-return` (the path the buyer comes back to) on it' },
+    { hook: 'form[data-checkout]', says: 'the form, `hidden` until the cart\'s *To checkout* hands on; `data-api`, `data-locale`, `data-return` (the path the buyer comes back to: the order\'s page, in the page\'s language) and `data-words` on it, and what it is drawing in `data-state`: `pricing`, `priced`, `stale`, `failed`, `refused`, `empty`, `paying`' },
     { hook: '[name=name]', says: 'the buyer\'s name' },
     { hook: '[name=email]', says: 'the buyer\'s email, where the confirmation is sent' },
     { hook: '[name=phone]', says: 'a phone, optional' },
@@ -86,10 +86,10 @@ export const CHECKOUT = piece(
     { hook: '[name=line2]', says: 'the address\'s second line, optional' },
     { hook: '[name=postal_code]', says: 'the postal code' },
     { hook: '[name=city]', says: 'the city' },
-    { hook: '[data-total]', says: 'the total the buyer is shown and the checkout sends' },
+    { hook: '[data-total]', says: 'the total the buyer is shown and the checkout sends: the subtotal and the method\'s price, as the shop priced the cart when the step was opened' },
     { hook: '[data-challenge]', says: 'empty and hidden; the anti-bot widget goes here where the host has one' },
     { hook: '[data-checkout-error]', says: 'what is wrong, said; tied to the fields it is about' },
-    { hook: '[data-pay]', says: 'the button that goes to pay' },
+    { hook: '[data-pay]', says: 'the button that goes to pay, a submit; held (`aria-disabled`) while the shop is asked, and one press of it is one order however often it is retried' },
   ],
   [
     { hook: '[data-abroad]', says: 'hidden; the customs notice, shown for a method that sends across the customs border' },

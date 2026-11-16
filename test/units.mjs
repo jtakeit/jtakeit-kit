@@ -451,7 +451,7 @@ try {
     // example/files is never written.
     const { shop, SHOP_FILES } = await import('../lib/units/shop.mjs');
     const { siteOf, treeOf: treeIn } = await import('../lib/units/index.mjs');
-    for (const path of ['src/components/shop/Product.astro', 'src/components/shop/Cart.astro', 'src/pages/[...lang]/cart.astro']) {
+    for (const path of ['src/components/shop/Product.astro', 'src/components/shop/Cart.astro', 'src/components/shop/Checkout.astro', 'src/pages/[...lang]/cart.astro']) {
       if (!SHOP_FILES.includes(path)) fail(`6 · the storefront's files do not name ${path}: ${SHOP_FILES}`);
     }
     const files = join(dir, 'storefront-files');

@@ -13,3 +13,5 @@ export { MAX_LINES, MAX_QTY, cartKey, readCart, addLine, removeLine, setQty, shi
 export type { Cart, CartLine, CartRow, CartView } from './shop-cart';
 export { productFacts, variantFor, valueStates, answersOf, fromPrice } from './shop';
 export type { ProductFacts, ValueState } from './shop';
+export { ATTEMPT, pressKey, freshPress, pressFor, checkoutBody, missingDetails, afterAnswer, CHECKOUT_WORDS } from './shop-checkout';
+export type { Press, Next, Buyer, Address, CheckoutForm } from './shop-checkout';

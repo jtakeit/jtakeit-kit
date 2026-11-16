@@ -44,6 +44,10 @@
       "types": "./types/shop-cart.d.ts",
       "default": "./lib/shop/cart.mjs"
     },
+    "./shop/checkout": {
+      "types": "./types/shop-checkout.d.ts",
+      "default": "./lib/shop/checkout.mjs"
+    },
     "./lead": {
       "types": "./types/lead.d.ts",
       "default": "./lib/lead/render.mjs"
@@ -103,6 +107,10 @@
     "./elements/shop-cart": {
       "types": "./types/elements-shop.d.ts",
       "default": "./elements/shop-cart.js"
+    },
+    "./elements/shop-checkout": {
+      "types": "./types/elements-shop.d.ts",
+      "default": "./elements/shop-checkout.js"
     },
     "./booking.css": "./booking.css",
     "./lead.css": "./lead.css",

@@ -53,6 +53,32 @@ const CART_DRIVE = [
 ];
 
 /**
+ * What the checkout's drive must have said on each cart page: the test shop sends to Switzerland by a parcel and a pick-up,
+ * and to Deutschland across the customs border by both — and devShop answers every press, which the walk holds where an
+ * answer it never gives is under test.
+ */
+const CHECKOUT_DRIVE = [
+  'checkout: To checkout opens the step',
+  "checkout: the total is the shop's",
+  'checkout: Pay pressed with nothing filled in',
+  'checkout: a pick-up asks no address',
+  'checkout: the customs sentence is said beside the total',
+  'checkout: incl. VAT is said beside the total',
+  'checkout: Pay pressed again while the shop answers is the same press',
+  "checkout: Pay sends the protocol's body",
+  'checkout: a detail the shop refuses is said at its field',
+  'checkout: a price that changed is shown and said',
+  'checkout: an address Stripe cannot tax is said',
+  'checkout: an answer that was lost is said',
+  'checkout: a press retried after an answer was lost is the same attempt',
+  "checkout: Stripe's page not given, the press keeps the order",
+  "checkout: the buyer is sent to Stripe's page",
+  "checkout: paid, the buyer comes back to the order's page",
+  "checkout: after Stripe's page was given the next press is a new one",
+  'checkout: an order already paid is not paid again',
+];
+
+/**
  * The storefront's pieces, in a buyer's order: the pages each adds to the
  * walk, and the checks its drive must have said on each — by the start of
  * the check's words.
@@ -89,6 +115,12 @@ const PIECES = [
       '/cart/': CART_DRIVE,
       '/en/cart/': [...CART_DRIVE, "cart: a line added on a page in another language is titled in this page's language"],
     },
+  },
+  {
+    // The checkout, below the cart on the same pages, driven after the cart's: it ends on the order's page, /order and /en/order.
+    piece: 'the checkout',
+    pages: [],
+    reaches: { '/cart/': CHECKOUT_DRIVE, '/en/cart/': CHECKOUT_DRIVE },
   },
 ];
 const SOLD_OUT = ['FOX-M-BLUE'];
@@ -127,7 +159,7 @@ try {
   const english = results.find((one) => one.path === '/en/cart/')?.found.find((one) => one.check.startsWith("cart: a line added on a page in another language"));
   if (english !== undefined && !(english.said ?? '').includes('«Fox T-shirt»')) lines.push(`/en/cart/ — the line the German fox page added is not titled «Fox T-shirt»: ${english.said}`);
   for (const one of results) {
-    for (const said of one.found.filter((each) => /^(product|cart|shop):/.test(each.check))) console.log(`${said.ok ? 'ok  ' : 'FAIL'} ${one.path} ${said.check}`);
+    for (const said of one.found.filter((each) => /^(product|cart|checkout|shop):/.test(each.check))) console.log(`${said.ok ? 'ok  ' : 'FAIL'} ${one.path} ${said.check}`);
   }
 
   // The command as a developer runs it, in the site's directory, on the pages it is given: `jtk a11y` has no cart to start from.

@@ -4,10 +4,11 @@
  * (jtakeit-core wiki/102 stage 9, decision 6).
  *
  * `jtk add shop` lays it with `src/components/shop/Cart.astro`, which draws
- * the cart and is where the markup and the look are the site's. This page is
- * the frame: the heading, and the cart under it; the checkout step goes below
- * the cart on the same page. It is built only where the schema turns the shop
- * on, so a site that took the shop out has no cart route left behind.
+ * the cart, and `src/components/shop/Checkout.astro`, the checkout step —
+ * where the markup and the look are the site's. This page is the frame: the
+ * heading, the cart under it, and the checkout below the cart, shown when the
+ * cart's *To checkout* hands on. It is built only where the schema turns the
+ * shop on, so a site that took the shop out has no cart route left behind.
  *
  * Its words are the kit's (`@jtakeit/kit/shop/words`, in the page's language),
  * not the page's content: the cart is nobody's to write, so the panel has
@@ -16,6 +17,7 @@
  */
 import Layout from '../../layouts/Layout.astro';
 import Cart from '../../components/shop/Cart.astro';
+import Checkout from '../../components/shop/Checkout.astro';
 import { shopWordsFor } from '@jtakeit/kit/shop/words';
 import { site } from '../../lib/site';
 import { EVERY_LOCALE, langOf, localeOf, localeParams, withLocale } from '../../lib/locale';
@@ -34,6 +36,7 @@ const languages = EVERY_LOCALE.length > 1 ? EVERY_LOCALE.map((one) => ({ locale:
   <main id="content" class="cart-page">
     <h1 data-jtk-fixed>{W.cart}</h1>
     <Cart locale={locale} />
+    <Checkout locale={locale} />
   </main>
 </Layout>
 

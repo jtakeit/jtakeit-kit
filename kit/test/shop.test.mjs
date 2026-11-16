@@ -22,6 +22,7 @@ import { SHOP_LOCALES, shopWordsFor } from '../lib/shop/words.mjs';
 import { PRODUCT, CART, CHECKOUT, ORDER, LISTING, lacking } from '../lib/shop/hooks.mjs';
 import { MAX_LINES, MAX_QTY, cartKey, readCart, addLine, removeLine, setQty, shippingBody, cartView } from '../lib/shop/cart.mjs';
 import { productFacts, variantFor, valueStates, answersOf, fromPrice } from '../lib/shop/product.mjs';
+import { ATTEMPT, CHECKOUT_WORDS, afterAnswer, checkoutBody, freshPress, missingDetails, pressFor, pressKey } from '../lib/shop/checkout.mjs';
 import * as barrel from '../index.mjs';
 
 const now = Date.parse('2026-11-15T12:00:00Z');
@@ -383,6 +384,189 @@ test('a cart is ready only when every line is priced, nothing is refused and a m
   assert.equal(nothing.rows.every((row) => row.quoted === undefined && row.refused === undefined), true);
 });
 
+// ── the checkout ──────────────────────────────────────────────────────────
+
+/** A random UUID, as `crypto.randomUUID()` makes one: what an attempt is, and of a shape the shop takes (Ruling 92). */
+const UUID4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+/** The fox twice, to Switzerland by the economy post: 5980 and 900, as the test shop prices it. */
+const FOX_TWICE = { v: 1, lines: [{ product: FOX, variant: 'v1', qty: 2, answers: {} }], country: 'CH', method: 'economy' };
+/** What the checkout step's form gives a press: a delivery, as typed. */
+const FORM = {
+  buyer: { name: 'Ada Lovelace', email: 'ada@example.ch', phone: '+41 79 000 00 00' },
+  address: { line1: 'Bahnhofstrasse 1', line2: '', postal_code: '8001', city: 'Zürich' },
+  total: 5980 + 900,
+  locale: 'de-CH',
+  return: '/order',
+  turnstile: '0.walk-token',
+};
+
+test("one attempt for a press and its retries, and a new one after Stripe's page was given", () => {
+  assert.equal(pressKey('/api/'), 'jtk:checkout:/api/');
+  assert.equal(pressKey('/p/fox/api/'), 'jtk:checkout:/p/fox/api/', 'a preview keeps a press of its own, as it keeps a cart');
+
+  // A press: an attempt of its own, a crypto.randomUUID() — one the shop takes — and no order yet.
+  const p = freshPress();
+  assert.match(p.attempt, UUID4);
+  assert.match(p.attempt, ATTEMPT);
+  assert.equal(p.order, '');
+  assert.notEqual(freshPress().attempt, p.attempt, 'each new press its own');
+  // The press kept in the tab is the press the next Pay goes on with; anything else is a new one.
+  assert.deepEqual(pressFor(JSON.parse(JSON.stringify(p))), p, 'kept, and read back as it was');
+  assert.deepEqual(pressFor({ attempt: p.attempt, order: 'T9' }), { attempt: p.attempt, order: 'T9' });
+  for (const stored of [null, undefined, 'a string', [], { order: 'T9' }, { attempt: 'short' }, { attempt: 'x'.repeat(129) }, { attempt: 'not one, with spaces' }]) {
+    const fresh = pressFor(/** @type {any} */ (stored));
+    assert.match(fresh.attempt, UUID4, JSON.stringify(stored));
+    assert.equal(fresh.order, '', JSON.stringify(stored));
+  }
+  assert.deepEqual(pressFor(/** @type {any} */ ({ attempt: p.attempt, order: 7 })), { attempt: p.attempt, order: '' }, 'an order that is no token is none');
+  // A page served over plain http has no randomUUID: an attempt of the same shape all the same.
+  Object.defineProperty(globalThis.crypto, 'randomUUID', { value: undefined, configurable: true });
+  try {
+    const plain = freshPress();
+    assert.match(plain.attempt, UUID4);
+    assert.notEqual(plain.attempt, freshPress().attempt);
+  } finally {
+    delete (/** @type {any} */ (globalThis.crypto)).randomUUID;
+  }
+  assert.equal(typeof globalThis.crypto.randomUUID, 'function');
+
+  // 201: Stripe's page; the press is over and forgotten, and the next press is a new one.
+  const stripe = 'https://checkout.stripe.com/c/pay/cs_test_a1';
+  assert.deepEqual(afterAnswer(p, { status: 201, body: { order: 'T9', url: stripe, expires_at: '2026-11-16T12:31:00Z' } }), { kind: 'go', url: stripe });
+  const next = pressFor(null);
+  assert.notEqual(next.attempt, p.attempt, 'the press after Stripe\'s page was given mints a new attempt');
+  assert.match(next.attempt, UUID4);
+  assert.equal(next.order, '');
+  // A 201 that names no page to go to is an order made: asked for again by its token, never pressed anew.
+  assert.deepEqual(afterAnswer(p, { status: 201, body: { order: 'T9', url: 'javascript:alert(1)' } }), { kind: 'ask_again', press: { attempt: p.attempt, order: 'T9' } });
+  assert.deepEqual(afterAnswer(p, { status: 201, body: { order: 'T9' } }), { kind: 'ask_again', press: { attempt: p.attempt, order: 'T9' } });
+
+  // 502 with the order: the same press, asked again with the order's token alone — no cart, nothing held, no challenge.
+  const again = afterAnswer(p, { status: 502, body: { error: 'try_again', order: 'T9' } });
+  assert.equal(again.kind, 'ask_again');
+  assert.deepEqual(/** @type {any} */ (again).press, { attempt: p.attempt, order: 'T9' });
+  assert.deepEqual(checkoutBody(/** @type {any} */ (again).press, FOX_TWICE, FORM), { order: 'T9' });
+  // …and that ask lost too: still the order, still the press.
+  assert.deepEqual(afterAnswer(/** @type {any} */ (again).press, null), { kind: 'ask_again', press: { attempt: p.attempt, order: 'T9' } });
+  assert.deepEqual(afterAnswer(/** @type {any} */ (again).press, { status: 502, body: { error: 'try_again' } }), { kind: 'ask_again', press: { attempt: p.attempt, order: 'T9' } });
+  // No answer, or a 502 with no order (the shop itself not reached): the same attempt, and the cart again.
+  for (const answer of [null, { status: 502, body: { error: 'try_again' } }, { status: 502, body: '<html>Bad gateway</html>' }, { status: 504, body: 'Gateway Timeout' }, { status: 503, body: null }]) {
+    const lost = afterAnswer(p, answer);
+    assert.deepEqual(lost, { kind: 'ask_again', press: { attempt: p.attempt, order: '' } }, JSON.stringify(answer));
+    const retry = checkoutBody(/** @type {any} */ (lost).press, FOX_TWICE, { ...FORM, turnstile: '0.a-fresh-one' });
+    assert.equal(retry.attempt, p.attempt, 'a retry is never a new attempt');
+    assert.equal(retry.turnstile, '0.a-fresh-one');
+    assert.deepEqual(retry.lines, FOX_TWICE.lines);
+  }
+
+  // A price that changed, a line refused, a method no longer offered, a last item gone: the same press, the new answer shown.
+  const quote = { currency: 'chf', lines: [], refused: [], subtotal: 6200, methods: [] };
+  for (const code of ['total', 'refused', 'method', 'short']) {
+    assert.deepEqual(afterAnswer(p, { status: 409, body: { error: code, quote, ...(code === 'short' ? { short: [{ sku: 'FOX-S-RED', wanted: 2, available: 1 }] } : {}) } }), { kind: 'requote', press: p, quote, word: `error.${code}` }, code);
+  }
+  assert.deepEqual(afterAnswer(p, { status: 409, body: { error: 'total' } }), { kind: 'say', word: 'error.total', press: p }, 'without its quote: said, and the press kept');
+  // Already paid: to its page, the press over.
+  assert.deepEqual(afterAnswer({ attempt: p.attempt, order: 'T9' }, { status: 409, body: { error: 'paid', order: 'T9' } }), { kind: 'paid', order: 'T9' });
+  assert.deepEqual(afterAnswer({ attempt: p.attempt, order: 'T9' }, { status: 409, body: { error: 'paid' } }), { kind: 'paid', order: 'T9' }, 'the order the press holds');
+  assert.deepEqual(afterAnswer(p, { status: 409, body: { error: 'paid' } }), { kind: 'say', word: 'error.paid', press: null }, 'an order paid that nobody names');
+
+  // Kept: nothing was written that another press of it would find another way.
+  assert.deepEqual(afterAnswer(p, { status: 403, body: { error: 'challenge' } }), { kind: 'say', word: 'error.challenge', press: p });
+  assert.deepEqual(afterAnswer(p, { status: 400, body: { error: 'buyer', fields: ['buyer.email', 7, 'address.line2'] } }), { kind: 'say', word: 'error.buyer', press: p, fields: ['buyer.email', 'address.line2'] });
+  assert.deepEqual(afterAnswer(p, { status: 429, body: { error: 'too_many' } }), { kind: 'say', word: 'error.too_many', press: p });
+  assert.deepEqual(afterAnswer(p, { status: 429, body: { error: 'open_checkouts' } }), { kind: 'say', word: 'error.open_checkouts', press: p });
+
+  // Gone: the order given up, lapsed, nobody's, or never to be — said, and the next press mints a new attempt.
+  for (const [status, body, word] of [
+    [409, { error: 'attempt' }, 'error.attempt'],
+    [410, { error: 'lapsed' }, 'error.lapsed'],
+    [410, { error: 'lapsed', order: 'T9' }, 'error.lapsed'],
+    [410, { error: 'too_late', order: 'T9' }, 'error.too_late'],
+    [410, { error: 'too_small', order: 'T9' }, 'error.too_small'],
+    [422, { error: 'address', order: 'T9' }, 'address'],
+    [424, { error: 'no_payee', order: 'T9' }, 'error.no_payee'],
+    [404, { error: 'not_found', order: 'T9' }, 'error.lapsed'],
+    [400, { error: 'return' }, 'error.return'],
+    [400, { error: 'nothing_to_pay' }, 'error.nothing_to_pay'],
+    [500, { error: 'internal', order: 'T9' }, 'error.internal'],
+    [500, 'internal error', 'error.internal'],
+    [403, { error: 'showcase', message: 'a sample: it never checks out' }, 'error.showcase'],
+    [409, "this site's schema does not turn the shop on", 'error.internal'],
+    [400, "an attempt is a press's own token: 16 to 128 letters, digits, '-' or '_', or none", 'error.internal'],
+  ]) {
+    assert.deepEqual(afterAnswer(p, { status: /** @type {number} */ (status), body }), { kind: 'say', word, press: null }, `${status} ${JSON.stringify(body)}`);
+  }
+  // A refusal in JSON the table does not name keeps the press: the next press can never be a second order of this one.
+  assert.deepEqual(afterAnswer(p, { status: 400, body: { error: 'JTK_E_SHOP_FIELD_UNKNOWN', fields: ['colour'], takes: [] } }), { kind: 'say', word: 'error.internal', press: p });
+
+  // Every word the checkout says is in every language the storefront speaks.
+  for (const locale of SHOP_LOCALES) {
+    const words = shopWordsFor(locale);
+    for (const word of CHECKOUT_WORDS) assert.ok(typeof words[word] === 'string' && words[word] !== '', `${locale}: ${word}`);
+  }
+  assert.equal(new Set(CHECKOUT_WORDS).size, CHECKOUT_WORDS.length);
+});
+
+test("the checkout sends the protocol's body", () => {
+  const p = freshPress();
+  const cart = readCart(JSON.stringify({ ...FOX_TWICE, lines: [{ ...FOX_TWICE.lines[0], answers: { tag: 'Ada' } }] }));
+  const body = /** @type {any} */ (checkoutBody(p, cart, FORM));
+  // A delivery: the cart, its country and method, the buyer and the address as typed, the total shown, the press, the return,
+  // the page's language and the challenge's token — in the protocol's order.
+  assert.deepEqual(Object.keys(body), ['lines', 'country', 'method', 'buyer', 'address', 'total', 'attempt', 'return', 'locale', 'turnstile']);
+  assert.deepEqual(body, {
+    lines: [{ product: FOX, variant: 'v1', qty: 2, answers: { tag: 'Ada' } }],
+    country: 'CH',
+    method: 'economy',
+    buyer: { name: 'Ada Lovelace', email: 'ada@example.ch', phone: '+41 79 000 00 00' },
+    address: { line1: 'Bahnhofstrasse 1', postal_code: '8001', city: 'Zürich' },
+    total: 6880,
+    attempt: p.attempt,
+    return: '/order',
+    locale: 'de-CH',
+    turnstile: '0.walk-token',
+  });
+  assert.equal(body.total, 5980 + 900, 'the subtotal and the method\'s price');
+  assert.notEqual(body.lines, cart.lines, 'the cart\'s own lines are never handed over to be changed');
+  assert.notEqual(body.lines[0].answers, cart.lines[0].answers);
+  // As typed: a name in another script, spaces where the buyer put them; an address's second line where there is one.
+  const typed = /** @type {any} */ (checkoutBody(p, cart, { ...FORM, buyer: { name: ' Ада Лавлейс ', email: 'ada@example.ch', phone: '' }, address: { ...FORM.address, line2: 'c/o Babbage' } }));
+  assert.deepEqual(typed.buyer, { name: ' Ада Лавлейс ', email: 'ada@example.ch' }, 'no phone where none was given');
+  assert.equal(typed.address.line2, 'c/o Babbage');
+
+  // A pick-up: no address.
+  const pickup = /** @type {any} */ (checkoutBody(p, { ...cart, method: 'pickup' }, { ...FORM, address: null, total: 5980 }));
+  assert.equal('address' in pickup, false);
+  assert.deepEqual([pickup.method, pickup.total], ['pickup', 5980]);
+
+  // No key outside the protocol's: the checkout's table in shop-protocol.md (jtakeit-core at 0e150d8a, `POST
+  // /api/checkout`; its shapes in backend/api/shopwire/testdata/protocol/v1/checkout.request.json) and `locale`,
+  // which shop/1 grew within version 1 (Task 9.6). A second ask is `{ order }` alone.
+  const PROTOCOL = new Set([
+    'lines', 'lines[]', 'lines[].product', 'lines[].variant', 'lines[].qty', 'lines[].answers',
+    'country', 'method', 'buyer', 'buyer.name', 'buyer.email', 'buyer.phone',
+    'address', 'address.line1', 'address.line2', 'address.postal_code', 'address.city',
+    'total', 'attempt', 'return', 'locale', 'turnstile', 'order',
+  ]);
+  /** The paths of a body, down to a line's answers, which are the product's own keys. */
+  const paths = (value, at = '') => Object.entries(value).flatMap(([key, one]) => {
+    const here = at === '' ? key : `${at}.${key}`;
+    if (Array.isArray(one)) return [here, `${here}[]`, ...one.flatMap((each) => paths(each, `${here}[]`))];
+    if (one !== null && typeof one === 'object' && here !== 'lines[].answers') return [here, ...paths(one, here)];
+    return [here];
+  });
+  for (const sent of [body, typed, pickup, checkoutBody({ attempt: p.attempt, order: 'T9' }, cart, FORM)]) {
+    for (const path of paths(sent)) assert.ok(PROTOCOL.has(path), `${path} is not in the protocol`);
+  }
+  assert.deepEqual(checkoutBody({ attempt: p.attempt, order: 'T9' }, cart, FORM), { order: 'T9' });
+
+  // What a press cannot go without, before it is sent: only what is plainly missing, by the protocol's paths — the rest the shop checks.
+  assert.deepEqual(missingDetails({ name: '', email: '' }, { line1: '', postal_code: '', city: '' }), ['buyer.name', 'buyer.email', 'address.line1', 'address.postal_code', 'address.city']);
+  assert.deepEqual(missingDetails({ name: '  ', email: 'ada' }, null), ['buyer.name', 'buyer.email'], 'a pick-up asks no address');
+  assert.deepEqual(missingDetails(FORM.buyer, FORM.address), []);
+  assert.deepEqual(missingDetails({ name: 'Ada', email: 'ada@example' }, null), [], 'an email the shop refuses for its domain is the shop\'s to say');
+});
+
 // ── a product's facts ─────────────────────────────────────────────────────
 
 const OPTION = (key, ...values) => ({ _key: key, name: key, values: values.map((value) => ({ _key: value, label: value.toUpperCase() })) });
@@ -653,6 +837,7 @@ test('the storefront is in the package under its own entries, and in the barrel'
     ['./shop/words', './lib/shop/words.mjs', './types/shop-words.d.ts'],
     ['./shop/hooks', './lib/shop/hooks.mjs', './types/shop-hooks.d.ts'],
     ['./shop/cart', './lib/shop/cart.mjs', './types/shop-cart.d.ts'],
+    ['./shop/checkout', './lib/shop/checkout.mjs', './types/shop-checkout.d.ts'],
   ]) {
     assert.deepEqual(manifest.exports[entry], { types, default: file }, entry);
     assert.ok(readFileSync(new URL(`../${file}`, import.meta.url), 'utf8').length > 0);
@@ -660,7 +845,7 @@ test('the storefront is in the package under its own entries, and in the barrel'
   }
   // `lib` and `types` are packed whole, so none of it can be left out of a release.
   assert.ok(manifest.files.includes('lib') && manifest.files.includes('types'));
-  for (const name of ['SHOP_LOCALES', 'shopWordsFor', 'PRODUCT', 'CART', 'CHECKOUT', 'ORDER', 'LISTING', 'MAX_LINES', 'MAX_QTY', 'cartKey', 'readCart', 'addLine', 'removeLine', 'setQty', 'shippingBody', 'cartView', 'productFacts', 'variantFor', 'valueStates', 'answersOf', 'fromPrice']) {
+  for (const name of ['SHOP_LOCALES', 'shopWordsFor', 'PRODUCT', 'CART', 'CHECKOUT', 'ORDER', 'LISTING', 'MAX_LINES', 'MAX_QTY', 'cartKey', 'readCart', 'addLine', 'removeLine', 'setQty', 'shippingBody', 'cartView', 'pressKey', 'freshPress', 'pressFor', 'checkoutBody', 'missingDetails', 'afterAnswer', 'productFacts', 'variantFor', 'valueStates', 'answersOf', 'fromPrice']) {
     assert.ok(name in barrel, `index.mjs exports ${name}`);
   }
 });
@@ -696,7 +881,7 @@ test('the pieces\' shared helpers: JSON from an attribute or what is given, and 
   assert.equal(typeof wire.BaseElement, 'function', 'something for a piece\'s element to extend, with or without a document');
   // With no custom elements to define it in, defining is nothing.
   wire.defineOnce('jtk-nothing', class extends wire.BaseElement {});
-  for (const file of ['shop-product.js', 'shop-cart.js']) {
+  for (const file of ['shop-product.js', 'shop-cart.js', 'shop-checkout.js']) {
     const source = readFileSync(new URL(`../elements/${file}`, import.meta.url), 'utf8');
     // Written once, in the wire: a piece takes them from there.
     assert.doesNotMatch(source, /^(?:export )?function (?:parsed|putBase)\b/m, `${file} writes its own`);
@@ -709,7 +894,7 @@ test('the pieces\' shared helpers: JSON from an attribute or what is given, and 
 test("a shop's title is put into a word as written, never as a replacement pattern", () => {
   // `'Remove {title}'.replace('{title}', 'Gift $& card')` would say «Remove {title} card»: a title is a shop's free text.
   assert.equal('Remove {title}'.replace('{title}', () => 'Gift $$ 50 $& card'), 'Remove Gift $$ 50 $& card');
-  for (const file of ['shop-product.js', 'shop-cart.js']) {
+  for (const file of ['shop-product.js', 'shop-cart.js', 'shop-checkout.js']) {
     const source = readFileSync(new URL(`../elements/${file}`, import.meta.url), 'utf8');
     for (const [call] of source.matchAll(/\.replace\('\{title\}',[^\n]*/g)) assert.match(call, /\{title\}',\s*\(\)\s*=>/, `${file}: ${call}`);
   }
@@ -732,6 +917,30 @@ test("the cart's element loads without a DOM, speaks over the same wire, and is 
   const cartTypes = readFileSync(new URL('../types/shop-cart.d.ts', import.meta.url), 'utf8');
   for (const name of ['CartRow', 'CartView', 'cartView']) assert.ok(cartTypes.includes(name), `shop-cart.d.ts declares ${name}`);
   assert.match(readFileSync(new URL('../types/index.d.ts', import.meta.url), 'utf8'), /cartView/, 'the barrel\'s types say cartView');
+});
+
+test("the checkout's element loads without a DOM, speaks over the same wire, and is in the package with its types", async () => {
+  const wire = await import('../elements/shop-wire.js');
+  const checkout = await import('../elements/shop-checkout.js');
+  assert.equal(checkout.SHOP_PROTOCOL, 1, 'the element names the wire\'s version');
+  assert.equal(checkout.ask, wire.ask);
+  for (const name of ['wireCheckout', 'defineCheckout']) assert.equal(typeof checkout[name], 'function', name);
+  assert.equal(typeof checkout.JtkCheckout, 'function');
+  // With no custom elements to define it in, defining is nothing.
+  checkout.defineCheckout();
+
+  const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  assert.deepEqual(manifest.exports['./elements/shop-checkout'], { types: './types/elements-shop.d.ts', default: './elements/shop-checkout.js' });
+  const types = readFileSync(new URL('../types/elements-shop.d.ts', import.meta.url), 'utf8');
+  for (const name of ['wireCheckout', 'defineCheckout', 'JtkCheckout']) assert.ok(types.includes(name), `elements-shop.d.ts declares ${name}`);
+  const checkoutTypes = readFileSync(new URL('../types/shop-checkout.d.ts', import.meta.url), 'utf8');
+  for (const name of ['Press', 'pressKey', 'freshPress', 'pressFor', 'checkoutBody', 'Next', 'afterAnswer']) assert.ok(checkoutTypes.includes(name), `shop-checkout.d.ts declares ${name}`);
+  assert.match(readFileSync(new URL('../types/index.d.ts', import.meta.url), 'utf8'), /afterAnswer/, 'the barrel\'s types say afterAnswer');
+  // The element keeps the press where the module says, and decides nothing of its own: every answer goes through afterAnswer.
+  const source = readFileSync(new URL('../elements/shop-checkout.js', import.meta.url), 'utf8');
+  assert.match(source, /from '\.\.\/lib\/shop\/checkout\.mjs'/);
+  for (const name of ['pressKey', 'pressFor', 'checkoutBody', 'afterAnswer']) assert.match(source, new RegExp(`\\b${name}\\(`), `the element calls ${name}`);
+  assert.match(source, /sessionStorage/, 'the press is kept in the tab');
 });
 
 test('ask names the protocol on every request, is never cached, sends JSON, and is null where nothing answered', async () => {

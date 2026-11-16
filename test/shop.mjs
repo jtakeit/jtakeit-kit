@@ -24,6 +24,10 @@
 //      of the cart; the header links to it; the sitemap does not; the page is
 //      no more `noindex` than any; and where the schema does not turn the shop
 //      on there is no cart page at all
+//   6  the checkout step, below the cart on the same page: its form, hidden
+//      until the cart hands on, with every hook of the checkout, the words it
+//      says for every answer of the shop in the page's language, and the order's
+//      page in that language to come back to — /order, /en/order (Ruling 202)
 //
 // Every built page of the shop is held as test/create3.mjs holds the
 // example's: no element says an attribute twice, no heading skips a level.
@@ -34,7 +38,9 @@ import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, sym
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { money } from '../kit/lib/money.mjs';
-import { CART } from '../kit/lib/shop/hooks.mjs';
+import { CART, CHECKOUT } from '../kit/lib/shop/hooks.mjs';
+import { CHECKOUT_WORDS } from '../kit/lib/shop/checkout.mjs';
+import { shopWordsFor } from '../kit/lib/shop/words.mjs';
 import { layShop } from './shop-site.mjs';
 import { varyContent } from './variants.mjs';
 
@@ -222,6 +228,38 @@ try {
     }
   }
   settle('the cart\'s page');
+
+  // ── 6 · the checkout step, under the cart ────────────────────────────────
+  for (const [address, lang, back] of [['cart', 'de-CH', '/order'], ['en/cart', 'en', '/en/order']]) {
+    const cart = page(address);
+    const where = `/${address}`;
+    const form = /<form\b[^>]*\sdata-checkout(?=[\s>=])[^>]*>/.exec(cart)?.[0];
+    check(form !== undefined, `${where} has no form[data-checkout]`);
+    const at = form === undefined ? -1 : cart.indexOf(form);
+    const step = at < 0 ? '' : cart.slice(at, cart.indexOf('</form>', at));
+    check(at > cart.indexOf('data-cart-lines'), `${where} does not draw the checkout below the cart`);
+    check(attr(form, 'data-return') === back, `${where}'s checkout sends the buyer back to ${attr(form, 'data-return')}, not to the order's page in its language, ${back}`);
+    check(attr(form, 'data-api') === '/api/' && attr(form, 'data-locale') === lang, `${where}'s checkout does not say its api and its language (${lang}): ${form}`);
+    check(/\shidden(?=[\s>=])/.test(form ?? '') && /\snovalidate(?=[\s>=])/.test(form ?? ''), `${where}'s checkout is not hidden until the cart hands on, or lets the browser judge it: ${form}`);
+    // Every hook of the checkout, written as markup in its form.
+    for (const { hook } of [...CHECKOUT.always, ...CHECKOUT.said]) {
+      const name = /^\[name=([a-z_0-9]+)\]$/.exec(hook);
+      const data = /^(?:form)?\[(data-[a-z-]+)\]$/.exec(hook);
+      check(name ? new RegExp(`\\sname="${name[1]}"`).test(step) : data ? new RegExp(`\\s${data[1]}(?=[\\s>=])`).test(step) : false, `${where}'s checkout does not carry ${hook}`);
+    }
+    // The words for every answer the shop gives a press, in the page's language.
+    let said;
+    try {
+      said = JSON.parse(attr(form, 'data-words') ?? '');
+    } catch {
+      said = undefined;
+    }
+    const W = shopWordsFor(lang);
+    const unsaid = CHECKOUT_WORDS.filter((key) => said?.[key] !== W[key]);
+    check(unsaid.length === 0, `${where}'s checkout does not hand its element the words for ${unsaid.join(', ')} in ${lang}`);
+    check(/<jtk-checkout[\s>]/.test(cart) && new RegExp(`<h2[^>]*>${W.checkout}</h2>`).test(step) && new RegExp(`<button[^>]*\\stype="submit"[^>]*\\sdata-pay[^>]*>${W.pay}</button>`).test(step), `${where} has no <jtk-checkout>, no heading «${W.checkout}» or no ${W.pay} button for it`);
+  }
+  settle('the checkout step');
   {
     // Built only where the schema turns the shop on: a copy of the site with the module off has no cart, in any language.
     const off = `${site}-off`;
@@ -260,7 +298,7 @@ try {
     }
   }
 
-  console.log('shop: the product\'s page is the site\'s own — its form, its facts and every option, the first price annotated, in German and English — and judged and linted clean, at the edges of the content too; the cart\'s page at /cart and /en/cart, linked from the header, left out of the sitemap, and not built where the shop is off');
+  console.log('shop: the product\'s page is the site\'s own — its form, its facts and every option, the first price annotated, in German and English — and judged and linted clean, at the edges of the content too; the cart\'s page at /cart and /en/cart, linked from the header, left out of the sitemap, and not built where the shop is off; the checkout under the cart, every hook and every answer\'s words, coming back to /order and /en/order');
 } catch (why) {
   if (!(why instanceof Failure)) throw why;
   console.error(`shop: ${why.message}`);
