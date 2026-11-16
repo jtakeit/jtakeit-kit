@@ -66,6 +66,10 @@ export async function liveCheck(site, { url, fail, said }) {
   run = spawnSync('npx', ['astro', 'build', '--outDir', out], { cwd: site, encoding: 'utf8', env: { ...env, JTK_RENDER: 'live' } });
   if (run.status !== 0) fail(`${said}: does not build for a server:\n${run.stdout}\n${run.stderr}`);
   const { readJtk } = await import(pathToFileURL(join(site, 'node_modules', '@jtakeit', 'kit', 'lib', 'content', 'node.mjs')).href);
+  // Each server build's entry adds its own `unhandledRejection` listener as it
+  // is imported, and a test that builds a dozen sites passes Node's warning
+  // at ten: one more allowed for each.
+  process.setMaxListeners(process.getMaxListeners() + 1);
   const { handler } = await import(pathToFileURL(join(site, out, 'server', 'entry.mjs')).href);
   const state = { draft: await readJtk(site), media: {} };
   const server = createServer((req, res) =>
