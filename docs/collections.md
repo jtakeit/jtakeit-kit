@@ -241,7 +241,7 @@ on the entry type:
   fields: [ /* title, date, starts, price, tickets, poster, lineup, about … */ ],
   form: {
     sections: [
-      { rows: [['title'], ['date', 'starts'], ['price', 'tickets']] },
+      { rows: [['title'], ['date', 'starts'], ['tickets', 'price']] },
       { title: 'On the page', note: 'What the poster and the listing show', rows: [['lineup'], ['about']] },
     ],
     aside: ['poster'],
@@ -261,6 +261,14 @@ on the entry type:
   `radio` or `segmented` for a short select, `stepper` for a bounded whole
   number, `tall` for a long paragraph (the platform's reference, «A form's
   widgets»).
+
+**Lay it out for the eye.** What belongs together shares a section, in the
+order a person fills a new one in. Two short fields share a row; a paragraph,
+a picture or a list does not share one with a line. Where the controls of a
+row differ in height, the taller goes left — a link (its two choices, its box
+and a line under it) before a one-line label, as `tickets` before `price`
+above: the eye expects the bigger one first, and a short control left of a
+tall one leaves a hole under it. The panel draws the row as you wrote it.
 
 Every required field needs a place, `body` never has one (it is written
 beside the page), and a gallery, a list or a document takes a row alone.
