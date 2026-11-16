@@ -1,14 +1,7 @@
 import type { Cart } from './shop-cart';
 
-/** What a press was sent with: its body less the challenge's token, the return and the page's language (Rulings 223, 225). */
-export interface Sent {
-  lines: object[];
-  country: string;
-  method: string;
-  buyer: object;
-  address: object | null;
-  total: number;
-}
+/** A digest of what a press was sent with — its body less the challenge's token, the return and the page's language (Rulings 223, 225, 226): it tells one body from another, and keeps none of the buyer's details. */
+export type Sent = string;
 /** A press of *Pay*: its `attempt`, the same for every retry of it, and the order's token once the shop has made one. */
 export interface Press {
   attempt: string;
@@ -29,7 +22,7 @@ export function pressKey(api: string): string;
 export function freshPress(): Press;
 /** The stored press, where it is one, within the hold, and sent with `sent` where that is given; else a fresh one. */
 export function pressFor(stored: Press | null | undefined, sent?: Sent, now?: number): Press;
-/** What a press is for, as the cart and the form would send it: the body less the token, the return and the language. */
+/** What a press is for, as the cart and the form would send it — the body less the token, the return and the language — as a digest. */
 export function sentOf(cart: Cart, form: CheckoutForm): Sent;
 /** A press as the tab keeps it once sent: what it was sent with, and when it was first sent. */
 export function keptPress(press: Press, sent: Sent, now?: number): Press;

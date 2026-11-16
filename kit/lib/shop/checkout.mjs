@@ -27,7 +27,10 @@
  * api]` (`pressKey`), as `{ attempt, order, sent, at }` (`keptPress`), from the
  * moment it is pressed until it is over — so a page reloaded after an answer
  * that was lost asks for the same order, and a page that has sent its buyer to
- * Stripe starts the next press afresh.
+ * Stripe starts the next press afresh. What it was sent with is kept as a
+ * digest of the body (`sentOf`), enough to tell the same body from another
+ * and nothing more: a stranger's name, email, phone and address are not left
+ * in the tab's storage for as long as a press lives (Ruling 226).
  *
  * Pure and framework-free, as the cart is: the element (elements/shop-checkout.js)
  * reads the storage, asks, and draws what `afterAnswer` says.
@@ -40,7 +43,7 @@ export const ATTEMPT = /^[A-Za-z0-9_-]{16,128}$/;
 export const HOLD = 31 * 60 * 1000;
 
 /**
- * @typedef {{ lines: object[]; country: string; method: string; buyer: object; address: object | null; total: number }} Sent what a press was sent with: its body less the token, the return and the language
+ * @typedef {string} Sent a digest of what a press was sent with — its body less the token, the return and the language — and nothing of it that can be read back
  * @typedef {{ attempt: string; order: string; sent?: Sent; at?: number }} Press `order` is `''` until the shop has made one; `sent` and `at` (when it was first sent, in milliseconds) once it has been
  * @typedef {import('./cart.mjs').Cart} Cart
  * @typedef {{ name: string; email: string; phone?: string }} Buyer
@@ -103,13 +106,36 @@ export function pressFor(stored, sent, now = Date.now()) {
   // Past the hold, whatever order the press made has been given up: a retry of it would be answered that it lapsed.
   if (at !== undefined && now - at > HOLD) return freshPress();
   // Ruling 223: a press is for one body, and only the same body is a retry.
-  if (sent !== undefined && (!isObject(stored.sent) || JSON.stringify(stored.sent) !== JSON.stringify(sent))) return freshPress();
+  if (sent !== undefined && stored.sent !== sent) return freshPress();
   return {
     attempt: stored.attempt,
     order: typeof stored.order === 'string' ? stored.order.trim() : '',
-    ...(isObject(stored.sent) ? { sent: /** @type {Sent} */ (stored.sent) } : {}),
+    ...(typeof stored.sent === 'string' ? { sent: stored.sent } : {}),
     ...(at === undefined ? {} : { at }),
   };
+}
+
+/** JSON with every object's keys in order: one text for one value, however its keys were written. */
+function canonical(value) {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
+  if (isObject(value)) return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}`;
+  return JSON.stringify(value) ?? 'null';
+}
+
+/** cyrb53: 53 bits of a text, by its seed — not a secret, only a short name for it that cannot be read back. */
+function cyrb53(text, seed) {
+  let h1 = 0xdeadbeef ^ seed;
+  let h2 = 0x41c6ce57 ^ seed;
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
+  h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
+  h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return 4294967296 * (2097151 & h2) + (h1 >>> 0);
 }
 
 /**
@@ -119,19 +145,26 @@ export function pressFor(stored, sent, now = Date.now()) {
  * one press (Ruling 223), and the total among it (Ruling 225) keeps an order's
  * token from being asked for once the step shows another.
  *
+ * Kept as a digest (Ruling 226): two runs of cyrb53 over the body written out
+ * the same way whatever order its keys came in — 106 bits, so that two bodies
+ * that differ are told apart, and a stranger's details are not kept in the
+ * tab. Synchronous, so it is the same on a page served over plain http, where
+ * the browser's own digests are not offered.
+ *
  * @param {Cart} cart
  * @param {CheckoutForm} form
  * @returns {Sent}
  */
 export function sentOf(cart, form) {
   const body = /** @type {any} */ (checkoutBody({ attempt: '', order: '' }, cart, form));
-  return { lines: body.lines, country: body.country, method: body.method, buyer: body.buyer, address: body.address ?? null, total: body.total };
+  const text = canonical({ lines: body.lines, country: body.country, method: body.method, buyer: body.buyer, address: body.address ?? null, total: body.total });
+  return `b1:${cyrb53(text, 0).toString(16).padStart(14, '0')}${cyrb53(text, 0x9e3779b9).toString(16).padStart(14, '0')}`;
 }
 
 /**
- * A press as the tab keeps it once it is sent: what it was sent with, and when
- * it was first sent — a retry keeps the time of the first, as the order's hold
- * does.
+ * A press as the tab keeps it once it is sent: the digest of what it was sent
+ * with, and when it was first sent — a retry keeps the time of the first, as
+ * the order's hold does.
  *
  * @param {Press} press
  * @param {Sent} sent

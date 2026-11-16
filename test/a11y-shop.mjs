@@ -58,6 +58,7 @@ const CART_DRIVE = [
  * answer it never gives is under test.
  */
 const CHECKOUT_DRIVE = [
+  'checkout: Pay pressed while the step shows no total yet sends nothing',
   'checkout: To checkout opens the step',
   "checkout: the total is the shop's",
   'checkout: Pay pressed with nothing filled in',

@@ -66,8 +66,10 @@
  *   - hides `[data-address]` for a pick-up, which asks no address;
  *   - on *Pay*: pressed while the shop is pricing, it waits for the answer and
  *     goes on with it — or says the price changed, where the total it was
- *     pressed on is no longer the shop's; a cart changed since the total was
- *     said is priced again and shown before anything is sent; what is plainly
+ *     pressed on is no longer the shop's, and only shows the total where it
+ *     was pressed on none, sending nothing the buyer has not seen; a cart
+ *     changed since the total was said is priced again and shown before
+ *     anything is sent; what is plainly
  *     missing — a name, an email, the street, the postal code and the city of
  *     a delivery — is said beside its field (`aria-invalid`,
  *     `aria-describedby`) and in `[data-checkout-error]` (`role="alert"`), the
@@ -523,6 +525,9 @@ export function wireCheckout(form) {
     form.dataset.state = was;
     hold();
     const next = afterAnswer(press, answer);
+    // A sentence is the developer's to read, whatever follows it — a refusal, or a gateway's page retried as a lost answer:
+    // said in the console as it was said.
+    if (typeof answer?.body === 'string' && answer.body !== '') console.error(`checkout: the shop said ${answer.status} — ${answer.body}`);
     if (next.kind === 'go') return leave(next.url);
     if (next.kind === 'paid') return leave(orderPage(next.order));
     keepPress(next.press);
@@ -541,8 +546,6 @@ export function wireCheckout(form) {
         echo = false;
       }
     } else {
-      // A sentence is the developer's to read: said in the console as the shop said it.
-      if (typeof answer?.body === 'string' && answer.body !== '') console.error(`checkout: the shop said ${answer.status} — ${answer.body}`);
       if (!(next.fields !== undefined && next.fields.length > 0 && blameAll(next.fields))) {
         say(words[next.word] ?? words['error.internal']);
         // An address Stripe cannot tax: checked, and started again from it.
@@ -590,13 +593,17 @@ export function wireCheckout(form) {
   }
 
   /**
-   * A press that waited for the shop's price goes on with it: where the shop priced nothing, its answer says why; where the
-   * total is not the one the press was made on, the buyer is told and presses again on the new one.
+   * A press that waited for the shop's price goes on with it: where the shop priced nothing, its answer says why; where it was
+   * made on no total at all, the total is shown and nothing sent — the buyer presses on what they see; where the total is not
+   * the one the press was made on, the buyer is told and presses again on the new one.
    * @param {number | null} was the total shown when *Pay* was pressed
    */
   function resume(was) {
     if (busy || !fresh || shown === null) return;
-    if (was !== null && shown !== was) {
+    // Pressed on no total — the step still being priced as it opened, or after a price that failed or was refused: the total
+    // is shown now, and nothing is sent until the buyer presses on it (N1).
+    if (was === null) return;
+    if (shown !== was) {
       say(words['error.total']);
       return;
     }

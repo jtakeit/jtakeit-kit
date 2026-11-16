@@ -512,7 +512,7 @@ test("one attempt for a press and its retries, and a new one after Stripe's page
     assert.deepEqual(afterAnswer(p, { status: 429, body }), { kind: 'say', word: 'error.too_many', press: p }, JSON.stringify(body));
   }
   // A press kept goes on with what it was sent with, and when: a retry is matched against it (Ruling 223), its age against the hold.
-  const sentOne = { lines: [], country: 'CH', method: 'economy', buyer: { name: 'Ada', email: 'ada@example.ch' }, address: null, total: 2990 };
+  const sentOne = 'b1:0123456789abcdef0123456789ab';
   const kept = { ...p, sent: sentOne, at: 1_000 };
   assert.deepEqual(afterAnswer(kept, null), { kind: 'ask_again', press: kept });
   assert.deepEqual(afterAnswer(kept, { status: 502, body: { error: 'try_again', order: 'T9' } }), { kind: 'ask_again', press: { ...kept, order: 'T9' } });
@@ -531,11 +531,17 @@ test('a press is for one body: only the same body is a retry, and no press outli
   const t0 = Date.parse('2026-11-16T12:00:00Z');
   const cart = readCart(JSON.stringify({ ...FOX_TWICE, lines: [FOX_TWICE.lines[0], { product: FOX, variant: 'v2', qty: 1, answers: {} }] }));
   const sent = sentOf(cart, FORM);
-  // What a press is for: the body less the challenge's token, the return and the page's language.
-  assert.deepEqual(Object.keys(sent), ['lines', 'country', 'method', 'buyer', 'address', 'total']);
-  assert.deepEqual(sent.address, { line1: 'Bahnhofstrasse 1', postal_code: '8001', city: 'Zürich' });
-  assert.equal(sentOf(cart, { ...FORM, address: null }).address, null, 'a pick-up is sent with no address');
-  assert.deepEqual(sentOf(cart, { ...FORM, turnstile: '0.another', return: '/en/order', locale: 'en' }), sent, 'a fresh token, another language or return is the same body');
+  // What a press is for: the body less the challenge's token, the return and the page's language — kept as a digest of it, which
+  // tells one body from another and holds nothing of the buyer's that could be read back from the tab (Ruling 226).
+  assert.match(sent, /^b1:[0-9a-f]{28}$/);
+  for (const detail of ['Ada', 'Lovelace', 'ada@example.ch', '+41', 'Bahnhofstrasse', '8001', 'Zürich', FOX, '6880']) assert.ok(!sent.includes(detail), `the digest holds ${detail}`);
+  assert.equal(sentOf(cart, FORM), sent, 'the same body, the same digest');
+  assert.equal(sentOf(cart, { ...FORM, turnstile: '0.another', return: '/en/order', locale: 'en' }), sent, 'a fresh token, another language or return is the same body');
+  assert.notEqual(sentOf(cart, { ...FORM, address: null }), sent, 'a pick-up, sent with no address, is another');
+  // However its keys were written: a line's answers in another order, the buyer's details in another, are the same body.
+  const answered = (answers) => readCart(JSON.stringify({ ...cart, lines: [{ ...cart.lines[0], answers }, cart.lines[1]] }));
+  assert.equal(sentOf(answered({ tag: 'Ada', colour: 'rot' }), FORM), sentOf(answered({ colour: 'rot', tag: 'Ada' }), FORM));
+  assert.equal(sentOf(cart, { ...FORM, buyer: { phone: FORM.buyer.phone, email: FORM.buyer.email, name: FORM.buyer.name } }), sent);
 
   // The first press: a new attempt, kept with what it was sent with and when.
   const first = pressFor(null, sent, t0);
