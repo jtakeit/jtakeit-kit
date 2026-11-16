@@ -55,11 +55,12 @@ jobs:
         # and driven in the runner's Chrome by `jtk a11y` over devShop: every
         # page in German and English, in a light and a dark palette, the
         # listing that hides what is sold out, the storefront as an agent
-        # leaves it (every class renamed, no <style>), and the command as a
-        # developer runs it. It is long: the cart and its checkout and the page
-        # after payment are walked state by state, so it is long: 6 min 45 s on
-        # a 16-core machine, most of it the walk's own waits (a held request,
-        # a stopped clock), which a slower runner does not lengthen much. The
+        # leaves it (every class renamed, no <style>) with a canary that the
+        # copy can tell a lost hook from a kept one, and the command as a
+        # developer runs it. The cart and its checkout and the page after
+        # payment are walked state by state, so it is long: 6 min 47 s on a
+        # 16-core machine, most of it the walk's own waits (a held request, a
+        # stopped clock), which a slower runner does not lengthen much. The
         # bound is three times that. A walk that hangs is a finding after its
         # own deadlines, never after this one.
         timeout-minutes: 20

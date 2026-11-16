@@ -12,17 +12,23 @@
 //     below it and the page after payment. The cart is read with its rows drawn
 //     at 320 px wide as well, and with the sentences the shop says only where
 //     they hold: incl. VAT, a country it does not send to, a parcel no method
-//     carries, the buyer's own currency
+//     carries, the buyer's own currency; and the chosen option and shipping
+//     method are read in forced colors, drawn unlike an empty one
 //   the listing that hides what is sold out, in both languages and both
 //     palettes: a copy of the site whose listing page says `HIDE_SOLD_OUT`, its
 //     products under two headings, all four of the fox's SKUs sold out
 //   the storefront as an agent leaves it (the booking form's copied walk,
-//     test/a11y.mjs): every component of `SHOP_FILES` with each class renamed
-//     (`mine-…`), no `<style>`, the product's fields in a row of their own —
+//     test/a11y.mjs): every file of `SHOP_FILES`, the components and the three
+//     pages, with each class renamed (`mine-…`), no `<style>`, the product's
+//     fields in a row of their own —
 //     built and walked again, in de-CH and the light palette, the pieces and the
 //     listing that hides. The hooks are all it keeps, and the elements must still
 //     draw, price, refuse and pay with only the rules they put on the page
 //     themselves
+//   a canary, every run: an element made to find a hook by a class (the product's
+//     Add, by `.buy__add`) passes a storefront that keeps its classes and must fail
+//     the agent's copy, so the copy's walk is known to tell a lost hook from a kept
+//     one — in a copy with a kit of its own, which the other sites do not share
 //   and the command, as a developer runs it in a site's directory (below)
 //
 // The pages are read in a buyer's order, one browser's storage throughout, so
@@ -52,7 +58,7 @@
 // about seven minutes (6 min 45 s on a 16-core machine; the time of each part is said as it
 // ends); CI runs it as its own step with a bound. Not in `npm test`: it needs a Chrome.
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { audit, report } from '../lib/a11y.mjs';
@@ -63,6 +69,7 @@ import { copyShop, dearerFirst, groupShop, hideSoldOut, layShop } from './shop-s
 const CART_DRIVE = [
   "cart: every line is the shop's own",
   'cart: with its rows drawn nothing of the cart is cut off at 320 px wide',
+  'cart: a chosen shipping method is drawn unlike an empty one in forced colors',
   'cart: a country chosen by the keyboard',
   'cart: a method chosen by the keyboard',
   'cart: the customs sentence is said for a parcel that crosses the border, and not for a pick-up',
@@ -182,6 +189,7 @@ const HIDING_DRIVE = [
 
 /** What the product page's drive must have said on each of the test shop's three products. */
 const FOX_DRIVE = [
+  'product: a chosen option is drawn unlike an empty one in forced colors',
   "product: each option's value chosen by the keyboard",
   "product: the price shown is the chosen variant's",
   'product: a variant sold out is said in words',
@@ -190,6 +198,7 @@ const FOX_DRIVE = [
   'shop: every request names the protocol version',
 ];
 const BAG_DRIVE = [
+  'product: a chosen option is drawn unlike an empty one in forced colors',
   "product: each option's value chosen by the keyboard",
   "product: the price shown is the chosen variant's",
   'product: a question left unanswered is said',
@@ -337,9 +346,9 @@ async function readPieces(site, { label, palette, pieces = PIECES }) {
     from: site,
     soldOut: SOLD_OUT,
     cart: { line: FOX_LINE, second: { ...FOX_LINE, variant: 'v2' } },
+    palette,
     log: (line) => console.log(`[shop, ${label}] ${line}`),
   });
-  for (const one of results) one.scheme = palette;
   everything.push(...results);
   lines.push(...report(results), ...unreached(results, pieces, palette));
   // The Review Focus's two languages, by the words: the English cart titles the line the German fox page added «Fox T-shirt».
@@ -365,9 +374,9 @@ async function readHiding(site, { label, palette, pages }) {
     schemes: ['light'],
     from: site,
     soldOut: FOX_SOLD_OUT,
+    palette,
     log: (line) => console.log(`[shop, ${label}] ${line}`),
   });
-  for (const one of results) one.scheme = palette;
   everything.push(...results);
   lines.push(...report(results));
   for (const path of pages) {
@@ -405,19 +414,23 @@ async function readHiding(site, { label, palette, pages }) {
 
 /**
  * The storefront as an agent leaves it, in a copy of a site (the booking form's copied walk, test/a11y.mjs; docs/booking.md): every
- * component of `SHOP_FILES` with each class renamed — `mine-…` — and the look gone, the `<style>`; and the product's fields — its options, the
- * price and what is left, its questions and the quantity — wrapped in a row of their own. The hooks are all it keeps. Thrown where the copy
- * was not made as meant, so that a component that says its classes some other way is seen here and not passed for the wrong reason.
+ * file of `SHOP_FILES` — the five components and the three pages that draw them — with each class renamed, `mine-…`, and the look gone,
+ * the `<style>`; and the product's fields — its options, the price and what is left, its questions and the quantity — wrapped in a row of
+ * their own. The hooks are all it keeps. Thrown where the copy was not made as meant, so that a file that says its classes some other way
+ * is seen here and not passed for the wrong reason.
  * @param {string} site a copy of a site `layShop` laid
  */
 function asAnAgentLeavesIt(site) {
   const components = SHOP_FILES.filter((file) => file.startsWith('src/components/'));
-  if (components.length < 5) throw new Error(`a11y-shop: SHOP_FILES has ${components.length} component(s) where the storefront has five: ${SHOP_FILES.join(', ')}`);
-  for (const file of components) {
+  const pages = SHOP_FILES.filter((file) => file.startsWith('src/pages/'));
+  if (components.length < 5 || pages.length < 3 || components.length + pages.length !== SHOP_FILES.length) {
+    throw new Error(`a11y-shop: SHOP_FILES has ${components.length} component(s) and ${pages.length} page(s) where the storefront has five and three: ${SHOP_FILES.join(', ')}`);
+  }
+  for (const file of SHOP_FILES) {
     const at = join(site, file);
     const original = readFileSync(at, 'utf8');
     let copy = original
-      .replace(/\n<style>[\s\S]*?<\/style>/, '')
+      .replace(/\n<style[^>]*>[\s\S]*?<\/style>/, '')
       .replace(/class="([^"]+)"/g, (_, names) => `class="${names.split(' ').map((one) => `mine-${one}`).join(' ')}"`);
     if (file.endsWith('/Product.astro')) {
       copy = copy
@@ -426,11 +439,45 @@ function asAnAgentLeavesIt(site) {
       if (!copy.includes('mine-row')) throw new Error(`a11y-shop: the product's fields were not wrapped in a row in ${file}`);
     }
     const classes = [...copy.matchAll(/class="([^"]+)"/g)].map((one) => one[1].split(' '));
-    if (!/class="/.test(original) || classes.some((names) => names.some((one) => !one.startsWith('mine-'))) || /<style[\s>]/.test(copy) || /class[:=]\{|class:list/.test(copy)) {
+    // A component says its classes; a page may say none, but a <style> it says is gone with the rest.
+    if ((components.includes(file) && !/class="/.test(original)) || classes.some((names) => names.some((one) => !one.startsWith('mine-'))) || /<style[\s>]/.test(copy) || /class[:=]\{|class:list/.test(copy)) {
       throw new Error(`a11y-shop: the copied ${file} was not made as meant: a class left as it was, a <style> left, or a class this copy cannot rename`);
     }
     writeFileSync(at, copy);
   }
+}
+
+/**
+ * A copy of a site that has a kit of its own to change: its `node_modules` are the site's, each entry linked, except `@jtakeit/kit`, which
+ * is copied — so an element changed in the copy's is changed in the copy's build alone, and the site and the copies made from it are not.
+ * @param {string} copy a copy `copyShop` made
+ * @param {string} site the site it was made from
+ */
+function withKitOfItsOwn(copy, site) {
+  const modules = join(copy, 'node_modules');
+  rmSync(modules, { force: true });
+  mkdirSync(modules);
+  for (const entry of readdirSync(join(site, 'node_modules'))) {
+    if (entry !== '@jtakeit') symlinkSync(join(site, 'node_modules', entry), join(modules, entry));
+  }
+  mkdirSync(join(modules, '@jtakeit'));
+  for (const entry of readdirSync(join(site, 'node_modules/@jtakeit'))) {
+    const there = join(site, 'node_modules/@jtakeit', entry);
+    if (entry === 'kit') cpSync(realpathSync(there), join(modules, '@jtakeit', entry), { recursive: true });
+    else symlinkSync(there, join(modules, '@jtakeit', entry));
+  }
+}
+
+/**
+ * An element made to find a hook by a class — the product's *Add* by `.buy__add` — which is what the storefront's elements must never do:
+ * they find by `data-*`, and a site that renames its classes keeps them working. Thrown where the line is not there.
+ * @param {string} copy a copy that has a kit of its own
+ */
+function findingAddByItsClass(copy) {
+  const file = join(copy, 'node_modules/@jtakeit/kit/elements/shop-product.js');
+  const source = readFileSync(file, 'utf8');
+  if (!source.includes("form.querySelector('[data-add]')")) throw new Error(`a11y-shop: ${file} does not find Add as the canary expects`);
+  writeFileSync(file, source.replace("form.querySelector('[data-add]')", "form.querySelector('.buy__add')"));
 }
 
 try {
@@ -478,6 +525,26 @@ try {
     asAnAgentLeavesIt(mineHiding);
     built(mineHiding, 'the listing that hides, as an agent leaves it');
     await readHiding(mineHiding, { label: 'copy, hiding', palette: 'copy, hiding', pages: ['/shop/'] });
+  });
+
+  // ── a canary: the copy's walk must be able to tell a lost hook from a kept one, every run ─
+  // An element made to find Add by its class is as good as ever while the classes are there, and loses Add where an agent renamed them. The
+  // fox's page is read in the two copies — one that keeps its classes, which must pass, and the agent's, which must not — so that a walk that
+  // has stopped telling the two apart (a drive that skips a check, a copy that is not renamed) says so here and does not pass the copy for nothing.
+  await timed('the canary: an element that finds Add by its class, in a copy that keeps its classes and in the agent\'s', async () => {
+    const reads = {};
+    for (const [name, renamed] of [['kept', false], ['left', true]]) {
+      const copy = copied(site, `canary-${name}`);
+      withKitOfItsOwn(copy, site);
+      findingAddByItsClass(copy);
+      if (renamed) asAnAgentLeavesIt(copy);
+      built(copy, `the canary's copy (${name})`);
+      const results = await audit({ dist: join(copy, 'dist'), pages: ['/shop/t-shirt-fox/'], schemes: ['light'], from: copy, soldOut: SOLD_OUT, palette: `canary, ${name}`, log: (line) => console.log(`[shop, canary ${name}] ${line}`) });
+      reads[name] = report(results);
+    }
+    if (reads.kept.length > 0) lines.push(`the canary: the element that finds Add by its class does not pass where the classes are kept, so the canary proves nothing:\n${reads.kept.join('\n')}`);
+    if (reads.left.length === 0) lines.push('the canary: an element that finds Add by its class passed the storefront as an agent leaves it, every class renamed — the copy\'s walk cannot tell a lost hook from a kept one');
+    else console.log(`a11y-shop: the canary failed the agent's copy as it must: ${reads.left.length} finding(s), «${reads.left[0].replace(/\s+/g, ' ').slice(0, 140)}»`);
   });
 
   // The command as a developer runs it, in the site's directory, on the pages it is given: `jtk a11y` has no cart to start from.
