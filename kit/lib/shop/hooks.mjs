@@ -101,16 +101,16 @@ export const CHECKOUT = piece(
 /** The page after payment: the order's state, its lines, its total. */
 export const ORDER = piece(
   [
-    { hook: '[data-order]', says: 'the page\'s root; `data-api` and `data-locale` on it' },
-    { hook: '[data-order-state]', says: 'what the order is: waiting, paid, lapsed, cancelled' },
+    { hook: '[data-order]', says: 'the page\'s root; `data-api`, `data-locale` and `data-words` on it, and what it is drawing in `data-state`: `loading`, `waiting`, `stopped` (still waiting after two minutes of asking, and asking no more), `paid`, `lapsed`, `cancelled`, `unknown`' },
+    { hook: '[data-order-state]', says: 'what the order is, said as a status: waiting, back from Stripe\'s page without paying, paid, lapsed, cancelled, not found' },
     { hook: '[data-order-lines]', says: 'empty; the element writes the order\'s lines, as they were frozen, into it' },
     { hook: '[data-order-total]', says: 'what the order came to' },
-    { hook: '[data-pay-again]', says: 'hidden; a link back to Stripe\'s page while the order waits and its page is open' },
+    { hook: '[data-pay-again]', says: 'a link (`<a>`), hidden; the element gives it Stripe\'s page to go back to paying, while the order waits and that page is still open' },
   ],
   [
-    { hook: '[data-order-number]', says: 'the order\'s number, once it is paid' },
-    { hook: '[data-order-method]', says: 'the shipping method\'s name' },
-    { hook: '[data-back-to-cart]', says: 'hidden; a link back to the cart' },
+    { hook: '[data-order-number]', says: 'hidden; the order\'s number, once it is paid (a cancelled order keeps the one it had)' },
+    { hook: '[data-order-method]', says: 'the shipping method\'s name and what it cost' },
+    { hook: '[data-back-to-cart]', says: 'a link to the cart, hidden; shown where the cart is to pay with: a buyer who left Stripe\'s page, an order not confirmed after two minutes, lapsed, cancelled or not found' },
   ],
 );
 

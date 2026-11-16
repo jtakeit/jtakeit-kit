@@ -16,9 +16,10 @@
  *
  * The shop's storefront shares five things between its five pieces, each
  * with its own entry (`@jtakeit/kit/shop`, `/shop/words`, `/shop/hooks`,
- * `/shop/cart`, `/shop/checkout`): a product's facts, the words in eight
- * languages, the hooks each piece's markup keeps, the cart as the protocol's
- * lines, and the checkout's press and what follows each of its answers.
+ * `/shop/cart`, `/shop/checkout`, `/shop/order`): a product's facts, the words in
+ * eight languages, the hooks each piece's markup keeps, the cart as the
+ * protocol's lines, the checkout's press and what follows each of its answers,
+ * and what the page after payment shows and does for the order's.
  */
 export { renderBookingForm, bookingForm, SENDS } from './lib/booking/render.mjs';
 export { ALWAYS, ASKED, SAID, HOOKS } from './lib/booking/hooks.mjs';
@@ -30,3 +31,4 @@ export { PRODUCT, CART, CHECKOUT, ORDER, LISTING } from './lib/shop/hooks.mjs';
 export { MAX_LINES, MAX_QTY, cartKey, readCart, addLine, removeLine, setQty, shippingBody, cartView } from './lib/shop/cart.mjs';
 export { productFacts, variantFor, valueStates, answersOf, fromPrice } from './lib/shop/product.mjs';
 export { ATTEMPT, HOLD, pressKey, freshPress, pressFor, sentOf, keptPress, checkoutBody, missingDetails, afterAnswer, CHECKOUT_WORDS } from './lib/shop/checkout.mjs';
+export { ASK_EVERY_MS, ASKS_MOST, ORDER_WORDS, orderView, orderAddress, frozenOrder } from './lib/shop/order.mjs';

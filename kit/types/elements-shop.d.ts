@@ -1,6 +1,6 @@
 /**
  * The storefront's elements (`@jtakeit/kit/elements/shop-*`: the product, the
- * cart, the checkout) and the one wire they speak `shop/1` over
+ * cart, the checkout, the page after payment) and the one wire they speak `shop/1` over
  * (`@jtakeit/kit/elements/shop-wire`).
  */
 
@@ -49,6 +49,15 @@ export function wireCheckout(form: HTMLFormElement): void;
 export function defineCheckout(name?: string): void;
 /** `<jtk-checkout>`: wires the checkout form inside it when it reaches the document. */
 export class JtkCheckout extends HTMLElement {
+  connectedCallback(): void;
+}
+
+/** Wires one order's `[data-order]`; one already wired is left alone. */
+export function wireOrder(root: HTMLElement): void;
+/** Defines `<jtk-order>` (or the name given), where there is a document and it is not defined yet. */
+export function defineOrder(name?: string): void;
+/** `<jtk-order>`: wires the page after payment inside it when it reaches the document. */
+export class JtkOrder extends HTMLElement {
   connectedCallback(): void;
 }
 

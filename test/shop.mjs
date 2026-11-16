@@ -28,6 +28,12 @@
 //      until the cart hands on, with every hook of the checkout, the words it
 //      says for every answer of the shop in the page's language, and the order's
 //      page in that language to come back to — /order, /en/order (Ruling 202)
+//   7  the page after payment, at /order and /en/order: the order's root with
+//      every hook of it, the words it says for every state in the page's
+//      language, the way back to the cart in that language, no language switch
+//      (the other language's page would have no token), no more `noindex` than
+//      any page and left out of the sitemap (Ruling 201), and not built where
+//      the schema does not turn the shop on
 //
 // Every built page of the shop is held as test/create3.mjs holds the
 // example's: no element says an attribute twice, no heading skips a level.
@@ -38,8 +44,9 @@ import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, sym
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { money } from '../kit/lib/money.mjs';
-import { CART, CHECKOUT } from '../kit/lib/shop/hooks.mjs';
+import { CART, CHECKOUT, ORDER } from '../kit/lib/shop/hooks.mjs';
 import { CHECKOUT_WORDS } from '../kit/lib/shop/checkout.mjs';
+import { ORDER_WORDS } from '../kit/lib/shop/order.mjs';
 import { shopWordsFor } from '../kit/lib/shop/words.mjs';
 import { layShop } from './shop-site.mjs';
 import { varyContent } from './variants.mjs';
@@ -74,7 +81,7 @@ function judged(site, said) {
   if (schema.status !== 0 || !schema.stdout.includes('the schema and the page agree')) fail(`${said}: jtk schema says\n${schema.stdout}\n${schema.stderr}`);
   const lint = spawnSync('node', [join(site, 'node_modules/@jtakeit/kit/bin/jtkit.mjs'), 'lint', '--dist', 'dist', '--root', '.'], { cwd: site, encoding: 'utf8' });
   if (lint.status !== 0) fail(`${said}: jtkit lint says\n${lint.stdout}\n${lint.stderr}`);
-  for (const file of walk(join(site, 'dist')).filter((one) => one.endsWith('.html') && /[\\/](shop|cart)[\\/]/.test(one))) {
+  for (const file of walk(join(site, 'dist')).filter((one) => one.endsWith('.html') && /[\\/](shop|cart|order)[\\/]/.test(one))) {
     const html = readFileSync(file, 'utf8');
     const where = relative(join(site, 'dist'), file);
     for (const [tag] of html.matchAll(/<[a-zA-Z][a-zA-Z0-9-]*\s[^>]*>/g)) {
@@ -260,6 +267,49 @@ try {
     check(/<jtk-checkout[\s>]/.test(cart) && new RegExp(`<h2[^>]*>${W.checkout}</h2>`).test(step) && new RegExp(`<button[^>]*\\stype="submit"[^>]*\\sdata-pay[^>]*>${W.pay}</button>`).test(step), `${where} has no <jtk-checkout>, no heading «${W.checkout}» or no ${W.pay} button for it`);
   }
   settle('the checkout step');
+
+  // ── 7 · the page after payment ───────────────────────────────────────────
+  {
+    const robots = (html) => /<meta name="robots" content="([^"]*)"/.exec(html)?.[1];
+    const sitemap = readFileSync(join(site, 'dist/sitemap.xml'), 'utf8');
+    for (const [address, lang, cart] of [['order', 'de-CH', '/cart'], ['en/order', 'en', '/en/cart']]) {
+      const html = page(address);
+      const where = `/${address}`;
+      const W = shopWordsFor(lang);
+      const root = /<[a-z]+\b[^>]*\sdata-order(?=[\s>=])[^>]*>/.exec(html)?.[0];
+      check(root !== undefined, `${where} has no [data-order]`);
+      check(attr(root, 'data-api') === '/api/' && attr(root, 'data-locale') === lang, `${where} does not say its api and its language (${lang}): ${root}`);
+      // Every hook of the order, written as markup in its root.
+      const at = root === undefined ? -1 : html.indexOf(root);
+      const step = at < 0 ? '' : html.slice(at, html.indexOf('</section>', at));
+      for (const { hook } of [...ORDER.always, ...ORDER.said]) {
+        const data = /^\[(data-[a-z-]+)\]$/.exec(hook);
+        check(data ? new RegExp(`\\s${data[1]}(?=[\\s>=])`).test(step) : false, `${where} does not carry ${hook}`);
+      }
+      // The words for every state, in the page's language; the element reads them under data-words.
+      let said;
+      try {
+        said = JSON.parse(attr(root, 'data-words') ?? '');
+      } catch {
+        said = undefined;
+      }
+      const unsaid = ORDER_WORDS.filter((key) => said?.[key] !== W[key]);
+      check(unsaid.length === 0, `${where} does not hand its element the words for ${unsaid.join(', ')} in ${lang}`);
+      check(new RegExp(`<h1[^>]*>${W.order}</h1>`).test(html) && (html.match(/<h1[\s>]/g) ?? []).length === 1, `${where} is not headed «${W.order}», once`);
+      check(/<jtk-order[\s>]/.test(html) && /<script type="module" src="[^"]+"/.test(html) && new RegExp(`<noscript><p[^>]*>${W.orderNoScript}</p></noscript>`).test(html), `${where} has no <jtk-order>, no script for it or no <noscript> sentence in ${lang}`);
+      // The way back to the cart is the cart of this language, which the buyer's cart is on.
+      const back = /<a\b[^>]*\sdata-back-to-cart[^>]*>/.exec(step)?.[0];
+      check(attr(back, 'href') === cart && /\shidden(?=[\s>=])/.test(back ?? ''), `${where}'s way back to the cart is not ${cart}, hidden: ${back}`);
+      check(!/\sdata-pay-again[^>]*\shref=/.test(step) && /<a\b[^>]*\sdata-pay-again/.test(step), `${where}'s Back to paying is not a link with no address of the build's`);
+      // No more or less indexable than any page, and the sitemap — the content's pages — leaves it out.
+      check(robots(html) !== undefined && robots(html) === robots(page('')) && !/noindex/.test(html), `${where} is not as indexable as the home page: ${robots(html)}`);
+      check(!sitemap.includes(`${where}/`) && !sitemap.includes(`${where}<`), `sitemap.xml names ${where}`);
+      // No language switch: the other language's page would have no token, and say that no order was found.
+      check(!/hreflang=/.test(html.slice(html.indexOf('<body'))) && !html.includes(`href="${address === 'order' ? '/en/order' : '/order'}"`), `${where} offers to switch to the other language's order page, which has no token`);
+    }
+    check(!sitemap.includes('/order'), 'sitemap.xml names the order page');
+  }
+  settle('the page after payment');
   {
     // Built only where the schema turns the shop on: a copy of the site with the module off has no cart, in any language.
     const off = `${site}-off`;
@@ -277,6 +327,7 @@ try {
     if (built.status !== 0) fail(`the shop turned off: the site does not build:\n${built.stdout}\n${built.stderr}`);
     check(existsSync(join(off, 'dist/shop/index.html')) && existsSync(join(off, 'dist/index.html')), 'the shop turned off: the site has lost its other pages');
     check(!existsSync(join(off, 'dist/cart')) && !existsSync(join(off, 'dist/en/cart')), 'the shop turned off: the site still has a cart page');
+    check(!existsSync(join(off, 'dist/order')) && !existsSync(join(off, 'dist/en/order')), 'the shop turned off: the site still has a page after payment');
   }
   settle('the cart, with the shop off');
 
@@ -298,7 +349,7 @@ try {
     }
   }
 
-  console.log('shop: the product\'s page is the site\'s own — its form, its facts and every option, the first price annotated, in German and English — and judged and linted clean, at the edges of the content too; the cart\'s page at /cart and /en/cart, linked from the header, left out of the sitemap, and not built where the shop is off; the checkout under the cart, every hook and every answer\'s words, coming back to /order and /en/order');
+  console.log('shop: the product\'s page is the site\'s own — its form, its facts and every option, the first price annotated, in German and English — and judged and linted clean, at the edges of the content too; the cart\'s page at /cart and /en/cart, linked from the header, left out of the sitemap, and not built where the shop is off; the checkout under the cart, every hook and every answer\'s words, coming back to /order and /en/order; the page after payment there, every hook and every state\'s words, no switch of language, left out of the sitemap, and not built where the shop is off');
 } catch (why) {
   if (!(why instanceof Failure)) throw why;
   console.error(`shop: ${why.message}`);

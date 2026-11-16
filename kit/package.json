@@ -48,6 +48,10 @@
       "types": "./types/shop-checkout.d.ts",
       "default": "./lib/shop/checkout.mjs"
     },
+    "./shop/order": {
+      "types": "./types/shop-order.d.ts",
+      "default": "./lib/shop/order.mjs"
+    },
     "./lead": {
       "types": "./types/lead.d.ts",
       "default": "./lib/lead/render.mjs"
@@ -111,6 +115,10 @@
     "./elements/shop-checkout": {
       "types": "./types/elements-shop.d.ts",
       "default": "./elements/shop-checkout.js"
+    },
+    "./elements/shop-order": {
+      "types": "./types/elements-shop.d.ts",
+      "default": "./elements/shop-order.js"
     },
     "./booking.css": "./booking.css",
     "./lead.css": "./lead.css",

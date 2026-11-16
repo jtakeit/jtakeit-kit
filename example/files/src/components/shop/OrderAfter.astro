@@ -1,0 +1,219 @@
+---
+/**
+ * The page after payment — a working base to copy and dress in the site's design
+ * (jtakeit-core wiki/102 stage 9, decision 6; the booking form's way, wiki/80).
+ *
+ * `jtk add shop` lays this file and the page that draws it
+ * (`src/pages/[...lang]/order.astro`, at `/order` and `/<lang>/order`). It is
+ * where Stripe sends the buyer back to: the checkout's `data-return`, with
+ * `order=<token>` on its address, and `left=1` where they left Stripe's page
+ * without paying. Everything here is the site's: the markup, its order and
+ * wrappers, the classes, the styles below. What is not the site's is the
+ * behaviour — `@jtakeit/kit`'s `<jtk-order>`, imported at the bottom — and the
+ * hooks it finds things by: a `data-*` attribute, never a class. Rename every
+ * class, put the total above the lines, draw the state as a banner; keep the
+ * hooks, and the page works. The list of them, and what each is for, is
+ * `@jtakeit/kit/shop/hooks` (`ORDER`); a hook left out is said in the browser's
+ * console.
+ *
+ * ── what is the kit's, and what is the page's ───────────────────────────────
+ *
+ * The page reads the order from its token alone, so it shows the same on
+ * another device, or long after, with no cart there: it asks `GET /api/order`
+ * until the order is paid, lapsed or cancelled — every three seconds, for two
+ * minutes at most, and then says it is still waiting and stops. What it draws is
+ * what the shop froze: the lines, what they came to, and the method's name and
+ * price — never the buyer's contact or address, which the answer does not
+ * carry. The element writes the lines into `[data-order-lines]`; each carries a
+ * data attribute (`data-order-line`, `data-order-line-title`,
+ * `data-order-line-qty`, `data-order-line-total`…) and is styled with
+ * `:global(...)` below. The root says what it is drawing in `data-state` —
+ * `loading`, `waiting`, `stopped`, `paid`, `lapsed`, `cancelled`, `unknown` —
+ * and this file's CSS shows each part for its own.
+ *
+ * *Back to paying* is Stripe's page again, while the order waits and Stripe's
+ * page is still open; the element gives it its address. *Back to your cart* is
+ * shown where the cart is to pay with — a buyer who left, an order not yet
+ * confirmed, lapsed, cancelled or not found: the cart is kept for them. Once
+ * the order is paid the element empties the cart, and nothing else.
+ *
+ * The page needs JavaScript to ask the shop; its `<noscript>` says so, and that
+ * the confirmation comes by email.
+ */
+import { shopWordsFor } from '@jtakeit/kit/shop/words';
+import { under } from '../../lib/under';
+import { langOf, withLocale } from '../../lib/locale';
+
+interface Props {
+  /** The page's language: `''` for the site's own, the tag of any other. */
+  locale: string;
+}
+
+const { locale } = Astro.props;
+const LANG = langOf(locale);
+const W = shopWordsFor(LANG);
+
+// The words the element says as the order changes, handed over in the page's language: every state among them
+// (`ORDER_WORDS` of `@jtakeit/kit/shop/order`).
+const SAID = [
+  'loading', 'orderNumber', 'quantity', 'free', 'yes', 'orderCartKept',
+  'state.waiting', 'state.left', 'state.paid', 'state.lapsed', 'state.cancelled', 'state.unknown', 'state.stillWaiting',
+];
+const words = Object.fromEntries(SAID.map((key) => [key, W[key]]));
+---
+
+<jtk-order class="order">
+  <section class="order__in" data-order data-api={under('/api/')} data-locale={LANG} data-words={JSON.stringify(words)} data-jtk-fixed aria-label={W.order}>
+    <noscript><p class="order__note">{W.orderNoScript}</p></noscript>
+
+    <p class="order__state" data-order-state role="status"></p>
+    <p class="order__number" data-order-number hidden></p>
+    <ul class="order__lines" data-order-lines></ul>
+
+    <p class="order__sum">
+      <span class="order__label">{W.total}</span>
+      <span class="order__amount" data-order-total></span>
+    </p>
+    <p class="order__method">
+      <span class="order__label">{W.shippingMethod}</span>
+      <span data-order-method></span>
+    </p>
+
+    <p class="order__ways">
+      <a class="order__pay" data-pay-again hidden>{W.payAgain}</a>
+      <a class="order__back" data-back-to-cart href={under(withLocale(locale, '/cart'))} hidden>{W.backToCart}</a>
+    </p>
+  </section>
+</jtk-order>
+
+<script>
+  import '@jtakeit/kit/elements/shop-order';
+</script>
+
+<style>
+  /*
+   * The look — the scaffold's, and the first thing to change, in the site's
+   * tokens. Classes are scoped to this file; what the element draws itself —
+   * a line — carries a data attribute and is styled with `:global(...)` under
+   * the order. The rule the behaviour needs (`[hidden]`, a focus ring) the
+   * element puts on the page.
+   */
+  .order {
+    display: block;
+  }
+  .order__in {
+    display: grid;
+    gap: var(--space-5, 1.5rem);
+    max-width: 46rem;
+  }
+  .order__in > * {
+    min-width: 0;
+  }
+  .order__note,
+  .order__number {
+    margin: 0;
+  }
+  .order__note,
+  .order__number {
+    color: var(--ink-quiet);
+  }
+  .order__state {
+    margin: 0;
+    font-size: var(--step-1, 1.25rem);
+    font-weight: 600;
+  }
+  /* What the order came to and the method are said once the shop has told the order: not before, not for none. */
+  .order__in:not([data-state='waiting'], [data-state='stopped'], [data-state='paid'], [data-state='lapsed'], [data-state='cancelled']) .order__sum,
+  .order__in:not([data-state='waiting'], [data-state='stopped'], [data-state='paid'], [data-state='lapsed'], [data-state='cancelled']) .order__method {
+    display: none;
+  }
+
+  /* the lines, as they were frozen */
+  .order__lines {
+    display: grid;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .order :global([data-order-line]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 0.25rem 1.25rem;
+    padding: var(--space-4, 1rem) 0;
+    border-bottom: 1px solid var(--line);
+    overflow-wrap: anywhere;
+  }
+  .order :global([data-order-line-title]),
+  .order :global([data-order-line-labels]),
+  .order :global([data-order-line-answers]),
+  .order :global([data-order-line-qty]) {
+    grid-column: 1;
+    margin: 0;
+  }
+  .order :global([data-order-line-title]) {
+    font-weight: 600;
+  }
+  .order :global([data-order-line-labels]),
+  .order :global([data-order-line-answers]),
+  .order :global([data-order-line-qty]) {
+    color: var(--ink-quiet);
+    font-size: 0.875rem;
+  }
+  .order :global([data-order-line-answers]) {
+    padding: 0;
+    list-style: none;
+  }
+  .order :global([data-order-line-total]) {
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* what it came to, and the way on */
+  .order__sum,
+  .order__method {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.75rem;
+    margin: 0;
+  }
+  .order__label {
+    font-size: 0.875rem;
+    color: var(--ink-quiet);
+  }
+  .order__amount {
+    font-size: var(--step-2, 1.5rem);
+    font-weight: 600;
+  }
+  .order__ways {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    margin: 0;
+  }
+  .order__pay,
+  .order__back {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    padding: 0.5rem 1.2rem;
+    border: 1px solid var(--ink);
+    border-radius: 999px;
+    color: var(--ink);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .order__pay[hidden],
+  .order__back[hidden] {
+    display: none;
+  }
+  .order__pay {
+    background: var(--ink);
+    color: var(--paper);
+  }
+</style>

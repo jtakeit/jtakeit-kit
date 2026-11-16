@@ -16,7 +16,9 @@
 // And the command itself, as a developer runs it in a site's directory: with
 // no cart of its own, a cart page read with the product pages is given a line
 // from the first product page's form and driven, and read alone is held to its
-// empty state and passes. Both through `jtk a11y`, on this site.
+// empty state and passes; and the order's page, read with no order on its
+// address, says so and asks the shop nothing. All through `jtk a11y`, on this
+// site.
 //
 //   CHROME_PATH=/usr/bin/chromium node test/a11y-shop.mjs [--keep]
 //
@@ -93,6 +95,28 @@ const CHECKOUT_DRIVE = [
 ];
 
 /**
+ * What the order's drive must have said on each cart page: the buyer's three orders on the shop's own pay page — the first paid,
+ * the second left, the third a new order — and then the page's clock in the walk's hands, for what time alone can show.
+ */
+const ORDER_DRIVE = [
+  'order: paid',
+  "order: back from Stripe's page without paying",
+  'order: Back to paying, by the keyboard',
+  'order: Back to your cart, by the keyboard',
+  "order: a press after the buyer left Stripe's page is a new order",
+  'order: a browser that will not let the page empty the cart',
+  'order: a buyer who has just paid and waits for Stripe to say',
+  'order: a hidden tab asks the shop nothing',
+  'order: a tab shown again asks once',
+  'order: after two minutes of asking',
+  'order: a page that has stopped asking asks no more',
+  'order: a lapsed order is said',
+  'order: a cancelled order is said',
+  "order: a token that is nobody's is said so",
+  'order: an order that is paid, lapsed, cancelled or not found is asked after once',
+];
+
+/**
  * The storefront's pieces, in a buyer's order: the pages each adds to the
  * walk, and the checks its drive must have said on each — by the start of
  * the check's words.
@@ -136,6 +160,18 @@ const PIECES = [
     pages: [],
     reaches: { '/cart/': CHECKOUT_DRIVE, '/en/cart/': CHECKOUT_DRIVE },
   },
+  {
+    // The page after payment: driven on the cart pages after the checkout (the buyer's three orders), and read as `jtk a11y` finds it,
+    // with no order on its address, at /order/ and /en/order/ — which asks the shop nothing.
+    piece: 'the order',
+    pages: ['/order/', '/en/order/'],
+    reaches: {
+      '/cart/': ORDER_DRIVE,
+      '/en/cart/': ORDER_DRIVE,
+      '/order/': ['order: an address with no order says no order was found'],
+      '/en/order/': ['order: an address with no order says no order was found'],
+    },
+  },
 ];
 const SOLD_OUT = ['FOX-M-BLUE'];
 /** The fox's first variant: what the cart's drive writes into a cart it finds empty; and its second, for two variants named apart. */
@@ -173,7 +209,7 @@ try {
   const english = results.find((one) => one.path === '/en/cart/')?.found.find((one) => one.check.startsWith("cart: a line added on a page in another language"));
   if (english !== undefined && !(english.said ?? '').includes('«Fox T-shirt»')) lines.push(`/en/cart/ — the line the German fox page added is not titled «Fox T-shirt»: ${english.said}`);
   for (const one of results) {
-    for (const said of one.found.filter((each) => /^(product|cart|checkout|shop):/.test(each.check))) console.log(`${said.ok ? 'ok  ' : 'FAIL'} ${one.path} ${said.check}`);
+    for (const said of one.found.filter((each) => /^(product|cart|checkout|order|shop):/.test(each.check))) console.log(`${said.ok ? 'ok  ' : 'FAIL'} ${one.path} ${said.check}`);
   }
 
   // The command as a developer runs it, in the site's directory, on the pages it is given: `jtk a11y` has no cart to start from.

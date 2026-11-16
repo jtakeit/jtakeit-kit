@@ -23,6 +23,7 @@ import { PRODUCT, CART, CHECKOUT, ORDER, LISTING, lacking } from '../lib/shop/ho
 import { MAX_LINES, MAX_QTY, cartKey, readCart, addLine, removeLine, setQty, shippingBody, cartView } from '../lib/shop/cart.mjs';
 import { productFacts, variantFor, valueStates, answersOf, fromPrice } from '../lib/shop/product.mjs';
 import { ATTEMPT, CHECKOUT_WORDS, HOLD, afterAnswer, checkoutBody, freshPress, keptPress, missingDetails, pressFor, pressKey, sentOf } from '../lib/shop/checkout.mjs';
+import { ASKS_MOST, ASK_EVERY_MS, ORDER_WORDS, frozenOrder, orderAddress, orderView } from '../lib/shop/order.mjs';
 import * as barrel from '../index.mjs';
 
 const now = Date.parse('2026-11-15T12:00:00Z');
@@ -654,9 +655,162 @@ test("the checkout sends the protocol's body", () => {
   assert.deepEqual(missingDetails({ name: 'Ada', email: 'ada@example' }, null), [], 'an email the shop refuses for its domain is the shop\'s to say');
 });
 
+// ── the page after payment ────────────────────────────────────────────────
+
+const STRIPE_PAGE = 'https://checkout.stripe.com/c/pay/cs_test_x';
+/** The lines of an order as the page after payment is told them: frozen at the checkout, in the language it was made in. */
+const FROZEN = [
+  { line: 0, product: 'p1', variant: 'v1', sku: 'FOX-S-RED', title: 'Fox T-shirt', labels: ['S', 'Red'], answers: [], unit: 2990, qty: 2, total: 5980 },
+  {
+    line: 1, product: 'p2', variant: 'v1', sku: 'BAG-1', title: 'Bag', labels: [],
+    answers: [{ key: 'body', name: 'Body', choice: 'red', label: 'Red', adds: 0 }, { key: 'zipper', name: 'Zipper', ticked: true, adds: 500 }, { key: 'tag', name: 'Tag', text: 'Ada', adds: 0 }],
+    unit: 8900, qty: 1, total: 8900,
+  },
+];
+const ORDER_PAID = { state: 'paid', number: 1001, lines: FROZEN, subtotal: 14880, shipping: 790, total: 15670, currency: 'chf', method: 'Post, 2–3 days', pickup: false };
+
+test("a buyer back from Stripe's page is offered it again, and keeps the cart", () => {
+  const waiting = { status: 200, body: { ...ORDER_PAID, state: 'waiting', number: undefined, pay_url: STRIPE_PAGE } };
+  // Back from Stripe's page without paying: said so, with the page to go back to paying — and the cart is not emptied.
+  const left = orderView(waiting, { left: true }, 1);
+  assert.equal(left.state, 'waiting');
+  assert.equal(left.word, 'state.left');
+  assert.equal(left.payUrl, STRIPE_PAGE);
+  assert.equal(left.emptiesCart, false, 'an order not paid leaves the cart as it is');
+  assert.equal(left.askAgain, true, 'and the page goes on asking: the buyer may have paid in another tab');
+  assert.equal(left.number, undefined);
+  // The same order without `left`: a buyer who has just paid, waiting for Stripe to say.
+  const just = orderView(waiting, { left: false }, 1);
+  assert.equal(just.state, 'waiting');
+  assert.equal(just.word, 'state.waiting');
+  assert.equal(just.payUrl, STRIPE_PAGE, 'the answer carries the page while the order waits');
+  assert.equal(just.emptiesCart, false);
+  assert.equal(just.askAgain, true);
+  // The answer takes the page away — the hold ended — and the page offers none.
+  const gone = orderView({ status: 200, body: { ...waiting.body, pay_url: undefined } }, { left: true }, 2);
+  assert.equal(gone.payUrl, undefined);
+  assert.equal(gone.word, 'state.left');
+  // A page that is not Stripe's, or is no address of the web, is never offered to a buyer.
+  for (const url of ['javascript:alert(1)', 'data:text/html,x', '//evil.example/x', '/relative', '', 7, null, {}]) {
+    assert.equal(orderView({ status: 200, body: { ...waiting.body, pay_url: url } }, { left: true }, 1).payUrl, undefined, JSON.stringify(url));
+  }
+  // Lapsed and cancelled: said, the cart kept to pay again, and nothing more to ask.
+  for (const [state, word] of [['lapsed', 'state.lapsed'], ['cancelled', 'state.cancelled']]) {
+    for (const was of [true, false]) {
+      const view = orderView({ status: 200, body: { ...ORDER_PAID, state, number: state === 'cancelled' ? 1001 : undefined, pay_url: STRIPE_PAGE } }, { left: was }, 3);
+      assert.equal(view.state, state);
+      assert.equal(view.word, word, 'what the order is, whether or not the buyer came back by leaving');
+      assert.equal(view.emptiesCart, false, `${state}: the cart is kept, to pay again`);
+      assert.equal(view.askAgain, false);
+      assert.equal(view.payUrl, undefined, `${state}: Stripe's page is offered only while the order waits`);
+    }
+  }
+  // A cancelled order, refunded in full, still has its number (shop-protocol.md).
+  assert.equal(orderView({ status: 200, body: { ...ORDER_PAID, state: 'cancelled' } }, { left: false }, 1).number, 1001);
+});
+
+test('the page after payment needs no cart, and stops asking', () => {
+  assert.equal(ASK_EVERY_MS, 3000);
+  assert.equal(ASKS_MOST, 40, 'two minutes of asking, then said and stopped');
+  // A token that is nobody's says so, and nothing more is asked.
+  const unknown = orderView({ status: 404, body: 'not found' }, { left: false }, 1);
+  assert.equal(unknown.state, 'unknown');
+  assert.equal(unknown.word, 'state.unknown');
+  assert.equal(unknown.askAgain, false);
+  assert.equal(unknown.emptiesCart, false);
+  assert.equal(orderView({ status: 404, body: { error: 'not_found' } }, { left: true }, 40).state, 'unknown');
+  // Paid: its number, and the cart emptied — a cart already empty included: nothing here reads the cart.
+  const paid = orderView({ status: 200, body: ORDER_PAID }, { left: false }, 1);
+  assert.equal(paid.state, 'paid');
+  assert.equal(paid.word, 'state.paid');
+  assert.equal(paid.number, 1001);
+  assert.equal(paid.emptiesCart, true);
+  assert.equal(paid.askAgain, false);
+  assert.equal(paid.payUrl, undefined);
+  // The page the buyer left, paid in another tab: paid all the same.
+  assert.equal(orderView({ status: 200, body: ORDER_PAID }, { left: true }, 17).word, 'state.paid');
+  assert.deepEqual(Object.keys(orderView({ status: 200, body: ORDER_PAID }, { left: false }, 1)).sort(), ['askAgain', 'emptiesCart', 'number', 'state', 'word']);
+
+  // Asked for two minutes — forty times, every three seconds — and then stopped, said, with Stripe's page while it lasts.
+  const waiting = { status: 200, body: { state: 'waiting', lines: FROZEN, pay_url: STRIPE_PAGE } };
+  assert.equal(orderView(waiting, { left: false }, ASKS_MOST - 1).askAgain, true, 'the 39th answer is asked after');
+  assert.equal(orderView(waiting, { left: false }, ASKS_MOST - 1).word, 'state.waiting');
+  const stopped = orderView(waiting, { left: false }, ASKS_MOST);
+  assert.equal(stopped.state, 'waiting');
+  assert.equal(stopped.word, 'state.stillWaiting');
+  assert.equal(stopped.askAgain, false);
+  assert.equal(stopped.payUrl, STRIPE_PAGE, 'Stripe\'s page is still offered');
+  assert.equal(stopped.emptiesCart, false);
+  assert.equal(orderView(waiting, { left: true }, ASKS_MOST + 5).word, 'state.stillWaiting', 'a buyer who left is told it is stopped as well');
+  // No answer — the network gone, a gateway, a rate limiter, a sentence — is asked again as if waiting, up to the same two minutes.
+  for (const answer of [null, undefined, { status: 502, body: { error: 'try_again' } }, { status: 503, body: 'upstream' }, { status: 429, body: null }, { status: 400, body: { error: 'invalid_body' } }, { status: 200, body: null }, { status: 200, body: 'ok' }, { status: 200, body: { state: 'something-new' } }, { status: 200, body: [] }]) {
+    const lost = orderView(/** @type {any} */ (answer), { left: false }, 3);
+    assert.deepEqual([lost.state, lost.word, lost.askAgain, lost.emptiesCart, lost.payUrl], ['waiting', 'state.waiting', true, false, undefined], JSON.stringify(answer));
+    const late = orderView(/** @type {any} */ (answer), { left: false }, ASKS_MOST);
+    assert.deepEqual([late.word, late.askAgain], ['state.stillWaiting', false], `${JSON.stringify(answer)} at the end`);
+  }
+  assert.equal(orderView(null, { left: true }, 1).word, 'state.left');
+
+  // The order is read from the address alone: its token, and never the cart.
+  assert.equal(orderAddress('/api/', '?order=T9&left=1'), '/api/order?token=T9');
+  assert.equal(orderAddress('/api/', ''), null);
+  assert.equal(orderAddress('/api/', '?left=1'), null);
+  assert.equal(orderAddress('/api/', '?order='), null);
+  assert.equal(orderAddress('/api/', '?order=%20'), null);
+  assert.equal(orderAddress('/api/', undefined), null);
+  assert.equal(orderAddress('/p/fox/api/', 'order=T9'), '/p/fox/api/order?token=T9', 'a preview asks its own, and a query with no ? is read');
+  assert.equal(orderAddress('/api', '?order=T9'), '/api/order?token=T9', 'a base without its slash is the same base');
+  assert.equal(orderAddress('/api/', '?order=a%26b%3Dc%20d'), '/api/order?token=a%26b%3Dc%20d', 'a token is put into the query as one value');
+  assert.equal(orderAddress('/api/', '?order=T1&order=T2'), '/api/order?token=T1', 'the first');
+});
+
+test('the order as it was frozen is read for the page to draw, whatever the answer says', () => {
+  const read = frozenOrder(ORDER_PAID, 'Yes');
+  assert.deepEqual(read?.lines, [
+    { title: 'Fox T-shirt', labels: ['S', 'Red'], answers: [], qty: 2, total: 5980 },
+    {
+      title: 'Bag', labels: [],
+      answers: [{ name: 'Body', value: 'Red', adds: 0 }, { name: 'Zipper', value: 'Yes', adds: 500 }, { name: 'Tag', value: 'Ada', adds: 0 }],
+      qty: 1, total: 8900,
+    },
+  ]);
+  assert.deepEqual([read?.subtotal, read?.shipping, read?.total, read?.currency, read?.method, read?.pickup], [14880, 790, 15670, 'chf', 'Post, 2–3 days', false]);
+  // Nothing of the buyer's own is read — the shop's answer never carries it, and the page draws only these keys.
+  assert.deepEqual(Object.keys(read ?? {}).sort(), ['currency', 'lines', 'method', 'pickup', 'shipping', 'subtotal', 'total']);
+  // An answer that is no order, or holds none of its parts, is read as nothing, and a part that is wrong as not there.
+  for (const body of [null, undefined, 'a sentence', [], 7, {}]) assert.equal(frozenOrder(/** @type {any} */ (body), 'Yes'), null, JSON.stringify(body));
+  const bent = frozenOrder(/** @type {any} */ ({ lines: [null, 'x', { title: 7, labels: 'S', answers: 'no', qty: '2', total: Infinity }, { title: 'Ok', labels: ['A', 3, ''], answers: [{ name: 'N', text: '' }, null, { name: 'M', text: 'x', adds: 'ten' }], qty: 1, total: 100 }], subtotal: '1', shipping: NaN, total: 3, currency: 4, method: null, pickup: 'yes' }), 'Yes');
+  assert.deepEqual(bent?.lines, [
+    { title: '', labels: [], answers: [], qty: 0, total: undefined },
+    { title: 'Ok', labels: ['A'], answers: [{ name: 'M', value: 'x', adds: 0 }], qty: 1, total: 100 },
+  ]);
+  assert.deepEqual([bent?.subtotal, bent?.shipping, bent?.total, bent?.currency, bent?.method, bent?.pickup], [undefined, undefined, 3, '', '', false]);
+  // The words of an answer are the shop's, put in as they are; a yes-or-no is said in the page's word.
+  assert.equal(frozenOrder({ lines: [{ title: 'T', labels: [], answers: [{ name: 'Gift', ticked: true, adds: 0 }], qty: 1, total: 1 }] }, 'Ja')?.lines[0].answers[0].value, 'Ja');
+});
+
+test('every word the page after payment may say is in every language, the three it adds among them', () => {
+  assert.ok(ORDER_WORDS.length > 0 && new Set(ORDER_WORDS).size === ORDER_WORDS.length);
+  for (const word of ['state.waiting', 'state.left', 'state.paid', 'state.lapsed', 'state.cancelled', 'state.unknown', 'state.stillWaiting', 'orderNumber', 'loading']) assert.ok(ORDER_WORDS.includes(word), word);
+  for (const locale of SHOP_LOCALES) {
+    const words = shopWordsFor(locale);
+    for (const word of ORDER_WORDS) assert.ok(typeof words[word] === 'string' && words[word].trim() !== '', `${locale}: ${word}`);
+    // The page's heading, the sentence for a browser with no script, and the one for a cart that could not be emptied.
+    for (const word of ['order', 'orderNoScript', 'orderCartKept']) assert.ok(typeof words[word] === 'string' && words[word].trim() !== '', `${locale}: ${word}`);
+  }
+  // Every state the view can say is a word the page hands over.
+  const body = { ...ORDER_PAID, state: 'waiting' };
+  const views = [
+    orderView({ status: 404, body: null }, { left: false }, 1), orderView({ status: 200, body: ORDER_PAID }, { left: false }, 1),
+    orderView({ status: 200, body: { ...ORDER_PAID, state: 'lapsed' } }, { left: false }, 1), orderView({ status: 200, body: { ...ORDER_PAID, state: 'cancelled' } }, { left: false }, 1),
+    orderView({ status: 200, body }, { left: false }, 1), orderView({ status: 200, body }, { left: true }, 1), orderView({ status: 200, body }, { left: true }, ASKS_MOST),
+  ];
+  for (const view of views) assert.ok(ORDER_WORDS.includes(view.word), `${view.state}: ${view.word}`);
+});
+
 // ── a product's facts ─────────────────────────────────────────────────────
 
-const OPTION = (key, ...values) => ({ _key: key, name: key, values: values.map((value) => ({ _key: value, label: value.toUpperCase() })) });
+const OPTION =(key, ...values) => ({ _key: key, name: key, values: values.map((value) => ({ _key: value, label: value.toUpperCase() })) });
 
 /** A product of three options — size, colour and fit — through the door, one variant to a combination written. */
 function threeOptions(picked, extra = {}) {
@@ -925,6 +1079,7 @@ test('the storefront is in the package under its own entries, and in the barrel'
     ['./shop/hooks', './lib/shop/hooks.mjs', './types/shop-hooks.d.ts'],
     ['./shop/cart', './lib/shop/cart.mjs', './types/shop-cart.d.ts'],
     ['./shop/checkout', './lib/shop/checkout.mjs', './types/shop-checkout.d.ts'],
+    ['./shop/order', './lib/shop/order.mjs', './types/shop-order.d.ts'],
   ]) {
     assert.deepEqual(manifest.exports[entry], { types, default: file }, entry);
     assert.ok(readFileSync(new URL(`../${file}`, import.meta.url), 'utf8').length > 0);
@@ -932,7 +1087,7 @@ test('the storefront is in the package under its own entries, and in the barrel'
   }
   // `lib` and `types` are packed whole, so none of it can be left out of a release.
   assert.ok(manifest.files.includes('lib') && manifest.files.includes('types'));
-  for (const name of ['SHOP_LOCALES', 'shopWordsFor', 'PRODUCT', 'CART', 'CHECKOUT', 'ORDER', 'LISTING', 'MAX_LINES', 'MAX_QTY', 'cartKey', 'readCart', 'addLine', 'removeLine', 'setQty', 'shippingBody', 'cartView', 'pressKey', 'freshPress', 'pressFor', 'checkoutBody', 'missingDetails', 'afterAnswer', 'productFacts', 'variantFor', 'valueStates', 'answersOf', 'fromPrice']) {
+  for (const name of ['SHOP_LOCALES', 'shopWordsFor', 'PRODUCT', 'CART', 'CHECKOUT', 'ORDER', 'LISTING', 'MAX_LINES', 'MAX_QTY', 'cartKey', 'readCart', 'addLine', 'removeLine', 'setQty', 'shippingBody', 'cartView', 'pressKey', 'freshPress', 'pressFor', 'checkoutBody', 'missingDetails', 'afterAnswer', 'ASK_EVERY_MS', 'ASKS_MOST', 'ORDER_WORDS', 'orderView', 'orderAddress', 'frozenOrder', 'productFacts', 'variantFor', 'valueStates', 'answersOf', 'fromPrice']) {
     assert.ok(name in barrel, `index.mjs exports ${name}`);
   }
 });
@@ -968,7 +1123,7 @@ test('the pieces\' shared helpers: JSON from an attribute or what is given, and 
   assert.equal(typeof wire.BaseElement, 'function', 'something for a piece\'s element to extend, with or without a document');
   // With no custom elements to define it in, defining is nothing.
   wire.defineOnce('jtk-nothing', class extends wire.BaseElement {});
-  for (const file of ['shop-product.js', 'shop-cart.js', 'shop-checkout.js']) {
+  for (const file of ['shop-product.js', 'shop-cart.js', 'shop-checkout.js', 'shop-order.js']) {
     const source = readFileSync(new URL(`../elements/${file}`, import.meta.url), 'utf8');
     // Written once, in the wire: a piece takes them from there.
     assert.doesNotMatch(source, /^(?:export )?function (?:parsed|putBase)\b/m, `${file} writes its own`);
@@ -981,7 +1136,7 @@ test('the pieces\' shared helpers: JSON from an attribute or what is given, and 
 test("a shop's title is put into a word as written, never as a replacement pattern", () => {
   // `'Remove {title}'.replace('{title}', 'Gift $& card')` would say «Remove {title} card»: a title is a shop's free text.
   assert.equal('Remove {title}'.replace('{title}', () => 'Gift $$ 50 $& card'), 'Remove Gift $$ 50 $& card');
-  for (const file of ['shop-product.js', 'shop-cart.js', 'shop-checkout.js']) {
+  for (const file of ['shop-product.js', 'shop-cart.js', 'shop-checkout.js', 'shop-order.js']) {
     const source = readFileSync(new URL(`../elements/${file}`, import.meta.url), 'utf8');
     for (const [call] of source.matchAll(/\.replace\('\{title\}',[^\n]*/g)) assert.match(call, /\{title\}',\s*\(\)\s*=>/, `${file}: ${call}`);
   }
@@ -1028,6 +1183,32 @@ test("the checkout's element loads without a DOM, speaks over the same wire, and
   assert.match(source, /from '\.\.\/lib\/shop\/checkout\.mjs'/);
   for (const name of ['pressKey', 'pressFor', 'checkoutBody', 'afterAnswer']) assert.match(source, new RegExp(`\\b${name}\\(`), `the element calls ${name}`);
   assert.match(source, /sessionStorage/, 'the press is kept in the tab');
+});
+
+test("the order's element loads without a DOM, speaks over the same wire, and is in the package with its types", async () => {
+  const wire = await import('../elements/shop-wire.js');
+  const order = await import('../elements/shop-order.js');
+  assert.equal(order.SHOP_PROTOCOL, 1, 'the element names the wire\'s version');
+  assert.equal(order.ask, wire.ask);
+  for (const name of ['wireOrder', 'defineOrder']) assert.equal(typeof order[name], 'function', name);
+  assert.equal(typeof order.JtkOrder, 'function');
+  // With no custom elements to define it in, defining is nothing.
+  order.defineOrder();
+
+  const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  assert.deepEqual(manifest.exports['./elements/shop-order'], { types: './types/elements-shop.d.ts', default: './elements/shop-order.js' });
+  const types = readFileSync(new URL('../types/elements-shop.d.ts', import.meta.url), 'utf8');
+  for (const name of ['wireOrder', 'defineOrder', 'JtkOrder']) assert.ok(types.includes(name), `elements-shop.d.ts declares ${name}`);
+  const orderTypes = readFileSync(new URL('../types/shop-order.d.ts', import.meta.url), 'utf8');
+  for (const name of ['ASK_EVERY_MS', 'ASKS_MOST', 'OrderView', 'orderView', 'orderAddress', 'frozenOrder', 'ORDER_WORDS']) assert.ok(orderTypes.includes(name), `shop-order.d.ts declares ${name}`);
+  assert.match(readFileSync(new URL('../types/index.d.ts', import.meta.url), 'utf8'), /orderView/, 'the barrel\'s types say orderView');
+  // The element decides nothing of its own: what the answer means is orderView's, and the address is orderAddress's — and the
+  // cart is never read, only emptied.
+  const source = readFileSync(new URL('../elements/shop-order.js', import.meta.url), 'utf8');
+  assert.match(source, /from '\.\.\/lib\/shop\/order\.mjs'/);
+  for (const name of ['orderView', 'orderAddress', 'frozenOrder']) assert.match(source, new RegExp(`\\b${name}\\(`), `the element calls ${name}`);
+  assert.doesNotMatch(source, /localStorage\.getItem|readCart/, 'the page after payment reads the order from its address alone, never the cart');
+  assert.match(source, /localStorage\.removeItem/, 'and empties it once the order is paid');
 });
 
 test('ask names the protocol on every request, is never cached, sends JSON, and is null where nothing answered', async () => {

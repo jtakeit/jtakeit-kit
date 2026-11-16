@@ -130,6 +130,9 @@ const BASE = {
     'state.cancelled': 'Замовлення скасовано, кошти повернуто повністю',
     'state.unknown': 'За цим посиланням замовлення не знайдено',
     'state.stillWaiting': 'Оплату ще не підтверджено. Якщо ви заплатили, підтвердження прийде на пошту; цю сторінку можна закрити',
+    order: 'Ваше замовлення',
+    orderNoScript: 'Щоб показати замовлення, потрібен JavaScript. Якщо ви заплатили, підтвердження прийде на пошту',
+    orderCartKept: 'Не вдалося очистити ваш кошик: браузер не дозволив сайту змінити свої дані',
   },
   de: {
     // the product page
@@ -229,6 +232,9 @@ const BASE = {
     'state.cancelled': 'Diese Bestellung wurde storniert und der Betrag vollständig erstattet',
     'state.unknown': 'Zu diesem Link wurde keine Bestellung gefunden',
     'state.stillWaiting': 'Die Zahlung ist noch nicht bestätigt. Falls Sie bezahlt haben, kommt die Bestätigung per E-Mail; Sie können diese Seite schliessen',
+    order: 'Ihre Bestellung',
+    orderNoScript: 'Zum Anzeigen Ihrer Bestellung ist JavaScript nötig. Falls Sie bezahlt haben, kommt die Bestätigung per E-Mail',
+    orderCartKept: 'Ihr Warenkorb konnte nicht geleert werden: Der Browser erlaubt der Seite nicht, ihre Daten zu ändern',
   },
   en: {
     // the product page
@@ -328,6 +334,9 @@ const BASE = {
     'state.cancelled': 'This order was cancelled and refunded in full',
     'state.unknown': 'No order was found for this link',
     'state.stillWaiting': 'The payment is not confirmed yet. If you paid, the confirmation will arrive by email; you can close this page',
+    order: 'Your order',
+    orderNoScript: 'Showing your order needs JavaScript. If you paid, the confirmation will arrive by email',
+    orderCartKept: 'Your cart could not be emptied: this browser would not let the site change its data',
   },
   ru: {
     // the product page
@@ -427,6 +436,9 @@ const BASE = {
     'state.cancelled': 'Заказ отменён, деньги возвращены полностью',
     'state.unknown': 'По этой ссылке заказ не найден',
     'state.stillWaiting': 'Оплата пока не подтверждена. Если вы заплатили, подтверждение придёт на почту; эту страницу можно закрыть',
+    order: 'Ваш заказ',
+    orderNoScript: 'Чтобы показать заказ, нужен JavaScript. Если вы заплатили, подтверждение придёт на почту',
+    orderCartKept: 'Не удалось очистить вашу корзину: браузер не позволил сайту изменить свои данные',
   },
   es: {
     // the product page
@@ -526,6 +538,9 @@ const BASE = {
     'state.cancelled': 'Este pedido se canceló y el importe se reembolsó por completo',
     'state.unknown': 'No se encontró ningún pedido con este enlace',
     'state.stillWaiting': 'El pago aún no está confirmado. Si ha pagado, la confirmación llegará por correo; puede cerrar esta página',
+    order: 'Su pedido',
+    orderNoScript: 'Para mostrar su pedido hace falta JavaScript. Si ha pagado, la confirmación llegará por correo',
+    orderCartKept: 'No se pudo vaciar su carrito: el navegador no permite que el sitio cambie sus datos',
   },
   it: {
     // the product page
@@ -625,6 +640,9 @@ const BASE = {
     'state.cancelled': 'Questo ordine è stato annullato e l’importo rimborsato per intero',
     'state.unknown': 'Nessun ordine trovato con questo link',
     'state.stillWaiting': 'Il pagamento non è ancora confermato. Se ha pagato, la conferma arriverà via e-mail; può chiudere questa pagina',
+    order: 'Il suo ordine',
+    orderNoScript: 'Per mostrare il suo ordine serve JavaScript. Se ha pagato, la conferma arriverà via e-mail',
+    orderCartKept: 'Non è stato possibile svuotare il suo carrello: il browser non consente al sito di modificare i propri dati',
   },
   pt: {
     // the product page
@@ -724,6 +742,9 @@ const BASE = {
     'state.cancelled': 'Esta encomenda foi cancelada e o valor reembolsado na totalidade',
     'state.unknown': 'Não foi encontrada nenhuma encomenda com esta ligação',
     'state.stillWaiting': 'O pagamento ainda não está confirmado. Se pagou, a confirmação chegará por e-mail; pode fechar esta página',
+    order: 'A sua encomenda',
+    orderNoScript: 'Para mostrar a sua encomenda é preciso JavaScript. Se pagou, a confirmação chegará por e-mail',
+    orderCartKept: 'Não foi possível esvaziar o seu carrinho: o navegador não deixa o site alterar os seus dados',
   },
   fr: {
     // the product page
@@ -823,6 +844,9 @@ const BASE = {
     'state.cancelled': 'Cette commande a été annulée et remboursée intégralement',
     'state.unknown': 'Aucune commande trouvée pour ce lien',
     'state.stillWaiting': 'Le paiement n’est pas encore confirmé. Si vous avez payé, la confirmation arrivera par e-mail ; vous pouvez fermer cette page',
+    order: 'Votre commande',
+    orderNoScript: 'L’affichage de votre commande nécessite JavaScript. Si vous avez payé, la confirmation arrivera par e-mail',
+    orderCartKept: 'Votre panier n’a pas pu être vidé : le navigateur n’autorise pas le site à modifier ses données',
   },
 };
 
