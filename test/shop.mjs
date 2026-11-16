@@ -44,6 +44,12 @@
 //      well — the sitemap and llms.txt name it, and every address they name is
 //      a page the build wrote — asking a shop that is off for nothing
 //
+//   9  a site with no shop builds as before (Task 9.17; Task 9.12 checked it once,
+//      by `diff -r` of two dist/ trees): a site with a blog and a salon kit and no
+//      shop, built with the scaffold's entry page as it is, and again with the
+//      lines the shop added to it taken out — the page as it was before the shop —
+//      has the same dist/, byte for byte, and no trace of the shop in any file of it
+//
 // Every built page of the shop is held as test/create3.mjs holds the
 // example's: no element says an attribute twice, no heading skips a level.
 // The kit is this checkout's, packed. The walk in a real Chrome is
@@ -148,6 +154,30 @@ function ownersOnly(site, said) {
     }
   }
 }
+
+/**
+ * The scaffold's entry page as it was before the shop (Task 9.12): the lines it says about a product taken out — the glob that finds the
+ * site's `Product.astro`, the facts loop's condition, and the branch that draws it in place of the generic article. Thrown where the page
+ * does not say them in the words below: whoever moves them moves this with them, and the guard it makes is only as good as the page it gives.
+ */
+function withoutTheShop(source) {
+  let out = source;
+  for (const [what, found, put] of [
+    ['the glob and the line that names the shop\'s product page', /\/\*\n \* ── a product, drawn by the shop's own page[\s\S]*?\*\/\nconst productPages = [^\n]*\nconst Product = [^\n]*\n\n/, ''],
+    ['the facts loop\'s condition', /for \(const field of Product === undefined \? collection\.fields : \[\]\) \{/, 'for (const field of collection.fields) {'],
+    ['the branch that draws a product', /    \{\/\* A product, where the site has its own page[^\n]*\*\/\}\n    \{Product !== undefined && <Product [^\n]*\/>\}\n    \{Product === undefined && \(\n/, ''],
+    ['the branch\'s end', /(    <\/article>\n)    \)\}\n/, '$1'],
+  ]) {
+    const next = out.replace(found, put);
+    if (next === out) throw new Failure(`a site with no shop: the scaffold's template/src/pages/[...entry].astro has not ${what} as test/shop.mjs's withoutTheShop expects`);
+    out = next;
+  }
+  if (/\bproductPages\b|<Product\b|\bProduct (?:===|!==)|\bconst Product\b/.test(out)) throw new Failure('a site with no shop: the entry page still says Product after the shop\'s lines were taken out — withoutTheShop does not know all of them');
+  return out;
+}
+
+/** A tree's files, by their path, with their bytes: what a build wrote. */
+const treeOf = (root) => new Map(walk(root).map((file) => [relative(root, file), readFileSync(file)]));
 
 try {
   const site = await layShop(dir);
@@ -484,7 +514,45 @@ try {
     }
   }
 
-  console.log('shop: the product\'s page is the site\'s own — its form, its facts and every option, the first price annotated, in German and English — and judged and linted clean, at the edges of the content too; the cart\'s page at /cart and /en/cart, linked from the header, left out of the sitemap, and not built where the shop is off; the checkout under the cart, every hook and every answer\'s words, coming back to /order and /en/order; the page after payment there, every hook and every state\'s words, no switch of language, left out of the sitemap, and not built where the shop is off; the products\' listing at /shop and /en/shop, every product a tile with its title and its lowest price annotated, hiding nothing as the unit lays it, and the same listing of a site that chooses to hide what is sold out built with every product it serves, the bag\'s least price on sale where it is not the first variant\'s; and, where the shop is off, built all the same and asking nothing, every address the sitemap and llms.txt name a page the build wrote');
+  // ── 9 · a site with no shop builds as before ─────────────────────────────
+  // The scaffold's entry page looks for the site's own `Product.astro`, which only `jtk add shop` lays. A site with none matches nothing
+  // there and draws every entry as it always did: built with the entry page as it is, and with the shop's lines taken out of it, its dist/
+  // is the same, file for file and byte for byte — and holds no trace of the shop, in a page, a script or a stylesheet. The site has what
+  // the entry page draws — a blog's posts and a salon's services and masters — in two languages, and its node_modules are the shop's, since
+  // the template's are the same.
+  {
+    const plain = join(dir, 'plain');
+    const made = spawnSync('node', [bin, 'create', 'plain-probe', '--locale', 'de-CH', '--locales', 'en', '--blog', '--kit', join(import.meta.dirname, 'fixtures/kit-salon.json'), '--no-git', '--out', plain], { encoding: 'utf8' });
+    if (made.status !== 0) fail(`a site with no shop: jtk create says\n${made.stdout}\n${made.stderr}`);
+    const before = `${plain}-before`;
+    cpSync(plain, before, { recursive: true, filter: (from) => !/[\\/](node_modules|dist|\.git)$/.test(from) });
+    for (const one of [plain, before]) symlinkSync(join(site, 'node_modules'), join(one, 'node_modules'));
+    const entryPage = 'src/pages/[...entry].astro';
+    check(!existsSync(join(plain, 'src/components/shop')) && !/shop/.test(readFileSync(join(plain, 'src/content/blocks.ts'), 'utf8').replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, '')), 'a site with no shop: the site has shop files or a shop in its declaration');
+    writeFileSync(join(before, entryPage), withoutTheShop(readFileSync(join(before, entryPage), 'utf8')));
+    for (const one of [plain, before]) {
+      const built = spawnSync('npm', ['run', 'build'], { cwd: one, encoding: 'utf8', env: { ...process.env, SITE_URL: 'https://plain-probe.example/' } });
+      if (built.status !== 0) fail(`a site with no shop: ${one === plain ? 'the site' : 'the site with the shop\'s lines taken out of its entry page'} does not build:\n${built.stdout}\n${built.stderr}`);
+    }
+    const [now, then] = [treeOf(join(plain, 'dist')), treeOf(join(before, 'dist'))];
+    const pages = [...now.keys()].filter((one) => one.endsWith('.html'));
+    // The subject: pages the entry page's generic article draws, in both languages — a comparison of two builds of nothing holds nothing.
+    const drawn = pages.filter((one) => /<article class="entry"/.test(now.get(one).toString('utf8')));
+    check(drawn.length >= 4 && drawn.some((one) => one.startsWith('en/')) && drawn.some((one) => !one.startsWith('en/')), `a site with no shop: the entry page's generic article draws only ${drawn.length} page(s), in one language at most: ${drawn.join(', ')} of ${pages.length}`);
+    const only = (a, b, said) => [...a.keys()].filter((one) => !b.has(one)).map((one) => `${one} (${said})`);
+    const differing = [...now.keys()].filter((one) => then.has(one) && !now.get(one).equals(then.get(one)));
+    const apart = [...only(now, then, 'only with the shop\'s lines in the entry page'), ...only(then, now, 'only without them'), ...differing.map((one) => `${one} (different bytes)`)];
+    check(apart.length === 0, `a site with no shop does not build as before: ${apart.length} file(s) of its dist/ differ with the shop's lines in the entry page:\n    ${apart.slice(0, 8).join('\n    ')}`);
+    // And no trace of the shop in what it ships: the elements, their scripts, the cart's storage, the protocol's header and addresses.
+    const TRACES = /jtk-(?:product|cart|checkout|order|listing)\b|data-(?:product|listing|cart|checkout|order)\b|jtk:cart|x-jtk-shop|\/api\/(?:shipping|stock|checkout)\b|@jtakeit\/kit\/elements\/shop/i;
+    const traced = [...now].filter(([, bytes]) => TRACES.test(bytes.toString('utf8'))).map(([name]) => name);
+    check(traced.length === 0, `a site with no shop carries the shop: ${traced.slice(0, 6).join(', ')} say the shop's elements, storage or addresses`);
+    check(!['shop', 'cart', 'order', 'en/shop', 'en/cart', 'en/order'].some((one) => existsSync(join(plain, 'dist', one))), 'a site with no shop has a page of the shop');
+    check(![...now.keys()].some((one) => /(?:^|[\\/])Product\.astro[^\\/]*$/.test(one)), 'a site with no shop ships a script of the shop\'s product page');
+  }
+  settle('a site with no shop');
+
+  console.log('shop: the product\'s page is the site\'s own — its form, its facts and every option, the first price annotated, in German and English — and judged and linted clean, at the edges of the content too; the cart\'s page at /cart and /en/cart, linked from the header, left out of the sitemap, and not built where the shop is off; the checkout under the cart, every hook and every answer\'s words, coming back to /order and /en/order; the page after payment there, every hook and every state\'s words, no switch of language, left out of the sitemap, and not built where the shop is off; the products\' listing at /shop and /en/shop, every product a tile with its title and its lowest price annotated, hiding nothing as the unit lays it, and the same listing of a site that chooses to hide what is sold out built with every product it serves, the bag\'s least price on sale where it is not the first variant\'s; and, where the shop is off, built all the same and asking nothing, every address the sitemap and llms.txt name a page the build wrote; and a site with no shop built as before — the same dist/, byte for byte, with the shop\'s lines taken out of the scaffold\'s entry page, and no trace of the shop in it');
 } catch (why) {
   if (!(why instanceof Failure)) throw why;
   console.error(`shop: ${why.message}`);
