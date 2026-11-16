@@ -51,7 +51,10 @@
  * it once, for the site, the panel and the build. And the judge's own advice
  * on a schema it accepts (`adviseSchema`): an entry type whose card the panel
  * lays out by guessing (`JTK_W_PANEL_FORM_GUESSED`) — a `form` that leaves
- * fields to «More», or seven fields or more and no `form`. Said in every
+ * fields to «More», or seven fields or more and no `form` — and a schema
+ * without `render: "live"` (`JTK_W_NOT_LIVE`): the owner previews no change
+ * before a build, so a contract-3 site keeps `RENDER = 'live'`, and one that
+ * cannot says why in BRIEF.md (docs/live.md). Said in every
  * mode, with `--emit-only` too, and counted in no exit code.
  *
  * ── what it never writes ────────────────────────────────────────────────────

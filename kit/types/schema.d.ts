@@ -400,7 +400,7 @@ export function schemaText(schema: Schema): string;
 /** Everything the platform's strict decode and its judge would say of a contract-3 schema's text, offline; empty for one it accepts. */
 export function judgeSchema(text: string): Fault[];
 
-/** The judge's advice on a schema it accepts — `JTK_W_PANEL_FORM_GUESSED`, where the panel guesses an entry's card; empty for one it refuses. */
+/** The judge's advice on a schema it accepts — `JTK_W_PANEL_FORM_GUESSED`, where the panel guesses an entry's card, and `JTK_W_NOT_LIVE`, a schema without `render: "live"`; empty for one it refuses. */
 export function adviseSchema(text: string): Fault[];
 
 /** `jtk schema` with these arguments; resolves to the exit code. */
