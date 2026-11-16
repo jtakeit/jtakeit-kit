@@ -1383,6 +1383,8 @@ export function contract3(byPath, names, { annotate, now }) {
             blocks: doc.body,
             visible: file.raw.visible,
             shown: doc.shown,
+            // Over by its date (ends_by): what the checks ask no place of.
+            ended: doc.ended === true,
           });
         }
       }
