@@ -124,30 +124,78 @@ The frame's headings over the address and the hours are optional shared fields
 (`contacts.address_label`, `reach_label`, `maps_label`, `hours.label`): the
 business's words where written, the kit's word in each language where empty.
 
+## Two sheets, one rule
+
+The server build bundles a page's stylesheets differently from the static
+one: where two sheets every page reads say the same selector — the
+scaffold's `global.css` and the site's own, say — it merges them into one,
+and its minifier drops the rule the later one overrides. The static build
+kept both. The platform's check then finds a rule of the built page missing
+live, and draws nothing live (KAIF, 16 November 2026: `a { color }` and
+`:focus-visible` in both `global.css` and `kaif.css`).
+
+Write an overriding rule once: change it where it is first said, and take
+the second one out, rather than saying it again in a later sheet.
+
 ## Moving a site
 
 `jtk upgrade contract-3` lays the scaffold's files out where a site's are the
 scaffold's, hands `astro.config.mjs`'s config to `liveRender` where it is
 written the scaffold's way, adds `@astrojs/node`, lays in `src/live/` and
-says `RENDER = 'live'`. Where any of those is the developer's, it leaves the
-word and `src/live/` out, and says so first in its list for a person: the
-site will not be drawn live, and the owner previews no change before a build.
+says `RENDER = 'live'`. Where the site's integration is its own — not
+`jtakeit-meta.mjs`, as KAIF's `fastlane-meta.mjs` — it lays in only what the
+routes need (`src/live/middleware.ts` and `images.ts`, and `Route.astro`
+only beside the scaffold's four catch-alls), wraps the config where the
+integration already says `liveRender`, and otherwise prints the lines to
+paste. Whatever it cannot do it says first in its list for a person, file by
+file with what each must do: the site will not be drawn live, and the owner
+previews no change before a build.
 
-Wiring the site's own pages in is then the developer's, and it is the next
-step, not a later one:
+## By hand, where the upgrade cannot
 
-1. make each file the upgrade names the scaffold's, or move its reads to the
-   door per request, as the table above says;
-2. lay in the scaffold's `src/live/`
-   (`node_modules/@jtakeit/astro/template/src/live/`), the config's two lines
-   (`liveRender` from `./jtakeit-meta.mjs`) and `@astrojs/node`;
-3. list in `DRAWN` (`jtakeit-meta.mjs`) every route of the site's own that
-   reads `Astro.props` from its `getStaticPaths`;
-4. say `RENDER = 'live'`, run `jtk schema`, and build: the platform's check
-   names any page that differs.
+Wiring the site's own pages in is the developer's, and it is the next step,
+not a later one. Each step as KAIF took it:
 
-A site already on contract 3 takes the same files by hand: `src/live/`,
-`src/lib/{site,entries,entryLoader,uploads,icon}.ts`, `src/copy/index.ts`,
-`jtakeit-meta.mjs`, the config's two lines and the dependency, then the word.
-Only where a page cannot be rewritten does the word stay out — with its
-reason in `BRIEF.md` ([the one exception](#the-one-exception)).
+1. **The adapter.** `npm install @astrojs/node` at the version the scaffold's
+   `package.json` names; the platform's renderer runs what the lockfile
+   says.
+2. **The middleware and the pictures.** Copy
+   `node_modules/@jtakeit/astro/template/src/live/middleware.ts` and
+   `images.ts` into `src/live/`. `Route.astro` only where `src/pages` has the
+   scaffold's `[...entry]`, `[...listing]`, `[...listing]/page/[page]` and
+   `[...lang]/index` — it draws exactly those.
+3. **The integration.** In the site's Astro integration, under
+   `process.env.JTK_RENDER === 'live'` only: export `liveRender(config)`,
+   which returns the config with `output: 'server'`,
+   `adapter: node({ mode: 'middleware' })` and `src/live/images.ts` as the
+   image service; in `astro:config:setup`, when `config.output === 'server'`,
+   `addMiddleware({ entrypoint: …/src/live/middleware.ts, order: 'pre' })`
+   (and `injectRoute` for `Route.astro` where step 2 laid it).
+   `jtk upgrade` prints these lines for an integration it does not know;
+   `template/jtakeit-meta.mjs` is the whole of it.
+4. **The config.** `export default defineConfig(await liveRender({ … }))`,
+   `liveRender` imported from the integration.
+5. **The routes that take props.** A route that reads `Astro.props` from its
+   own `getStaticPaths` — `[...entry].astro`, `[...feed].xml.ts` — gets no
+   props from a server. Prerender it under `JTK_RENDER=live` (in
+   `astro:route:setup`, `route.prerender = true`), or draw it through
+   `Route.astro`. A page that reads no `Astro.props` (`/`, `/afisha`) needs
+   neither: the server draws it per request.
+6. **The reads.** Every read of content at a module's top level moves into
+   the frontmatter of the page or section that draws it, through the door —
+   `src/lib/site.ts` wrapped in `live()` from `@jtakeit/kit/live` (the table
+   at the top). Two sheets that say one rule say it once (above).
+7. **The word.** `export const RENDER = 'live'` after `CONTRACT = 3` in
+   `src/content/blocks.ts`, then `npx @jtakeit/astro schema`.
+8. **The check.** `npm run build`, then `JTK_RENDER=live npm run build`: the
+   server build must build too (it writes `dist/` for a server — build
+   static again after it). Then push and build on the platform, whose check
+   draws a few pages live, holds each to its built twin and names any page
+   that differs in the build's log. The platform makes its server build in
+   `.jtk-live/` beside the checkout: put that in `.gitignore`.
+
+A site already on contract 3 takes the scaffold's files the same way:
+`src/live/`, `src/lib/{site,entries,entryLoader,uploads,icon}.ts`,
+`src/copy/index.ts`, `jtakeit-meta.mjs`, the config's two lines and the
+dependency, then the word. Only where a page cannot be rewritten does the word
+stay out — with its reason in `BRIEF.md` ([the one exception](#the-one-exception)).
