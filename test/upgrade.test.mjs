@@ -11,7 +11,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
-import { copyThroughTheDoor, ownFile, readsOf, tokened, untokened } from '../lib/upgrade.mjs';
+import { closeOver, copyThroughTheDoor, exportsOf, importsOf, namedImportsOf, ownFile, provenanceOf, readsOf, resolveImport, stateFromThePlatform, tokened, untokened } from '../lib/upgrade.mjs';
 
 const bin = resolve('bin/jtk.mjs');
 const KIT = resolve('test/fixtures/kit-salon.json');
@@ -399,7 +399,7 @@ test('two languages, the shared values equal: one original, its translation besi
     assert.deepEqual(Object.keys(english), ['of', 'locale', 'name', 'seo', 'blocks', 'translated']);
     assert.equal(english.of, page.id);
     assert.equal(english.locale, 'en');
-    assert.equal(english.name, 'Welcome');
+    assert.equal(english.name, 'Home', 'the home page by the word for it in English (B11)');
     assert.deepEqual(english.seo, { title: 'Welcome' });
     assert.deepEqual(english.blocks, [
       { _key: 'hero0001', title: 'Welcome', image: { alt: 'The shop' } },
@@ -545,3 +545,253 @@ test('jtk copy on contract 3: the form\'s words, content, in the language\'s tra
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+// ── what the KAIF move found (16 November 2026) ─────────────────────────────
+
+const OLD = (version, path) => readFileSync(resolve('test/fixtures/scaffold-old', version, path), 'utf8');
+/** Every relative import of the site's code that leads nowhere: what the move must never leave. */
+function unresolved(site) {
+  const out = [];
+  const code = [];
+  const walk = (at) => {
+    for (const entry of readdirSync(at)) {
+      if (['node_modules', 'dist', '.git'].includes(entry)) continue;
+      const file = join(at, entry);
+      if (statSync(file).isDirectory()) walk(file);
+      else if (/\.(ts|astro|mjs|js)$/.test(entry)) code.push(relative(site, file).split('\\').join('/'));
+    }
+  };
+  walk(join(site, 'src'));
+  for (const path of code) {
+    for (const spec of importsOf(readFileSync(join(site, path), 'utf8'))) {
+      if (resolveImport(path, spec, (one) => existsSync(join(site, one)) && statSync(join(site, one)).isFile()) === undefined) out.push(`${path} → ${spec}`);
+    }
+  }
+  return out;
+}
+
+test('B2: a file replaced brings the scaffold\'s files it imports, or is left with the partner the developer changed; nothing imports what is not there; src/live/ only on a site ready to be drawn live (B7)', () => {
+  const site = scaffold();
+  try {
+    // Contract 2's pair, the loader changed by the developer: contract 3's
+    // content.config.ts calls entries() with no collection, and cannot go in alone.
+    write(site, 'src/content.config.ts', OLD('0.16.0', 'src/content.config.ts'));
+    write(site, 'src/lib/entryLoader.ts', `${OLD('0.16.0', 'src/lib/entryLoader.ts')}\n// the developer's\n`);
+    // An old sitemap, untouched, and the files contract 3's imports taken away.
+    write(site, 'src/pages/sitemap.xml.ts', OLD('0.6.0', 'src/pages/sitemap.xml.ts'));
+    rmSync(join(site, 'src/lib/pages.ts'));
+    rmSync(join(site, 'src/live'), { recursive: true });
+    const run = upgrade(site, '--mint-ids', '--no-check');
+    assert.equal(run.status, 0, said(run));
+    // The pair: left as it was, and said with what keeps it.
+    assert.equal(readFileSync(join(site, 'src/content.config.ts'), 'utf8'), OLD('0.16.0', 'src/content.config.ts'));
+    assert.match(run.stdout, /· src\/content\.config\.ts — the scaffold's 0\.1\.0–0\.16\.0, untouched, and left — contract 3's content\.config\.ts imports src\/lib\/entryLoader\.ts, which is not the scaffold's as it is now/);
+    assert.match(run.stdout, /a scaffold file left as it was — src\/content\.config\.ts .*COLLECTIONS from src\/content\/blocks\.ts/);
+    assert.match(run.stdout, /a scaffold file the developer changed — src\/lib\/entryLoader\.ts .*a collection's prefix: .*\(line \d+, \d+/);
+    // The sitemap: replaced, and what it imports laid in with it.
+    assert.match(run.stdout, /↻ src\/pages\/sitemap\.xml\.ts — the scaffold's 0\.1\.0–0\.6\.0, untouched: replaced with the door's/);
+    assert.match(run.stdout, /\+ src\/lib\/pages\.ts — the scaffold's, which a file written here imports and this site has not got/);
+    assert.equal(readFileSync(join(site, 'src/lib/pages.ts'), 'utf8'), readFileSync(resolve('template/src/lib/pages.ts'), 'utf8'));
+    // Not ready to be drawn live: its files not laid in.
+    assert.equal(existsSync(join(site, 'src/live')), false);
+    assert.match(run.stdout, /the live preview — .*src\/lib\/entryLoader\.ts is not the scaffold's.*src\/live\/ is not laid in/);
+    // Where the site came from, by its files, and not by the catalogue's generator.
+    assert.match(run.stdout, /the scaffold this site came from, by its files: 0\.17\.0 \(\d+ untouched files, most of them\)/);
+    // The planted loader is 0.16.0's, whose own imports (specimens.mjs, ./schedule) a 0.17.0 scaffold has not got: the developer's file, not the move's.
+    assert.deepEqual(unresolved(site).filter((one) => !one.startsWith('src/lib/entryLoader.ts ')), []);
+  } finally {
+    rmSync(join(site, '..'), { recursive: true, force: true });
+  }
+});
+
+test('B2: closed over imports — brought where the site lacks a file, not written where a partner is the developer\'s, a name gone, or a file nobody has; what was brought for nothing, not brought', () => {
+  const template = new Map([
+    ['src/a.ts', "import { b } from './lib/b';\nexport const a = b;\n"],
+    ['src/lib/b.ts', "import { c } from './c';\nexport const b = c;\n"],
+    ['src/lib/c.ts', 'export const c = 1;\n'],
+    ['src/d.ts', "import { e } from './lib/e';\nexport const d = e;\n"],
+    ['src/lib/e.ts', 'export const e = 2;\n'],
+    ['src/f.ts', "import { g } from './lib/g';\nexport const f = g;\n"],
+    ['src/h.ts', 'export const h2 = 3;\n'],
+  ]);
+  const site = new Map([
+    ['src/a.ts', 'old a'],
+    ['src/d.ts', 'old d'],
+    ['src/lib/e.ts', 'export const e = 2; // changed\n'],
+    ['src/f.ts', 'old f'],
+    ['src/h.ts', 'export const h = 3;\n'],
+    ['src/uses-h.ts', "import { h } from './h';\n"],
+  ]);
+  const tree = {
+    exists: (path) => site.has(path),
+    text: (path) => site.get(path),
+    template,
+    current: (path) => site.get(path) === template.get(path),
+    files: [...site.keys()],
+  };
+  const seeds = new Map([['src/a.ts', template.get('src/a.ts')], ['src/d.ts', template.get('src/d.ts')], ['src/f.ts', template.get('src/f.ts')], ['src/h.ts', template.get('src/h.ts')]]);
+  const { writes, brought, dropped } = closeOver(seeds, tree);
+  assert.deepEqual([...writes.keys()].sort(), ['src/a.ts', 'src/lib/b.ts', 'src/lib/c.ts']);
+  assert.deepEqual(brought, ['src/lib/b.ts', 'src/lib/c.ts']);
+  assert.deepEqual(dropped.map((one) => one.path).sort(), ['src/d.ts', 'src/f.ts', 'src/h.ts']);
+  assert.match(dropped.find((one) => one.path === 'src/d.ts').why, /imports src\/lib\/e\.ts, which is not the scaffold's/);
+  assert.match(dropped.find((one) => one.path === 'src/f.ts').why, /imports \.\/lib\/g, which this site has not got/);
+  assert.match(dropped.find((one) => one.path === 'src/h.ts').why, /src\/uses-h\.ts imports h from it/);
+  // A file brought that cannot be laid in is not brought again: the one that needs it is not written, and the closure ends.
+  const chain = closeOver(new Map([['src/x.ts', "import { y } from './lib/y';\n"]]), {
+    exists: (path) => path === 'src/lib/z.ts',
+    text: (path) => (path === 'src/lib/z.ts' ? 'export const z = 0; // changed\n' : undefined),
+    template: new Map([['src/x.ts', "import { y } from './lib/y';\n"], ['src/lib/y.ts', "import { z } from './z';\nexport const y = z;\n"], ['src/lib/z.ts', 'export const z = 0;\n']]),
+    current: () => false,
+    files: ['src/lib/z.ts'],
+  });
+  assert.deepEqual([...chain.writes.keys()], []);
+  assert.deepEqual(chain.dropped.map((one) => one.path), ['src/x.ts']);
+  assert.match(chain.dropped[0].why, /src\/lib\/y\.ts, which this site has not got and which cannot be laid in: it imports src\/lib\/z\.ts/);
+  // What a file imports and exports, as the closure reads it.
+  assert.deepEqual(importsOf("// import x from './no'\nimport a, { b as c, type D } from './x';\nexport * from '../y';\nconst z = await import('./z.mjs');\nimport 'astro:content';"), ['./x', '../y', './z.mjs']);
+  assert.deepEqual(namedImportsOf("import a, { b as c, type D } from './x';", './x'), ['default', 'b', 'D']);
+  assert.equal(namedImportsOf("import * as all from './x';", './x'), undefined);
+  assert.deepEqual([...exportsOf('export const { META, HOME } = COPY;\nexport type { Shown } from \'./make\';\nexport async function f() {}\n')].sort(), ['HOME', 'META', 'Shown', 'f']);
+  assert.deepEqual([...exportsOf('---\nexport interface Props {}\n---\n<p/>', 'src/X.astro')].sort(), ['Props', 'default']);
+});
+
+test('B2: where a site came from is what its untouched files agree on, not what the catalogue\'s generator says', () => {
+  const order = ['0.1.0', '0.2.0', '0.9.2', '0.16.0', '0.17.0'];
+  assert.deepEqual(provenanceOf([['0.1.0', '0.2.0', '0.9.2'], ['0.1.0', '0.2.0'], ['0.1.0', '0.2.0', '0.9.2', '0.16.0']], order), { versions: ['0.1.0', '0.2.0'], files: 3, all: true });
+  assert.deepEqual(provenanceOf([['0.1.0'], ['0.16.0'], ['0.16.0', '0.17.0']], order), { versions: ['0.16.0'], files: 2, all: false });
+  assert.equal(provenanceOf([], order), undefined);
+});
+
+test('B3: the reads a contract-2 template makes that the detector missed — a path joined, drafts, the declaration\'s collections, a picture\'s words by key, an annotation by address — each with its lines', () => {
+  const kinds = { money: new Set(), refs: new Set(), lists: new Set(), pictures: new Set(['cover']), alts: new Set(['cover_alt']) };
+  const meta = readsOf(
+    [
+      "import { join } from 'node:path';",
+      'export function meta() {',
+      "  return { hooks: { 'astro:build:done': async ({ dir }) => {",
+      "    const root = join(process.cwd(), 'jtk', 'content');",
+      '    const drafts = [];',
+      "    await write(join(dir, '_meta.json'), JSON.stringify({ redirects: [], drafts }));",
+      '  } } };',
+      '}',
+    ].join('\n'),
+    kinds,
+  );
+  assert.deepEqual(meta.changes.map((one) => one.split(':')[0]), ['jtk/content/', 'drafts in _meta.json']);
+  assert.match(meta.changes[0], /\(line 4\)$/);
+  assert.match(meta.changes[1], /\(line 6\)$/);
+  const loader = readsOf(
+    [
+      "import { COLLECTIONS, type Collection } from '../content/blocks';",
+      'export const listed = COLLECTIONS.filter((collection) => collection.pages !== false);',
+      "export const at = (collection: Collection) => collection.prefix.replace(/^\\//, '');",
+      'const body = collection.body ?? [];',
+      "const alt = n.v('cover_alt');",
+      'const path = (key) => `page:${prefix}/${entry.id}:blocks[0].${key}`;',
+    ].join('\n'),
+    kinds,
+  );
+  assert.deepEqual(loader.changes.map((one) => one.split(':')[0]), [
+    "'cover_alt'",
+    "a collection's pages",
+    "a collection's prefix",
+    "a collection's body",
+    'an annotation by index, written by hand',
+    'an annotation naming another document by its address (page',
+  ]);
+  assert.equal(loader.weight, 6);
+  // Through the door, a collection's prefix and pages are contract 3's own: not reads that move.
+  const door = readsOf("import { site } from '../lib/site';\nfor (const one of site.collections.filter((c) => c.pages)) console.log(one.prefix, entry.body);", kinds);
+  assert.deepEqual(door.changes, []);
+  // A body of an entry is no collection's: not said.
+  assert.deepEqual(readsOf("const body = typeof post.body === 'string' ? post.body : '';", kinds).changes, []);
+});
+
+test('B3: the list for a person ranks the files that read what moved, and the changed files that read nothing by name are one line', () => {
+  const site = scaffold();
+  try {
+    for (const [path, extra] of [
+      ['src/components/Hero.astro', '\n<!-- the developer\'s -->\n'],
+      ['src/components/Clip.astro', '\n<!-- the developer\'s -->\n'],
+      ['src/lib/entries.ts', "\nexport const a = () => join(process.cwd(), 'jtk', 'content');\nexport const b = () => join(process.cwd(), 'jtk', 'content', 'blog');\nexport const c = '/jtk/content/index.json';\n"],
+    ]) {
+      write(site, path, `${readFileSync(join(site, path), 'utf8')}${extra}`);
+    }
+    write(site, 'site-meta.mjs', "export const m = () => ({ hooks: { 'astro:build:done': () => write('_meta.json', { redirects: [], drafts: [] }) } });\n");
+    const run = upgrade(site, '--mint-ids', '--no-check', '--dry-run');
+    assert.equal(run.status, 0, said(run));
+    const list = run.stdout.slice(run.stdout.indexOf('5 · for a person'));
+    const at = (what) => list.indexOf(what);
+    assert.ok(at('src/lib/entries.ts') > 0 && at('src/lib/entries.ts') < at('site-meta.mjs'), list);
+    assert.match(list, /site-meta\.mjs: drafts in _meta\.json: contract 3's _meta\.json says redirects, immutable and cache only/);
+    assert.match(list, /2 scaffold files the developer changed that read nothing of the contract by name — left as they are: src\/components\/Clip\.astro, src\/components\/Hero\.astro — build and compare/);
+    assert.doesNotMatch(list, /a scaffold file the developer changed — src\/components\/Hero\.astro/);
+  } finally {
+    rmSync(join(site, '..'), { recursive: true, force: true });
+  }
+});
+
+test('B15: a page made to back a shown_on whose route does not read it is asked about', () => {
+  const site = scaffold('--kit', KIT);
+  try {
+    write(site, 'src/pages/services.astro', '---\nconst title = "Services";\n---\n<h1>{title}</h1>\n');
+    const run = upgrade(site, '--mint-ids', '--no-check', '--dry-run');
+    assert.equal(run.status, 0, said(run));
+    assert.match(run.stdout, /a page whose route does not read it — jtk\/pages\/services\.json is new — the page the services collection is shown on, which contract 3 names — and src\/pages\/services\.astro does not read it \(site\.page\('\/services'\)\)/);
+    write(site, 'src/pages/services.astro', "---\nimport { site } from '../lib/site';\nconst page = site.page('/services');\n---\n<h1>{page?.seo?.title}</h1>\n");
+    assert.doesNotMatch(upgrade(site, '--mint-ids', '--no-check', '--dry-run').stdout, /a page whose route does not read it/);
+  } finally {
+    rmSync(join(site, '..'), { recursive: true, force: true });
+  }
+});
+
+test('--site: the platform\'s state fetched as get_site and get_content read it, with the token jtk schema --judge sends; refused without one', async () => {
+  const SITE = '0848daf4-6c94-4932-b797-f9081bff1ce7';
+  const asked = [];
+  const send = async (url, init) => {
+    asked.push({ url, init });
+    const body = url.endsWith('/pages') ? { pages: [{ id: id(1), path: '/', collection: '', locale: '', position: 0 }] } : { id: SITE, slug: 'kaif', currency: 'CHF' };
+    return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
+  };
+  const env = { api: process.env.JTK_API, token: process.env.JTK_TOKEN };
+  try {
+    delete process.env.JTK_API;
+    delete process.env.JTK_TOKEN;
+    await assert.rejects(stateFromThePlatform(SITE, send), /JTK_API .* JTK_TOKEN .*--state <file>/);
+    process.env.JTK_API = 'https://api.stg.example/';
+    process.env.JTK_TOKEN = 'jtk_secret';
+    const state = await stateFromThePlatform(SITE, send);
+    assert.deepEqual(state, { site: { id: SITE, slug: 'kaif', currency: 'CHF' }, pages: [{ id: id(1), path: '/', collection: '', locale: '', position: 0 }] });
+    assert.deepEqual(asked.map((one) => one.url).sort(), [`https://api.stg.example/v1/sites/${SITE}`, `https://api.stg.example/v1/sites/${SITE}/pages`]);
+    assert.equal(asked[0].init.headers.authorization, 'Bearer jtk_secret');
+    process.env.JTK_TOKEN = 'a-session';
+    await stateFromThePlatform(SITE, send);
+    assert.equal(asked.at(-1).init.headers.cookie, 'sid=a-session');
+    process.env.JTK_API = 'http://api.example';
+    await assert.rejects(stateFromThePlatform(SITE, send), /over https only/);
+  } finally {
+    if (env.api === undefined) delete process.env.JTK_API;
+    else process.env.JTK_API = env.api;
+    if (env.token === undefined) delete process.env.JTK_TOKEN;
+    else process.env.JTK_TOKEN = env.token;
+  }
+});
+
+test('the check at the end: not run where the site is not installed, and said so; --no-check skips it (B14: the declaration\'s notes in contract 3\'s words)', () => {
+  const site = scaffold();
+  try {
+    const declared = readFileSync(join(site, 'src/content/blocks.ts'), 'utf8');
+    write(site, 'src/content/blocks.ts', declared.replace(/^/, '// The schema is jtk/catalogue.json, written by npx @jtakeit/astro catalogue.\nconst NOTE = "jtk/catalogue.json stays in a string";\n'));
+    const run = upgrade(site, '--mint-ids');
+    assert.equal(run.status, 0, said(run));
+    assert.match(run.stdout, /6 · the check — not run: the site is not installed here \(npm ci\)\. Then: npm run build && npx @jtakeit\/astro schema/);
+    const source = readFileSync(join(site, 'src/content/blocks.ts'), 'utf8');
+    assert.match(source, /^\/\/ The schema is jtk\/schema\.json, written by npx @jtakeit\/astro schema\.$/m);
+    assert.match(source, /const NOTE = "jtk\/catalogue\.json stays in a string";/);
+    assert.doesNotMatch(source, /still say/);
+  } finally {
+    rmSync(join(site, '..'), { recursive: true, force: true });
+  }
+});
+
