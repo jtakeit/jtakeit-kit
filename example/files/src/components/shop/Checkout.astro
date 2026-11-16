@@ -276,4 +276,10 @@ const words = Object.fromEntries(SAID.map((key) => [key, W[key]]));
     background: color-mix(in srgb, var(--ink) 10%, var(--paper));
     color: var(--ink-quiet);
   }
+  /* Forced colors drops the fill a button is drawn by, and with `border: 0` nothing is left of it but its words: it keeps an edge. */
+  @media (forced-colors: active) {
+    .checkout__pay {
+      border: 2px solid ButtonText;
+    }
+  }
 </style>

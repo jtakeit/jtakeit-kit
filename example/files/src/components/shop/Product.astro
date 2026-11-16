@@ -557,6 +557,12 @@ const details = collection.fields
     color: var(--ink-quiet);
     cursor: not-allowed;
   }
+  /* Forced colors drops the fill a button is drawn by, and with `border: 0` nothing is left of it but its words: it keeps an edge. */
+  @media (forced-colors: active) {
+    .buy__add {
+      border: 2px solid ButtonText;
+    }
+  }
   .buy__added {
     margin: 0;
   }

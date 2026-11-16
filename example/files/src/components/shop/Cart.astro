@@ -421,4 +421,10 @@ const countries = codes.map((code) => ({ code, name: nameOf(code) }));
     color: var(--ink-quiet);
     cursor: not-allowed;
   }
+  /* Forced colors drops the fill a button is drawn by, and with `border: 0` nothing is left of it but its words: it keeps an edge. */
+  @media (forced-colors: active) {
+    .cart__go {
+      border: 2px solid ButtonText;
+    }
+  }
 </style>
