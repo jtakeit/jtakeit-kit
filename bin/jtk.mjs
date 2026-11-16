@@ -10,6 +10,7 @@
  *   jtk push|pull <url>     move the site's code to and from jtakeit (lib/code.mjs)
  *   jtk media push|pull     the site's pictures into and out of its media library (lib/media.mjs)
  *   jtk add|remove <unit>   a section or a module of the example site, part by part (lib/units/)
+ *   jtk import products …   a spreadsheet's products, as contract 3's entries (lib/import.mjs)
  *   jtk units               what the site has of the example, what can be added
  */
 import { dirname, join } from 'node:path';
@@ -80,6 +81,12 @@ switch (command) {
     const { main } = await import(pathToFileURL(join(HERE, '..', 'lib', 'units', 'cli.mjs')).href);
     process.exit(await main(command, rest));
   }
+  case 'import': {
+    // The command prints its own errors, and writes nothing until it has judged every row.
+    const { main } = await import(pathToFileURL(join(HERE, '..', 'lib', 'import.mjs')).href);
+    process.exitCode = await main(rest);
+    break;
+  }
   case 'media': {
     // The command prints its own errors, with the token taken out of them.
     const { main } = await import(pathToFileURL(join(HERE, '..', 'lib', 'media.mjs')).href);
@@ -100,6 +107,7 @@ switch (command) {
     const upgrade = await import(pathToFileURL(join(HERE, '..', 'lib', 'upgrade.mjs')).href);
     const copies = await import(pathToFileURL(join(HERE, '..', 'lib', 'copies.mjs')).href);
     const units = await import(pathToFileURL(join(HERE, '..', 'lib', 'units', 'cli.mjs')).href);
+    const imported = await import(pathToFileURL(join(HERE, '..', 'lib', 'import.mjs')).href);
     console.error(`@jtakeit/astro — the scaffold and the catalogue tool for a site on jtakeit
 
   jtk create <slug> [options]     scaffold a site into ./<slug>, on contract 3: jtk/schema.json
@@ -113,6 +121,7 @@ switch (command) {
                                   says CONTRACT = 3, mint the ids and _keys, and check it
                                   against the built pages in the grammar by key
   ${units.usage()}
+${imported.usage()}
   ${upgrade.usage()}
   ${copies.usage()}
   jtk showroom [--photos <dir>] [--port 4330]

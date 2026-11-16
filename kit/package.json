@@ -56,6 +56,10 @@
       "types": "./types/shop-listing.d.ts",
       "default": "./lib/shop/listing.mjs"
     },
+    "./shop/skus": {
+      "types": "./types/shop-skus.d.ts",
+      "default": "./lib/shop/skus.mjs"
+    },
     "./lead": {
       "types": "./types/lead.d.ts",
       "default": "./lib/lead/render.mjs"
@@ -153,6 +157,7 @@
       "types": "./types/content-node.d.ts",
       "default": "./lib/content/node.mjs"
     },
+    "./content/identity": "./lib/content/identity.mjs",
     "./live": {
       "types": "./types/live.d.ts",
       "default": "./lib/live.mjs"

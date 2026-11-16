@@ -1,0 +1,7 @@
+Handle,Title,Body (HTML),Vendor,Option1 Name,Option1 Value,Option2 Name,Option2 Value,Variant SKU,Variant Grams,Variant Inventory Qty,Variant Price,Image Src,Status
+becher,Becher,<p>Handgedreht &amp; glasiert.</p>,Brumy,Title,Default Title,,,MUG-1,350,12,14.50,https://example.com/becher.jpg,active
+t-shirt-fox,T-Shirt Fox,<p>Weich &amp; <strong>fair</strong> gemacht.<br>Passt wie gewohnt.</p>,Brumy,Size,S,Colour,Red,FOX-S-RED,180,5,29.90,https://example.com/fox-1.jpg,draft
+t-shirt-fox,,,,,S,,Blue,FOX-S-BLUE,180,0,29.90,,
+t-shirt-fox,,,,,,,,,,,,https://example.com/fox-2.jpg,
+t-shirt-fox,,,,,M,,Red,FOX-M-RED,180,7,29.90,,
+t-shirt-fox,,,,,M,,Blue,,180,3,29.90,,

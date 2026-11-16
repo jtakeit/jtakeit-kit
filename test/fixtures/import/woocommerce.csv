@@ -1,0 +1,7 @@
+ID,Type,SKU,Name,Name (EN),Published,Description,Weight (kg),Regular price,Stock,Parent,Attribute 1 name,Attribute 1 value(s),Attribute 2 name,Attribute 2 value(s),Tax class
+12,simple,MUG-1,Becher,Mug,1,<p>Hand-thrown &amp; glazed.</p>,0.35,14.50,12,,,,,,
+20,variable,T-SHIRT-FOX,T-Shirt Fox,Fox T-shirt,1,<p>Soft cotton.</p><p>Fits as you expect.</p>,,,,,Size,"S, M",Colour,"Red, Blue",
+21,variation,FOX-S-RED,"T-Shirt Fox - S, Red",,1,,0.18,29.90,5,id:20,Size,S,Colour,Red,
+22,variation,FOX-M-RED,"T-Shirt Fox - M, Red",,1,,0.18,29.90,7,id:20,Size,M,Colour,Red,
+23,variation,FOX-S-BLUE,"T-Shirt Fox - S, Blue",,1,,0.18,29.90,0,id:20,Size,S,Colour,Blue,
+24,variation,,"T-Shirt Fox - M, Blue",,1,,0.18,29.90,3,id:20,Size,M,Colour,Blue,

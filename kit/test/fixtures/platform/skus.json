@@ -1,0 +1,37 @@
+{
+  "about": "What the platform makes for a product, and the kit's import makes the same: the SKU a slug and the keys of a variant's values make (base), the first SKU a site has not taken (free), and the key a label makes in the panel (keys). The platform's modules/shop/skus_test.go and the panel's widgets/shop/combinations.test.ts read this file, and the kit's import is held to a copy of it. base: SKUBase(slug, values) is sku, and sku is one the sku kind takes. free: with taken taken (by SKUKey) and, where numbered is { base, from, to }, every <base>-<n> for n from from to to taken too, FreeSKU(base, taken) asked once for each of skus, in order, answers each. keys: the panel's keyOf(label, new Set(taken), fallback) is key. A case is added here, never in a test.",
+  "base": [
+    {"name": "the slug", "slug": "t-shirt-fox", "values": [], "sku": "T-SHIRT-FOX"},
+    {"name": "then each value's key", "slug": "t-shirt-fox", "values": ["m", "red"], "sku": "T-SHIRT-FOX-M-RED"},
+    {"name": "a slug of 81 characters is cut to 60", "slug": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-b", "values": [], "sku": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"},
+    {"name": "whatever the kind does not take is a dash, a run of them one", "slug": "kerz 01!!ä", "values": ["x"], "sku": "KERZ-01-X"},
+    {"name": "a dash at neither end", "slug": "-kerz-", "values": ["-", "m"], "sku": "KERZ-M"},
+    {"name": "a dot and an underscore stay", "slug": "kerz.01", "values": ["a_b"], "sku": "KERZ.01-A_B"},
+    {"name": "no letter or digit to begin with is none", "slug": "._-", "values": [], "sku": "SKU"},
+    {"name": "nothing is SKU", "slug": "", "values": [], "sku": "SKU"},
+    {"name": "nothing left is SKU", "slug": "ä", "values": ["ö"], "sku": "SKU"},
+    {"name": "cut at 60 where a dash would be its last, a dash at neither end", "slug": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbb", "values": [], "sku": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"},
+    {"name": "forty values are cut to 60 too, the room a number needs", "slug": "a-product", "values": ["value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value", "value"], "sku": "A-PRODUCT-VALUE-VALUE-VALUE-VALUE-VALUE-VALUE-VALUE-VALUE-VA"}
+  ],
+  "free": [
+    {"name": "a taken SKU gets a number", "base": "T-SHIRT-FOX", "taken": ["t-shirt-fox"], "numbered": null, "skus": ["T-SHIRT-FOX-2", "T-SHIRT-FOX-3", "T-SHIRT-FOX-4"]},
+    {"name": "a base nobody has is its own, whatever else is taken, and is taken then", "base": "CAP-FOX", "taken": ["t-shirt-fox"], "numbered": null, "skus": ["CAP-FOX", "CAP-FOX-2"]},
+    {"name": "what is taken is compared by SKUKey: lower case", "base": "MUG", "taken": ["mug"], "numbered": null, "skus": ["MUG-2"]},
+    {"name": "and a SKU taken in capitals is the same one", "base": "MUG", "taken": ["Mug"], "numbered": null, "skus": ["MUG-2"]},
+    {"name": "a base so often taken that its number is four digits gives up a character for it, and each answer is new", "base": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "taken": ["AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"], "numbered": {"base": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "from": 2, "to": 998}, "skus": ["AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-999", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1000", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1001", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1002", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1003", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1004", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1005", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1006", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1007", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1008", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1009", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1010", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1011", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1012", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1013", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1014", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1015", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1016", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1017", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1018", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1019", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1020", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1021", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1022", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1023", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1024", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1025", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1026", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1027", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1028", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-1029"]}
+  ],
+  "keys": [
+    {"name": "the label in small letters", "label": "Size", "taken": [], "fallback": "o", "key": "size"},
+    {"name": "another label in small letters", "label": "Rot", "taken": [], "fallback": "v", "key": "rot"},
+    {"name": "words joined with a dash", "label": "Extra large", "taken": [], "fallback": "v", "key": "extra-large"},
+    {"name": "accents taken off", "label": "  Größe!  ", "taken": [], "fallback": "o", "key": "grosse"},
+    {"name": "letters with an accent are the letter", "label": "Crème brûlée", "taken": [], "fallback": "v", "key": "creme-brulee"},
+    {"name": "a label of digits is put after the fallback, since a key starts with a letter", "label": "42", "taken": [], "fallback": "x", "key": "x42"},
+    {"name": "a label with nothing a key can hold is the fallback", "label": "Розмір", "taken": [], "fallback": "o1", "key": "o1"},
+    {"name": "a key taken gets -2", "label": "Size", "taken": ["size"], "fallback": "o", "key": "size-2"},
+    {"name": "and -2 taken, -3", "label": "Size", "taken": ["size", "size-2"], "fallback": "o", "key": "size-3"},
+    {"name": "the fallback taken gets a number too", "label": "Розмір", "taken": ["o1"], "fallback": "o1", "key": "o1-2"},
+    {"name": "a key is cut to 32", "label": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "taken": [], "fallback": "o", "key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+    {"name": "and a number taken is cut to fit in 32", "label": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "taken": ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"], "fallback": "o", "key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-2"}
+  ]
+}
