@@ -11,7 +11,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
-import { closeOver, copyThroughTheDoor, exportsOf, importsOf, namedImportsOf, ownFile, provenanceOf, readsOf, resolveImport, stateFromThePlatform, tokened, untokened } from '../lib/upgrade.mjs';
+import { closeOver, copyThroughTheDoor, exportsOf, importsOf, integrationOf, liveConfig, liveSnippet, namedImportsOf, ownFile, propsRoutes, provenanceOf, readsOf, resolveImport, stateFromThePlatform, tokened, untokened } from '../lib/upgrade.mjs';
 
 const bin = resolve('bin/jtk.mjs');
 const KIT = resolve('test/fixtures/kit-salon.json');
@@ -602,7 +602,7 @@ test('B2: a file replaced brings the scaffold\'s files it imports, or is left wi
     assert.equal(existsSync(join(site, 'src/live')), false);
     // Said plainly, with what it costs the owner, and first for a person — not after the reads.
     assert.match(run.stdout, /✗ the site will not be drawn live: the owner sees a change only after a build — the first thing for a person below \(docs\/live\.md\)/);
-    assert.match(run.stdout, /\n {2}1\. the site will not be drawn live — the panel's preview will not draw this site live — the owner sees a change only after a build, and cannot preview an entry's card before it is saved — because .*src\/lib\/entryLoader\.ts is not the scaffold's.*src\/live\/ is not laid in\. Wire the site's own pages into src\/live as docs\/live\.md says/);
+    assert.match(run.stdout, /\n {2}1\. the site will not be drawn live — the panel's preview will not draw this site live — the owner sees a change only after a build, and cannot preview an entry's card before it is saved\. RENDER = 'live' is not said, src\/live\/ is not laid in, because: .*src\/lib\/entryLoader\.ts is the site's own, not the scaffold's — it keeps beside each rendered body what it was made of.*\. Wire the site's own pages into src\/live as docs\/live\.md says/);
     assert.match(run.stdout, /say why in BRIEF\.md\./);
     // Where the site came from, by its files, and not by the catalogue's generator.
     assert.match(run.stdout, /the scaffold this site came from, by its files: 0\.17\.0 \(\d+ untouched files, most of them\)/);
@@ -804,3 +804,69 @@ test('the check at the end: not run where the site is not installed, and said so
   }
 });
 
+
+test('live, by what a site has: its own integration, its routes by what they need, the lines to paste (the KAIF move, 16 November 2026)', () => {
+  // The pieces: which integration the config takes, which routes take props, what to paste.
+  assert.deepEqual(integrationOf("import { defineConfig } from 'astro/config';\nimport { fastlaneMeta } from './fastlane-meta.mjs';\n"), { file: 'fastlane-meta.mjs', name: 'fastlaneMeta' });
+  assert.deepEqual(integrationOf("import { jtakeitMeta, liveRender } from './jtakeit-meta.mjs';\n"), { file: 'jtakeit-meta.mjs', name: 'jtakeitMeta' });
+  assert.equal(integrationOf("import { defineConfig } from 'astro/config';\n"), undefined);
+  assert.deepEqual(
+    propsRoutes(new Map([
+      ['src/pages/[...entry].astro', '---\nexport function getStaticPaths() { return []; }\nconst { entry } = Astro.props;\n---\n'],
+      ['src/pages/[...feed].xml.ts', 'export function getStaticPaths() { return []; }\nexport function GET({ props }) { return new Response(props.xml); }\n'],
+      ['src/pages/afisha.astro', '---\nconst nights = site.entries("nights");\n---\n'],
+      ['src/pages/[slug].astro', '---\nexport function getStaticPaths() { return []; }\nconst { slug } = Astro.params;\n---\n'],
+    ])),
+    ['src/pages/[...entry].astro', 'src/pages/[...feed].xml.ts'],
+  );
+  const lines = liveSnippet({ file: 'fastlane-meta.mjs', name: 'fastlaneMeta' }, ['src/pages/[...entry].astro'], '11.1.12').join('\n');
+  assert.match(lines, /npm install @astrojs\/node@11\.1\.12/);
+  assert.match(lines, /process\.env\.JTK_RENDER === 'live'/);
+  assert.match(lines, /output: 'server', adapter: node\(\{ mode: 'middleware' \}\)/);
+  assert.match(lines, /addMiddleware\(\{ entrypoint: own\('src\/live\/middleware\.ts'\), order: 'pre' \}\)/);
+  assert.match(lines, /PRERENDERED = new Set\(\['src\/pages\/\[\.\.\.entry\]\.astro'\]\)/);
+  assert.match(lines, /import \{ fastlaneMeta, liveRender \} from '\.\/fastlane-meta\.mjs'/);
+  assert.match(liveConfig("import { fastlaneMeta } from './fastlane-meta.mjs';\nexport default defineConfig({\n  integrations: [fastlaneMeta()],\n});\n", { file: 'fastlane-meta.mjs', name: 'fastlaneMeta' }), /import \{ fastlaneMeta, liveRender \} from '\.\/fastlane-meta\.mjs';[\s\S]*defineConfig\(await liveRender\(\{[\s\S]*\}\)\);\n$/);
+
+  // A site whose integration is its own and whose routes are its own — no
+  // listing — as KAIF's: the middleware and the pictures laid in, no
+  // Route.astro, and the lines to paste said first for a person.
+  const own = (wired) => {
+    const site = scaffold();
+    rmSync(join(site, 'jtakeit-meta.mjs'));
+    rmSync(join(site, 'src/live'), { recursive: true });
+    rmSync(join(site, 'src/pages/[...listing].astro'));
+    rmSync(join(site, 'src/pages/[...listing]'), { recursive: true });
+    write(site, 'fastlane-meta.mjs', wired
+      ? "const LIVE = process.env.JTK_RENDER === 'live';\nconst PRERENDERED = new Set(['src/pages/[...entry].astro', 'src/pages/[...feed].xml.ts']);\nexport async function liveRender(config) { return config; }\nexport function fastlaneMeta() {\n  return { name: 'fastlane-meta', hooks: { 'astro:config:setup': ({ addMiddleware }) => { if (LIVE) addMiddleware({ entrypoint: 'src/live/middleware.ts', order: 'pre' }); } } };\n}\n"
+      : "export function fastlaneMeta() {\n  return { name: 'fastlane-meta', hooks: {} };\n}\n");
+    write(site, 'astro.config.mjs', "import { defineConfig } from 'astro/config';\nimport { fastlaneMeta } from './fastlane-meta.mjs';\n\nexport default defineConfig({\n  integrations: [fastlaneMeta()],\n});\n");
+    return site;
+  };
+  const bare = own(false);
+  try {
+    const run = upgrade(bare, '--mint-ids', '--no-check', '--no-install');
+    assert.equal(existsSync(join(bare, 'src/live/middleware.ts')), true, said(run));
+    assert.equal(existsSync(join(bare, 'src/live/images.ts')), true);
+    assert.equal(existsSync(join(bare, 'src/live/Route.astro')), false, 'no Route.astro without the scaffold\'s catch-alls');
+    assert.doesNotMatch(readFileSync(join(bare, 'src/content/blocks.ts'), 'utf8'), /export const RENDER/);
+    assert.match(run.stdout, /\n {2}1\. the site will not be drawn live — .*src\/live\/middleware\.ts and src\/live\/images\.ts laid in, because: \(1\) fastlane-meta\.mjs is the site's integration, not the scaffold's jtakeit-meta\.mjs, and does not wire the live render — paste the lines below into it/);
+    assert.match(run.stdout, /\n {7}export async function liveRender\(config\) \{\n/);
+    assert.match(run.stdout, /\n {7}const PRERENDERED = new Set\(\['src\/pages\/\[\.\.\.entry\]\.astro', 'src\/pages\/\[\.\.\.feed\]\.xml\.ts'\]\);\n/);
+    assert.doesNotMatch(run.stdout, /is not the scaffold's\b(?!\s*jtakeit)/, 'no file said only «not the scaffold\'s»');
+  } finally {
+    rmSync(join(bare, '..'), { recursive: true, force: true });
+  }
+  // The same site with the integration wired: the config handed to it, the word said.
+  const wired = own(true);
+  try {
+    const run = upgrade(wired, '--mint-ids', '--no-check', '--no-install');
+    assert.match(run.stdout, /↻ astro\.config\.mjs — its config handed to liveRender \(fastlane-meta\.mjs\)/, said(run));
+    assert.match(readFileSync(join(wired, 'astro.config.mjs'), 'utf8'), /import \{ fastlaneMeta, liveRender \} from '\.\/fastlane-meta\.mjs';[\s\S]*await liveRender\(\{/);
+    assert.match(readFileSync(join(wired, 'src/content/blocks.ts'), 'utf8'), /^export const RENDER = 'live';$/m);
+    assert.doesNotMatch(run.stdout, /the site will not be drawn live —/);
+    assert.doesNotMatch(run.stdout, /a route the live render cannot draw/);
+  } finally {
+    rmSync(join(wired, '..'), { recursive: true, force: true });
+  }
+});
