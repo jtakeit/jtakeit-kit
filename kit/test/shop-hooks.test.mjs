@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { PRODUCT, CART, CHECKOUT, ORDER } from '../lib/shop/hooks.mjs';
+import { PRODUCT, CART, CHECKOUT, ORDER, LISTING } from '../lib/shop/hooks.mjs';
 
 // The hooks are the whole contract between a storefront piece's markup and its
 // element (`@jtakeit/kit/shop/hooks`): what an agent keeps when it copies the
@@ -113,9 +113,37 @@ test('the copied order page carries every hook, links back to the cart in its la
   assert.match(page, /site\.rolesOf\('shop'\) === undefined \? \[\]/, 'built only where the schema turns the shop on');
 });
 
+test('the copied listing carries every hook, hides nothing unless asked, imports the element and no stylesheet of the kit', () => {
+  const astro = component('ProductListing.astro');
+  for (const one of [...LISTING.always, ...LISTING.said]) assert.match(astro, written(one.hook), `${one.hook} — ${one.says}`);
+  // The root's own: what the element reads off it. `data-hide-sold-out` is there with `hideSoldOut` and only with it:
+  // the page's choice, off by default, and the build lists every product either way.
+  const root = /<[a-z]+\b[^>]*\sdata-listing[\s>=][^>]*>/.exec(astro)?.[0] ?? '';
+  for (const attribute of ['data-listing', 'data-api']) assert.match(root, new RegExp(`\\s${attribute}[\\s=>]`), `the listing says ${attribute}`);
+  assert.match(root, /\sdata-hide-sold-out=\{hideSoldOut \? '' : undefined\}/, 'data-hide-sold-out only where hideSoldOut is');
+  assert.match(astro, /hideSoldOut\??:\s*boolean/, 'hideSoldOut is a boolean prop');
+  assert.match(astro, /hideSoldOut\s*=\s*false/, 'and off unless the page says it');
+  // Each tile is one product's, by its id, and a group wraps its heading with its tiles, so hiding the group hides the heading too.
+  assert.match(astro, /<li\b[^>]*\sdata-product-tile[^>]*\sdata-product=\{entry\.id\}/, 'a tile says the product\'s id');
+  const group = /<([a-z]+)\b[^>]*\sdata-listing-group[^>]*>([\s\S]*?)<\/\1>/.exec(astro)?.[2] ?? '';
+  assert.match(group, /<h2\b/, 'the group\'s heading is inside the element that is hidden with it');
+  assert.match(astro, /<jtk-listing\b/, 'the listing is inside <jtk-listing>');
+  assert.match(astro, /<script>\s*import '@jtakeit\/kit\/elements\/shop-listing';\s*<\/script>/, 'and the element that makes it work');
+  assert.match(astro, /<style>/, 'its own look');
+  assert.doesNotMatch(astro, /@jtakeit\/kit\/[^'"]*\.css/, 'the look is the file\'s own, not the kit\'s');
+  // No <noscript>: the page lists every product with or without a script, and says nothing a reader who has none misses.
+  assert.doesNotMatch(astro.slice(astro.lastIndexOf('\n---\n')), /<noscript>/, 'a listing with no script is the whole listing');
+  // The page: at the products' route, the page's choice written once, built only where the schema turns the shop on.
+  const page = readFileSync(join(here, '../../example/files/src/pages/[...lang]/shop/index.astro'), 'utf8');
+  const markup = page.slice(page.lastIndexOf('\n---\n'));
+  assert.match(markup, /<ProductListing\b[^>]*\shideSoldOut=\{HIDE_SOLD_OUT\}/, 'the page passes its choice');
+  assert.match(page, /const HIDE_SOLD_OUT = false;/, 'which is no, as the unit lays it');
+  assert.match(page, /site\.rolesOf\('shop'\)/, 'built only where the schema turns the shop on');
+});
+
 test("the shop's elements find nothing by a class alone", () => {
   const files = readdirSync(join(here, '../elements')).filter((one) => /^shop-.*\.js$/.test(one));
-  assert.ok(files.includes('shop-product.js') && files.includes('shop-wire.js') && files.includes('shop-cart.js') && files.includes('shop-checkout.js') && files.includes('shop-order.js'), `the shop's elements: ${files}`);
+  assert.ok(['shop-product.js', 'shop-wire.js', 'shop-cart.js', 'shop-checkout.js', 'shop-order.js', 'shop-listing.js'].every((one) => files.includes(one)), `the shop's elements: ${files}`);
   for (const file of files) {
     const source = readFileSync(join(here, '../elements', file), 'utf8');
     for (const [, selector] of source.matchAll(/(?:querySelector(?:All)?|closest|matches)\(\s*['"`]([^'"`]+)['"`]/g)) {

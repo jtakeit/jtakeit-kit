@@ -24,6 +24,7 @@ import { MAX_LINES, MAX_QTY, cartKey, readCart, addLine, removeLine, setQty, shi
 import { productFacts, variantFor, valueStates, answersOf, fromPrice } from '../lib/shop/product.mjs';
 import { ATTEMPT, CHECKOUT_WORDS, HOLD, afterAnswer, checkoutBody, freshPress, keptPress, missingDetails, pressFor, pressKey, sentOf } from '../lib/shop/checkout.mjs';
 import { ASKS_MOST, ASK_DEADLINE_MS, ASK_EVERY_MS, ORDER_WORDS, frozenOrder, orderAddress, orderView, paidFromKey, sentFromHere } from '../lib/shop/order.mjs';
+import { STOCK_ASKS_MOST, STOCK_DEADLINE_MS, hiddenTiles, stockAsks } from '../lib/shop/listing.mjs';
 import * as barrel from '../index.mjs';
 
 const now = Date.parse('2026-11-15T12:00:00Z');
@@ -861,6 +862,78 @@ test('every word the page after payment may say is in every language, the three 
   for (const view of views) assert.ok(ORDER_WORDS.includes(view.word), `${view.state}: ${view.word}`);
 });
 
+// ── the listing ───────────────────────────────────────────────────────────
+
+/** The products a stock address asks after, in its order. */
+const askedAt = (address) => new URL(address, 'http://x').searchParams.getAll('product');
+
+test('a listing of 150 products asks twice', () => {
+  assert.equal(STOCK_ASKS_MOST, 100, "shop/1's limit: a call that asks after more is refused");
+  const ids = Array.from({ length: 150 }, (_, i) => `0193a5c3-6b1c-7d20-9a31-${String(i).padStart(12, '0')}`);
+  const asks = stockAsks('/api/', ids);
+  assert.equal(asks.length, 2);
+  assert.deepEqual(askedAt(asks[0]), ids.slice(0, 100), 'the first names the first 100');
+  assert.deepEqual(askedAt(asks[1]), ids.slice(100), 'the second the other 50');
+  assert.ok(asks.every((one) => one.startsWith('/api/stock?product=')), 'at the shop\'s stock address, under the api base');
+  // Exactly a hundred is one call, and one more is two.
+  assert.equal(stockAsks('/api/', ids.slice(0, 100)).length, 1);
+  assert.deepEqual(askedAt(stockAsks('/api/', ids.slice(0, 101))[1]), ids.slice(100, 101));
+  // An id given twice is asked once, where it first was: the tile of a product in two groups is not two products.
+  assert.deepEqual(stockAsks('/api/', ['a', 'b', 'a', 'c', 'b']).map(askedAt), [['a', 'b', 'c']]);
+  const twice = Array.from({ length: 100 }, (_, i) => `p${i}`);
+  assert.equal(stockAsks('/api/', [...twice, ...twice]).length, 1, 'two hundred ids that are a hundred products are one call');
+  // Nothing to ask after is nothing asked, and an id that is none is none.
+  assert.deepEqual(stockAsks('/api/', []), []);
+  assert.deepEqual(stockAsks('/api/', ['', undefined, null, 7, 'a']).map(askedAt), [['a']]);
+  // The base with or without its slash, and a preview's, are the same address of their own; an id is one value, whatever it says.
+  assert.equal(stockAsks('/api', ['a'])[0], '/api/stock?product=a');
+  assert.equal(stockAsks('/p/shop-probe/api/', ['a'])[0], '/p/shop-probe/api/stock?product=a');
+  assert.deepEqual(askedAt(stockAsks('/api/', ['a&product=b', 'c d'])[0]), ['a&product=b', 'c d']);
+});
+
+test('what is hidden is what nobody can buy', () => {
+  const product = (id, ...states) => ({ id, served: true, variants: states.map((state, i) => ({ key: `v${i}`, sku: `S-${id}-${i}`, state })) });
+  // A product all sold out is hidden; one variant in stock is shown; all off sale is hidden.
+  assert.deepEqual([...hiddenTiles([{ products: [product('sold', 'sold_out', 'sold_out')] }])], ['sold']);
+  assert.deepEqual([...hiddenTiles([{ products: [product('some', 'sold_out', 'in_stock')] }])], [], 'one variant in stock is a product to buy');
+  assert.deepEqual([...hiddenTiles([{ products: [product('off', 'off_sale', 'off_sale')] }])], ['off']);
+  // Sold out and off sale together are no more buyable than either.
+  assert.deepEqual([...hiddenTiles([{ products: [product('mixed', 'off_sale', 'sold_out')] }])], ['mixed']);
+  // One a shop does not serve is hidden — it has no variants and none to buy.
+  assert.deepEqual([...hiddenTiles([{ products: [{ id: 'gone', served: false, variants: [] }] }])], ['gone']);
+  // One it serves with no variant at all has nothing to buy either.
+  assert.deepEqual([...hiddenTiles([{ products: [product('bare')] }])], ['bare']);
+  // A state this kit does not know is not in stock: only `in_stock` can be bought.
+  assert.deepEqual([...hiddenTiles([{ products: [product('later', 'on_order')] }])], ['later']);
+  // A count says nothing the state did not: a variant in stock with or without `left` is in stock.
+  assert.deepEqual([...hiddenTiles([{ products: [{ id: 'few', served: true, variants: [{ key: 'v1', sku: 'S', state: 'in_stock', left: 1 }] }] }])], []);
+
+  // A failed answer hides nothing — its products stay shown — whatever the other answers say.
+  assert.deepEqual([...hiddenTiles([null])], []);
+  assert.deepEqual([...hiddenTiles([])], [], 'no answers at all');
+  const calls = [{ products: [product('a', 'sold_out'), product('b', 'in_stock')] }, null, { products: [product('c', 'off_sale'), { id: 'd', served: false, variants: [] }] }];
+  assert.deepEqual([...hiddenTiles(calls)].sort(), ['a', 'c', 'd'], 'the answers that came are read, the one that did not hides nothing');
+  // Nor does an answer that is no stock answer, or says a product in a way this kit does not read: none of it hides anything, and nothing throws.
+  for (const bad of [undefined, 'a sentence', 7, {}, [], { products: 'x' }, { products: null }, { products: [null, 7, 'x', [], {}] }]) {
+    assert.deepEqual([...hiddenTiles([bad])], [], JSON.stringify(bad));
+  }
+  const odd = [
+    { id: 'no-served', variants: [{ state: 'sold_out' }] },
+    { id: 'served-text', served: 'false', variants: [] },
+    { id: 'variants-text', served: true, variants: 'sold_out' },
+    { id: 'variants-missing', served: true },
+    { served: false, variants: [] },
+    { id: '', served: false, variants: [] },
+    { id: 9, served: false, variants: [] },
+  ];
+  assert.deepEqual([...hiddenTiles([{ products: odd }])], [], 'a product said with no plain served, or no id, is shown: nothing is hidden on a guess');
+  // A variant that is no object cannot be in stock, and does not make a product shown by throwing.
+  assert.deepEqual([...hiddenTiles([{ products: [{ id: 'x', served: true, variants: [null, 'in_stock', 7] }] }])], ['x']);
+  // A product an answer does not name is not in what it hides, and one named twice is hidden once.
+  assert.deepEqual([...hiddenTiles([{ products: [product('a', 'sold_out')] }, { products: [product('a', 'sold_out')] }])], ['a']);
+  assert.equal(STOCK_DEADLINE_MS, 10000, 'a stalled call is given up at its deadline, and its tiles stay shown');
+});
+
 // ── a product's facts ─────────────────────────────────────────────────────
 
 const OPTION = (key, ...values) => ({ _key: key, name: key, values: values.map((value) => ({ _key: value, label: value.toUpperCase() })) });
@@ -1133,6 +1206,7 @@ test('the storefront is in the package under its own entries, and in the barrel'
     ['./shop/cart', './lib/shop/cart.mjs', './types/shop-cart.d.ts'],
     ['./shop/checkout', './lib/shop/checkout.mjs', './types/shop-checkout.d.ts'],
     ['./shop/order', './lib/shop/order.mjs', './types/shop-order.d.ts'],
+    ['./shop/listing', './lib/shop/listing.mjs', './types/shop-listing.d.ts'],
   ]) {
     assert.deepEqual(manifest.exports[entry], { types, default: file }, entry);
     assert.ok(readFileSync(new URL(`../${file}`, import.meta.url), 'utf8').length > 0);
@@ -1140,7 +1214,7 @@ test('the storefront is in the package under its own entries, and in the barrel'
   }
   // `lib` and `types` are packed whole, so none of it can be left out of a release.
   assert.ok(manifest.files.includes('lib') && manifest.files.includes('types'));
-  for (const name of ['SHOP_LOCALES', 'shopWordsFor', 'PRODUCT', 'CART', 'CHECKOUT', 'ORDER', 'LISTING', 'MAX_LINES', 'MAX_QTY', 'cartKey', 'readCart', 'addLine', 'removeLine', 'setQty', 'shippingBody', 'cartView', 'pressKey', 'freshPress', 'pressFor', 'checkoutBody', 'missingDetails', 'afterAnswer', 'ASK_EVERY_MS', 'ASKS_MOST', 'ORDER_WORDS', 'orderView', 'orderAddress', 'frozenOrder', 'productFacts', 'variantFor', 'valueStates', 'answersOf', 'fromPrice']) {
+  for (const name of ['SHOP_LOCALES', 'shopWordsFor', 'PRODUCT', 'CART', 'CHECKOUT', 'ORDER', 'LISTING', 'MAX_LINES', 'MAX_QTY', 'cartKey', 'readCart', 'addLine', 'removeLine', 'setQty', 'shippingBody', 'cartView', 'pressKey', 'freshPress', 'pressFor', 'checkoutBody', 'missingDetails', 'afterAnswer', 'ASK_EVERY_MS', 'ASKS_MOST', 'ORDER_WORDS', 'orderView', 'orderAddress', 'frozenOrder', 'STOCK_ASKS_MOST', 'STOCK_DEADLINE_MS', 'stockAsks', 'hiddenTiles', 'productFacts', 'variantFor', 'valueStates', 'answersOf', 'fromPrice']) {
     assert.ok(name in barrel, `index.mjs exports ${name}`);
   }
 });
@@ -1176,7 +1250,7 @@ test('the pieces\' shared helpers: JSON from an attribute or what is given, and 
   assert.equal(typeof wire.BaseElement, 'function', 'something for a piece\'s element to extend, with or without a document');
   // With no custom elements to define it in, defining is nothing.
   wire.defineOnce('jtk-nothing', class extends wire.BaseElement {});
-  for (const file of ['shop-product.js', 'shop-cart.js', 'shop-checkout.js', 'shop-order.js']) {
+  for (const file of ['shop-product.js', 'shop-cart.js', 'shop-checkout.js', 'shop-order.js', 'shop-listing.js']) {
     const source = readFileSync(new URL(`../elements/${file}`, import.meta.url), 'utf8');
     // Written once, in the wire: a piece takes them from there.
     assert.doesNotMatch(source, /^(?:export )?function (?:parsed|putBase)\b/m, `${file} writes its own`);
@@ -1271,6 +1345,33 @@ test("the order's element loads without a DOM, speaks over the same wire, and is
   const sender = readFileSync(new URL('../elements/shop-checkout.js', import.meta.url), 'utf8');
   assert.match(sender, /paidFromKey\(/, 'the checkout names where the mark is kept');
   assert.match(sender, /sessionStorage\.setItem\(paidFrom,/, 'and writes it');
+});
+
+test("the listing's element loads without a DOM, speaks over the same wire, and is in the package with its types", async () => {
+  const wire = await import('../elements/shop-wire.js');
+  const listing = await import('../elements/shop-listing.js');
+  assert.equal(listing.SHOP_PROTOCOL, 1, 'the element names the wire\'s version');
+  assert.equal(listing.ask, wire.ask);
+  for (const name of ['wireListing', 'defineListing']) assert.equal(typeof listing[name], 'function', name);
+  assert.equal(typeof listing.JtkListing, 'function');
+  // With no custom elements to define it in, defining is nothing.
+  listing.defineListing();
+
+  const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  assert.deepEqual(manifest.exports['./elements/shop-listing'], { types: './types/elements-shop.d.ts', default: './elements/shop-listing.js' });
+  const types = readFileSync(new URL('../types/elements-shop.d.ts', import.meta.url), 'utf8');
+  for (const name of ['wireListing', 'defineListing', 'JtkListing']) assert.ok(types.includes(name), `elements-shop.d.ts declares ${name}`);
+  const listingTypes = readFileSync(new URL('../types/shop-listing.d.ts', import.meta.url), 'utf8');
+  for (const name of ['STOCK_ASKS_MOST', 'STOCK_DEADLINE_MS', 'stockAsks', 'hiddenTiles']) assert.ok(listingTypes.includes(name), `shop-listing.d.ts declares ${name}`);
+  assert.match(readFileSync(new URL('../types/index.d.ts', import.meta.url), 'utf8'), /hiddenTiles/, 'the barrel\'s types say hiddenTiles');
+  // The element decides nothing of its own: which products to ask after is stockAsks's, and which tiles to hide is hiddenTiles's;
+  // every address stockAsks makes is asked, a call has its deadline, and a failed one is none of the answers hiddenTiles reads.
+  const source = readFileSync(new URL('../elements/shop-listing.js', import.meta.url), 'utf8');
+  assert.match(source, /from '\.\.\/lib\/shop\/listing\.mjs'/);
+  for (const name of ['stockAsks', 'hiddenTiles']) assert.match(source, new RegExp(`\\b${name}\\(`), `the element calls ${name}`);
+  assert.match(source, /STOCK_DEADLINE_MS/, 'each call has its deadline');
+  assert.match(source, /data-hide-sold-out|hideSoldOut/, 'and hides only where the site says so');
+  assert.doesNotMatch(source, /localStorage|sessionStorage/, 'a listing keeps nothing in the browser');
 });
 
 test('ask names the protocol on every request, is never cached, sends JSON, and is null where nothing answered', async () => {

@@ -34,6 +34,13 @@
 //      (the other language's page would have no token), no more `noindex` than
 //      any page and left out of the sitemap (Ruling 201), and not built where
 //      the schema does not turn the shop on
+//   8  the products' listing, at /shop and /en/shop (Task 9.16): every product
+//      a tile by its id, each with its title and its lowest price on sale
+//      annotated, no `data-hide-sold-out` as the unit lays it; and a site that
+//      chooses to hide what is sold out still builds every product — its
+//      listing says `data-hide-sold-out`, with a product hidden in its file
+//      gone from it and nothing else. The scaffold's own listing leaves /shop
+//      to it, and it is not built where the schema does not turn the shop on
 //
 // Every built page of the shop is held as test/create3.mjs holds the
 // example's: no element says an attribute twice, no heading skips a level.
@@ -43,17 +50,19 @@ import { spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
-import { money } from '../kit/lib/money.mjs';
-import { CART, CHECKOUT, ORDER } from '../kit/lib/shop/hooks.mjs';
+import { money, priceWords } from '../kit/lib/money.mjs';
+import { CART, CHECKOUT, LISTING, ORDER } from '../kit/lib/shop/hooks.mjs';
 import { CHECKOUT_WORDS } from '../kit/lib/shop/checkout.mjs';
 import { ORDER_WORDS } from '../kit/lib/shop/order.mjs';
 import { shopWordsFor } from '../kit/lib/shop/words.mjs';
-import { layShop } from './shop-site.mjs';
+import { copyShop, hideSoldOut, layShop } from './shop-site.mjs';
 import { varyContent } from './variants.mjs';
 
 const bin = resolve(import.meta.dirname, '../bin/jtk.mjs');
 const dir = mkdtempSync(join(tmpdir(), 'jtk-shop-'));
+const CANDLE = '0193a5c3-6b1c-7d20-9a31-5e4d3c2b1a01';
 const FOX = '0193a5c3-6b1c-7d20-9a31-5e4d3c2b1a02';
+const BAG = '0193a5c3-6b1c-7d20-9a31-5e4d3c2b1a03';
 /** A fault that stops the run: thrown, so the `finally` takes the site away, and said once at the end. */
 class Failure extends Error {}
 const fail = (m) => {
@@ -310,6 +319,81 @@ try {
     check(!sitemap.includes('/order'), 'sitemap.xml names the order page');
   }
   settle('the page after payment');
+
+  // ── 8 · the products' listing ────────────────────────────────────────────
+  /** A listing's tiles in the order drawn: each product's id, its opening tag and what is inside it. */
+  const tilesOf = (html) => [...html.matchAll(/(<li\b[^>]*\sdata-product-tile(?=[\s>=])[^>]*>)([\s\S]*?)<\/li>/g)].map((one) => ({ id: attr(one[1], 'data-product'), tag: one[1], inner: one[2] }));
+  const escaped = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  {
+    // What each tile of the test shop says, in each language: its title and its lowest price on sale — «from CHF 89» where the
+    // variants differ (the bag's two sizes), the price where they do not (all four of the fox's are 29.90).
+    const listed = (lang) => [
+      [CANDLE, 'kerzenstaender', 'Kerzenständer', money(2400, 'CHF', lang)],
+      [FOX, 't-shirt-fox', lang === 'en' ? 'Fox T-shirt' : 'T-shirt «Fox»', money(2990, 'CHF', lang)],
+      [BAG, 'tasche-nach-mass', 'Tasche nach Mass', priceWords(lang).from.replace('{amount}', money(8900, 'CHF', lang))],
+    ];
+    for (const [address, lang, prefix] of [['shop', 'de-CH', ''], ['en/shop', 'en', '/en']]) {
+      const html = page(address);
+      const where = `/${address}/`;
+      const root = /<[a-z]+\b[^>]*\sdata-listing(?=[\s>=])[^>]*>/.exec(html)?.[0];
+      check(root !== undefined, `${where} has no [data-listing]`);
+      check(attr(root, 'data-api') === '/api/', `${where} does not say its api: ${root}`);
+      // The listing `jtk add shop` lays hides nothing: the site chooses it.
+      check(!/\sdata-hide-sold-out(?=[\s>=])/.test(root ?? ''), `${where} says data-hide-sold-out, which only a site's own choice does: ${root}`);
+      for (const { hook } of [...LISTING.always, ...LISTING.said]) {
+        const data = /^\[(data-[a-z-]+)\]$/.exec(hook);
+        check(data ? new RegExp(`\\s${data[1]}(?=[\\s>=])`).test(html) : false, `${where} does not carry ${hook}`);
+      }
+      // Every product is a tile, by its id, in the order of their ranks — and not one is hidden by the build.
+      const tiles = tilesOf(html);
+      check(JSON.stringify(tiles.map((one) => one.id)) === JSON.stringify([CANDLE, FOX, BAG]), `${where} does not list the three products by their ids, in the order of their ranks: ${tiles.map((one) => one.id)}`);
+      check(tiles.every((one) => !/\shidden(?=[\s>=])/.test(one.tag)) && !/\shidden(?=[\s>=])/.test(html.slice(html.indexOf('<main'), html.indexOf('</main>'))), `${where} is built with a tile hidden: the build lists every product`);
+      for (const [id, slug, title, price] of listed(lang)) {
+        const tile = tiles.find((one) => one.id === id);
+        check(tile !== undefined && tile.inner.includes(`href="${prefix}/shop/${slug}/"`), `${where}: the tile of ${slug} does not link to ${prefix}/shop/${slug}/`);
+        check(new RegExp(`<h2\\b[^>]*\\sdata-jtk-path="entry:${id}:title"[^>]*>${escaped(title)}</h2>`).test(tile?.inner ?? ''), `${where}: the tile of ${slug} has not its title «${title}» as a heading, annotated as the entry's`);
+        // The lowest price on sale, annotated as the variant it is — all four of the fox's are the same, so the first.
+        check(new RegExp(`<[a-z]+\\b[^>]*\\sdata-jtk-path="entry:${id}:variants\\[v1\\]\\.price"[^>]*>${escaped(price)}</`).test(tile?.inner ?? ''), `${where}: the tile of ${slug} does not say its lowest price «${price}», annotated as the variant's`);
+      }
+      check(/<jtk-listing[\s>]/.test(html) && /<script type="module" src="[^"]+"/.test(html) && !/<noscript/.test(html.slice(html.indexOf('<main'), html.indexOf('</main>'))), `${where} has no <jtk-listing> or no script for it, or a <noscript> sentence the whole listing does not need`);
+      // The collection's name is the repository's (the kit writes it in the site's language), so both languages say it alike.
+      check(/<h1[^>]*>Produkte<\/h1>/.test(html) && (html.match(/<h1[\s>]/g) ?? []).length === 1, `${where} is not headed «Produkte», the collection's name, once`);
+      // The scaffold's own listing left /shop to it: the page at the address is the shop's, not the blog's cards.
+      check(!/class="post-card"/.test(html), `${where} is the scaffold's own listing, not the shop's`);
+    }
+  }
+  settle('the products\' listing');
+  {
+    // A site's own choice: its page says `HIDE_SOLD_OUT`, and a product hidden in its file is left out of the listing — and no other.
+    // What is sold out is the shop's to say, once the page has loaded: the build lists every product it serves.
+    const hiding = copyShop(site, `${site}-hiding`);
+    hideSoldOut(hiding);
+    const candle = join(hiding, 'jtk/entries/products/kerzenstaender.json');
+    writeFileSync(candle, `${JSON.stringify({ ...JSON.parse(readFileSync(candle, 'utf8')), visible: false }, null, 2)}\n`);
+    // The fox has a cover — a picture of the example's own library — so a tile with a picture is built too.
+    const foxFile = join(hiding, 'jtk/entries/products/t-shirt-fox.json');
+    const foxEntry = JSON.parse(readFileSync(foxFile, 'utf8'));
+    foxEntry.fields.cover = { src: 'media/jtk-example/360fe554c851e54e.jpg', alt: 'Fuchs auf dem Hemd' };
+    writeFileSync(foxFile, `${JSON.stringify(foxEntry, null, 2)}\n`);
+    const built = spawnSync('npm', ['run', 'build'], { cwd: hiding, encoding: 'utf8', env: { ...process.env, SITE_URL: 'https://shop-probe.example/' } });
+    if (built.status !== 0) fail(`the listing that hides what is sold out does not build:\n${built.stdout}\n${built.stderr}`);
+    for (const [address, prefix] of [['shop', ''], ['en/shop', '/en']]) {
+      const html = readFileSync(join(hiding, 'dist', address, 'index.html'), 'utf8');
+      const where = `/${address}/ of the site that hides what is sold out`;
+      const root = /<[a-z]+\b[^>]*\sdata-listing(?=[\s>=])[^>]*>/.exec(html)?.[0];
+      check(/\sdata-hide-sold-out(?=[\s>=])/.test(root ?? ''), `${where}: the listing does not say data-hide-sold-out: ${root}`);
+      const tiles = tilesOf(html);
+      check(JSON.stringify(tiles.map((one) => one.id)) === JSON.stringify([FOX, BAG]), `${where}: with the candle holder hidden in its file, the listing is not the fox and the bag: ${tiles.map((one) => one.id)}`);
+      check(tiles.every((one) => !/\shidden(?=[\s>=])/.test(one.tag)), `${where}: a tile is hidden by the build`);
+      check(!html.slice(html.indexOf('<main'), html.indexOf('</main>')).includes(CANDLE), `${where}: the hidden candle holder is still on the listing`);
+      check(tiles.every((one) => one.inner.includes(`href="${prefix}/shop/`)), `${where}: a tile does not link under ${prefix}/shop/`);
+      // A tile with a cover draws it, with its words and the entry's annotation; one with none draws no picture.
+      const [foxTile, bagTile] = [tiles.find((one) => one.id === FOX), tiles.find((one) => one.id === BAG)];
+      check(new RegExp(`<img\\b[^>]*\\salt="Fuchs auf dem Hemd"[^>]*\\sdata-jtk-path="entry:${FOX}:cover\\.src"|<img\\b[^>]*\\sdata-jtk-path="entry:${FOX}:cover\\.src"[^>]*\\salt="Fuchs auf dem Hemd"`).test(foxTile?.inner ?? ''), `${where}: the fox's tile does not draw its cover, with its words, annotated as the entry's`);
+      check(!/<img\b/.test(bagTile?.inner ?? ''), `${where}: the bag's tile draws a picture it has not got`);
+    }
+  }
+  settle('the listing that hides what is sold out');
   {
     // Built only where the schema turns the shop on: a copy of the site with the module off has no cart, in any language.
     const off = `${site}-off`;
@@ -325,7 +409,8 @@ try {
     if (emitted.status !== 0) fail(`the shop turned off: jtk schema says\n${emitted.stdout}\n${emitted.stderr}`);
     const built = spawnSync('npm', ['run', 'build'], { cwd: off, encoding: 'utf8', env: { ...process.env, SITE_URL: 'https://shop-probe.example/' } });
     if (built.status !== 0) fail(`the shop turned off: the site does not build:\n${built.stdout}\n${built.stderr}`);
-    check(existsSync(join(off, 'dist/shop/index.html')) && existsSync(join(off, 'dist/index.html')), 'the shop turned off: the site has lost its other pages');
+    check(existsSync(join(off, 'dist/shop/t-shirt-fox/index.html')) && existsSync(join(off, 'dist/index.html')), 'the shop turned off: the site has lost its other pages');
+    check(!existsSync(join(off, 'dist/shop/index.html')) && !existsSync(join(off, 'dist/en/shop/index.html')), 'the shop turned off: the shop\'s listing is still built');
     check(!existsSync(join(off, 'dist/cart')) && !existsSync(join(off, 'dist/en/cart')), 'the shop turned off: the site still has a cart page');
     check(!existsSync(join(off, 'dist/order')) && !existsSync(join(off, 'dist/en/order')), 'the shop turned off: the site still has a page after payment');
   }
@@ -349,7 +434,7 @@ try {
     }
   }
 
-  console.log('shop: the product\'s page is the site\'s own — its form, its facts and every option, the first price annotated, in German and English — and judged and linted clean, at the edges of the content too; the cart\'s page at /cart and /en/cart, linked from the header, left out of the sitemap, and not built where the shop is off; the checkout under the cart, every hook and every answer\'s words, coming back to /order and /en/order; the page after payment there, every hook and every state\'s words, no switch of language, left out of the sitemap, and not built where the shop is off');
+  console.log('shop: the product\'s page is the site\'s own — its form, its facts and every option, the first price annotated, in German and English — and judged and linted clean, at the edges of the content too; the cart\'s page at /cart and /en/cart, linked from the header, left out of the sitemap, and not built where the shop is off; the checkout under the cart, every hook and every answer\'s words, coming back to /order and /en/order; the page after payment there, every hook and every state\'s words, no switch of language, left out of the sitemap, and not built where the shop is off; the products\' listing at /shop and /en/shop, every product a tile with its title and its lowest price annotated, hiding nothing as the unit lays it, and the same listing of a site that chooses to hide what is sold out built with every product it serves, and not built where the shop is off');
 } catch (why) {
   if (!(why instanceof Failure)) throw why;
   console.error(`shop: ${why.message}`);

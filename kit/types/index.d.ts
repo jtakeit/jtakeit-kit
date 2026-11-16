@@ -17,3 +17,4 @@ export { ATTEMPT, HOLD, pressKey, freshPress, pressFor, sentOf, keptPress, check
 export type { Press, Sent, Next, Buyer, Address, CheckoutForm } from './shop-checkout';
 export { ASK_EVERY_MS, ASKS_MOST, ASK_DEADLINE_MS, ORDER_WORDS, orderView, orderAddress, paidFromKey, sentFromHere, frozenOrder } from './shop-order';
 export type { OrderState, OrderView, FrozenOrder, FrozenLine, FrozenAnswer } from './shop-order';
+export { STOCK_ASKS_MOST, STOCK_DEADLINE_MS, stockAsks, hiddenTiles } from './shop-listing';

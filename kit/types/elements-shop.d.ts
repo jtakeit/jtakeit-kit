@@ -1,6 +1,6 @@
 /**
  * The storefront's elements (`@jtakeit/kit/elements/shop-*`: the product, the
- * cart, the checkout, the page after payment) and the one wire they speak `shop/1` over
+ * cart, the checkout, the page after payment, the listing) and the one wire they speak `shop/1` over
  * (`@jtakeit/kit/elements/shop-wire`).
  */
 
@@ -58,6 +58,15 @@ export function wireOrder(root: HTMLElement): void;
 export function defineOrder(name?: string): void;
 /** `<jtk-order>`: wires the page after payment inside it when it reaches the document. */
 export class JtkOrder extends HTMLElement {
+  connectedCallback(): void;
+}
+
+/** Wires one listing's `[data-listing]`; one already wired is left alone. Where it says `data-hide-sold-out`, the tiles the shop says nobody can buy are hidden once the page has loaded. */
+export function wireListing(root: HTMLElement): void;
+/** Defines `<jtk-listing>` (or the name given), where there is a document and it is not defined yet. */
+export function defineListing(name?: string): void;
+/** `<jtk-listing>`: wires the listing inside it when it reaches the document. */
+export class JtkListing extends HTMLElement {
   connectedCallback(): void;
 }
 
