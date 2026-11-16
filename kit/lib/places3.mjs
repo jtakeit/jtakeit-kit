@@ -186,14 +186,34 @@ export function searchable(html) {
 }
 
 /**
+ * What of a page a value may be drawn in without its annotation: the text
+ * no annotation claims (`unclaimed`, lint.mjs's `unclaimedText` — the
+ * platform's walk for wiki/111 E2), and every text node and attribute value
+ * whole — an element annotated by a place that names nothing still draws
+ * its words. A value found only inside another field's annotated words —
+ * KAIF's «Билеты» in «Билеты продаются на Eventfrog…» — is that field's,
+ * not drawn here.
+ *
+ * @param {string} html @param {string} unclaimed
+ */
+export function seenOn(html, unclaimed) {
+  const whole = new Set();
+  for (const [, value] of html.matchAll(/\s[a-zA-Z_:][-a-zA-Z0-9_:.]*\s*=\s*"([^"]*)"/g)) whole.add(searchable(value).trim());
+  for (const [, value] of html.matchAll(/>([^<]+)</g)) whole.add(searchable(value).trim());
+  whole.delete('');
+  return { text: searchable(unclaimed), whole };
+}
+
+/**
  * Whether a filled value a page does not annotate is on that page at all —
  * the line between a field this build does not draw (a template condition
  * hides it: KAIF's footer draws `tickets_label` only when the next night has
- * a ticket link, B9) and one drawn and left untappable. Asked of the page's
- * markup, words and attributes, for a value drawn as it is stored; a picture
- * or a body is drawn as something else, and is never said to be absent.
+ * a ticket link, B9) and one drawn and left untappable. Asked of what the
+ * page draws that no annotation claims (`seenOn`), for a value drawn as it
+ * is stored; a picture or a body is drawn as something else, and is never
+ * said to be absent.
  *
- * @param {string} page `searchable(html)` of the built page
+ * @param {{ text: string; whole: Set<string> }} page `seenOn` of the built page
  * @param {any} field @param {unknown} value
  * @returns {boolean | undefined} true drawn, false not drawn, undefined not known
  */
@@ -207,8 +227,9 @@ export function drawnOn(page, field, value) {
   } else said = [value];
   const words = said.filter((one) => typeof one === 'string' || typeof one === 'number').map((one) => String(one).replace(/\s+/g, ' ').trim()).filter((one) => one !== '');
   if (words.length === 0) return undefined;
-  if (words.some((one) => page.includes(one))) return true;
-  return field.kind === 'tel' && words.some((one) => page.includes(one.replace(/[\s().\-/]/g, ''))) ? true : false;
+  const found = (one) => page.text.includes(one) || page.whole.has(one);
+  if (words.some(found)) return true;
+  return field.kind === 'tel' && words.some((one) => found(one.replace(/[\s().\-/]/g, ''))) ? true : false;
 }
 
 /**

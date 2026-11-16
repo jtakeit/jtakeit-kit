@@ -293,6 +293,11 @@ test('a filled value this build does not draw at all is advice, and one drawn wi
     hidden.warnings.some((one) => one.code === 'JTK_W_UNANNOTATED_FIELD' && one.says === '/: blocks[hero].lead is filled and this build does not draw it at all — a condition in the template hides it; where it is drawn, annotate it'),
     JSON.stringify(hidden.warnings),
   );
+  // Its words only inside another field's annotated words (KAIF's «Билеты» in «Билеты продаются на Eventfrog…»): that field's, and this one not drawn.
+  const inside = await lint({
+    root: tree({ pages: { 'index.html': PAGES['index.html'].replace('<p data-jtk-path="blocks[hero].lead">Ein Laden.</p>', '').replace('>Willkommen</h1>', '>Willkommen — Ein Laden. Und mehr</h1>') } }),
+  });
+  assert.deepEqual(said(inside), []);
   // Drawn, its words on the page, and nothing to tap: refused as before.
   const drawn = await lint({ root: tree({ pages: page('index.html', '<p data-jtk-path="blocks[hero].lead">Ein Laden.</p>', '<p>Ein Laden.</p>') }) });
   assert.deepEqual(said(drawn), [`${CODES.UNANNOTATED_FIELD} /: blocks[hero].lead is not annotated`]);

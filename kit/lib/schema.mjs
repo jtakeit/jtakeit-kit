@@ -63,7 +63,8 @@ import { contractOf, mintJtk, readJtk } from './content/node.mjs';
 import { canonicalTag, judgeSchema } from './judge3.mjs';
 import { filesBeside, judgeRequest } from './judgeFiles.mjs';
 import { copiesMissing, copyMissingSays, judgeTranslations } from './translations.mjs';
-import { BY_INDEX, DOCUMENT_ID, ID, drawnOn, isEmpty, KEY, placesIn, searchable, tappable3 } from './places3.mjs';
+import { BY_INDEX, DOCUMENT_ID, ID, drawnOn, isEmpty, KEY, placesIn, seenOn, tappable3 } from './places3.mjs';
+import { unclaimedText } from './lint.mjs';
 import { metaFaults } from './meta3.mjs';
 import { builtPages, prefixBuild, servedFaults, unboundedHeights, unowned } from './served.mjs';
 
@@ -210,7 +211,7 @@ export function pagesAgainst({ files, schema, dist, advice = [] }) {
     const html = readFileSync(file, 'utf8');
     corpus += `\n${decoded(html)}`;
     built.set(page, {
-      text: searchable(html),
+      seen: seenOn(html, unclaimedText(html)),
       paths: new Set([...html.matchAll(/data-jtk-path="([^"]+)"/g)].map((one) => one[1])),
       binds: [...html.matchAll(/data-jtk-bind="([^"]*)"/g)].flatMap((one) => one[1].split(/\s+/).filter(Boolean)),
       hrefs: [...html.matchAll(/data-jtk-href="([^"]*)"/g)].map((one) => one[1]),
@@ -282,7 +283,7 @@ export function pagesAgainst({ files, schema, dist, advice = [] }) {
       for (const place of isEntry ? entryPlaces(document) : blockPlaces(document.blocks)) {
         if (page.paths.has(place)) continue;
         const held = valueAt(document, place, isEntry);
-        if (held !== undefined && drawnOn(page.text, held.field, held.value) === false) {
+        if (held !== undefined && drawnOn(page.seen, held.field, held.value) === false) {
           advice.push(`${document.path}: ${place} is filled and this build does not draw it at all — a condition in the template hides it; where it is drawn, annotate it`);
         } else out.push(`${document.path}: ${place} is declared and the page does not render it`);
       }

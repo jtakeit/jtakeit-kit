@@ -30,7 +30,7 @@ import { content as door, TAPPABLE, tappable } from './content/index.mjs';
 import { unnamed } from './content/identity.mjs';
 import { collectContent, contractOf, readJtk } from './content/node.mjs';
 import { metaFaults } from './meta3.mjs';
-import { DOCUMENT_ID, ID, drawnOn, isObject, placesIn, pricePaths, searchable, widened3 } from './places3.mjs';
+import { DOCUMENT_ID, ID, drawnOn, isObject, placesIn, pricePaths, seenOn, widened3 } from './places3.mjs';
 
 export { CODES, said, pricePaths };
 
@@ -661,7 +661,7 @@ async function lint3({ root, distDir, siteURL, now }) {
   const hidden = [];
   const unannotated = (path, html, document, place, entry) => {
     const held = valueAt(document, place, entry);
-    if (held !== undefined && drawnOn(searchable(html), held.field, held.value) === false) {
+    if (held !== undefined && drawnOn(seenOn(html, unclaimedText(html)), held.field, held.value) === false) {
       hidden.push({ code: 'JTK_W_UNANNOTATED_FIELD', says: `${path}: ${place} is filled and this build does not draw it at all — a condition in the template hides it; where it is drawn, annotate it` });
     } else fault(CODES.UNANNOTATED_FIELD, `${path}: ${place} is not annotated`);
   };
