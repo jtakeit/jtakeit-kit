@@ -600,7 +600,10 @@ test('B2: a file replaced brings the scaffold\'s files it imports, or is left wi
     assert.match(run.stdout, /a read the move changes — src\/lib\/own\.ts: jtk\/content\/: .*\(line 1\)/);
     // Not ready to be drawn live: its files not laid in.
     assert.equal(existsSync(join(site, 'src/live')), false);
-    assert.match(run.stdout, /the live preview — .*src\/lib\/entryLoader\.ts is not the scaffold's.*src\/live\/ is not laid in/);
+    // Said plainly, with what it costs the owner, and first for a person — not after the reads.
+    assert.match(run.stdout, /✗ the site will not be drawn live: the owner sees a change only after a build — the first thing for a person below \(docs\/live\.md\)/);
+    assert.match(run.stdout, /\n {2}1\. the site will not be drawn live — the panel's preview will not draw this site live — the owner sees a change only after a build, and cannot preview an entry's card before it is saved — because .*src\/lib\/entryLoader\.ts is not the scaffold's.*src\/live\/ is not laid in\. Wire the site's own pages into src\/live as docs\/live\.md says/);
+    assert.match(run.stdout, /say why in BRIEF\.md\./);
     // Where the site came from, by its files, and not by the catalogue's generator.
     assert.match(run.stdout, /the scaffold this site came from, by its files: 0\.17\.0 \(\d+ untouched files, most of them\)/);
     // The planted loader is 0.16.0's, whose own imports (specimens.mjs, ./schedule) a 0.17.0 scaffold has not got: the developer's file, not the move's.
