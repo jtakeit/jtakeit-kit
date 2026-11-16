@@ -4,6 +4,7 @@
  *
  *   node scripts/release.mjs bump --kit minor --astro minor   [--dry-run]
  *   node scripts/release.mjs bump --kit 0.3.0 --astro 0.5.0   [--dry-run]
+ *   node scripts/release.mjs bump --again                     [--dry-run]
  *   node scripts/release.mjs publish                          [--dry-run]
  *
  * `bump` sets the kit's version, the scaffold's version, and the kit as a
@@ -12,6 +13,12 @@
  * runs the tests. A version has to be above both what git holds and what
  * npm already has, because a release once went out from a working tree that
  * was never merged, and git said 0.3.0 while npm said 0.4.0.
+ *
+ * `bump --again` moves no version: it writes again what `bump` wrote for the
+ * versions already on the branch — the lockfiles, the scaffold's hashes — and
+ * runs the tests. The kit's tarball changes with every file of it, so a fix
+ * after `bump` leaves the template's lockfile naming a tarball the tree no
+ * longer packs, which `publish` refuses; this is the way back to one it does.
  *
  * `publish` publishes the kit first and the scaffold second (the scaffold
  * depends on the kit), from a clean tree on main, refusing a version npm
@@ -30,6 +37,7 @@ const argv = process.argv.slice(2);
 const command = argv[0];
 const flag = (name) => { const at = argv.indexOf(`--${name}`); return at === -1 ? undefined : argv[at + 1]; };
 const dry = argv.includes('--dry-run');
+const again = argv.includes('--again');
 
 const FILES = {
   root: join(ROOT, 'package.json'),
@@ -126,17 +134,28 @@ if (command === 'bump') {
   // must not be released again under the same number.
   const kitNow = max(kit.version, onNpm(kit.name));
   const astroNow = max(root.version, onNpm(root.name));
-  const kitNext = flag('kit') ? next(kitNow, flag('kit')) : kitNow;
-  const astroNext = flag('astro') ? next(astroNow, flag('astro')) : undefined;
-  if (!flag('kit') && !flag('astro')) { console.error('say what to bump: --kit minor and/or --astro minor'); process.exit(1); }
-  if (flag('kit') && !greater(kitNext, kitNow)) { console.error(`kit ${kitNext} is not above ${kitNow}`); process.exit(1); }
-  if (astroNext && !greater(astroNext, astroNow)) { console.error(`astro ${astroNext} is not above ${astroNow}`); process.exit(1); }
-  if (flag('kit') && !astroNext) { console.error('a new kit needs a new scaffold too (its dependency moves): add --astro patch'); process.exit(1); }
+  if (again && (flag('kit') || flag('astro'))) { console.error('--again moves no version: say it alone, `bump --again`, or say what to bump'); process.exit(1); }
+  if (again) {
+    // The versions already on the branch, and nothing moved: they must be ones `bump` could have left, above what npm holds or exactly it
+    // (a kit already published is then locked as npm holds it), and the three files must agree on the kit.
+    if (greater(kitNow, kit.version) || greater(astroNow, root.version)) {
+      console.error(`npm holds ${kit.name}@${onNpm(kit.name)} and ${root.name}@${onNpm(root.name)}, above the ${kit.version} and ${root.version} on this branch: run bump with what to bump`); process.exit(1);
+    }
+    if (root.dependencies['@jtakeit/kit'] !== kit.version || template.dependencies['@jtakeit/kit'] !== kit.version) {
+      console.error(`the kit is ${kit.version} and is depended on as ${root.dependencies['@jtakeit/kit']} (root) / ${template.dependencies['@jtakeit/kit']} (template): run bump with what to bump`); process.exit(1);
+    }
+  }
+  const kitNext = again ? kit.version : flag('kit') ? next(kitNow, flag('kit')) : kitNow;
+  const astroNext = again ? root.version : flag('astro') ? next(astroNow, flag('astro')) : undefined;
+  if (!again && !flag('kit') && !flag('astro')) { console.error('say what to bump: --kit minor and/or --astro minor, or --again'); process.exit(1); }
+  if (!again && flag('kit') && !greater(kitNext, kitNow)) { console.error(`kit ${kitNext} is not above ${kitNow}`); process.exit(1); }
+  if (!again && astroNext && !greater(astroNext, astroNow)) { console.error(`astro ${astroNext} is not above ${astroNow}`); process.exit(1); }
+  if (!again && flag('kit') && !astroNext) { console.error('a new kit needs a new scaffold too (its dependency moves): add --astro patch'); process.exit(1); }
 
-  console.log(`kit   ${kit.version} (npm ${onNpm(kit.name)}) → ${kitNext}`);
+  console.log(`kit   ${kit.version} (npm ${onNpm(kit.name)}) → ${kitNext}${again ? ' (again: no version moves)' : ''}`);
   console.log(`astro ${root.version} (npm ${onNpm(root.name)}) → ${astroNext ?? root.version}`);
   console.log(`the kit as a dependency: root ${root.dependencies['@jtakeit/kit']} → ${kitNext}, template ${template.dependencies['@jtakeit/kit']} → ${kitNext}`);
-  if (!dry) {
+  if (!dry && !again) {
     kit.version = kitNext; writeJSON(FILES.kit, kit);
     root.version = astroNext ?? root.version; root.dependencies['@jtakeit/kit'] = kitNext; writeJSON(FILES.root, root);
     template.dependencies['@jtakeit/kit'] = kitNext; writeJSON(FILES.template, template);
@@ -158,6 +177,13 @@ if (command === 'bump') {
   // (scripts/scaffold-hashes.mjs; jtakeit-core wiki/98 §7 · 1).
   run('node', ['scripts/scaffold-hashes.mjs']);
   run('npm', ['test']);
+  if (again) {
+    console.log(`
+Done: the lockfile and the scaffold's hashes name the tree as it is, at the same versions (kit ${kitNext}, astro ${astroNext}). Commit them with the fix they follow:
+  git add template/package-lock.json package-lock.json lib/upgrade/scaffold.json
+  git commit -m "..."`);
+    process.exit(0);
+  }
   console.log(`
 Done. What is left is yours:
   git checkout -b release/${astroNext ?? root.version}
@@ -193,7 +219,7 @@ if (command === 'publish') {
     const named = kitInTemplateLock();
     const packed = packedKit();
     if (named.version === kit.version && named.integrity !== packed.integrity) {
-      console.error(`the template's lockfile names a ${kit.name}@${kit.version} tarball this tree no longer packs — the kit changed since bump; run bump again (same versions) and merge that`); process.exit(1);
+      console.error(`the template's lockfile names a ${kit.name}@${kit.version} tarball this tree no longer packs — the kit changed since bump; run \`npm run release -- bump --again\` (the same versions) and merge that`); process.exit(1);
     }
     run('npm', ['publish', '--workspace', 'kit', '--access', 'public']);
     if (!dry && !(await untilNpmHas(kit.name, kit.version))) { console.error(`\nnpm still does not have ${kit.name}@${kit.version}; look at npmjs.com, then run publish again`); process.exit(1); }
@@ -218,5 +244,6 @@ Next, in jtakeit-core: backend/api/sitebuild/scaffold.version → ${root.version
 }
 
 console.error(`node scripts/release.mjs bump --kit <minor|patch|x.y.z> --astro <minor|patch|x.y.z> [--dry-run]
+node scripts/release.mjs bump --again [--dry-run]       the same versions, the lockfile and the scaffold's hashes written again
 node scripts/release.mjs publish [--dry-run]`);
 process.exit(1);
