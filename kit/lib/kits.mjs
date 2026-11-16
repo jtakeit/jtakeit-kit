@@ -186,6 +186,9 @@ export function kitEntries(kit, locale) {
  */
 export const CONTRACT_3_ONLY = Object.freeze({
   catalogue: Object.freeze(['shared']),
+  // An entry type's card in the panel and a type's steps from its older
+  // versions: `form` and `upcast`, contract 3's alone.
+  block: Object.freeze(['form', 'upcast']),
   field: Object.freeze(['localized', 'role', 'integer', 'qualifiers', 'to', 'many', 'on_delete', 'option_defs', 'min_zero', 'max_zero']),
   collection: Object.freeze(['route', 'shown_on', 'untranslated', 'ends_by']),
 });
@@ -224,7 +227,7 @@ export function catalogueIn2(catalogue) {
   if (Array.isArray(catalogue.blocks)) {
     out.blocks = catalogue.blocks.map((block) => {
       if (!isObject(block)) return block;
-      const two = { ...block };
+      const two = without(block, CONTRACT_3_ONLY.block);
       for (const list of ['fields', 'asks']) if (Array.isArray(block[list])) two[list] = fields2(block[list]);
       return two;
     });

@@ -32,16 +32,21 @@
  * of contract 3 (`registry/testdata/contract3.json`) is sat by both. The
  * sentences are this kit's, in the platform's words where it has them.
  *
+ * Besides the verdict, the one advice of the judge's that is about the
+ * schema alone (`adviseSchema`): where the panel guesses an entry's card,
+ * `JTK_W_PANEL_FORM_GUESSED` (form.go's `adviseForms`) — and the card itself,
+ * resolved as the panel draws it (`formsOf`, `ResolveForm`).
+ *
  * What is not here, on purpose: the judge of the files beside the schema —
  * pages, entries, a module's settings, a translation (lib/translations.mjs) — which the
- * platform's import applies and `--judge` asks it for; and `JTK_W_` advice,
- * the bookings module's, which `--judge` prints.
+ * platform's import applies and `--judge` asks it for; and the bookings
+ * module's `JTK_W_` advice, which `--judge` prints.
  *
  * Imports nothing but the codes, the merge's notion of what a module books
  * (content/overlay.mjs) and what a zone is (endsBy.mjs), which import
  * nothing: the dev server runs it on every save.
  */
-import { E } from './codes.mjs';
+import { E, W } from './codes.mjs';
 import { bookedIn } from './content/overlay.mjs';
 import { ENDS_AFTER_MAX, isZone } from './endsBy.mjs';
 
@@ -142,7 +147,7 @@ const MODULES = new Map([
 
 const KEYS = {
   schema: ['contract', 'generator', 'blocks', 'page_seo', 'collections', 'modules', 'locale', 'locales', 'shared', 'render'],
-  block: ['type', 'v', 'label', 'hint', 'fields', 'views', 'collects', 'asks', 'photos'],
+  block: ['type', 'v', 'label', 'hint', 'fields', 'views', 'collects', 'asks', 'photos', 'upcast', 'form'],
   view: ['key', 'label', 'min', 'max', 'ratio', 'needs_build'],
   field: [
     'key', 'label', 'hint', 'kind', 'required', 'min', 'max', 'options', 'of', 'client_editable', 'accept', 'multiple',
@@ -154,6 +159,13 @@ const KEYS = {
   route: ['detail', 'listing', 'per_page'],
   order: ['by', 'desc'],
   ends_by: ['date', 'time', 'after', 'zone', 'then'],
+  // An entry type's card in the panel (`form3`, form.go), and a type's steps
+  // from its older versions (`upcast3`, `upcastRows3`, upcast.go).
+  form: ['sections', 'aside', 'widgets'],
+  section: ['title', 'note', 'rows'],
+  cell: ['field', 'span'],
+  upcast: ['from', 'rename', 'rows', 'values', 'drop', 'set'],
+  rows: ['rename', 'rows', 'values', 'drop', 'set'],
 };
 
 /** What contract 3 says instead of a word of contract 2's (`replacedIn3`). */
@@ -237,6 +249,28 @@ function strayKeys(top) {
     fields(at, block.fields);
     fields(`${at}.asks`, block.asks);
     eachObject(block.views, (j, view) => say(named(`${at}.views`, view, 'key', j), view, 'view'));
+    if (isObject(block.form)) {
+      say(`${at}.form`, block.form, 'form');
+      eachObject(block.form.sections, (j, section) => {
+        const where = `${at}.form.sections[${j}]`;
+        say(where, section, 'section');
+        if (!Array.isArray(section.rows)) return;
+        section.rows.forEach((row, r) => eachObject(row, (c, cell) => say(`${where}.rows[${r}][${c}]`, cell, 'cell')));
+      });
+    }
+    eachObject(block.upcast, (j, step) => {
+      const where = `${at}.upcast[${j}]`;
+      say(where, step, 'upcast');
+      const rows = (owner, lists) => {
+        if (!isObject(lists)) return;
+        for (const key of Object.keys(lists).sort()) {
+          if (!isObject(lists[key])) continue;
+          say(`${owner}.rows.${key}`, lists[key], 'rows');
+          rows(`${owner}.rows.${key}`, lists[key].rows);
+        }
+      };
+      rows(where, step.rows);
+    });
   });
   fields('page_seo', top.page_seo);
   eachObject(top.collections, (i, collection) => {
@@ -298,6 +332,13 @@ function object(value, at) {
   if (!isObject(value)) throw wrong(at, value, 'object');
   return value;
 }
+/** A Go map read strictly: `undefined` where absent (nil), each value read by `each`. */
+function map(value, at, each) {
+  const read = object(value, at);
+  if (read === undefined) return undefined;
+  return Object.fromEntries(Object.entries(read).map(([key, one]) => [key, each(one, `${at}.${key}`)]));
+}
+const stringMap = (value, at) => map(value, at, str);
 
 /**
  * Words, written once or per language (`Text`): the languages spelt one way
@@ -396,6 +437,45 @@ function wireBlock(raw, at) {
     collects: str(value.collects, `${at}.collects`),
     asks: list(value.asks, `${at}.asks`, wireField),
     photos: int(value.photos, `${at}.photos`),
+    upcast: list(value.upcast, `${at}.upcast`, (one, where) => {
+      const step = object(one, where) ?? {};
+      return { from: int(step.from, `${where}.from`), ...wireChange(step, where) };
+    }),
+    form: wireForm(value.form, `${at}.form`),
+  };
+}
+
+/** `upcastRows3`: a step's changes, to a block or to each row of one of its lists. */
+function wireChange(value, at) {
+  return {
+    rename: stringMap(value.rename, `${at}.rename`),
+    rows: map(value.rows, `${at}.rows`, (one, where) => wireChange(object(one, where) ?? {}, where)),
+    values: map(value.values, `${at}.values`, stringMap),
+    drop: absent(value.drop) ? undefined : strings(value.drop, `${at}.drop`),
+    set: object(value.set, `${at}.set`),
+  };
+}
+
+/**
+ * `form3`: a block type's `form` as the file writes it — `undefined` where it
+ * says none, `sections` and `aside` absent apart from empty, as Go's nil and
+ * `[]` are apart. A row's cells are kept raw, a key or `{field, span}`, and
+ * read with the registry (`formDefOf`).
+ */
+function wireForm(raw, at) {
+  const value = object(raw, at);
+  if (value === undefined) return undefined;
+  return {
+    sections: absent(value.sections) ? undefined : list(value.sections, `${at}.sections`, (one, where) => {
+      const section = object(one, where) ?? {};
+      return {
+        title: text(section.title, `${where}.title`, "a section's title"),
+        note: text(section.note, `${where}.note`, "a section's note"),
+        rows: list(section.rows, `${where}.rows`, (row, rowAt) => list(row, rowAt, (cell) => cell ?? null)),
+      };
+    }),
+    aside: absent(value.aside) ? undefined : strings(value.aside, `${at}.aside`),
+    widgets: stringMap(value.widgets, `${at}.widgets`) ?? {},
   };
 }
 
@@ -620,6 +700,7 @@ function validateBlock(j, block, seen) {
   validateText(say, path, 'hint', block.hint);
   validateFields(j, path, block.fields, 2);
   validateViews(j, block);
+  validateUpcast(say, path, block);
 }
 
 function validateAsks(j, path, asks) {
@@ -1291,6 +1372,519 @@ function validateShared(say, reg) {
   nowhere('page_seo', reg.pageSEO);
 }
 
+// ── a type's steps from its older versions (`upcast.go`) ───────────────────
+//
+// A type at `v: 3` names, for each older version, the step to the next: a
+// closed set of changes — rename, rows, values, drop, set — each judged for
+// its spelling, and the last step's names held to the fields the type has now.
+
+/** `upcastDepth`: a list's rows, and no list inside a row. */
+const UPCAST_DEPTH = 2;
+
+/** Go's `IsEmpty`: nothing, blank words, an empty list. */
+const emptyValue = (value) => value === undefined || value === null || (typeof value === 'string' && value.trim() === '') || (Array.isArray(value) && value.length === 0);
+const sortedKeys = (object) => Object.keys(object ?? {}).sort();
+
+/** `validateUpcast`: each step from an older version of the type, each version once. */
+function validateUpcast(say, path, block) {
+  const seen = new Set();
+  block.upcast.forEach((step, i) => {
+    const at = `${path}.upcast[${i}]`;
+    if (step.from < 1 || step.from >= block.v) {
+      say(E.UPCAST, `${at}.from`, `block ${q(block.type)} is at version ${block.v}, and a step goes from an older version of it: from ${step.from} is not one (1 to ${Math.max(block.v - 1, 1)})`);
+      return;
+    }
+    if (seen.has(step.from)) {
+      say(E.UPCAST, `${at}.from`, `block ${q(block.type)} has two steps from version ${step.from} — one step a version`);
+      return;
+    }
+    seen.add(step.from);
+    // The last step makes the block the type as it is declared now; an
+    // earlier step's names are a version nobody declares any more, and only
+    // their spelling is held.
+    const last = step.from === block.v - 1;
+    validateChange(say, at, block.type, step, last ? block.fields : [], last, 1);
+  });
+}
+
+/** `validateChange`: one step's changes to an object whose fields, in the last step, are `fields`. */
+function validateChange(say, at, blockType, change, fields, last, depth) {
+  const name = (where, key) => {
+    if (keyRe.test(key)) return true;
+    say(E.UPCAST, where, `${where} names ${q(key)}, which is not a field's name`);
+    return false;
+  };
+  const declared = (where, key) => {
+    if (last && fieldIn(fields, key) === undefined) {
+      say(E.UPCAST, where, `${where} writes ${q(key)}, and the last step makes the block ${q(blockType)} as it is declared now, which has no such field`);
+    }
+  };
+
+  const targets = new Map();
+  for (const from of sortedKeys(change.rename)) {
+    const to = change.rename[from];
+    const where = `${at}.rename.${from}`;
+    if (!name(where, from) || !name(where, to)) continue;
+    if (from === to) {
+      say(E.UPCAST, where, `${where} renames ${q(from)} to itself`);
+      continue;
+    }
+    if (targets.has(to)) {
+      say(E.UPCAST, where, `${at}.rename.${targets.get(to)} and ${where} both become ${q(to)} — one value a field`);
+      continue;
+    }
+    targets.set(to, from);
+    declared(where, to);
+  }
+  for (const key of sortedKeys(change.values)) {
+    const where = `${at}.values.${key}`;
+    if (!name(where, key)) continue;
+    const renames = change.values[key] ?? {};
+    if (Object.keys(renames).length === 0) say(E.UPCAST, where, `${where} renames no value`);
+    // Go walks the map in no order; this copy in the keys' own.
+    for (const was of sortedKeys(renames)) {
+      const now = renames[was];
+      if (was === '' || now === '' || was === now) say(E.UPCAST, where, `${where} renames ${q(was)} to ${q(now)}: a value becomes another value`);
+    }
+    declared(where, key);
+  }
+  (change.drop ?? []).forEach((key, i) => {
+    const where = `${at}.drop[${i}]`;
+    if (!name(where, key)) return;
+    if (last && fieldIn(fields, key) !== undefined) say(E.UPCAST, where, `${where} drops ${q(key)}, which the block ${q(blockType)} still declares`);
+  });
+  for (const key of sortedKeys(change.set)) {
+    const where = `${at}.set.${key}`;
+    if (!name(where, key)) continue;
+    if (emptyValue(change.set[key])) {
+      say(E.UPCAST, where, `${where} sets nothing — leave the field out of \`set\`, and it starts empty`);
+      continue;
+    }
+    declared(where, key);
+  }
+  for (const key of sortedKeys(change.rows)) {
+    const where = `${at}.rows.${key}`;
+    if (!name(where, key)) continue;
+    if (depth >= UPCAST_DEPTH) {
+      say(E.UPCAST, where, `${where} goes deeper than a list in a row`);
+      continue;
+    }
+    let of = [];
+    if (last) {
+      const list = fieldIn(fields, key);
+      if (list === undefined || list.kind !== 'list') {
+        say(E.UPCAST, where, `${where} changes the rows of ${q(key)}, which the block ${q(blockType)} does not declare as a list`);
+        continue;
+      }
+      of = list.of;
+    }
+    validateChange(say, where, blockType, change.rows[key], of, last, depth + 1);
+  }
+}
+
+// ── an entry's card in the panel (`form.go`) ───────────────────────────────
+//
+// A collection's entry type may say `form`: sections with a title and a line
+// under it, rows of up to three fields on a grid of six columns, an aside,
+// and a control per field from its kind's closed list. The platform draws
+// the rest; a field the form does not place is drawn after its sections,
+// under «More», and advised (`JTK_W_PANEL_FORM_GUESSED`).
+
+/** `FormColumns`, `FormRowMost`, `FormSpanLeast`, `FormAsideMost`, `FormSectionsMost`, `FormGuessFields`. */
+const FORM_COLUMNS = 6;
+const FORM_ROW_MOST = 3;
+const FORM_SPAN_LEAST = 2;
+const FORM_ASIDE_MOST = 6;
+const FORM_SECTIONS_MOST = 8;
+const FORM_GUESS_FIELDS = 7;
+/** `SegmentedMost`, `RadioMost`, `StepperMost`. */
+const SEGMENTED_MOST = 4;
+const RADIO_MOST = 7;
+const STEPPER_MOST = 50;
+
+/** `widgetsByKind`: the controls a field is written with, its kind's own first. */
+const WIDGETS = new Map([
+  ['text', ['line']],
+  ['textarea', ['area', 'tall']],
+  ['richtext_lite', ['area', 'tall']],
+  ['markdown', ['writing']],
+  ['number', ['number', 'stepper']],
+  ['money', ['money']],
+  ['duration', ['minutes', 'presets']],
+  ['time_of_day', ['clock']],
+  ['date', ['calendar']],
+  ['bool', ['toggle']],
+  ['select', ['dropdown', 'radio', 'segmented']],
+  ['tel', ['input']],
+  ['email', ['input']],
+  ['url', ['input']],
+  ['sku', ['code']],
+  ['media', ['picture']],
+  ['list', ['rows']],
+  ['ref', ['dropdown']],
+]);
+
+/** `WidgetsOf`: a gallery and several references are drawn by their own. */
+function widgetsOf(field) {
+  if (field.kind === 'media' && field.multiple) return ['gallery'];
+  if (field.kind === 'ref' && field.many) return ['checklist'];
+  return WIDGETS.get(field.kind) ?? [];
+}
+
+/** `widgetMisfit`: why a widget of the kind's cannot draw this field, or ''. */
+function widgetMisfit(field, widget) {
+  const n = field.options.length;
+  if (widget === 'segmented' && n > SEGMENTED_MOST) {
+    return `a row of buttons holds at most ${SEGMENTED_MOST} choices and \`${field.key}\` has ${n} — \`radio\` holds ${RADIO_MOST}, \`dropdown\` any number`;
+  }
+  if (widget === 'radio' && n > RADIO_MOST) return `radios hold at most ${RADIO_MOST} choices and \`${field.key}\` has ${n} — \`dropdown\` holds any number`;
+  if (widget === 'stepper') {
+    if (!field.integer) return `a stepper counts whole numbers: \`${field.key}\` says \`integer: true\` for it`;
+    if ((field.min === 0 && !field.minZero) || (field.max === 0 && !field.maxZero)) return `a stepper runs between two bounds: \`${field.key}\` says both \`min\` and \`max\``;
+    if (field.max - field.min > STEPPER_MOST) {
+      return `a stepper takes at most ${STEPPER_MOST} steps and \`${field.key}\` runs from ${field.min} to ${field.max} — \`number\` is a box to type into`;
+    }
+  }
+  return '';
+}
+
+/** `wholeRow`: rows, pictures in a strip, a document — each too narrow beside another field. */
+const wholeRow = (field) => field.kind === 'list' || field.kind === 'markdown' || (field.kind === 'media' && field.multiple);
+
+/** `asideRefuses`: why a field may not stand in the aside, or ''. */
+function asideRefuses(field) {
+  if (wholeRow(field)) return 'takes a whole row';
+  if (field.kind === 'textarea' || field.kind === 'richtext_lite') return 'is a paragraph, written in a row';
+  return '';
+}
+
+/** `pairable`: the kinds the default layout puts two to a row. */
+function pairable(field) {
+  if (['number', 'money', 'duration', 'time_of_day', 'date', 'bool', 'select', 'tel', 'email', 'sku'].includes(field.kind)) return true;
+  if (field.kind === 'ref') return !field.many;
+  if (field.kind === 'media') return !field.multiple;
+  return false;
+}
+
+/** `inForm`: `body` is the writing, beside the page, and never in a form. */
+const inForm = (field) => field.key !== 'body';
+
+/** `kindSaid`: a field's kind as a sentence says it. */
+function kindSaid(field) {
+  if (field.kind === 'media') return field.multiple ? 'a gallery' : 'a picture';
+  if (field.kind === 'list') return 'a list';
+  if (field.kind === 'ref' && field.many) return 'references to several entries';
+  return `a ${field.kind}`;
+}
+
+function saidAsOneOf(widgets) {
+  const quoted = widgets.map((one) => `\`${one}\``);
+  if (quoted.length === 1) return `its one control is ${quoted[0]} — leave it out`;
+  return `it is written with ${quoted.slice(0, -1).join(', ')} or ${quoted.at(-1)}`;
+}
+
+/**
+ * `form3.def`: the form in its one shape, every cell an object; a cell that is
+ * neither a key nor `{field, span}` is refused where it stands, as the file is
+ * read. What the cells name is judged with the rest (`validateForms`).
+ */
+function formDefOf(say, at, d) {
+  const out = { sections: d.sections === undefined ? undefined : [], aside: d.aside, widgets: d.widgets };
+  (d.sections ?? []).forEach((section, i) => {
+    const read = { title: section.title, note: section.note, rows: [] };
+    section.rows.forEach((row, r) => {
+      const cells = [];
+      row.forEach((raw, c) => {
+        // Go reads a cell as words first — null among them, as no words —
+        // and then as `{field, span}`, each of the right shape.
+        if (raw === null || typeof raw === 'string') {
+          cells.push({ field: raw ?? '', span: 0 });
+        } else if (isObject(raw) && (absent(raw.field) || typeof raw.field === 'string') && (absent(raw.span) || Number.isInteger(raw.span))) {
+          cells.push({ field: raw.field ?? '', span: raw.span ?? 0 });
+        } else {
+          const where = `${at}.sections[${i}].rows[${r}][${c}]`;
+          say(E.PANEL_FORM, where, `${where} is not a field of a row: a row is a list of keys, or of {"field": "costs", "span": 2}`);
+        }
+      });
+      read.rows.push(cells);
+    });
+    out.sections.push(read);
+  });
+  return out;
+}
+
+/** `validateForms`: every `form` of the schema, one code, the rule in its sentence. */
+function validateForms(say, reg) {
+  const entryTypes = new Set(reg.collections.map((one) => one.type));
+  for (const block of reg.blocks) {
+    if (block.form === undefined) continue;
+    const at = `blocks.${block.type}.form`;
+    if (!entryTypes.has(block.type)) {
+      say(E.PANEL_FORM, at, `${at} lays out an entry's card, and \`${block.type}\` is no collection's \`type\`: leave \`form\` out of a page's block`);
+      continue;
+    }
+    validateForm(say, at, block);
+  }
+}
+
+function validateForm(say, at, block) {
+  const def = block.form;
+  const keys = block.fields.filter(inForm).map((one) => one.key).join(', ');
+  // Each name the form says, once, a field of the type the card draws.
+  const seen = new Map();
+  const name = (where, key) => {
+    if (key === '') {
+      say(E.PANEL_FORM, where, `${where} names no field: write the key of one of ${keys}`);
+      return undefined;
+    }
+    if (key === 'body') {
+      say(E.PANEL_FORM, where, `${where} names \`body\`, which is written beside the page and never in the form: leave it out`);
+      return undefined;
+    }
+    const field = fieldIn(block.fields, key);
+    if (field === undefined) {
+      say(E.PANEL_FORM, where, `${where} names \`${key}\`, which ${block.type} does not declare: name one of ${keys}`);
+      return undefined;
+    }
+    if (seen.has(key)) {
+      say(E.PANEL_FORM, where, `${where} names \`${key}\` again, which ${seen.get(key)} already places: a field stands in one place`);
+      return undefined;
+    }
+    seen.set(key, where);
+    return field;
+  };
+
+  const sections = def.sections ?? [];
+  if (sections.length > FORM_SECTIONS_MOST) {
+    say(E.PANEL_FORM, `${at}.sections`, `${at}.sections holds ${sections.length} sections: at most ${FORM_SECTIONS_MOST} — a long form is read to its end on no phone`);
+  }
+  if (def.sections !== undefined && sections.length === 0) {
+    say(E.PANEL_FORM, `${at}.sections`, `${at}.sections is empty: leave it out for the platform's layout, or say a section`);
+  }
+  sections.forEach((section, i) => {
+    const where = `${at}.sections[${i}]`;
+    if (section.rows.length === 0) {
+      say(E.PANEL_FORM, `${where}.rows`, `${where} has no rows: a section holds one row or more, each a list of fields — [["title"], ["takes", "costs"]]`);
+    }
+    section.rows.forEach((row, r) => {
+      const rowAt = `${where}.rows[${r}]`;
+      if (row.length === 0) {
+        say(E.PANEL_FORM, rowAt, `${rowAt} is empty: a row holds one to ${FORM_ROW_MOST} fields`);
+        return;
+      }
+      if (row.length > FORM_ROW_MOST) say(E.PANEL_FORM, rowAt, `${rowAt} holds ${row.length} fields: at most ${FORM_ROW_MOST} stand side by side — start another row`);
+      let used = 0;
+      let open = 0;
+      let spansOK = true;
+      row.forEach((cell, c) => {
+        const cellAt = `${rowAt}[${c}]`;
+        const field = name(cellAt, cell.field);
+        if (cell.span !== 0 && (cell.span < FORM_SPAN_LEAST || cell.span > FORM_COLUMNS)) {
+          say(E.PANEL_FORM, `${cellAt}.span`, `${cellAt}.span is ${cell.span}: a field takes ${FORM_SPAN_LEAST} to ${FORM_COLUMNS} of the row's ${FORM_COLUMNS} columns`);
+          spansOK = false;
+        }
+        used += cell.span;
+        if (cell.span === 0) open += 1;
+        if (field !== undefined && wholeRow(field) && row.length > 1) {
+          say(E.PANEL_FORM, cellAt, `${cellAt} is \`${field.key}\`, ${kindSaid(field)}, which takes a whole row: give it a row of its own`);
+        }
+      });
+      if (!spansOK) return;
+      const left = FORM_COLUMNS - used;
+      if (used > FORM_COLUMNS) say(E.PANEL_FORM, rowAt, `${rowAt} spans ${used} columns: a row has ${FORM_COLUMNS}`);
+      else if (open > 0 && left % open !== 0) say(E.PANEL_FORM, rowAt, `${rowAt} leaves ${left} columns to ${open} fields, which do not share them evenly: give each a \`span\``);
+      else if (open > 0 && Math.trunc(left / open) < FORM_SPAN_LEAST) {
+        say(E.PANEL_FORM, rowAt, `${rowAt} leaves ${left} columns to ${open} fields: each takes at least ${FORM_SPAN_LEAST} — narrow a \`span\`, or start another row`);
+      }
+    });
+  });
+
+  if (def.aside !== undefined) {
+    if (def.aside.length > FORM_ASIDE_MOST) {
+      say(E.PANEL_FORM, `${at}.aside`, `${at}.aside holds ${def.aside.length} fields: at most ${FORM_ASIDE_MOST} — the aside is what the entry is at a glance; the rest goes in a section`);
+    }
+    def.aside.forEach((key, i) => {
+      const where = `${at}.aside[${i}]`;
+      const field = name(where, key);
+      if (field === undefined) return;
+      const why = asideRefuses(field);
+      if (why !== '') say(E.PANEL_FORM, where, `${where} is \`${key}\`, ${kindSaid(field)}, which ${why}: the aside is a narrow column — put it in a section`);
+    });
+  }
+
+  for (const key of sortedKeys(def.widgets)) {
+    const where = `${at}.widgets.${key}`;
+    const chosen = def.widgets[key];
+    const field = fieldIn(block.fields, key);
+    if (field === undefined || !inForm(field)) {
+      say(E.PANEL_FORM, where, `${where} is for \`${key}\`, which ${block.type} does not declare in its form: name one of ${keys}`);
+      continue;
+    }
+    const own = widgetsOf(field);
+    if (!own.includes(chosen)) {
+      say(E.PANEL_FORM, where, `${where} is ${q(chosen)}, which \`${key}\` (${kindSaid(field)}) is not written with: ${saidAsOneOf(own)}`);
+      continue;
+    }
+    const why = widgetMisfit(field, chosen);
+    if (why !== '') say(E.PANEL_FORM, where, `${where} is ${q(chosen)}: ${why}`);
+  }
+
+  // A required value is placed, so a new entry asks for it where the form
+  // says: a form that leaves one to «More» has forgotten it.
+  if (def.sections !== undefined) {
+    for (const field of block.fields) {
+      if (field.required && inForm(field) && field.key !== 'title' && !seen.has(field.key)) {
+        say(E.PANEL_FORM, at, `${at} places no row or aside for \`${field.key}\`, which is required: a new entry is asked for it where the form puts it — place it`);
+      }
+    }
+  }
+}
+
+/** The words of a section as the schema wrote them, or `undefined` for none (`rawText`). */
+const textAsWritten = (one) => (zero(one) ? undefined : one.words !== '' ? one.words : Object.fromEntries(one.byLocale));
+
+/**
+ * `ResolveForm`: an entry type's card, its declared form over the defaults —
+ * what the panel draws, as `{ declared, sections, aside }`.
+ *
+ *   - the aside: what the form says, else every single picture, up to six;
+ *   - the sections: what the form says, with `title` first where no row
+ *     names it; else one, the platform's: `title` (with `date` beside it),
+ *     then every other field in its order, the short ones two to a row;
+ *   - a field a declared form does not place: in a last section, «More»;
+ *   - each field's control: the declared one, else its kind's own.
+ */
+function resolveForm(entryType) {
+  const def = entryType.form ?? { sections: undefined, aside: undefined, widgets: {} };
+  const out = { declared: entryType.form !== undefined, sections: [], aside: [] };
+  const widget = (field) => {
+    const chosen = def.widgets?.[field.key];
+    if (chosen !== undefined && widgetsOf(field).includes(chosen)) return chosen;
+    return widgetsOf(field)[0] ?? '';
+  };
+  const cell = (field, span) => ({ field: field.key, span, widget: widget(field) });
+  const fields = entryType.fields.filter(inForm);
+  const placed = new Set();
+
+  if (def.aside !== undefined) {
+    for (const key of def.aside) {
+      const field = fieldIn(entryType.fields, key);
+      if (field === undefined || !inForm(field) || placed.has(key)) continue;
+      out.aside.push(cell(field, FORM_COLUMNS));
+      placed.add(key);
+    }
+  } else {
+    for (const field of fields) {
+      if (out.aside.length < FORM_ASIDE_MOST && field.kind === 'media' && !field.multiple) {
+        out.aside.push(cell(field, FORM_COLUMNS));
+        placed.add(field.key);
+      }
+    }
+  }
+
+  for (const section of def.sections ?? []) {
+    const resolved = { more: false, rows: [] };
+    const title = textAsWritten(section.title);
+    const note = textAsWritten(section.note);
+    if (title !== undefined) resolved.title = title;
+    if (note !== undefined) resolved.note = note;
+    for (const row of section.rows) {
+      const spans = rowSpans(row);
+      const cells = [];
+      row.forEach((at, i) => {
+        const field = fieldIn(entryType.fields, at.field);
+        if (field === undefined || !inForm(field) || placed.has(at.field)) return;
+        cells.push(cell(field, wholeRow(field) ? FORM_COLUMNS : spans[i]));
+        placed.add(at.field);
+      });
+      if (cells.length > 0) resolved.rows.push(cells);
+    }
+    if (resolved.rows.length > 0) out.sections.push(resolved);
+  }
+
+  // `title` first, where nothing placed it; in the platform's layout a dated
+  // entry says when beside it.
+  let lead;
+  const title = fieldIn(entryType.fields, 'title');
+  if (title !== undefined && !placed.has('title')) {
+    lead = [cell(title, FORM_COLUMNS)];
+    placed.add('title');
+    const date = fieldIn(entryType.fields, 'date');
+    if (date !== undefined && def.sections === undefined && date.kind === 'date' && !placed.has('date')) {
+      lead = [cell(title, 4), cell(date, 2)];
+      placed.add('date');
+    }
+  }
+
+  const rest = fields.filter((field) => !placed.has(field.key));
+  if (def.sections === undefined) {
+    const rows = [...(lead === undefined ? [] : [lead]), ...packRows(rest, cell)];
+    if (rows.length > 0) out.sections.push({ more: false, rows });
+    return out;
+  }
+  if (lead !== undefined) {
+    if (out.sections.length === 0) out.sections.push({ more: false, rows: [] });
+    out.sections[0].rows.unshift(lead);
+  }
+  if (rest.length > 0) out.sections.push({ more: true, rows: packRows(rest, cell) });
+  return out;
+}
+
+/** `packRows`: in their order, two short ones to a row, everything else a row of its own. */
+function packRows(fields, cell) {
+  const rows = [];
+  let waiting;
+  for (const field of fields) {
+    if (!pairable(field)) {
+      if (waiting !== undefined) rows.push([cell(waiting, FORM_COLUMNS / 2)]);
+      waiting = undefined;
+      rows.push([cell(field, FORM_COLUMNS)]);
+    } else if (waiting === undefined) {
+      waiting = field;
+    } else {
+      rows.push([cell(waiting, FORM_COLUMNS / 2), cell(field, FORM_COLUMNS / 2)]);
+      waiting = undefined;
+    }
+  }
+  if (waiting !== undefined) rows.push([cell(waiting, FORM_COLUMNS / 2)]);
+  return rows;
+}
+
+/** `rowSpans`: each declared span, and the rest of the six shared by the cells that say none. */
+function rowSpans(row) {
+  const used = row.reduce((sum, one) => sum + one.span, 0);
+  const open = row.filter((one) => one.span === 0).length;
+  const share = open > 0 ? Math.trunc((FORM_COLUMNS - used) / open) : 0;
+  return row.map((one) => (one.span === 0 ? share : one.span));
+}
+
+/**
+ * `adviseForms`: where the panel guessed a field's place — a declared form
+ * that leaves fields to «More», or a type of seven fields or more with no
+ * form at all.
+ */
+function adviseForms(say, reg) {
+  const done = new Set();
+  for (const collection of reg.collections) {
+    const entryType = typeOf(reg, collection.type);
+    if (entryType === undefined || done.has(entryType.type)) continue;
+    done.add(entryType.type);
+    const at = `blocks.${entryType.type}`;
+    if (entryType.form !== undefined) {
+      for (const section of resolveForm(entryType).sections) {
+        if (!section.more) continue;
+        const keys = section.rows.flat().map((one) => `\`${one.field}\``).join(', ');
+        say(W.PANEL_FORM_GUESSED, `${at}.form`, `${at}.form places no row for ${keys}: the panel draws them after its sections, under More, laid out by their kinds — place them, or say where in a section`);
+      }
+      continue;
+    }
+    const count = entryType.fields.filter(inForm).length;
+    if (count >= FORM_GUESS_FIELDS) {
+      say(W.PANEL_FORM_GUESSED, at, `${at} has ${count} fields and no \`form\`: the panel lays them out in their order, short ones two to a row and pictures aside — say \`form\` to put together what belongs together`);
+    }
+  }
+}
+
 // ── the judge ──────────────────────────────────────────────────────────────
 
 /**
@@ -1303,27 +1897,68 @@ function validateShared(say, reg) {
  * @returns {{ code: string; path: string; says: string }[]}
  */
 export function judgeSchema(raw) {
+  return judged(raw).faults;
+}
+
+/**
+ * The judge's advice on this text where it refuses nothing, as the
+ * platform's `Advise` gives it beside an empty verdict: the panel guessing
+ * where an entry's fields go (`JTK_W_PANEL_FORM_GUESSED`) — a form that
+ * leaves fields to «More», or a type of seven fields or more with none.
+ * Allowed, and unwise; `[]` for a schema it refuses.
+ *
+ * @param {string} raw the schema as text
+ * @returns {{ code: string; path: string; says: string }[]}
+ */
+export function adviseSchema(raw) {
+  const { faults, reg } = judged(raw);
+  if (faults.length > 0 || reg === undefined) return [];
+  const j = judgement();
+  adviseForms(j.say, reg);
+  return j.list;
+}
+
+/**
+ * Each collection's entry card as the panel draws it (`Registry.Forms`), by
+ * the collection's name — `{ declared, sections, aside }` — or `null` for a
+ * schema the judge refuses.
+ *
+ * @param {string} raw the schema as text
+ */
+export function formsOf(raw) {
+  const { faults, reg } = judged(raw);
+  if (faults.length > 0 || reg === undefined) return null;
+  const out = {};
+  for (const collection of reg.collections) {
+    const entryType = typeOf(reg, collection.type);
+    if (entryType !== undefined) out[collection.name] = resolveForm(entryType);
+  }
+  return out;
+}
+
+/** The verdict, and the registry it was reached on where the text could be read into one. */
+function judged(raw) {
   let top;
   try {
     top = JSON.parse(raw);
   } catch (why) {
-    return [{ code: E.SCHEMA_UNREADABLE, path: '', says: `this is not a schema: ${why.message}` }];
+    return { faults: [{ code: E.SCHEMA_UNREADABLE, path: '', says: `this is not a schema: ${why.message}` }] };
   }
-  if (!isObject(top)) return [{ code: E.SCHEMA_UNREADABLE, path: '', says: 'this is not a schema: a schema is one JSON object' }];
+  if (!isObject(top)) return { faults: [{ code: E.SCHEMA_UNREADABLE, path: '', says: 'this is not a schema: a schema is one JSON object' }] };
   if (top.contract !== 3) {
     const said = top.contract === undefined ? 'says no contract' : `says contract ${JSON.stringify(top.contract)}`;
-    return [{ code: E.CONTRACT, path: 'contract', says: `jtk/schema.json ${said} — it is contract 3's file, and says "contract": 3; contracts 1 and 2 are written in jtk/catalogue.json` }];
+    return { faults: [{ code: E.CONTRACT, path: 'contract', says: `jtk/schema.json ${said} — it is contract 3's file, and says "contract": 3; contracts 1 and 2 are written in jtk/catalogue.json` }] };
   }
 
   const stray = strayKeys(top);
-  if (stray.length > 0) return stray;
+  if (stray.length > 0) return { faults: stray };
 
   let file;
   try {
     file = decode(top);
   } catch (why) {
     if (!(why instanceof Unreadable)) throw why;
-    return [{ code: E.SCHEMA_UNREADABLE, path: why.path, says: why.message }];
+    return { faults: [{ code: E.SCHEMA_UNREADABLE, path: why.path, says: why.message }] };
   }
 
   const read = judgement();
@@ -1336,12 +1971,20 @@ export function judgeSchema(raw) {
     shared: file.shared,
     blocks: file.blocks.map((block, i) => {
       const at = at3('blocks', block.type, i);
-      return { ...block, fields: fieldsOf(read.say, at, block.fields), asks: fieldsOf(read.say, `${at}.asks`, block.asks) };
+      return {
+        ...block,
+        fields: fieldsOf(read.say, at, block.fields),
+        asks: fieldsOf(read.say, `${at}.asks`, block.asks),
+        // In the order of their versions, as `upcastSteps` keeps them: the
+        // judge's `upcast[i]` is a step's place in that order.
+        upcast: [...block.upcast].sort((one, other) => one.from - other.from),
+        form: block.form === undefined ? undefined : formDefOf(read.say, `${at}.form`, block.form),
+      };
     }),
     pageSEO: fieldsOf(read.say, 'page_seo', file.pageSEO),
   };
   reg.collections = file.collections.map((c, i) => collectionOf(read.say, at3('collections', c.name, i), c, file.locale));
-  if (read.list.length > 0) return read.list;
+  if (read.list.length > 0) return { faults: read.list };
 
   const j = judgement();
   if (reg.generator !== '' && !generatorRe.test(reg.generator)) j.say(E.GENERATOR, 'generator', `${q(reg.generator)} does not name a generator`);
@@ -1356,5 +1999,6 @@ export function judgeSchema(raw) {
   validateRefs(j.say, reg);
   validateModules(j.say, reg);
   validateShared(j.say, reg);
-  return j.list;
+  validateForms(j.say, reg);
+  return { faults: j.list, reg };
 }

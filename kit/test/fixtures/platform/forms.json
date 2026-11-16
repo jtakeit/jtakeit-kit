@@ -1,0 +1,267 @@
+{
+  "about": "How an entry's card is laid out in the panel (wiki/99 §10, registry/form.go). Each case is one entry type of a contract-3 schema, its collection `items`, and either the form resolved (ResolveForm, which the panel draws as it is) or what the judge says of it: the refusals (JTK_E_PANEL_FORM_INVALID) and the advice (JTK_W_PANEL_FORM_GUESSED), each by its path. Read by Go; by the kit's judge when it learns `form`.",
+  "cases": [
+    {
+      "name": "a service with no form: the picture aside, the length beside the price",
+      "type": {"type": "service", "v": 1, "label": "Service", "fields": [
+        {"key": "title", "label": "Name", "kind": "text", "required": true, "client_editable": true},
+        {"key": "about", "label": "A line about it", "kind": "textarea", "client_editable": true},
+        {"key": "photo", "label": "Photograph", "kind": "media", "ratio": "4:3", "client_editable": true},
+        {"key": "takes", "label": "Takes", "kind": "duration", "client_editable": true},
+        {"key": "costs", "label": "Price", "kind": "money", "client_editable": true}
+      ]},
+      "resolved": {"declared": false, "aside": [{"field": "photo", "span": 6, "widget": "picture"}], "sections": [
+        {"more": false, "rows": [
+          [{"field": "title", "span": 6, "widget": "line"}],
+          [{"field": "about", "span": 6, "widget": "area"}],
+          [{"field": "takes", "span": 3, "widget": "minutes"}, {"field": "costs", "span": 3, "widget": "money"}]
+        ]}
+      ]}
+    },
+    {
+      "name": "a post with no form: the date beside the title, the cover aside, the body never",
+      "type": {"type": "post", "v": 1, "label": "Post", "fields": [
+        {"key": "title", "label": "Title", "kind": "text", "required": true, "client_editable": true},
+        {"key": "date", "label": "Date", "kind": "date", "required": true, "client_editable": true},
+        {"key": "excerpt", "label": "Excerpt", "kind": "textarea", "client_editable": true},
+        {"key": "cover", "label": "Cover", "kind": "media", "client_editable": true},
+        {"key": "body", "label": "Text", "kind": "markdown", "client_editable": true}
+      ]},
+      "resolved": {"declared": false, "aside": [{"field": "cover", "span": 6, "widget": "picture"}], "sections": [
+        {"more": false, "rows": [
+          [{"field": "title", "span": 4, "widget": "line"}, {"field": "date", "span": 2, "widget": "calendar"}],
+          [{"field": "excerpt", "span": 6, "widget": "area"}]
+        ]}
+      ]}
+    },
+    {
+      "name": "a declared form: sections with words, spans, the aside and the widgets as written",
+      "type": {"type": "service", "v": 1, "label": "Service", "fields": [
+        {"key": "title", "label": "Name", "kind": "text", "required": true, "client_editable": true},
+        {"key": "category", "label": "Category", "kind": "select", "options": [{"value": "cut"}, {"value": "colour"}, {"value": "care"}], "client_editable": true},
+        {"key": "takes", "label": "Takes", "kind": "duration", "required": true, "client_editable": true},
+        {"key": "costs", "label": "Price", "kind": "money", "client_editable": true},
+        {"key": "about", "label": "About it", "kind": "textarea", "client_editable": true},
+        {"key": "photo", "label": "Photograph", "kind": "media", "client_editable": true}
+      ],
+      "form": {
+        "sections": [
+          {"rows": [[{"field": "title", "span": 4}, "category"], ["takes", "costs"]]},
+          {"title": {"de": "Auf der Seite", "en": "On the page"}, "note": "What the price list says", "rows": [["about"]]}
+        ],
+        "aside": ["photo"],
+        "widgets": {"category": "segmented", "takes": "presets", "about": "tall"}
+      }},
+      "resolved": {"declared": true, "aside": [{"field": "photo", "span": 6, "widget": "picture"}], "sections": [
+        {"more": false, "rows": [
+          [{"field": "title", "span": 4, "widget": "line"}, {"field": "category", "span": 2, "widget": "segmented"}],
+          [{"field": "takes", "span": 3, "widget": "presets"}, {"field": "costs", "span": 3, "widget": "money"}]
+        ]},
+        {"title": {"de": "Auf der Seite", "en": "On the page"}, "note": "What the price list says", "more": false, "rows": [
+          [{"field": "about", "span": 6, "widget": "tall"}]
+        ]}
+      ]}
+    },
+    {
+      "name": "a declared form that names no title: the title leads its first section",
+      "type": {"type": "person", "v": 1, "label": "Person", "fields": [
+        {"key": "title", "label": "Name", "kind": "text", "required": true, "client_editable": true},
+        {"key": "role", "label": "What they do", "kind": "text", "client_editable": true},
+        {"key": "portrait", "label": "Portrait", "kind": "media", "client_editable": true},
+        {"key": "bio", "label": "A line about them", "kind": "textarea", "client_editable": true}
+      ],
+      "form": {"sections": [{"rows": [["role"], ["bio"]]}], "aside": ["portrait"]}},
+      "resolved": {"declared": true, "aside": [{"field": "portrait", "span": 6, "widget": "picture"}], "sections": [
+        {"more": false, "rows": [
+          [{"field": "title", "span": 6, "widget": "line"}],
+          [{"field": "role", "span": 6, "widget": "line"}],
+          [{"field": "bio", "span": 6, "widget": "area"}]
+        ]}
+      ]}
+    },
+    {
+      "name": "a form that says only its widgets and no aside: the platform's rows, no column beside them",
+      "type": {"type": "class", "v": 1, "label": "Class", "fields": [
+        {"key": "title", "label": "Name", "kind": "text", "required": true, "client_editable": true},
+        {"key": "level", "label": "Level", "kind": "select", "options": [{"value": "a"}, {"value": "b"}], "client_editable": true},
+        {"key": "seats", "label": "Seats", "kind": "number", "integer": true, "min": 1, "max": 20, "client_editable": true},
+        {"key": "poster", "label": "Poster", "kind": "media", "client_editable": true}
+      ],
+      "form": {"aside": [], "widgets": {"level": "radio", "seats": "stepper"}}},
+      "resolved": {"declared": true, "aside": [], "sections": [
+        {"more": false, "rows": [
+          [{"field": "title", "span": 6, "widget": "line"}],
+          [{"field": "level", "span": 3, "widget": "radio"}, {"field": "seats", "span": 3, "widget": "stepper"}],
+          [{"field": "poster", "span": 3, "widget": "picture"}]
+        ]}
+      ]},
+      "advice": []
+    },
+    {
+      "name": "fields a declared form does not place: under More, after its sections, and advised",
+      "type": {"type": "car", "v": 1, "label": "Car", "fields": [
+        {"key": "title", "label": "Model", "kind": "text", "required": true, "client_editable": true},
+        {"key": "seats", "label": "Seats", "kind": "number", "client_editable": true},
+        {"key": "doors", "label": "Doors", "kind": "number", "client_editable": true},
+        {"key": "notes", "label": "Notes", "kind": "textarea", "client_editable": true},
+        {"key": "photos", "label": "Photographs", "kind": "media", "multiple": true, "client_editable": true}
+      ],
+      "form": {"sections": [{"rows": [["title"], ["photos"]]}]}},
+      "resolved": {"declared": true, "aside": [], "sections": [
+        {"more": false, "rows": [
+          [{"field": "title", "span": 6, "widget": "line"}],
+          [{"field": "photos", "span": 6, "widget": "gallery"}]
+        ]},
+        {"more": true, "rows": [
+          [{"field": "seats", "span": 3, "widget": "number"}, {"field": "doors", "span": 3, "widget": "number"}],
+          [{"field": "notes", "span": 6, "widget": "area"}]
+        ]}
+      ]},
+      "advice": ["blocks.car.form"]
+    },
+    {
+      "name": "many fields and no form: laid out, and advised",
+      "type": {"type": "room", "v": 1, "label": "Room", "fields": [
+        {"key": "title", "label": "Name", "kind": "text", "required": true, "client_editable": true},
+        {"key": "beds", "label": "Beds", "kind": "number", "client_editable": true},
+        {"key": "size", "label": "Size", "kind": "number", "client_editable": true},
+        {"key": "view", "label": "View", "kind": "select", "options": [{"value": "lake"}, {"value": "town"}], "client_editable": true},
+        {"key": "price", "label": "Per night", "kind": "money", "client_editable": true},
+        {"key": "about", "label": "About it", "kind": "textarea", "client_editable": true},
+        {"key": "photos", "label": "Photographs", "kind": "media", "multiple": true, "client_editable": true}
+      ]},
+      "resolved": {"declared": false, "aside": [], "sections": [
+        {"more": false, "rows": [
+          [{"field": "title", "span": 6, "widget": "line"}],
+          [{"field": "beds", "span": 3, "widget": "number"}, {"field": "size", "span": 3, "widget": "number"}],
+          [{"field": "view", "span": 3, "widget": "dropdown"}, {"field": "price", "span": 3, "widget": "money"}],
+          [{"field": "about", "span": 6, "widget": "area"}],
+          [{"field": "photos", "span": 6, "widget": "gallery"}]
+        ]}
+      ]},
+      "advice": ["blocks.room"]
+    },
+    {
+      "name": "the kit's services, as the scaffold should declare them: the facts the diary reads first, the photograph aside",
+      "type": {"type": "service", "v": 1, "label": "Service", "fields": [
+        {"key": "title", "label": "Name", "kind": "text", "required": true, "max": 80, "client_editable": true},
+        {"key": "about", "label": "A line about it", "kind": "textarea", "max": 280, "client_editable": true},
+        {"key": "photo", "label": "Photograph", "kind": "media", "ratio": "4:3", "client_editable": true},
+        {"key": "takes", "label": "Takes", "kind": "duration", "client_editable": true},
+        {"key": "costs", "label": "Price", "kind": "money", "client_editable": true}
+      ],
+      "form": {"sections": [{"rows": [["title"], ["takes", "costs"], ["about"]]}], "aside": ["photo"], "widgets": {"takes": "presets"}}},
+      "resolved": {"declared": true, "aside": [{"field": "photo", "span": 6, "widget": "picture"}], "sections": [
+        {"more": false, "rows": [
+          [{"field": "title", "span": 6, "widget": "line"}],
+          [{"field": "takes", "span": 3, "widget": "presets"}, {"field": "costs", "span": 3, "widget": "money"}],
+          [{"field": "about", "span": 6, "widget": "area"}]
+        ]}
+      ]},
+      "advice": []
+    },
+    {
+      "name": "the kit's team, as the scaffold should declare it: the name beside what they do, the portrait aside",
+      "type": {"type": "person", "v": 1, "label": "Person", "fields": [
+        {"key": "title", "label": "Name", "kind": "text", "required": true, "max": 80, "client_editable": true, "localized": false},
+        {"key": "role", "label": "What they do", "kind": "text", "max": 80, "client_editable": true},
+        {"key": "portrait", "label": "Portrait", "kind": "media", "ratio": "4:5", "client_editable": true},
+        {"key": "bio", "label": "A line about them", "kind": "textarea", "max": 400, "client_editable": true}
+      ],
+      "form": {"sections": [{"rows": [["title", "role"], ["bio"]]}], "aside": ["portrait"]}},
+      "resolved": {"declared": true, "aside": [{"field": "portrait", "span": 6, "widget": "picture"}], "sections": [
+        {"more": false, "rows": [
+          [{"field": "title", "span": 3, "widget": "line"}, {"field": "role", "span": 3, "widget": "line"}],
+          [{"field": "bio", "span": 6, "widget": "area"}]
+        ]}
+      ]},
+      "advice": []
+    },
+    {
+      "name": "the kit's blog, as the scaffold should declare it: the title beside its date, what the journal's list shows under a title of its own",
+      "type": {"type": "post", "v": 1, "label": "Post", "fields": [
+        {"key": "title", "label": "Title", "kind": "text", "required": true, "max": 120, "client_editable": true},
+        {"key": "date", "label": "Date", "kind": "date", "required": true, "client_editable": true},
+        {"key": "excerpt", "label": "Excerpt", "kind": "textarea", "max": 300, "client_editable": true},
+        {"key": "cover", "label": "Cover", "kind": "media", "ratio": "3:2", "client_editable": true},
+        {"key": "body", "label": "Text", "kind": "markdown", "max": 40000, "client_editable": true}
+      ],
+      "form": {"sections": [
+        {"rows": [[{"field": "title", "span": 4}, "date"]]},
+        {"title": {"de": "In der Liste", "en": "In the list"}, "note": {"de": "Was die Seite des Journals zu diesem Beitrag zeigt", "en": "What the journal's page shows for this post"}, "rows": [["excerpt"]]}
+      ], "aside": ["cover"]}},
+      "resolved": {"declared": true, "aside": [{"field": "cover", "span": 6, "widget": "picture"}], "sections": [
+        {"more": false, "rows": [
+          [{"field": "title", "span": 4, "widget": "line"}, {"field": "date", "span": 2, "widget": "calendar"}]
+        ]},
+        {"title": {"de": "In der Liste", "en": "In the list"}, "note": {"de": "Was die Seite des Journals zu diesem Beitrag zeigt", "en": "What the journal's page shows for this post"}, "more": false, "rows": [
+          [{"field": "excerpt", "span": 6, "widget": "area"}]
+        ]}
+      ]},
+      "advice": []
+    },
+    {
+      "name": "refused: a field the type does not declare, body, and one field twice",
+      "type": {"type": "service", "v": 1, "label": "Service", "fields": [
+        {"key": "title", "label": "Name", "kind": "text", "required": true, "client_editable": true},
+        {"key": "costs", "label": "Price", "kind": "money", "client_editable": true},
+        {"key": "body", "label": "Text", "kind": "markdown", "client_editable": true}
+      ],
+      "form": {"sections": [{"rows": [["title", "price"], ["body"], ["costs"]]}], "aside": ["costs"]}},
+      "refused": ["blocks.service.form.sections[0].rows[0][1]", "blocks.service.form.sections[0].rows[1][0]", "blocks.service.form.aside[0]"]
+    },
+    {
+      "name": "refused: four to a row, a span past the grid, and a share that does not divide",
+      "type": {"type": "service", "v": 1, "label": "Service", "fields": [
+        {"key": "title", "label": "Name", "kind": "text", "required": true, "client_editable": true},
+        {"key": "a", "label": "A", "kind": "number", "client_editable": true},
+        {"key": "b", "label": "B", "kind": "number", "client_editable": true},
+        {"key": "c", "label": "C", "kind": "number", "client_editable": true},
+        {"key": "d", "label": "D", "kind": "number", "client_editable": true},
+        {"key": "e", "label": "E", "kind": "number", "client_editable": true},
+        {"key": "f", "label": "F", "kind": "number", "client_editable": true}
+      ],
+      "form": {"sections": [{"rows": [["a", "b", "c", "d"], [{"field": "e", "span": 7}], [{"field": "title", "span": 3}, "f", "title"]]}]}},
+      "refused": ["blocks.service.form.sections[0].rows[0]", "blocks.service.form.sections[0].rows[1][0].span", "blocks.service.form.sections[0].rows[2]", "blocks.service.form.sections[0].rows[2][2]"]
+    },
+    {
+      "name": "refused: a gallery beside a field, a paragraph aside",
+      "type": {"type": "work", "v": 1, "label": "Work", "fields": [
+        {"key": "title", "label": "Title", "kind": "text", "required": true, "client_editable": true},
+        {"key": "about", "label": "About", "kind": "textarea", "client_editable": true},
+        {"key": "photos", "label": "Photographs", "kind": "media", "multiple": true, "client_editable": true}
+      ],
+      "form": {"sections": [{"rows": [["title", "photos"]]}], "aside": ["about"]}},
+      "refused": ["blocks.work.form.sections[0].rows[0][1]", "blocks.work.form.aside[0]"]
+    },
+    {
+      "name": "refused as it is read: a row that is not a list of fields",
+      "type": {"type": "work", "v": 1, "label": "Work", "fields": [
+        {"key": "title", "label": "Title", "kind": "text", "required": true, "client_editable": true}
+      ],
+      "form": {"sections": [{"rows": [["title"], [3]]}]}},
+      "refused": ["blocks.work.form.sections[0].rows[1][0]"]
+    },
+    {
+      "name": "refused: a widget of another kind, buttons for too many choices, a stepper with no bounds, a required field with no place",
+      "type": {"type": "product", "v": 1, "label": "Product", "fields": [
+        {"key": "title", "label": "Name", "kind": "text", "required": true, "client_editable": true},
+        {"key": "size", "label": "Size", "kind": "select", "options": [{"value": "xs"}, {"value": "s"}, {"value": "m"}, {"value": "l"}, {"value": "xl"}], "client_editable": true},
+        {"key": "stock", "label": "Stock", "kind": "number", "integer": true, "client_editable": true},
+        {"key": "sku", "label": "Code", "kind": "text", "required": true, "client_editable": true}
+      ],
+      "form": {"sections": [{"rows": [["size", "stock"]]}], "widgets": {"title": "tall", "size": "segmented", "stock": "stepper"}}},
+      "refused": ["blocks.product.form.widgets.size", "blocks.product.form.widgets.stock", "blocks.product.form.widgets.title", "blocks.product.form"]
+    },
+    {
+      "name": "refused: a form on a block type that is no collection's",
+      "type": {"type": "service", "v": 1, "label": "Service", "fields": [
+        {"key": "title", "label": "Name", "kind": "text", "required": true, "client_editable": true}
+      ]},
+      "page_block": {"type": "hero", "v": 1, "label": "Hero", "fields": [
+        {"key": "title", "label": "Heading", "kind": "text", "client_editable": true}
+      ], "form": {"sections": [{"rows": [["title"]]}]}},
+      "refused": ["blocks.hero.form"]
+    }
+  ]
+}

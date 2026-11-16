@@ -48,8 +48,11 @@
  *
  * A template that compares an entry's date with today to choose what it
  * shows (`JTK_W_DATE_HIDES`, dateHides.mjs): the collection's `ends_by` says
- * it once, for the site, the panel and the build. Said in every mode, with
- * `--emit-only` too, and counted in no exit code.
+ * it once, for the site, the panel and the build. And the judge's own advice
+ * on a schema it accepts (`adviseSchema`): an entry type whose card the panel
+ * lays out by guessing (`JTK_W_PANEL_FORM_GUESSED`) — a `form` that leaves
+ * fields to «More», or seven fields or more and no `form`. Said in every
+ * mode, with `--emit-only` too, and counted in no exit code.
  *
  * ── what it never writes ────────────────────────────────────────────────────
  *
@@ -67,7 +70,7 @@ import { isAdvice, isPlatformCode, LOCAL } from './codes.mjs';
 import { unnamed } from './content/identity.mjs';
 import { content } from './content/index.mjs';
 import { contractOf, mintJtk, readJtk } from './content/node.mjs';
-import { canonicalTag, judgeSchema } from './judge3.mjs';
+import { adviseSchema, canonicalTag, judgeSchema } from './judge3.mjs';
 import { CODE_FILE, dateHides } from './dateHides.mjs';
 import { filesBeside, judgeRequest } from './judgeFiles.mjs';
 import { copiesMissing, copyMissingSays, judgeTranslations } from './translations.mjs';
@@ -76,7 +79,7 @@ import { unclaimedText } from './lint.mjs';
 import { metaFaults } from './meta3.mjs';
 import { builtPages, prefixBuild, servedFaults, unboundedHeights, unowned } from './served.mjs';
 
-export { judgeSchema };
+export { adviseSchema, judgeSchema };
 
 const TOOL_VERSION = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
 
@@ -386,7 +389,7 @@ export function pagesAgainst({ files, schema, dist, advice = [] }) {
 // for nothing. The files' findings (`jtk/…`) and the judge's advice are the
 // platform's alone, printed and not examined.
 
-async function sitTheExam(root, text, ours) {
+async function sitTheExam(root, text, ours, said = []) {
   if (!process.env.JTK_API || !process.env.JTK_TOKEN) {
     console.error(`
 jtk schema: --judge needs somewhere to ask and something to ask with.
@@ -436,7 +439,9 @@ beside it judges the whole working tree before any push.`);
   const findings = all.filter((one) => !ofFiles.includes(one));
   for (const one of ofFiles) console.error(`  ✗ ${one.code}  ${one.path}: ${one.says}`);
   if (ofFiles.length > 0) console.error(`  ${ofFiles.length} finding(s) in the files beside the schema (${files.length} sent) — refused at import until fixed.\n`);
-  const advice = [...(verdict.advice ?? []), ...findings.filter((one) => isAdvice(one.code))];
+  // What this copy advised already is not said twice.
+  const already = new Set(said.map((one) => `${one.code} ${one.path}`));
+  const advice = [...(verdict.advice ?? []), ...findings.filter((one) => isAdvice(one.code))].filter((one) => !already.has(`${one.code} ${one.path ?? ''}`));
   for (const one of advice) console.log(`  ~ ${one.code}  ${one.path || '(the file)'}: ${one.says}`);
   if (advice.length > 0) console.log(`  ${advice.length} piece(s) of advice from the judge — allowed, and unwise. Act on them before the first build.\n`);
 
@@ -554,7 +559,10 @@ A JTK_E_… code is the platform's own name for that fault, the one POST
 /v1/registry/validate returns for this text. ${LOCAL} is the kit's own — the
 studio's preview arrangement, which the schema has nothing to say about.`);
   }
-  const exam = has('judge') ? await sitTheExam(root, text, problems) : { divergences: 0, ofFiles: 0 };
+  // The judge's advice on a schema it accepts (none on one it refuses): allowed, and unwise.
+  const advised = adviseSchema(text);
+  for (const one of advised) console.log(`  ~ ${one.code}  ${one.path}: ${one.says}`);
+  const exam = has('judge') ? await sitTheExam(root, text, problems, advised) : { divergences: 0, ofFiles: 0 };
   if (exam.failed) return 1;
 
   // Written only when the platform would read it, and only when it changed:
