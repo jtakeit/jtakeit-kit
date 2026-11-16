@@ -128,14 +128,36 @@ import type { Block, Collection, Field, Modules, Text } from '@jtakeit/kit/schem
 export const CONTRACT = 3;
 
 /**
- * This template draws a page the same way from a draft at request time as
- * from its files at build time (src/live/, src/lib/site.ts), so the panel may
- * show the owner a saved field in the preview at once, rather than after a
- * build. `jtk schema` writes it as `render: "live"`. The platform checks the
- * word at every build — it renders a few pages live and compares them with
- * the built ones — and shows the build where they differ, saying why; what is
- * published is always the build. Take the line out if the site's own pages
- * read content in a way a server cannot (docs/live.md).
+ * Keep this line. It says the template draws a page the same way from a
+ * draft at request time as from its files at build time (src/live/,
+ * src/lib/site.ts), and `jtk schema` writes it as `render: "live"`: the
+ * panel then shows the owner a saved field in the preview at once, and an
+ * entry's card before the entry is saved. Without it the owner sees a change
+ * only after a build. The platform checks the word at every build — it
+ * renders a few pages live and compares them with the built ones — and shows
+ * the build where they differ, saying why; what is published is always the
+ * build.
+ *
+ * The live renderer runs on the edge: no Node `fs`, no sharp, no network but
+ * the draft it is handed. A page stays drawable live when (docs/live.md):
+ *
+ *   - its content comes through the door, `site.page()`, `site.entries()`,
+ *     `site.shared()`, `site.settings()`, read in the frontmatter of the page
+ *     or section that draws it — never `import x from '…/jtk/…json'`, a glob
+ *     of jtk/, or a value read at a module's top level and kept;
+ *   - its pictures are library keys drawn through `<Shot>` (a block's or an
+ *     entry's `picture()`, a slot's name for what the code draws) — never a
+ *     directory scanned with `fs` to find them; a file the owner gives is a
+ *     key of the library in a field, read through the door too;
+ *   - its frontmatter does no build-time-only work: nothing read off the
+ *     disk, fetched from the network or resized with sharp. What the page
+ *     needs is written in jtk/ (the owner's) or in the code (yours); what
+ *     differs between two renders — today's date, a random order — is a
+ *     script in the browser or the build's (`YEAR`, `virtual:jtk/build`).
+ *
+ * Take the line out only for a page that does at build what a server cannot,
+ * and cannot be rewritten as above — and then write the reason in BRIEF.md,
+ * under Decisions, for the owner and the next developer.
  */
 export const RENDER = 'live';
 
