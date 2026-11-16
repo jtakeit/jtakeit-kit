@@ -640,8 +640,8 @@ export function wireCart(root) {
   root.addEventListener('focusout', (event) => {
     if (!held || !(event.target instanceof Element) || !event.target.matches('[data-line-qty]')) return;
     setTimeout(() => {
-      // An answer still to come draws them itself, as it lands.
-      if (held && !typing() && view !== null && !pending && root.isConnected) draw();
+      // An answer still to come draws them itself, as it lands; a cart the shop could not be asked again stays as it is, said, until it can.
+      if (held && !typing() && view !== null && !pending && !stale && root.isConnected) draw();
     }, 0);
   });
 
