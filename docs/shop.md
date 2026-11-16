@@ -475,7 +475,7 @@ name of one of the sheet's, in quotes.
 | `tariff_number`, `made_in` | text; the owner's facts for customs |
 | `pictures` | a column of addresses and paths; a bare column string splits a cell on `,`; `{ "column", "split": ";" }` says the text between them where it is not a comma ([Pictures](#pictures)) |
 | `stock` | the starting stock, a whole number from 0 to 999,999 ([Stock](#stock)) |
-| `on_sale`, `visible`, `tracked` | a switch. A column alone reads `yes`/`no`, `true`/`false`, `1`/`0`, `on`/`off`, and any other word is refused with the key to say it; `{ "column", "yes": ["active"] }` says which values are yes, every other no. An empty cell says nothing: a new product has its default and a matched one keeps what it has |
+| `on_sale`, `visible`, `tracked` | a switch. A column alone reads `yes`/`no`, `y`/`n`, `true`/`false`, `1`/`0` and `on`/`off`, in any case, and any other word is refused with the key to say it; `{ "column", "yes": ["active"] }` says which values are yes, every other no. An empty cell says nothing: a new product has its default and a matched one keeps what it has |
 
 ### A WooCommerce export
 
@@ -507,6 +507,18 @@ English beside it:
   }
 }
 ```
+
+It names no `pictures`, and the fixture's sheet has no such column. For
+an export that has WooCommerce's `Images` column — a cell holds the product's
+addresses, separated by commas — the mapping is the fixture's plus one key under
+`fields`:
+
+```json
+    "pictures": "Images",
+```
+
+A bare column string splits a cell on `,`; `{ "column": "Images", "split": ";" }`
+says another separator.
 
 ### A Shopify export
 
@@ -554,9 +566,12 @@ included, each name one.
   Shopify writes the names on a product's first row alone. A name the first row
   does not have is refused with its row and column; an attribute no variation
   uses is left out and said.
-- **A simple product's attributes make no options.** WooCommerce's attributes of
-  a product with no variations describe it; the import leaves them out and says
-  so.
+- **Under `group.parent`, a simple product's attributes make no options.**
+  WooCommerce's attributes of a product with no variations describe it; the
+  import leaves them out and says so. Under `group.by`, or with no group, a row
+  that names an option and gives its value makes that option, with its variant
+  picking it; an option a row names and no variant gives a value is left out of
+  the options, and said.
 - **Two rows with one SKU** (a SKU is one variant's, in any case) are refused,
   naming both rows; so are two variants of one product that pick the same
   values.
@@ -570,8 +585,11 @@ The business's SKUs are kept. A variant the sheet leaves without one is given
 the SKU the platform would have made — the product's slug and its values' keys,
 capitals, joined by dashes: `T-SHIRT-FOX-M-BLUE` — numbered `-2`, `-3`… where
 the site or the sheet has taken it. An option and a value get the key the panel
-would give from their names: *Size* is `size`, *Extra large* is `extra-large`, a
-shoe's 42 is `x42`. The two are held to the platform's own cases (`@jtakeit/kit/shop/skus`,
+would give from their names: *Size* is `size`, *Extra large* is `extra-large`;
+a value that starts with a digit is put after `v` and an option after `o`, so a
+shoe's 42 is `v42` as a value and `o42` as an option; a name with no letter or
+digit a key can hold, a Cyrillic one, is `v` or `o` itself, numbered `-2`, `-3`…
+where taken. A key is at most 32 characters. The two are held to the platform's own cases (`@jtakeit/kit/shop/skus`,
 a copy), so an import and a person in the panel never disagree about what a
 thing is called, and the keys are kept: `picks` depends on them.
 
@@ -660,6 +678,10 @@ library's key in each slot's place and moves the file to `.jtakeit/adopted/`
 npx @jtakeit/astro import products catalogue.csv --map mapping.json --media '<media_link url>'
 ```
 
+`--media` sends the pictures the sheet names, so **it is refused where the mapping
+names no `pictures` column** — before the products are planned, and nothing
+is written.
+
 Two things to say plainly, to the developer and to yourself:
 
 1. **`--media` runs the whole `jtk media push`**, not only the import's pictures:
@@ -670,7 +692,8 @@ Two things to say plainly, to the developer and to yourself:
 2. **A stranger's sheet — a supplier's catalogue — can make this machine ask any
    address it names**, the developer's own `localhost` and link-local addresses
    included: the import sends a GET to each address of the `pictures` column, from
-   this machine, whatever the address is. Only an image is ever kept — any other
+   this machine, whatever the address is — and **it follows redirects**, so an
+   address the sheet names can send this machine on to one the sheet does not. Only an image is ever kept — any other
    answer is dropped and said — but the request has been made.
    **Read a stranger's sheet before importing it.**
 
@@ -712,6 +735,8 @@ leave out, the pictures it would fetch, the lines of the stock file and what it
 would add to `.gitignore`. A sheet that would be refused is refused the same.
 Run it first.
 
+For the WooCommerce fixture, on a site that has no product yet, the whole of it:
+
 ```
 jtk import products --dry-run: this is what it would do, and nothing is written or fetched.
   would make becher (row 2, 1 variant)
@@ -721,7 +746,11 @@ jtk import products --dry-run: this is what it would do, and nothing is written 
   row 9 skipped: «Type» is «external»
   would write .jtakeit/stock.txt, 5 lines, for set_stock:
     MUG-1 12
-    …
+    FOX-S-RED 5
+    FOX-M-RED 7
+    FOX-S-BLUE 0
+    T-SHIRT-FOX-M-BLUE 3
+  would add .jtakeit/stock*.txt to .gitignore: the stock is never in the site's files
 ```
 
 Then: `npx @jtakeit/astro schema --judge` (or `validate_schema`) judges the site
