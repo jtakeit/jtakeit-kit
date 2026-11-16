@@ -49,7 +49,7 @@ may add it beside its booking kit. The kit is the platform's, asked of it
 - **the storefront** — the five components, the cart's page, the page after
   payment and the listing's page (`src/pages/[...lang]/cart.astro`,
   `order.astro`, `shop/index.astro`), written where the site has none, and
-  «Cart» in the header's menu;
+  «Shop» and «Cart» in the header's menu;
 - no product. The products are the business's, by hand or by
   [`jtk import products`](#jtk-import-products), and their stock is the
   platform's (`set_stock`).

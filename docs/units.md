@@ -126,7 +126,7 @@ and takes away its own and changes none of the site's.
 - **The storefront.** `src/components/shop/` — the product, the cart, the checkout,
   the page after payment and the listing — and the three pages that draw them
   (`cart`, `order` and `shop/index` under `src/pages/[...lang]/`), to copy and
-  make the site's own; and «Cart» in the header's menu. A file the site has is
+  make the site's own; and «Shop» and «Cart» in the header's menu. A file the site has is
   left as it is. [shop.md](shop.md) says what each is.
 - **No file of the scaffold's is changed.** The entry page and `jtakeit-meta.mjs`
   are every site's; a site laid out before the shop is told the lines to add —
