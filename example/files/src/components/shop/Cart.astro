@@ -355,6 +355,14 @@ const countries = codes.map((code) => ({ code, name: nameOf(code) }));
   .cart :global([data-method-radio]:checked) {
     background: radial-gradient(circle, var(--ink) 0 38%, transparent 42%);
   }
+  /* Forced colors drops a background image, and the dot with it: a system colour in the content box is kept. */
+  @media (forced-colors: active) {
+    .cart :global([data-method-radio]:checked) {
+      background-color: CanvasText;
+      background-clip: content-box;
+      padding: 3px;
+    }
+  }
   .cart :global([data-method-price]) {
     margin-inline-start: auto;
     font-weight: 600;
