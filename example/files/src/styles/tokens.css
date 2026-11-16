@@ -23,12 +23,25 @@ html:root {
   --paper-lift: #ffffff;
   --paper-deep: #efece6;
   --ink: #111110;
-  --ink-quiet: #5f5c58;
+  /*
+   * The quiet ink is the ink, quietened towards the paper — as global.css derives
+   * it — and not a grey of its own: a fixed grey is 5.9:1 on this paper and 2.8:1
+   * on a dark page whose `jtk/design.json` sets another paper and ink, which it
+   * did (the shop's walk on a dark palette, 17 November 2026). Two thirds of the
+   * ink is the grey this palette had, and keeps 4.5:1 on any.
+   */
+  --ink-quiet: color-mix(in srgb, var(--ink) 66%, var(--paper));
   --line: #e0ddd6;
   --accent: #e2431f;
   /* The accent as words on paper: a step deeper, 5:1 and more (WCAG 1.4.3). */
   --accent-deep: #c4360f;
-  --accent-ink: var(--accent-deep);
+  /*
+   * And as words on any paper: the accent a step towards the ink, as global.css
+   * derives it, so it follows the accent and the paper `jtk/design.json` sets —
+   * `--accent-deep` as words was 2.5:1 on a dark page with an amber accent.
+   * Four fifths of the accent is the red this palette had, 5:1 on this paper.
+   */
+  --accent-ink: color-mix(in srgb, var(--accent) 80%, var(--ink));
   --accent-hot: #ff8a5c;
   /* Words on the accent: Layout.astro chooses by its lightness; this is the default. */
   --on-accent: #16130f;
