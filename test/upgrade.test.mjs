@@ -581,6 +581,8 @@ test('B2: a file replaced brings the scaffold\'s files it imports, or is left wi
     write(site, 'src/pages/sitemap.xml.ts', OLD('0.6.0', 'src/pages/sitemap.xml.ts'));
     rmSync(join(site, 'src/lib/pages.ts'));
     rmSync(join(site, 'src/live'), { recursive: true });
+    // The developer's own read of the home page by its file, as KAIF's copy had it.
+    write(site, 'src/lib/own.ts', "import home from '../../jtk/content/index.json';\nexport const title = (home as any).blocks[0].title;\n");
     const run = upgrade(site, '--mint-ids', '--no-check');
     assert.equal(run.status, 0, said(run));
     // The pair: left as it was, and said with what keeps it.
@@ -592,6 +594,10 @@ test('B2: a file replaced brings the scaffold\'s files it imports, or is left wi
     assert.match(run.stdout, /↻ src\/pages\/sitemap\.xml\.ts — the scaffold's 0\.1\.0–0\.6\.0, untouched: replaced with the door's/);
     assert.match(run.stdout, /\+ src\/lib\/pages\.ts — the scaffold's, which a file written here imports and this site has not got/);
     assert.equal(readFileSync(join(site, 'src/lib/pages.ts'), 'utf8'), readFileSync(resolve('template/src/lib/pages.ts'), 'utf8'));
+    // A document imported by its file: named where the move put it, and its read listed.
+    assert.equal(readFileSync(join(site, 'src/lib/own.ts'), 'utf8').split('\n')[0], "import home from '../../jtk/pages/index.json';");
+    assert.match(run.stdout, /↻ src\/lib\/own\.ts — imports jtk\/pages\/index\.json, where the move put jtk\/content\/index\.json/);
+    assert.match(run.stdout, /a read the move changes — src\/lib\/own\.ts: jtk\/content\/: .*\(line 1\)/);
     // Not ready to be drawn live: its files not laid in.
     assert.equal(existsSync(join(site, 'src/live')), false);
     assert.match(run.stdout, /the live preview — .*src\/lib\/entryLoader\.ts is not the scaffold's.*src\/live\/ is not laid in/);
