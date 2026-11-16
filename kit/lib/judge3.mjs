@@ -153,7 +153,7 @@ const KEYS = {
   collection: ['name', 'label', 'one', 'intro', 'place', 'icon', 'type', 'order', 'group', 'blocks', 'untranslated', 'route', 'shown_on', 'ends_by'],
   route: ['detail', 'listing', 'per_page'],
   order: ['by', 'desc'],
-  ends_by: ['date', 'time', 'after', 'zone'],
+  ends_by: ['date', 'time', 'after', 'zone', 'then'],
 };
 
 /** What contract 3 says instead of a word of contract 2's (`replacedIn3`). */
@@ -419,7 +419,7 @@ function wireCollection(raw, at) {
   };
 }
 
-/** `EndsBy`: that the entries go by their own date — `{"date": …, "time": …, "after": …, "zone": …}`. */
+/** `EndsBy`: when the entries are over, by their own date — `{"date": …, "time": …, "after": …, "zone": …, "then": …}`. */
 function endsBy(raw, at) {
   const value = object(raw, at);
   if (value === undefined) return undefined;
@@ -428,6 +428,7 @@ function endsBy(raw, at) {
     time: str(value.time, `${at}.time`),
     after: intOrNone(value.after, `${at}.after`),
     zone: str(value.zone, `${at}.zone`),
+    then: str(value.then, `${at}.then`),
   };
 }
 
@@ -1105,11 +1106,12 @@ function validateEntryGroup(say, c, entry, path) {
 }
 
 /**
- * `validateEndsBy`: a collection whose entries go by their own date (the
- * owner, 16 November 2026, on KAIF's nights) is held to the entry type it
- * reads — a date field of kind "date", a time field of kind "time_of_day",
- * at most a week after, on an IANA zone's clock. Each part is judged on its
- * own, as the platform's `validateEndsBy` judges them (registry/endsBy.go).
+ * `validateEndsBy`: a collection whose entries are over by their own date
+ * (the owner, 16 November 2026, on KAIF's nights) is held to the entry type
+ * it reads — a date field of kind "date", a time field of kind
+ * "time_of_day", at most a week after, `then` "keep" or "hide", on an IANA
+ * zone's clock. Each part is judged on its own, as the platform's
+ * `validateEndsBy` judges them (registry/endsBy.go).
  */
 function validateEndsBy(say, c, entry, path) {
   const e = c.endsBy;
@@ -1134,6 +1136,9 @@ function validateEndsBy(say, c, entry, path) {
   }
   if (e.after !== undefined && (e.after < 0 || e.after > ENDS_AFTER_MAX)) {
     say(E.COLLECTION, `${where}.after`, `collection ${q(c.name)} goes ${e.after} minutes after its moment — between 0 and ${ENDS_AFTER_MAX} (a week)`);
+  }
+  if (e.then !== '' && e.then !== 'keep' && e.then !== 'hide') {
+    say(E.COLLECTION, `${where}.then`, `collection ${q(c.name)} does ${q(e.then)} with an entry that is over — "keep" leaves it on the site for the template to place (the default), "hide" takes it off`);
   }
   if (e.zone === '') {
     say(E.COLLECTION, `${where}.zone`, `collection ${q(c.name)} goes by a date on no clock — ends_by.zone is the IANA zone the date is in, "Europe/Zurich"`);

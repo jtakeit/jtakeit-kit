@@ -99,11 +99,12 @@ export interface Collection {
   /** Contract 3: what a language without a translation does with an entry: shows the original, or hides it there (built, listed nowhere, as a language held back is). */
   untranslated?: 'base' | 'hide';
   /**
-   * Contract 3: that its entries go by their own date — `{ date, time?,
-   * after?, zone }`. The door leaves out an entry whose moment has passed, as
-   * the platform's `hide_at` written from the date does.
+   * Contract 3: when its entries are over, by their own date — `{ date,
+   * time?, after?, zone, then }`, `then` read as `'keep'` where the schema
+   * says none. Each entry says `ended` and `endsAt`; on `'hide'` the door
+   * also leaves out one that is over.
    */
-  ends_by?: { date: string; time?: string; after?: number; zone: string };
+  ends_by?: { date: string; time?: string; after?: number; zone: string; then: 'keep' | 'hide' };
 }
 
 /** The annotation of one value: spread it onto the element that draws it. Empty when annotation is off. */
@@ -303,6 +304,15 @@ export interface Entry {
   locale: string;
   /** Whether a listing shows it now: `visible`, `show_at`, `hide_at`. */
   visible: boolean;
+  /**
+   * Whether it is over by its own date — its collection's `ends_by` — at the door's clock (the
+   * build's; `JTK_NOW` on the platform). Choose the next one with `!entry.ended` and put the past ones
+   * in an archive; never compare a date with today in the template. Always `false` for an entry of a
+   * collection without `ends_by`, an entry with no date yet, and on contract 2.
+   */
+  ended: boolean;
+  /** When it is over, RFC 3339 in UTC; `null` where its collection has no `ends_by` or it has no date. */
+  endsAt: string | null;
   seo: Record<string, unknown>;
   file?: string;
   /** A specimen page: one arrangement of a block type, built for the panel, listed nowhere. */

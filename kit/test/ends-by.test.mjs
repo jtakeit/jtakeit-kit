@@ -1,9 +1,10 @@
-// A collection whose entries go by their own date — contract 3's `ends_by`
-// (the owner, 16 November 2026, on KAIF's nights): the moment worked out as
-// the platform works it out (registry/endsBy.go), the judge's refusals in its
-// words and at its paths, contract 2 without it, the declaration carrying it
-// into jtk/schema.json, the door leaving out what has gone, and the advice to
-// a template that compares an entry's date with the clock itself.
+// A collection whose entries are over by their own date — contract 3's
+// `ends_by` (the owner, 16 November 2026, on KAIF's nights): the moment worked
+// out as the platform works it out (registry/endsBy.go), the judge's refusals
+// in its words and at its paths, contract 2 without it, the declaration
+// carrying it into jtk/schema.json, the door saying `ended` of every entry and
+// leaving out what is over on `then: "hide"`, and the advice to a template
+// that compares an entry's date with the clock itself.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -55,6 +56,8 @@ test('a zone is an IANA name in its own case, never Local or an offset', () => {
 test('ends_by is held to the entry it reads, in the platform\'s words and at its paths (TestEndsByIsHeldToTheEntryItReads)', () => {
   assert.deepEqual(judgeSchema(JSON.stringify(kitWith({ date: 'date', time: 'starts', after: 480, zone: 'Europe/Zurich' }))), []);
   assert.deepEqual(judgeSchema(JSON.stringify(kitWith({ date: 'date', zone: 'Europe/Zurich' }))), []);
+  assert.deepEqual(judgeSchema(JSON.stringify(kitWith({ date: 'date', zone: 'Europe/Zurich', then: 'keep' }))), []);
+  assert.deepEqual(judgeSchema(JSON.stringify(kitWith({ date: 'date', zone: 'Europe/Zurich', then: 'hide' }))), []);
   for (const [name, ends, path, says, code = 'JTK_E_COLLECTION_INVALID'] of [
     ['no date', { zone: 'Europe/Zurich' }, 'collections.works.ends_by.date', 'collection "works" goes by a date it does not name — "ends_by": {"date": "<a date field>", "time": "<a time_of_day field>", "after": <minutes>, "zone": "Europe/Zurich"}'],
     ['a date nothing declares', { date: 'when', zone: 'Europe/Zurich' }, 'collections.works.ends_by.date', 'collection "works" goes by work.when, which "work" does not declare'],
@@ -63,6 +66,8 @@ test('ends_by is held to the entry it reads, in the platform\'s words and at its
     ['a time that is no time', { date: 'date', time: 'title', zone: 'Europe/Zurich' }, 'collections.works.ends_by.time', 'collection "works" goes at the time in work.title, which is "text" — ends_by.time names a field of kind "time_of_day"'],
     ['too long after', { date: 'date', after: 20000, zone: 'Europe/Zurich' }, 'collections.works.ends_by.after', 'collection "works" goes 20000 minutes after its moment — between 0 and 10080 (a week)'],
     ['before its moment', { date: 'date', after: -1, zone: 'Europe/Zurich' }, 'collections.works.ends_by.after', 'collection "works" goes -1 minutes after its moment — between 0 and 10080 (a week)'],
+    ['a then it has not', { date: 'date', zone: 'Europe/Zurich', then: 'archive' }, 'collections.works.ends_by.then', 'collection "works" does "archive" with an entry that is over — "keep" leaves it on the site for the template to place (the default), "hide" takes it off'],
+    ['the machine\'s clock', { date: 'date', zone: 'Local' }, 'collections.works.ends_by.zone', 'collection "works" goes by a date in "Local", which is no IANA zone — "Europe/Zurich", "Europe/Kyiv"'],
     ['no zone', { date: 'date' }, 'collections.works.ends_by.zone', 'collection "works" goes by a date on no clock — ends_by.zone is the IANA zone the date is in, "Europe/Zurich"'],
     ['no such zone', { date: 'date', zone: 'Europe/Zuerich' }, 'collections.works.ends_by.zone', 'collection "works" goes by a date in "Europe/Zuerich", which is no IANA zone — "Europe/Zurich", "Europe/Kyiv"'],
     ['a key it has not', { date: 'date', zone: 'Europe/Zurich', until: 'x' }, 'collections.works.ends_by.until', "collections.works.ends_by.until is not a key of contract 3's schema, and nothing would read it", 'JTK_E_SCHEMA_KEY_UNKNOWN'],
@@ -71,8 +76,8 @@ test('ends_by is held to the entry it reads, in the platform\'s words and at its
     assert.deepEqual(found, [{ code, path, says }], name);
   }
   // Each part judged on its own, as Go's validateEndsBy adds them.
-  assert.deepEqual(judgeSchema(JSON.stringify(kitWith({ date: 'title', after: 99999 }))).map((one) => one.path), [
-    'collections.works.ends_by.date', 'collections.works.ends_by.after', 'collections.works.ends_by.zone',
+  assert.deepEqual(judgeSchema(JSON.stringify(kitWith({ date: 'title', after: 99999, then: 'later' }))).map((one) => one.path), [
+    'collections.works.ends_by.date', 'collections.works.ends_by.after', 'collections.works.ends_by.then', 'collections.works.ends_by.zone',
   ]);
   // A shape Go's decoder refuses is one unreadable schema.
   for (const ends of ['soon', { date: 'date', zone: 'Europe/Zurich', after: 1.5 }, { date: 7, zone: 'Europe/Zurich' }]) {
@@ -89,7 +94,7 @@ test('contract 2 has no ends_by: a kit laid out on contract 2 leaves it out, as 
 });
 
 test('the declaration carries ends_by into jtk/schema.json as written', () => {
-  const ends = { date: 'date', time: 'starts', after: 480, zone: 'Europe/Zurich' };
+  const ends = { date: 'date', time: 'starts', after: 480, zone: 'Europe/Zurich', then: 'hide' };
   const schema = schemaOf({ CONTRACT: 3, LOCALE: 'de', BLOCKS: [], COLLECTIONS: [{ name: 'nights', label: 'Nights', type: 'night', route: { detail: '/nights/{slug}' }, ends_by: ends }] });
   assert.deepEqual(schema.collections[0].ends_by, ends);
 });
@@ -125,24 +130,54 @@ const tree = (ends) => ({
   '/jtk/entries/nights/held.json': night(5, 'held', { title: 'Held', date: '2026-12-01' }, { visible: false }),
 });
 
-test('the door leaves out an entry whose date has gone, as the platform\'s hide_at written from it does', () => {
+test('then "hide": the door leaves out an entry that is over, as the platform\'s hide_at written from the date does', () => {
   const now = Date.parse('2026-11-16T12:00:00Z');
-  const ends = { date: 'date', time: 'starts', after: 480, zone: 'Europe/Zurich' };
+  const ends = { date: 'date', time: 'starts', after: 480, zone: 'Europe/Zurich', then: 'hide' };
   const site = content(tree(ends), { now });
   assert.deepEqual(site.entries('nights').map((one) => one.slug), ['moved', 'tonight', 'undated']);
   assert.deepEqual(site.entries('nights', { locale: 'en' }).map((one) => one.slug), ['moved', 'tonight', 'undated'], 'a translation goes with its original');
   assert.deepEqual(site.collection('nights').ends_by, ends);
-  // Asked with another clock: at 05:59 UTC on the 15th the night of the 14th is still on.
+  // Asked with another clock: at 04:59 UTC on the 15th the night of the 14th is still on.
   assert.ok(site.entries('nights', { now: Date.parse('2026-11-15T04:59:00Z') }).some((one) => one.slug === 'gone'));
   assert.ok(!site.entries('nights', { now: Date.parse('2026-11-15T05:00:00Z') }).some((one) => one.slug === 'gone'));
   // Every entry is still a document, built for the editor, its standing said.
   const gone = site.documents().find((one) => one.slug === 'gone' && one.locale === '');
   assert.equal(gone.shown, false);
-  assert.ok(site.entries('nights', { all: true }).some((one) => one.slug === 'gone'));
+  const all = site.entries('nights', { all: true });
+  assert.deepEqual(all.map((one) => [one.slug, one.ended, one.endsAt]), [
+    ['gone', true, '2026-11-15T05:00:00Z'],
+    ['held', false, '2026-12-01T07:00:00Z'], // no time: midnight, and eight hours
+    ['moved', false, '2026-11-22T05:00:00Z'],
+    ['tonight', false, '2026-11-17T05:00:00Z'],
+    ['undated', false, null],
+  ]);
+});
 
-  // Without ends_by the files' own moments stand: the moved night's hide_at hides it, the gone one shows.
+test('then "keep", the default: every entry stays, and says whether it is over — the template places it', () => {
+  const now = Date.parse('2026-11-16T12:00:00Z');
+  const site = content(tree({ date: 'date', time: 'starts', after: 480, zone: 'Europe/Zurich' }), { now });
+  assert.equal(site.collection('nights').ends_by.then, 'keep');
+  // The file's own hide_at stands on keep: the moved night is off by the owner's moment, not its date.
+  const shown = site.entries('nights');
+  assert.deepEqual(shown.map((one) => [one.slug, one.ended]), [['gone', true], ['tonight', false], ['undated', false]]);
+  assert.deepEqual(site.entries('nights', { locale: 'en' }).map((one) => [one.slug, one.ended]), [['gone', true], ['tonight', false], ['undated', false]]);
+  // KAIF's /afisha: the coming ones first, then the past ones — no date compared in the template.
+  const coming = shown.filter((one) => !one.ended).map((one) => one.slug);
+  const past = shown.filter((one) => one.ended).map((one) => one.slug);
+  assert.deepEqual([coming, past], [['tonight', 'undated'], ['gone']]);
+  // The build's moment: JTK_NOW, where no clock is handed in.
+  const before = process.env.JTK_NOW;
+  try {
+    process.env.JTK_NOW = '2026-11-15T04:59:00Z';
+    assert.equal(content(tree({ date: 'date', time: 'starts', after: 480, zone: 'Europe/Zurich' })).entries('nights').find((one) => one.slug === 'gone').ended, false);
+  } finally {
+    if (before === undefined) delete process.env.JTK_NOW;
+    else process.env.JTK_NOW = before;
+  }
+
+  // A collection without ends_by: nothing is over, and no moment.
   const plain = content(tree(undefined), { now });
-  assert.deepEqual(plain.entries('nights').map((one) => one.slug), ['gone', 'tonight', 'undated']);
+  assert.deepEqual(plain.entries('nights').map((one) => [one.slug, one.ended, one.endsAt]), [['gone', false, null], ['tonight', false, null], ['undated', false, null]]);
 });
 
 // ── the advice ────────────────────────────────────────────────────────────
@@ -202,10 +237,10 @@ test('advice: said as JTK_W_DATE_HIDES, naming the collection that should declar
   assert.equal(one.code, 'JTK_W_DATE_HIDES');
   assert.equal(one.path, 'src/lib/nights.ts:2');
   assert.match(one.says, /^`n\.date >= today` compares an entry's date \(date\) with the clock/);
-  assert.match(one.says, /Declare ends_by on "nights" \("ends_by": \{"date": "date", "zone": "Europe\/Zurich"\}/);
-  assert.match(one.says, /site\.entries\("nights"\)/);
+  assert.match(one.says, /Declare ends_by on "nights" \("ends_by": \{"date": "date", "zone": "Europe\/Zurich", "then": "keep"\} — "keep" to keep past ones as an archive, "hide" to take them off/);
+  assert.match(one.says, /read `ended` from the entries the door gives \(site\.entries\("nights"\)\)/);
   const [going] = dateHides(files, nightsSchema({ date: 'date', zone: 'Europe/Zurich' }));
-  assert.match(going.says, /"nights" goes by that date already \(ends_by\)/);
+  assert.match(going.says, /"nights" is over by that date already \(ends_by\).*read `ended`/);
 });
 
 test('jtk schema says the advice and counts it nowhere', () => {

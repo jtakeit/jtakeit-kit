@@ -106,6 +106,18 @@ export { TAPPABLE, ADVISED, tappable, annotatable, specimenId };
 // test that has one document to merge, and the fixture corpus it is held to.
 export { mergeDocument, overlay, layOf, kindOf, localizedIn, valueAt } from './overlay.mjs';
 
+/**
+ * The moment the platform's build is made for (`JTK_NOW`, RFC 3339), which
+ * its collect step reads its schedule against too, or nothing — on a
+ * laptop, in a browser, or where the variable is empty or not a time.
+ */
+function buildNow() {
+  const said = typeof process !== 'undefined' ? process.env?.JTK_NOW : undefined;
+  if (typeof said !== 'string' || said === '') return undefined;
+  const at = Date.parse(said);
+  return Number.isNaN(at) ? undefined : at;
+}
+
 /** Empty is absent: what a value that says nothing is spelt as, folded. */
 function isEmpty(value) {
   return value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
@@ -121,11 +133,12 @@ const isObject = (value) => value !== null && typeof value === 'object' && !Arra
  *   in a template, `await readJtk()` in Node
  * @param {{ annotate?: boolean; now?: number }} [options]
  *   `annotate`: whether `at()` writes annotations at all (off for a build with no editor);
- *   `now`: the clock a `show_at`/`hide_at` is read against, this moment by default
+ *   `now`: the clock a `show_at`/`hide_at` and an entry's `ended` are read against — the
+ *   build's `JTK_NOW` where the platform's build gives one, this moment otherwise
  */
 export function content(files, options = {}) {
   const annotate = options.annotate !== false;
-  const now = options.now ?? Date.now();
+  const now = options.now ?? buildNow() ?? Date.now();
 
   // ── the files, in one order ──────────────────────────────────────────────
   //
@@ -496,6 +509,9 @@ export function content(files, options = {}) {
         translated: true,
         locale: doc.locale,
         visible: doc.shown,
+        // Contract 3's `ends_by`; contract 2 has none, so nothing is over.
+        ended: false,
+        endsAt: null,
         seo: doc.seo,
         file: doc.file,
         specimen: false,

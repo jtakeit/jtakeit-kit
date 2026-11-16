@@ -219,12 +219,13 @@ export type Pattern = string | Record<string, string>;
 export type Route = 'none' | { detail: Pattern; listing?: Pattern; per_page?: number };
 
 /**
- * That a collection's entries go from the site by their own date (the owner,
- * 16 November 2026): the platform writes each entry's `hide_at` from it on
- * every save, and the door leaves out one whose moment has passed — so a
- * template never compares the date with today itself.
+ * When a collection's entries are over, by their own date (the owner, 16
+ * November 2026). The platform works the moment out on every save, says
+ * «over» in the panel and rebuilds the site at it; the door gives each entry
+ * `ended` and `endsAt`, so a template never compares the date with today
+ * itself. What becomes of an entry that is over is `then`'s.
  *
- *   { date: 'date', time: 'starts', after: 480, zone: 'Europe/Zurich' }
+ *   { date: 'date', time: 'starts', after: 480, zone: 'Europe/Zurich', then: 'keep' }
  *
  * The moment is the date at the time (the start of the day without one) on
  * the zone's clock, and `after` minutes.
@@ -238,6 +239,12 @@ export interface EndsBy {
   after?: number;
   /** The IANA zone the date and the time are on the clock of: `Europe/Zurich`. */
   zone: string;
+  /**
+   * What becomes of an entry that is over: `keep` (absent) leaves it on the site — in the listing,
+   * the feed, the sitemap — for the template to place by `ended`, an archive of past nights; `hide`
+   * takes it off, its `hide_at` the moment.
+   */
+  then?: 'keep' | 'hide';
 }
 
 /** A set of entries of one block type (§3.5). */
@@ -263,7 +270,7 @@ export interface Collection {
   blocks?: string[];
   /** What a language with no translation does with an entry: shows the original, or leaves it out. */
   untranslated?: 'base' | 'hide';
-  /** That its entries go by their own date: the platform writes each one's `hide_at` from it. */
+  /** When its entries are over, by their own date, and what becomes of them then. */
   ends_by?: EndsBy;
 }
 

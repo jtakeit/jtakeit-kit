@@ -3,20 +3,26 @@
  * (the owner, 16 November 2026, on KAIF's nights), read the way the
  * platform reads it (`registry.EndsBy`, backend/api/registry/endsBy.go).
  *
- *   "ends_by": {"date": "date", "time": "starts", "after": 480, "zone": "Europe/Zurich"}
+ *   "ends_by": {"date": "date", "time": "starts", "after": 480, "zone": "Europe/Zurich", "then": "keep"}
  *
  * `date` names a `date` field of the entry type, `time` a `time_of_day`
  * field (minutes from midnight) or nothing for the start of the day, `after`
  * the minutes after that moment the entry goes — none by default where there
  * is a time, the whole day (1440) where there is not — and `zone` the IANA
- * zone the date and the time are on the clock of.
+ * zone the date and the time are on the clock of, and `then` what becomes of
+ * an entry that is over: `keep` (the default) leaves it on the site for the
+ * template to place — the next night first, the past ones as an archive —
+ * and `hide` takes it off.
  *
- * The platform writes each entry's `hide_at` from its date whenever the entry
- * is written (the panel, an import, a copy, a CSV): the date is the one
- * source, and a `hide_at` in the file is written over by it. The door asks
- * `endsAt` the same, so a dev server and a local build leave a night that is
- * over out of the listings before the platform has ever saved the entry —
- * and a template has no comparison of its own with today to make.
+ * WHEN an entry is over is the platform's: it works the moment out from the
+ * date whenever the entry is written (the panel, an import, a copy, a CSV),
+ * keeps it on the document as `ends_at` — never in the jtk/ files — says
+ * «over» in the panel and rebuilds the site at it. WHAT then happens is the
+ * site's: on `then: "hide"` the moment is the entry's `hide_at` as well; on
+ * `keep` the door hands the template `ended` and `endsAt`, so it never
+ * compares a date with today itself (the owner, 16 November 2026). The door
+ * works the same moment out from the date, on the dev server and in every
+ * build.
  *
  * Imports nothing: the judge, the door and the dev server all read it.
  */
@@ -107,7 +113,7 @@ function dayOf(value) {
  * says none or one nothing could go by (no date, no zone). The judge says
  * what is wrong with one; the door reads rather than judges.
  * @param {unknown} raw
- * @returns {{ date: string; time?: string; after?: number; zone: string } | undefined}
+ * @returns {{ date: string; time?: string; after?: number; zone: string; then: 'keep' | 'hide' } | undefined}
  */
 export function endsByOf(raw) {
   if (!isObject(raw)) return undefined;
@@ -116,6 +122,9 @@ export function endsByOf(raw) {
   const out = { date, zone };
   if (typeof time === 'string' && time !== '') out.time = time;
   if (typeof after === 'number' && Number.isInteger(after)) out.after = after;
+  // What becomes of an entry that is over: kept, unless the collection says
+  // hide. A word that is neither the judge refuses; the door keeps.
+  out.then = /** @type {any} */ (raw).then === 'hide' ? 'hide' : 'keep';
   return out;
 }
 
@@ -158,8 +167,8 @@ export function endsAt(ends, values) {
 }
 
 /**
- * The `hide_at` the platform writes for an entry of such a collection, RFC
- * 3339 in UTC, or `undefined` for none.
+ * The moment as the platform writes it — the document's `ends_at`, and its
+ * `hide_at` on `then: "hide"` — RFC 3339 in UTC, or `undefined` for none.
  * @param {{ date: string; time?: string; after?: number; zone: string } | undefined} ends
  * @param {Record<string, unknown> | null | undefined} values
  */

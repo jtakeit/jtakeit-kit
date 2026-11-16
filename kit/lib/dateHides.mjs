@@ -7,9 +7,10 @@
  * marked a ticket over): the build froze the comparison until the next
  * build, a visitor saw a night long past, and the panel, which knew nothing
  * of it, showed the night as on the site. Contract 3 says it once, on the
- * collection — `ends_by` — and the platform writes each entry's `hide_at`
- * from its date and rebuilds at the moment; the door (`site.entries(…)`)
- * leaves out what has gone (the owner, 16 November 2026).
+ * collection — `ends_by` — and the platform works out when each entry is
+ * over, says so in the panel and rebuilds at the moment; the door hands the
+ * template `ended` for each entry, and `then: "hide"` takes the past ones off
+ * (the owner, 16 November 2026).
  *
  * What is looked for, in the site's own code, comments left out: a
  * comparison — `<`, `<=`, `>`, `>=` — with the clock on one side and an
@@ -255,9 +256,9 @@ export function dateHides(files, schema) {
       const names = (list) => list.map((name) => `"${name}"`).join(' or ');
       const says =
         open.length > 0
-          ? `\`${one.said}\` compares an entry's date (${one.key}) with the clock to choose what is shown — a build freezes that comparison until the next build, a visitor sees what is over and the panel, which cannot know, shows it as on the site. ` +
-            `Declare ends_by on ${names(open)} ("ends_by": {"date": "${one.key}", "zone": "Europe/Zurich"}, a time and "after" where it ends later) and read the entries the door gives (site.entries(${JSON.stringify(open[0])}))`
-          : `\`${one.said}\` compares an entry's date (${one.key}) with the clock, and ${names(going)} goes by that date already (ends_by): the door leaves out what has gone and the platform rebuilds at the moment — read the entries it gives and drop the comparison, which a build freezes`;
+          ? `\`${one.said}\` compares an entry's date (${one.key}) with the clock to choose what is shown — a build freezes that comparison until the next build, a visitor sees what is over as ahead and the panel cannot know. ` +
+            `Declare ends_by on ${names(open)} ("ends_by": {"date": "${one.key}", "zone": "Europe/Zurich", "then": "keep"} — "keep" to keep past ones as an archive, "hide" to take them off; a time and "after" where it ends later) and read \`ended\` from the entries the door gives (site.entries(${JSON.stringify(open[0])}))`
+          : `\`${one.said}\` compares an entry's date (${one.key}) with the clock, and ${names(going)} is over by that date already (ends_by): the platform rebuilds at the moment — read \`ended\` from the entries the door gives and drop the comparison, which a build freezes`;
       out.push({ code: W.DATE_HIDES, path: `${path}:${one.line}`, says });
     }
   }
