@@ -283,10 +283,15 @@ try {
       check(new RegExp(`<a href="${other}" hreflang="[^"]*"`).test(cart), `${where}'s language switch does not go to ${other}`);
     }
     check(!sitemap.includes('/cart'), 'sitemap.xml names the cart');
-    // The header links to it, in each language, as the site's own navigation does.
-    for (const [address, href, label] of [['', '/cart', 'Warenkorb'], ['en', '/en/cart', 'Cart']]) {
+    // The header links to it, and to the products, in each language, as the site's own navigation does.
+    for (const [address, key, href, label] of [
+      ['', 'nav-cart', '/cart', 'Warenkorb'],
+      ['en', 'nav-cart', '/en/cart', 'Cart'],
+      ['', 'nav-shop', '/shop', 'Shop'],
+      ['en', 'nav-shop', '/en/shop', 'Shop'],
+    ]) {
       const home = page(address);
-      check(new RegExp(`<a href="${href}"[^>]*data-jtk-path="shared:blocks\\[header\\]\\.nav\\[nav-cart\\]\\.label"[^>]*>${label}</a>`).test(home), `/${address} has no link to ${href} in the header, annotated, saying «${label}»`);
+      check(new RegExp(`<a href="${href}"[^>]*data-jtk-path="shared:blocks\\[header\\]\\.nav\\[${key}\\]\\.label"[^>]*>${label}</a>`).test(home), `/${address} has no link to ${href} in the header, annotated, saying «${label}»`);
     }
   }
   settle('the cart\'s page');

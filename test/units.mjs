@@ -281,8 +281,8 @@ try {
     const run = ok(copied, 'schema', '--emit-only');
     return { schema: jsonOf(copied, 'jtk/schema.json'), findings: judgeSchema(read(copied, 'jtk/schema.json')), run };
   };
-  /** The header's links to the cart, in the file given. */
-  const cartLinks = (site, file) => jsonOf(site, file).blocks.find((one) => one.type === 'header').nav.filter((one) => one.link === '/cart');
+  /** The header's links to the shop's listing and to the cart, in the file given. */
+  const cartLinks = (site, file) => jsonOf(site, file).blocks.find((one) => one.type === 'header').nav.filter((one) => one.link === '/shop' || one.link === '/cart');
   const shopAt = copy(base, 'shop');
   {
     // The kit laid over a fresh site in German: its words the site's, the country the locale's.
@@ -300,23 +300,29 @@ try {
     const { schema, findings } = judged(shopAt);
     if (schema.modules?.shop?.products !== 'products') fail(`6 · the schema does not bind the products role: ${JSON.stringify(schema.modules)}`);
     if (findings.length > 0) fail(`6 · the platform's judge finds the shop's schema wanting: ${JSON.stringify(findings)}`);
-    // The header's link to the cart: given once, in the site's words and in the English overlay's.
+    // The header's links to the products and to the cart, side by side: each given once, in the site's
+    // words and in the English overlay's. Without the first nothing led to the products (16 November 2026).
     const links = (site) => cartLinks(site, 'jtk/shared.json');
-    if (JSON.stringify(links(shopAt)) !== JSON.stringify([{ _key: 'nav-cart', label: 'Warenkorb', link: '/cart' }])) fail(`6 · add shop did not give the header one link to the cart, in German: ${JSON.stringify(links(shopAt))}`);
-    const overlaid = jsonOf(shopAt, 'jtk/shared.en.json').blocks.find((one) => one._key === jsonOf(shopAt, 'jtk/shared.json').blocks.find((each) => each.type === 'header')._key);
-    if (JSON.stringify(overlaid?.nav?.filter((one) => one._key === 'nav-cart')) !== JSON.stringify([{ _key: 'nav-cart', label: 'Cart' }])) fail(`6 · the English overlay does not say the cart's link in English: ${JSON.stringify(overlaid)}`);
+    const both = [{ _key: 'nav-shop', label: 'Shop', link: '/shop' }, { _key: 'nav-cart', label: 'Warenkorb', link: '/cart' }];
+    if (JSON.stringify(links(shopAt)) !== JSON.stringify(both)) fail(`6 · add shop did not give the header one link to the products and one to the cart, in German: ${JSON.stringify(links(shopAt))}`);
+    const header = jsonOf(shopAt, 'jtk/shared.json').blocks.find((one) => one.type === 'header');
+    const shopAtNav = header.nav.findIndex((one) => one._key === 'nav-shop');
+    if (header.nav[shopAtNav + 1]?._key !== 'nav-cart') fail(`6 · the products' link and the cart's are not side by side: ${JSON.stringify(header.nav)}`);
+    const overlaid = jsonOf(shopAt, 'jtk/shared.en.json').blocks.find((one) => one._key === header._key);
+    if (JSON.stringify(overlaid?.nav?.filter((one) => one._key === 'nav-shop' || one._key === 'nav-cart')) !== JSON.stringify([{ _key: 'nav-shop', label: 'Shop' }, { _key: 'nav-cart', label: 'Cart' }])) fail(`6 · the English overlay does not say the products' and the cart's links in English: ${JSON.stringify(overlaid)}`);
     const twice = copy(shopAt, 'shop-twice');
     const again = ok(twice, 'add', 'shop', '--kit', shopFile);
     if (!again.stdout.includes('already there')) fail(`6 · add shop twice did not say it is already there:\n${again.stdout}`);
     same(twice, shopAt, 'add shop twice');
-    if (links(twice).length !== 1) fail(`6 · add shop twice gave the header another link to the cart: ${JSON.stringify(links(twice))}`);
+    if (links(twice).length !== 2) fail(`6 · add shop twice gave the header another link to the products or the cart: ${JSON.stringify(links(twice))}`);
     // A site whose header links to /cart already has its own: not given a second.
     const owned = copy(base, 'shop-own-link');
     const shared = jsonOf(owned, 'jtk/shared.json');
     shared.blocks.find((one) => one.type === 'header').nav.push({ _key: 'my-cart', label: 'Korb', link: '/cart' });
     writeFileSync(join(owned, 'jtk/shared.json'), `${JSON.stringify(shared, null, 2)}\n`);
     ok(owned, 'add', 'shop', '--kit', shopFile);
-    if (JSON.stringify(links(owned)) !== JSON.stringify([{ _key: 'my-cart', label: 'Korb', link: '/cart' }])) fail(`6 · add shop gave a second link to the cart to a header that had its own: ${JSON.stringify(links(owned))}`);
+    // It is given the products' link still, before its own cart's.
+    if (JSON.stringify(links(owned)) !== JSON.stringify([{ _key: 'nav-shop', label: 'Shop', link: '/shop' }, { _key: 'my-cart', label: 'Korb', link: '/cart' }])) fail(`6 · add shop gave a second link to the cart to a header that had its own, or no link to the products: ${JSON.stringify(links(owned))}`);
     // One that is there is not asked of the platform again.
     const offline = ok(copy(shopAt, 'shop-offline'), 'add', 'shop', '--api', 'http://127.0.0.1:1');
     if (!offline.stdout.includes('already there')) fail(`6 · add shop on a site that has it asked the platform:\n${offline.stdout}`);
@@ -405,7 +411,7 @@ try {
     const site = copy(shopAt, 'shop-out');
     const run = ok(site, 'remove', 'shop');
     if (!run.stdout.includes('file(s) changed')) fail(`6 · remove shop said nothing:\n${run.stdout}`);
-    if (cartLinks(site, 'jtk/shared.json').length !== 0 || /nav-cart/.test(read(site, 'jtk/shared.en.json'))) fail(`6 · remove shop left the header's link to the cart, or its English words:\n${run.stdout}`);
+    if (cartLinks(site, 'jtk/shared.json').length !== 0 || /nav-cart|nav-shop/.test(read(site, 'jtk/shared.en.json'))) fail(`6 · remove shop left the header's link to the products or the cart, or their English words:\n${run.stdout}`);
     same(site, base, 'add shop then remove shop');
     const again = ok(site, 'remove', 'shop');
     if (!again.stdout.includes('not there')) fail(`6 · remove shop twice did something:\n${again.stdout}`);
