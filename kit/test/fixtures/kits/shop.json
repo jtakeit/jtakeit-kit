@@ -7,7 +7,7 @@
   "about": "A shop: products with options, variants and customizations, stocked by SKU and sent by the owner's zones and rates.",
   "ask": [
     "the catalogue: what it sells and roughly how many products — a spreadsheet, or a WooCommerce or Shopify export, with the SKUs and the stock it already has",
-    "variants and customizations: whether any product has variants (sizes, colours) or customizations (a name on a tag) — and only then *Advanced* is opened",
+    "variants and customizations: whether any product has variants (sizes, colours) or customizations (a name on a tag) — customizations are written only for the products that have them",
     "the country it sends from: the zone the kit starts with — from the address; say it back rather than asking",
     "where it ships, and each method's price: flat or by weight, and free above a total",
     "pick-up: whether the business offers it, and where to collect",

@@ -103,7 +103,8 @@ function trimmed(key, most) {
  * A key made from a label (contract 3's `_key`): "Size" → `size`, "Extra
  * large" → `extra-large`, letters with their accents taken off and anything
  * else a dash. It starts with a letter, so a label of digits — a shoe's 42 —
- * is put after `fallback` (`x42`), and a label with nothing a key can hold — a
+ * is put after `fallback` (`v42` for a value, `o42` for an option, as the
+ * callers give them), and a label with nothing a key can hold — a
  * Cyrillic one — is `fallback` itself. A key already `taken` gets `-2`, `-3` …,
  * cut so the number fits in 32.
  *
