@@ -109,6 +109,10 @@ public/            favicons, the og image, clips
 - **Online booking** — [booking.md](booking.md): the
   platform's diary drawn by the page — six addresses, a `BookingForm.astro`
   to copy, and why no free time is ever computed in the repository
+- **A shop** — [shop.md](shop.md): the platform's shop on the page — four
+  addresses, five components to copy (a product, the cart, the checkout, the
+  page after payment, a listing), `jtk add shop` and `jtk import products`, and
+  why no price is ever worked out in the repository
 - **Photos, and how they are printed** — [photos.md](photos.md)
 - **A site in more than one language** — [languages.md](languages.md):
   the address that pairs translations, and the `hreflang` that stops them competing

@@ -15,6 +15,10 @@ npx @jtakeit/astro add blog                             the journal: /blog, two 
 npx @jtakeit/astro add booking --kind <kind> [--api <url>]
                                                         a booking kit of the platform's, mapped onto
                                                         the example (below); --kit <file> for a file
+npx @jtakeit/astro add shop [--kit <file>] [--country <XX>] [--api <url>]
+                                                        the platform's shop kit: the products collection,
+                                                        a zone in the site's country, two methods to
+                                                        price, and the storefront to copy (below)
 npx @jtakeit/astro remove <section|module…> [--force]
 npx @jtakeit/astro create <slug> --without team,testimonials --blog --kit salon
 ```
@@ -27,8 +31,9 @@ change. `jtk create` commits, as always.
 
 `create --blog` is `create` then `add blog`; `create --kit <kind>` (or `--kind`)
 is `create` then `add booking --kind <kind>`. One implementation, two roads: the
-kit's tests hold them equal, ids aside. `shop` and `events` are refused with the
-page that says when.
+kit's tests hold them equal, ids aside. `shop` is added, never created: a salon
+may add it beside its booking kit, and `jtk create` makes none. `events` is
+refused with the page that says when.
 
 ## What a unit owns
 
@@ -99,6 +104,41 @@ as `jtkit apply` (`@jtakeit/kit/kits`, `kitIn3`), and mapped onto the example:
 Every element the kit adds to `blocks.ts` carries a line saying so;
 `remove booking` takes those, puts the example's service and team back, moves the
 hours back into the shared text, and leaves the price list.
+
+## `add shop`
+
+The shop is the platform's second module, and the kit is the platform's too
+(`GET /v1/kits/shop`; `--kit <file>` for a file, `--api` or `JTK_API_URL` for
+another platform than `https://api.jtakeit.com`). Unlike a booking kit it is
+**laid over the site as it is**, not mapped onto the example's sections: it adds
+and takes away its own and changes none of the site's.
+
+- **The declaration.** The kit's `product` type, its `products` collection (pages
+  at `/shop/<slug>`, listing at `/shop`) and `shop: { products: 'products' }` in
+  `MODULES`, each under a line saying they are the kit's and from then on yours.
+  A type or a collection of the site's by the kit's names is refused, and nothing
+  is written.
+- **The settings.** `jtk/modules/shop.json` with one zone, `home`, whose country is
+  `--country`, else the region of the site's locale (`de-CH` is `CH`), else the
+  shared contacts' country; and two methods in it, `post` and `pickup`, with no
+  price: the owner's rates are a fact only the business has. A site that has zones
+  of its own keeps them. `kit` and `kit_version` record where they came from.
+- **The storefront.** `src/components/shop/` — the product, the cart, the checkout,
+  the page after payment and the listing — and the three pages that draw them
+  (`cart`, `order` and `shop/index` under `src/pages/[...lang]/`), to copy and
+  make the site's own; and «Cart» in the header's menu. A file the site has is
+  left as it is. [shop.md](shop.md) says what each is.
+- **No file of the scaffold's is changed.** The entry page and `jtakeit-meta.mjs`
+  are every site's; a site laid out before the shop is told the lines to add —
+  the two that hand a product to `Product.astro`, and `devShop`, which answers the
+  shop's addresses on localhost.
+
+No product is written and no stock: the products are the business's, by hand or
+by `import products` ([shop.md](shop.md#jtk-import-products)), and their stock is
+the platform's, set with `set_stock`. What the kit asks of the business is
+printed. `remove shop` takes the kit's elements out by the line above each,
+refuses while a product is there, keeps the settings where they hold a rate or a
+second country and says so, and leaves a storefront file the site changed.
 
 ## The photographs
 

@@ -128,6 +128,69 @@ drawn without a name.
 `@jtakeit/kit/lead.css` is the legible minimum; keep `.trap` off-screen
 whatever you restyle.
 
+## The storefront
+
+The platform's shop, on the page: what is left of each variant, a cart priced,
+the checkout and the order after payment — `shop/1`, four addresses on the
+site's own host (the platform's `jtakeit:///reference/shop-protocol.md`, and
+`jtakeit:///guides/shop-on-the-site.md` for the site). Five pieces, each an
+element that wraps the markup the site writes:
+
+| piece | element | its root hook |
+| --- | --- | --- |
+| a product's page | `<jtk-product>` — `@jtakeit/kit/elements/shop-product` | `form[data-product]` |
+| the cart | `<jtk-cart>` — `…/elements/shop-cart` | `[data-cart]` |
+| the checkout step | `<jtk-checkout>` — `…/elements/shop-checkout` | `form[data-checkout]` |
+| the page after payment | `<jtk-order>` — `…/elements/shop-order` | `[data-order]` |
+| a listing | `<jtk-listing>` — `…/elements/shop-listing` | `[data-listing]` |
+
+```html
+<script type="module">import '@jtakeit/kit/elements/shop-product';</script>
+```
+
+There is no markup to render: **the markup is the site's.** `@jtakeit/astro`'s
+`jtk add shop` lays five components to copy and dress, and a site on another
+generator writes its own from them. Each element finds everything by a hook — a
+`data-*` attribute or a control's `name`, never a class — and the list, with what
+each is for, is `@jtakeit/kit/shop/hooks` (`PRODUCT`, `CART`, `CHECKOUT`,
+`ORDER`, `LISTING`, each `{ always, said }`): the *always* hooks the piece cannot
+work without, said in the console where one is missing; the *said*, where the
+element writes what happened, may be left out. The platform's `preflight` reads
+none of them.
+
+```js
+import { productFacts } from '@jtakeit/kit/shop';          // a product's options, variants and questions, from the door's entry
+import { shopWordsFor } from '@jtakeit/kit/shop/words';    // what every piece says, in eight languages
+
+const facts = productFacts(entry, site.currency);          // carried on the form as data-facts
+const words = shopWordsFor('de-CH');                        // German; English for a language the kit has not got
+```
+
+What the elements hold to, and the markup does not decide:
+
+- **Every request says `X-Jtk-Shop: 1`** (`SHOP_PROTOCOL` in
+  `@jtakeit/kit/elements/shop-wire`) and is never cached.
+- **The cart is the browser's and holds no price.** `localStorage["jtk:cart:" + api]`,
+  the protocol's lines `{ product, variant, qty, answers }` and the country and
+  the method, with no title and no price: what the cart shows is the last
+  `POST /api/shipping`, so one kept for a week says nothing stale. A preview's
+  `/p/<slug>/api/` is a cart of its own.
+- **A press of *Pay* is one order**, however often it is retried: it carries one
+  `attempt` for the same body, and a new body is a new press.
+- **A price is never worked out on the page.** The checkout sends the `total` it
+  was shown, and the platform holds it to that.
+- **The look is the site's.** There is no stylesheet to import: the rules a piece's
+  behaviour cannot work without (`[hidden]`, a focus ring where the site draws
+  none) are put on the page by the element.
+
+On localhost `@jtakeit/kit/devshop` answers the four addresses from the site's
+own files, as `devDiary` does for the booking form: `server.middlewares.use('/api',
+devShop(process.cwd()))`. Every variant on sale of a counted product is in stock
+and none says how many are left; there is no VAT and no Stripe — a checkout is
+paid on a page of its own that charges nothing. `preflight` with `try_order` is
+the test of the real shop. [`docs/shop.md` of `@jtakeit/astro`](https://github.com/jtakeit/jtakeit-kit/blob/main/docs/shop.md)
+says it whole, with `jtk import products`.
+
 ## The content, read through one door
 
 `@jtakeit/kit/content` is the one place a site reads its `jtk/` files: which
@@ -331,6 +394,22 @@ a build.
   on a whole price, no sign where the site has not said its currency.
 - `@jtakeit/kit/booking/words` — the form's words per language, the salon's
   and the letting business's by the day, before the platform corrects them.
+- `@jtakeit/kit/shop` — a product's facts for its page, read through the door:
+  `productFacts`, `fromPrice`, `variantFor`, `valueStates`, `answersOf`.
+- `@jtakeit/kit/shop/words` — the storefront's words per language, English for
+  any other (`shopWordsFor`); `@jtakeit/kit/shop/hooks` — what each element reads.
+- `@jtakeit/kit/shop/cart`, `/checkout`, `/order`, `/listing` — the pure part of
+  each piece: the cart's lines and how a shipping answer is read into what the
+  page shows, a press kept across its retries, what the page after payment does
+  for each state, which tiles to hide. Tested under Node; the elements are their
+  glue.
+- `@jtakeit/kit/shop/skus` — the SKUs and keys the platform makes for a product
+  (`skuBase`, `freeSku`, `keyOf`), a copy held to the platform's own cases;
+  `jtk import products` makes the ones a sheet leaves out with them.
+- `@jtakeit/kit/devshop` — the shop on the dev server, from the site's own files.
+- `@jtakeit/kit/content/identity` — the ids and keys of contract 3's documents,
+  found and minted (`uuid7`, `newKey`, `mint`); a writer of entries — a kit laid
+  out, an upgrade, an import — names them as this does.
 - `@jtakeit/kit/codes` — the schema's error codes, a copy of the platform's
   table that `--judge` keeps honest.
 

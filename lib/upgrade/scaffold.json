@@ -35,7 +35,8 @@
   "0.14.0",
   "0.15.0",
   "0.16.0",
-  "0.17.0"
+  "0.17.0",
+  "0.18.0"
  ],
  "files": {
   "figures.mjs": {
@@ -65,7 +66,8 @@
     "0.14.0",
     "0.15.0",
     "0.16.0",
-    "0.17.0"
+    "0.17.0",
+    "0.18.0"
    ]
   },
   "jtakeit-meta.mjs": {
@@ -110,6 +112,9 @@
    ],
    "7b2fd24424c65575f7d396fdf60c9e5c8e2f68da81ad7e24aa82dc1d1eef8fd9": [
     "0.17.0"
+   ],
+   "a5df1771b014d99bdbeaeb57431e54c8b5b5e555188220d79a65356f1cbc5cba": [
+    "0.18.0"
    ]
   },
   "markdown.mjs": {
@@ -137,7 +142,8 @@
     "0.14.0",
     "0.15.0",
     "0.16.0",
-    "0.17.0"
+    "0.17.0",
+    "0.18.0"
    ]
   },
   "public/_jtk/booking.css": {
@@ -156,7 +162,8 @@
     "0.14.0",
     "0.15.0",
     "0.16.0",
-    "0.17.0"
+    "0.17.0",
+    "0.18.0"
    ]
   },
   "specimens.mjs": {
@@ -220,6 +227,9 @@
    ],
    "761752de9bb01b2c0884b666eb6fc1838f079cc9772b85f547ffbe6a95f88a40": [
     "0.17.0"
+   ],
+   "2a51fd6c20a610b1157c615f71efb55cb59f1c71dfdcde0ee7056ae1e47a777e": [
+    "0.18.0"
    ]
   },
   "src/components/BookingForm.astro": {
@@ -260,6 +270,9 @@
    ],
    "957880332d7d1a997f7679c9e2869d5ddbdefa0029dc14773295e09134ac7446": [
     "0.17.0"
+   ],
+   "23bcf37945ead97dfb5f90cb098c4fea270e49eb28af53103537501466439d1a": [
+    "0.18.0"
    ]
   },
   "src/components/Clip.astro": {
@@ -289,7 +302,8 @@
     "0.14.0",
     "0.15.0",
     "0.16.0",
-    "0.17.0"
+    "0.17.0",
+    "0.18.0"
    ]
   },
   "src/components/EntryCard.astro": {
@@ -308,6 +322,9 @@
    ],
    "112f00405983f631fca54c4ed122908ea0ec14a5455f9d1ccd978a38be3b741e": [
     "0.17.0"
+   ],
+   "5d145c1521aa36a6aea61da1ab6673d4479a9453ac61f335785d6399c4a50068": [
+    "0.18.0"
    ]
   },
   "src/components/EntryListing.astro": {
@@ -326,6 +343,9 @@
    ],
    "4290bcfd354cedef82ef212eeb23c9e79e2ef1618b5120f0f7a3dbf35327287d": [
     "0.17.0"
+   ],
+   "443b6b8871bc6018d28aaf1b8d6e9e5380fa25952ddb50a86053ebf4eb0376e5": [
+    "0.18.0"
    ]
   },
   "src/components/Hero.astro": {
@@ -360,6 +380,9 @@
    ],
    "1c3716129cd158ecd212265da59a6ee6d9712f2f86f304cb4df8cd9778410cc0": [
     "0.17.0"
+   ],
+   "f1e6ec91d3ccf6a52e57ae46e0720f7a7d295caa29246b7df99d38c2942f176a": [
+    "0.18.0"
    ]
   },
   "src/components/Languages.astro": {
@@ -381,6 +404,9 @@
    ],
    "6a1c588e362eabb6424bb329bc5688509924ff8e089d11de65c72db674f4e243": [
     "0.17.0"
+   ],
+   "bea2f6c3f64b3b4a2ee017ee4ea9238eef31422d5029bfe5b49b35ea431c9d72": [
+    "0.18.0"
    ]
   },
   "src/components/LeadForm.astro": {
@@ -421,6 +447,9 @@
    ],
    "dc5301ff36a6ee3408cf885d5e5871fd882c09beb52f6f4e7b223abb5e1ef7bf": [
     "0.17.0"
+   ],
+   "be8b5d67dae7dced98594970633464bb7dc695243c1265b69c8b37a1aec4535f": [
+    "0.18.0"
    ]
   },
   "src/components/OpeningHours.astro": {
@@ -452,7 +481,8 @@
     "0.16.0"
    ],
    "15247b8cea2a71c9a18c17a30a2038468f10a3ed0418a89da7b6b4fed68c0bde": [
-    "0.17.0"
+    "0.17.0",
+    "0.18.0"
    ]
   },
   "src/components/Pile.astro": {
@@ -482,7 +512,8 @@
     "0.14.0",
     "0.15.0",
     "0.16.0",
-    "0.17.0"
+    "0.17.0",
+    "0.18.0"
    ]
   },
   "src/components/Shot.astro": {
@@ -511,6 +542,9 @@
     "0.15.0",
     "0.16.0",
     "0.17.0"
+   ],
+   "d304598fbce440104242a957b0425302a3574c988c29af924824334c6fbbc173": [
+    "0.18.0"
    ]
   },
   "src/components/gallery/Deck.astro": {
@@ -525,7 +559,8 @@
     "0.14.0",
     "0.15.0",
     "0.16.0",
-    "0.17.0"
+    "0.17.0",
+    "0.18.0"
    ]
   },
   "src/components/gallery/Gallery.astro": {
@@ -559,7 +594,8 @@
     "0.14.0",
     "0.15.0",
     "0.16.0",
-    "0.17.0"
+    "0.17.0",
+    "0.18.0"
    ]
   },
   "src/components/gallery/Morph.astro": {
@@ -572,7 +608,8 @@
     "0.14.0",
     "0.15.0",
     "0.16.0",
-    "0.17.0"
+    "0.17.0",
+    "0.18.0"
    ]
   },
   "src/components/gallery/Reel.astro": {
@@ -585,7 +622,8 @@
     "0.14.0",
     "0.15.0",
     "0.16.0",
-    "0.17.0"
+    "0.17.0",
+    "0.18.0"
    ]
   },
   "src/components/gallery/Sphere.astro": {
@@ -596,7 +634,8 @@
     "0.14.0",
     "0.15.0",
     "0.16.0",
-    "0.17.0"
+    "0.17.0",
+    "0.18.0"
    ]
   },
   "src/components/gallery/Stage.astro": {
@@ -609,7 +648,8 @@
     "0.14.0",
     "0.15.0",
     "0.16.0",
-    "0.17.0"
+    "0.17.0",
+    "0.18.0"
    ]
   },
   "src/components/gallery/galleries.ts": {
@@ -641,7 +681,8 @@
     "0.14.0",
     "0.15.0",
     "0.16.0",
-    "0.17.0"
+    "0.17.0",
+    "0.18.0"
    ]
   },
   "src/components/motion/HeroField.astro": {
@@ -669,7 +710,8 @@
     "0.14.0",
     "0.15.0",
     "0.16.0",
-    "0.17.0"
+    "0.17.0",
+    "0.18.0"
    ]
   },
   "src/components/motion/fields.ts": {
@@ -697,7 +739,8 @@
     "0.14.0",
     "0.15.0",
     "0.16.0",
-    "0.17.0"
+    "0.17.0",
+    "0.18.0"
    ]
   },
   "src/components/surface/Pattern.astro": {
@@ -727,7 +770,8 @@
     "0.14.0",
     "0.15.0",
     "0.16.0",
-    "0.17.0"
+    "0.17.0",
+    "0.18.0"
    ]
   },
   "src/components/surface/patterns.ts": {
@@ -757,7 +801,8 @@
     "0.14.0",
     "0.15.0",
     "0.16.0",
-    "0.17.0"
+    "0.17.0",
+    "0.18.0"
    ]
   },
   "src/content.config.ts": {
@@ -787,7 +832,8 @@
     "0.16.0"
    ],
    "47380573abef668a357c0a5b8f1b0d87058c427b61bdd9db6ade408d7a473b95": [
-    "0.17.0"
+    "0.17.0",
+    "0.18.0"
    ]
   },
   "src/copy/index.ts": {
@@ -809,6 +855,9 @@
    ],
    "8c4e1347718e3c757dbb5cf8c63a8d614f4ca62e4d3a78a83eca121d9427fccd": [
     "0.17.0"
+   ],
+   "82ec841e8a280732196173388debeadd3f3734cbf4015a560eb565ae516e52a5": [
+    "0.18.0"
    ]
   },
   "src/copy/make.ts": {
@@ -834,6 +883,9 @@
    ],
    "aa7573014131c531fbb2911c847c9b5800da6aec2128f5d626f56b58bff4cb8a": [
     "0.17.0"
+   ],
+   "5cfac042075a798f75a4c708884f8742b10172fc7b6adb0c2a9d5601f6fee9e3": [
+    "0.18.0"
    ]
   },
   "src/layouts/Layout.astro": {
@@ -874,6 +926,9 @@
    ],
    "185a13393cc97fb46599529f4b01bc9258a949a0da820d74793ab04abb5ba1ce": [
     "0.17.0"
+   ],
+   "8067e87864d13c98807b8ef5a3c5401f661389e8f72fc05b01b3b7cfed55ed4f": [
+    "0.18.0"
    ]
   },
   "src/lib/alive.ts": {
@@ -903,7 +958,8 @@
     "0.14.0",
     "0.15.0",
     "0.16.0",
-    "0.17.0"
+    "0.17.0",
+    "0.18.0"
    ]
   },
   "src/lib/entries.ts": {
@@ -942,6 +998,9 @@
    ],
    "28249c9e11e820b875bbf6317cc60ad662535346d50ef766258f1c9404e23d44": [
     "0.17.0"
+   ],
+   "5e0822a199244697806b43b64f6d3dca346df4f2f915636319bee621a71cc60f": [
+    "0.18.0"
    ]
   },
   "src/lib/entryLoader.ts": {
@@ -980,6 +1039,9 @@
    ],
    "ba2f0ccda7f1f444280898471f20758e975c5183b908c17743666ec986161507": [
     "0.17.0"
+   ],
+   "dac0a3c485443f74cb4c82f731a5baa7cf6ee5cbf40139996832b4fe2a1e1deb": [
+    "0.18.0"
    ]
   },
   "src/lib/groups.ts": {
@@ -1016,6 +1078,9 @@
     "0.15.0",
     "0.16.0",
     "0.17.0"
+   ],
+   "7198cc8d3d0cb943deaf1b8ebf5eac015fd70d3ae34dd14d18c863e65db70866": [
+    "0.18.0"
    ]
   },
   "src/lib/listing.ts": {
@@ -1051,7 +1116,8 @@
     "0.16.0"
    ],
    "8a016cd1ddc4e78464619005e8a57cf45790d7e16c4253b6cf2a84df3b4b373b": [
-    "0.17.0"
+    "0.17.0",
+    "0.18.0"
    ]
   },
   "src/lib/money.ts": {
@@ -1103,7 +1169,8 @@
     "0.14.0",
     "0.15.0",
     "0.16.0",
-    "0.17.0"
+    "0.17.0",
+    "0.18.0"
    ]
   },
   "src/lib/page.ts": {
@@ -1139,6 +1206,11 @@
     "0.16.0"
    ]
   },
+  "src/lib/pages.ts": {
+   "aa533590cde99a88d7554411d62347325d6acbfdd7bf487eb0b72050cf68bf44": [
+    "0.18.0"
+   ]
+  },
   "src/lib/photos.ts": {
    "d3089a39e7abf7684af291d4e7156bcd4bdd7b16e82f5294db6945fc0eb1ee0d": [
     "0.1.0",
@@ -1165,6 +1237,9 @@
     "0.15.0",
     "0.16.0",
     "0.17.0"
+   ],
+   "f862698c7c7dd678fb49b0473e827b466e36bc964b11ac291d30a4200ca7c687": [
+    "0.18.0"
    ]
   },
   "src/lib/schedule.ts": {
@@ -1180,6 +1255,11 @@
     "0.14.0",
     "0.15.0",
     "0.16.0"
+   ]
+  },
+  "src/lib/sections.ts": {
+   "803bc7e9fc3d60de3c5471a835286ea8b2bcb1b4f407332dcb3c38062727f630": [
+    "0.18.0"
    ]
   },
   "src/lib/site.ts": {
@@ -1201,6 +1281,9 @@
    ],
    "599b07ab6dbe64c3b4deda6858ddac805ecfb8e882692e4908ddd3aa16255cbf": [
     "0.17.0"
+   ],
+   "0a8298af8f9fb1f1504d81e9e0345b39c3f8137d0063d8321d9c0ef9b3749b69": [
+    "0.18.0"
    ]
   },
   "src/lib/under.ts": {
@@ -1231,6 +1314,9 @@
     "0.15.0",
     "0.16.0",
     "0.17.0"
+   ],
+   "c992c16000d8c61649da8de3152cd165fc0dd7fb4fab1f37f904fadbfbf9b18e": [
+    "0.18.0"
    ]
   },
   "src/lib/uploads.ts": {
@@ -1261,6 +1347,29 @@
     "0.15.0",
     "0.16.0",
     "0.17.0"
+   ],
+   "0d0f74bf7b136de87b9e35c1f27a3d24faf387f11077efad01ee01b8768cf4ed": [
+    "0.18.0"
+   ]
+  },
+  "src/live/Route.astro": {
+   "43901e7a273a8a3ecf0be60341aba9801b4aa5e21c3f1644d917c817480157a1": [
+    "0.18.0"
+   ]
+  },
+  "src/live/build.d.ts": {
+   "9b9d400d0eb94bea4f728b2281d5e5daaf05dbf0d6999edc71e1f0cef1335e32": [
+    "0.18.0"
+   ]
+  },
+  "src/live/images.ts": {
+   "f64264560f4fd75b9cb1dbf7f844699581072e99f9d59bcff1d2f31d78fa9691": [
+    "0.18.0"
+   ]
+  },
+  "src/live/middleware.ts": {
+   "3bbd1c2a270fe943e12721eb77fad3107554e18532726907ce05fa76d378fb85": [
+    "0.18.0"
    ]
   },
   "src/pages/[...entry].astro": {
@@ -1301,6 +1410,9 @@
    ],
    "dd8ddf31c442a4299bc77177cb542b5ea9045a44c08d4e3df23e9f86439c26ed": [
     "0.17.0"
+   ],
+   "3675c96cfebfce8fbb9d9bb071518ac065e0271806b08c288aaaa39e3135851b": [
+    "0.18.0"
    ]
   },
   "src/pages/[...feed].xml.ts": {
@@ -1335,6 +1447,9 @@
    ],
    "efbf9366edebd8b3c9c67eb50fccd2431a5137bf0cdd594596a2ad350fdbe974": [
     "0.17.0"
+   ],
+   "072dfaf4b6792f85b79a5e22cc20a1fe7359246eecf72e4d86e823bf86b6d8eb": [
+    "0.18.0"
    ]
   },
   "src/pages/[...lang]/blog/index.astro": {
@@ -1358,6 +1473,9 @@
    ],
    "6a92a0c2c8649a2bbeaa540c08c8f1bbb0a05560fdfacaa5ce3050edb65c0794": [
     "0.17.0"
+   ],
+   "dc5e7ba68ca907f4e0b935a2731d6a7d74bc8c49e005873dca2d3c10fb41d30c": [
+    "0.18.0"
    ]
   },
   "src/pages/[...lang]/index.astro": {
@@ -1381,6 +1499,9 @@
    ],
    "0cadc865624f4458d378745d53073331147e33fd5db6c15b43697d1f964e8fbb": [
     "0.17.0"
+   ],
+   "dff4f444c1b5447f4c21846b4544fd54345f2fefd080b62397b4552f6ab94490": [
+    "0.18.0"
    ]
   },
   "src/pages/[...lang]/privacy.astro": {
@@ -1408,6 +1529,9 @@
    ],
    "da836746818b024d0b322fce444199d0d90656dde34717cf559c593e6e6fc49f": [
     "0.17.0"
+   ],
+   "ec6b52dcf62e22d70b431cd94dc3293424835017bebaf93b998a59cef7827baa": [
+    "0.18.0"
    ]
   },
   "src/pages/[...listing].astro": {
@@ -1437,6 +1561,9 @@
    ],
    "78af3dfb65bc5d96200b407a9135b28c3f3dd0fcfcc2520a01ed4a51a0194fc5": [
     "0.17.0"
+   ],
+   "1cdedf6cb6b3efbabf750588f2a0b170ce7db13fa39c74933d7769e5bd94e56a": [
+    "0.18.0"
    ]
   },
   "src/pages/[...listing]/page/[page].astro": {
@@ -1455,6 +1582,9 @@
    ],
    "b3e15e861e2cb937b72151815b1001267539d4a7a93d0d73d20fe8c4d65b0763": [
     "0.17.0"
+   ],
+   "0199865bfc7928ccf80ae6271eeab132e57fe12da3a52723ccade693e2319c89": [
+    "0.18.0"
    ]
   },
   "src/pages/apple-touch-icon.png.ts": {
@@ -1473,7 +1603,8 @@
     "0.14.0",
     "0.15.0",
     "0.16.0",
-    "0.17.0"
+    "0.17.0",
+    "0.18.0"
    ]
   },
   "src/pages/favicon-32.png.ts": {
@@ -1492,7 +1623,8 @@
     "0.14.0",
     "0.15.0",
     "0.16.0",
-    "0.17.0"
+    "0.17.0",
+    "0.18.0"
    ]
   },
   "src/pages/index.astro": {
@@ -1538,6 +1670,9 @@
    ],
    "dcb504d9dc53a9a3e3bcff83186051de1ebfab74e22c5908ba873cbf71267ae0": [
     "0.17.0"
+   ],
+   "dd524030e19df07405781cd73c9e4b07f0546e0f260ec54519af88814b32ac2c": [
+    "0.18.0"
    ]
   },
   "src/pages/privacy.astro": {
@@ -1578,7 +1713,8 @@
     "0.14.0",
     "0.15.0",
     "0.16.0",
-    "0.17.0"
+    "0.17.0",
+    "0.18.0"
    ]
   },
   "src/pages/sitemap.xml.ts": {
@@ -1611,6 +1747,9 @@
    ],
    "dd7c2c31ef7c4f8a89c01f0433ff039c021d8852f0083799688341135c576815": [
     "0.17.0"
+   ],
+   "4d8837fe6320403e58aad925a5101121c7aad24e7db81122a2d613ff08496c64": [
+    "0.18.0"
    ]
   },
   "tsconfig.json": {
@@ -1638,9 +1777,171 @@
     "0.14.0",
     "0.15.0",
     "0.16.0",
-    "0.17.0"
+    "0.17.0",
+    "0.18.0"
    ]
   }
  },
- "example": {}
+ "example": {
+  "jtk/design.json": {
+   "89aad0512a45a978059584ff213816ec232a95d94b5eab24d007541e8579ae01": [
+    "0.18.0"
+   ]
+  },
+  "src/components/sections/Contact.astro": {
+   "8a6e3807ee16a24f22ad46bab48e474fa6273587bdeb0d45e7e5988397bfb042": [
+    "0.18.0"
+   ]
+  },
+  "src/components/sections/GallerySection.astro": {
+   "262e7edb98660de5111ab16189bce0c8e1976e7f8fa4653be286cbe551b59bf2": [
+    "0.18.0"
+   ]
+  },
+  "src/components/sections/Hero.astro": {
+   "dea191d7e01893a394fc5e020af35e677e139f97d11cef93acfaf442a50908c9": [
+    "0.18.0"
+   ]
+  },
+  "src/components/sections/Intro.astro": {
+   "01506610d8870078a92039961af20731ef534a639541fdaaafd2ee32fb464960": [
+    "0.18.0"
+   ]
+  },
+  "src/components/sections/PostsLatest.astro": {
+   "3d346059a917911970fc0d1a6194fffe8bf75fcd8dc3f839add2adf7880e4e2b": [
+    "0.18.0"
+   ]
+  },
+  "src/components/sections/Questions.astro": {
+   "7ace40922888e481050a86906bb0ab34e5c07f400bbcfd6622296d624a5129ed": [
+    "0.18.0"
+   ]
+  },
+  "src/components/sections/ServicesList.astro": {
+   "4cfcb4d7ceabb832a5358623027c4a07d71f2bc2d23ea93c84b2d85253dc2188": [
+    "0.18.0"
+   ]
+  },
+  "src/components/sections/TeamList.astro": {
+   "4e8612325e87baa04d3fa57938f213750adf673311ea208ea16bc9683b2ea873": [
+    "0.18.0"
+   ]
+  },
+  "src/components/sections/Testimonials.astro": {
+   "2b45e38e0ef67a7633518af9a5af22a5746f26294e24ad5ae1213f6241194aea": [
+    "0.18.0"
+   ]
+  },
+  "src/components/sections/Values.astro": {
+   "25073e5d0ca85c6ed414af2646c10694ff085ec24ba3f59d3f4df186040bb73c": [
+    "0.18.0"
+   ]
+  },
+  "src/components/sections/index.ts": {
+   "7816e91225c7bc83c9209d695694a8f1ef2519adde3601b01dfe34459720e848": [
+    "0.18.0"
+   ]
+  },
+  "src/components/shop/Cart.astro": {
+   "700627b18ad130708731806287bbd5430dd05e9c953168960ebcb324e6e92fb0": [
+    "0.18.0"
+   ]
+  },
+  "src/components/shop/Checkout.astro": {
+   "20acbba75f5a40b1b194915fadf548de1fc6b484b514a12c2c41c6ad67e62c93": [
+    "0.18.0"
+   ]
+  },
+  "src/components/shop/OrderAfter.astro": {
+   "26c08c0d05951ca6c3431f5052500a306f800d67f37de5442875f17c0ff4fe25": [
+    "0.18.0"
+   ]
+  },
+  "src/components/shop/Product.astro": {
+   "15aa615c0d6bdad42e10de980d5adc5dcdb7d5b6ed3548d7ceb441cc87f49b11": [
+    "0.18.0"
+   ]
+  },
+  "src/components/shop/ProductListing.astro": {
+   "4ae6d6d605edd2a1a7491ad13bac28e02978c4e847014288a2776956d8cb4f30": [
+    "0.18.0"
+   ]
+  },
+  "src/components/site/Button.astro": {
+   "0f759d940d826ab20504f8d76c32f32d47cb391a834ed782185b75b3816258bb": [
+    "0.18.0"
+   ]
+  },
+  "src/components/site/Footer.astro": {
+   "1579ea466a46f20f8d1583110bb96927051cfa0892758f0b5f021cee4d7ed3de": [
+    "0.18.0"
+   ]
+  },
+  "src/components/site/Header.astro": {
+   "796fcb7258710bddfee3cc67d8354b22a0b4a419ba4936117369de0f0e44d04f": [
+    "0.18.0"
+   ]
+  },
+  "src/components/site/Hours.astro": {
+   "f77c95d6be495e37bdb4b9d4375bf8fc76df475983a8a7a34713a8a3b0d04bd9": [
+    "0.18.0"
+   ]
+  },
+  "src/components/site/Label.astro": {
+   "ce06e179614b94750c20bbada474be9b576a6cc276b7f48cbb861420ff538445": [
+    "0.18.0"
+   ]
+  },
+  "src/components/site/Look.astro": {
+   "409e0b31a42c8024ad21d7e0aa2dff6350bfb43a4d2bac76dcba550bda7b6bc0": [
+    "0.18.0"
+   ]
+  },
+  "src/components/site/Page.astro": {
+   "a0064576d847a86799f192a9f5b1d4ca33feaab7e22a8971c7a6d3ada6d5e813": [
+    "0.18.0"
+   ]
+  },
+  "src/components/site/words.ts": {
+   "7f4e0439fbe2b33af7c3a9ee4e3870f857dcf63a20831ee883007d32af26993c": [
+    "0.18.0"
+   ]
+  },
+  "src/content/blocks.ts": {
+   "99a7f5e1a576ad5fb22e4ed0c052ae5461ac168be6526a0b556aea1297ff87b2": [
+    "0.18.0"
+   ]
+  },
+  "src/pages/[...lang]/cart.astro": {
+   "a6c35d8d9a71786645e87c9a9b4916c2ff38bcf1af2f1ba874731b6c59e8fdbe": [
+    "0.18.0"
+   ]
+  },
+  "src/pages/[...lang]/imprint.astro": {
+   "5fe8d8a4abb5d5df7786198841ea6149daa26edc04c6d9f6c873e58a5571081b": [
+    "0.18.0"
+   ]
+  },
+  "src/pages/[...lang]/order.astro": {
+   "4aa8d4dd32605f4ee25de2d215d25351c47cdab61ffe676f71a2bbe475c49263": [
+    "0.18.0"
+   ]
+  },
+  "src/pages/[...lang]/shop/index.astro": {
+   "13ac08b22eca086d166f6b3c1c146bf35d92ee1de615ae95d2997f772bcfa819": [
+    "0.18.0"
+   ]
+  },
+  "src/styles/look.css": {
+   "855c6006e5e4f0f0fdbc9d28fc585e967fa898ff3d95f3c1745585b99ea18774": [
+    "0.18.0"
+   ]
+  },
+  "src/styles/tokens.css": {
+   "32e3e1ba1b699be634b29afefa15a209f7ee82b7ce6bc3ece02422c5e31b656a": [
+    "0.18.0"
+   ]
+  }
+ }
 }
