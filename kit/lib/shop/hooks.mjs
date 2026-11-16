@@ -87,9 +87,9 @@ export const CHECKOUT = piece(
     { hook: '[name=postal_code]', says: 'the postal code' },
     { hook: '[name=city]', says: 'the city' },
     { hook: '[data-total]', says: 'the total the buyer is shown and the checkout sends: the subtotal and the method\'s price, as the shop priced the cart when the step was opened' },
-    { hook: '[data-challenge]', says: 'empty and hidden; the anti-bot widget goes here where the host has one' },
+    { hook: '[data-challenge]', says: 'empty and hidden; the anti-bot widget goes here where the host has one, and *Pay* waits for its token' },
     { hook: '[data-checkout-error]', says: 'what is wrong, said; tied to the fields it is about' },
-    { hook: '[data-pay]', says: 'the button that goes to pay, a submit; held (`aria-disabled`) while the shop is asked, and one press of it is one order however often it is retried' },
+    { hook: '[data-pay]', says: 'the button that goes to pay, a submit; held (`aria-disabled`) while the shop is asked — pressed then, it waits for the answer and goes on with it — and one press of it is one order however often it is retried on the same body' },
   ],
   [
     { hook: '[data-abroad]', says: 'hidden; the customs notice, shown for a method that sends across the customs border' },

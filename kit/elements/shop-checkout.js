@@ -10,7 +10,7 @@
  * was shown, keep the press, and act on every answer (`afterAnswer`,
  * lib/shop/checkout.mjs).
  *
- *   POST /api/shipping   { lines, country, locale }    → the cart priced, when the step is opened
+ *   POST /api/shipping   { lines, country, locale }    → the cart priced, when the step is opened and when the cart changes
  *   GET  /api/turnstile                                 → the challenge's key, or "" where the host has none
  *   POST /api/checkout   { lines, …, attempt, … }       → 201 Stripe's page, or the refusal that says why not
  *                        { order }                      → the same, for an order already made
@@ -55,20 +55,32 @@
  *     `POST /api/shipping` again with the stored cart, its country and its
  *     method (Ruling 200): no quote passes from the cart, so the total it says
  *     and sends is what the shop prices at that moment;
+ *   - prices the cart again whenever it changes while the step is open — the
+ *     cart above says so with `jtk:cart`, another tab with `storage` — so the
+ *     total beside *Pay* is always the cart's as shown (Ruling 224); a change
+ *     heard while a press is with the shop is priced once it has answered;
  *   - says that answer's total — the subtotal and the method's price — in
  *     `[data-total]`, with `[data-vat]` (*incl. VAT*) and `[data-abroad]` (the
  *     customs sentence, never for a pick-up) beside it, and
  *     `[data-own-currency]` beside *Pay*, where the shop says them;
  *   - hides `[data-address]` for a pick-up, which asks no address;
- *   - on *Pay*: a cart changed since the total was said is priced again and
- *     shown before anything is sent; what is plainly missing — a name, an
- *     email, the street, the postal code and the city of a delivery — is said
- *     beside its field (`aria-invalid`, `aria-describedby`) and in
- *     `[data-checkout-error]` (`role="alert"`), the first such field focused;
- *     then the press is kept (`pressFor`, `sessionStorage[pressKey(api)]`) and
- *     sent (`checkoutBody`), with a fresh token of the challenge where the host
- *     has one, rendered into `[data-challenge]`, for every call that carries
- *     the cart;
+ *   - on *Pay*: pressed while the shop is pricing, it waits for the answer and
+ *     goes on with it — or says the price changed, where the total it was
+ *     pressed on is no longer the shop's; a cart changed since the total was
+ *     said is priced again and shown before anything is sent; what is plainly
+ *     missing — a name, an email, the street, the postal code and the city of
+ *     a delivery — is said beside its field (`aria-invalid`,
+ *     `aria-describedby`) and in `[data-checkout-error]` (`role="alert"`), the
+ *     first such field focused; then the press is sent (`checkoutBody`) and
+ *     kept with what it was sent with (`keptPress`,
+ *     `sessionStorage[pressKey(api)]`): *Pay* pressed again on the same body is
+ *     a retry of it, on any other body a new press (`pressFor`, Ruling 223),
+ *     and an order's token alone is asked for only while the step shows the
+ *     total the order was made at (Ruling 225). Where the host has a challenge
+ *     it is rendered into `[data-challenge]`, a fresh token goes with every
+ *     call that carries the cart, and *Pay* waits for one; a key that could not
+ *     be asked is asked again after the shop says `403 challenge`, and a widget
+ *     that does not load is said;
  *   - acts on the answer: Stripe's page, or the order's page where it is paid
  *     already, the press then over and forgotten; the same press asked again —
  *     by the order's token alone where the shop made one — after an answer that
@@ -78,13 +90,14 @@
  *     next press is a new one only once this one can make no order.
  *
  * A press is never two: *Pay* pressed while the shop answers is the same press,
- * and is not sent twice. A browser that keeps no cart is said (`cartUnavailable`).
+ * and is not sent twice. A browser that keeps no cart is said (`cartUnavailable`);
+ * one that keeps nothing in the tab keeps the press in the page.
  */
 import { money } from '../lib/money.mjs';
 import { shopWordsFor } from '../lib/shop/words.mjs';
 import { CHECKOUT, lacking } from '../lib/shop/hooks.mjs';
 import { cartKey, cartView, readCart, shippingBody } from '../lib/shop/cart.mjs';
-import { afterAnswer, checkoutBody, missingDetails, pressFor, pressKey } from '../lib/shop/checkout.mjs';
+import { afterAnswer, checkoutBody, keptPress, missingDetails, pressFor, pressKey, sentOf } from '../lib/shop/checkout.mjs';
 import { BaseElement, ask, defineOnce, parsed, putBase } from './shop-wire.js';
 import { onAlive } from './alive.js';
 
@@ -170,8 +183,15 @@ export function wireCheckout(form) {
   /** The ask being answered; an older one is dropped when it arrives. */
   let sent = 0;
   let pricing = false;
-  /** Whether a press is with the shop, or the buyer is on the way to pay: another is not sent. */
+  /** Whether a press is with the shop, or the buyer is on the way to pay: another is not sent, and nothing is priced. */
   let busy = false;
+  /** A change of the cart heard while a press was with the shop: priced once it has answered. */
+  let dirty = false;
+  /** *Pay* pressed while the shop was pricing, and the total shown when it was: it goes on once the shop has answered. */
+  let wanted = false;
+  let seen = /** @type {number | null} */ (null);
+  /** Whether `jtk:cart` is this step's own, said after a new price: not heard again by the step that said it. */
+  let echo = false;
   /** The press as this page keeps it, once it has kept one — the tab's storage may not. */
   let remembered = /** @type {import('../lib/shop/checkout.mjs').Press | null} */ (null);
   let keptHere = false;
@@ -198,7 +218,7 @@ export function wireCheckout(form) {
       if (one === null) sessionStorage.removeItem(kept);
       else sessionStorage.setItem(kept, JSON.stringify(one));
     } catch (why) {
-      console.error(`checkout: the browser keeps no press across a reload (${why instanceof Error ? why.message : String(why)})`);
+      console.error(`checkout: the browser keeps no press across a reload, so this page keeps it (${why instanceof Error ? why.message : String(why)})`);
     }
   }
 
@@ -221,6 +241,8 @@ export function wireCheckout(form) {
   // ── what is wrong ───────────────────────────────────────────────────────
   /** A sentence not tied to a field: a refusal, a state of the shop. */
   let sentence = '';
+  /** Whether the sentence is what the shop's price said — the cart could not be priced, or as it is — which a new price takes back. */
+  let ofPrice = false;
   /** @type {{ field: HTMLElement; note: HTMLElement; line: string }[]} */
   let blamed = [];
   let faults = 0;
@@ -232,8 +254,9 @@ export function wireCheckout(form) {
     error.textContent = text;
     error.hidden = text === '';
   }
-  function say(text) {
+  function say(text, priceSaid = false) {
     sentence = text;
+    ofPrice = priceSaid && text !== '';
     sum();
   }
   function unblame(field) {
@@ -281,7 +304,7 @@ export function wireCheckout(form) {
     node.hidden = !holds;
   }
 
-  /** *Pay* is held while the shop is asked: pressed, it does nothing, and says so to a screen reader. */
+  /** *Pay* is held while the shop is asked: pressed, it waits for the answer, or is the press already with the shop. */
   function hold() {
     if (pay) pay.setAttribute('aria-disabled', String(busy || pricing));
     if (busy || pricing) form.setAttribute('aria-busy', 'true');
@@ -293,6 +316,12 @@ export function wireCheckout(form) {
     if (!pay) return;
     if (now) pay.textContent = words.paying;
     else pay.replaceChildren(...payWords);
+  }
+
+  /** Nothing of a total shown: the sentences beside it hidden. */
+  function blank() {
+    if (total) total.textContent = '';
+    for (const part of [vat, abroad, own]) if (part) part.hidden = true;
   }
 
   /** The total of the priced cart, the sentences beside it, and the address asked only of a delivery. */
@@ -315,7 +344,7 @@ export function wireCheckout(form) {
     }
     form.dataset.state = shown === null ? 'refused' : 'priced';
     // A cart the shop would not price as it is — a line refused, no way to send it: the cart above says which.
-    if (shown === null) say(view.cannotSend ? words.cannotSend : words['error.refused']);
+    if (shown === null) say(view.cannotSend ? words.cannotSend : words['error.refused'], true);
   }
 
   /** The shop could not be asked: what was shown stays, and is not paid for until the shop has said it again. */
@@ -323,17 +352,23 @@ export function wireCheckout(form) {
     fresh = false;
     if (shown === null) {
       form.dataset.state = 'failed';
-      if (total) total.textContent = '';
-      for (const part of [vat, abroad, own]) if (part) part.hidden = true;
+      blank();
     } else {
       form.dataset.state = 'stale';
     }
-    say(text);
+    say(text, true);
   }
 
   // ── asking the shop ─────────────────────────────────────────────────────
-  /** Prices the cart as it is stored now: its lines, its country, its method. */
+  /**
+   * Prices the cart as it is stored now: its lines, its country, its method. Never while a press is with the shop, whose
+   * total must not change under it: that waits for its answer. *Pay* pressed meanwhile goes on with the answer (`resume`).
+   */
   async function price() {
+    if (busy) {
+      dirty = true;
+      return;
+    }
     const readable = load();
     if (!readable || cart.lines.length === 0) {
       sent += 1;
@@ -342,10 +377,11 @@ export function wireCheckout(form) {
       priced = null;
       shown = null;
       fresh = false;
-      if (total) total.textContent = '';
-      for (const part of [vat, abroad, own]) if (part) part.hidden = true;
+      // A press waiting on this price is answered by it: there is nothing to pay for.
+      wanted = false;
+      blank();
       form.dataset.state = readable ? 'empty' : 'failed';
-      say(readable ? words.cartEmpty : words.cartUnavailable);
+      say(readable ? words.cartEmpty : words.cartUnavailable, true);
       return;
     }
     const mine = (sent += 1);
@@ -354,20 +390,26 @@ export function wireCheckout(form) {
     if (shown === null) form.dataset.state = 'pricing';
     hold();
     const answer = await ask(api, 'shipping', { body: shippingBody(asked, locale) });
-    // A newer ask is on its way, and what that says is what is shown.
+    // A newer ask is on its way, and what that says is what is shown — and what a press waiting on it goes on with (M3).
     if (mine !== sent) return;
     pricing = false;
     hold();
     const body = answer?.status === 200 ? answer.body : null;
     if (!isObject(body) || !Array.isArray(body.lines)) {
+      // A press waiting on this price is answered by it: the shop could not be asked.
+      wanted = false;
       failed(words.cartFailed);
       return;
     }
     priced = asked;
     quote = body;
     fresh = true;
-    say('');
+    if (ofPrice) say('');
     draw();
+    if (wanted) {
+      wanted = false;
+      resume(seen);
+    }
   }
 
   /** The challenge, if this host has one: its key asked at runtime, the widget rendered into `[data-challenge]`. */
@@ -375,7 +417,12 @@ export function wireCheckout(form) {
     if (keyAsked || !challenge) return;
     keyAsked = true;
     const answer = await ask(api, 'turnstile');
-    const sitekey = answer?.status === 200 && typeof answer.body?.sitekey === 'string' ? answer.body.sitekey : '';
+    // A key that could not be asked is not «no challenge»: it is asked again, at the next opening or after a 403 challenge.
+    if (answer === null || answer.status !== 200 || !isObject(answer.body)) {
+      keyAsked = false;
+      return;
+    }
+    const sitekey = typeof answer.body.sitekey === 'string' ? answer.body.sitekey : '';
     // Where the host has no widget, nothing is asked and nothing is sent.
     if (sitekey === '') return;
     challenge.hidden = false;
@@ -383,8 +430,16 @@ export function wireCheckout(form) {
     const said = form.dataset.turnstileTheme;
     // The widget in the page's colours and language, not the browser's (the booking form's rule).
     const theme = said === 'light' || said === 'dark' || said === 'auto' ? said : /\blight\b/.test(scheme) && !/\bdark\b/.test(scheme) ? 'light' : /\bdark\b/.test(scheme) && !/\blight\b/.test(scheme) ? 'dark' : 'auto';
+    /** A widget that cannot be drawn — its script blocked, or not what it should be — is said, and asked for again later. */
+    const unavailable = () => {
+      keyAsked = false;
+      challenge.hidden = true;
+      say(words.challengeUnavailable);
+    };
     const render = () => {
-      const id = /** @type {any} */ (window).turnstile?.render(challenge, {
+      const turnstile = /** @type {any} */ (window).turnstile;
+      if (typeof turnstile?.render !== 'function') return unavailable();
+      const id = turnstile.render(challenge, {
         sitekey,
         theme,
         language: document.documentElement.lang || locale,
@@ -402,6 +457,10 @@ export function wireCheckout(form) {
     script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
     script.async = true;
     script.onload = render;
+    script.onerror = () => {
+      script.remove();
+      unavailable();
+    };
     document.head.appendChild(script);
   }
 
@@ -410,6 +469,9 @@ export function wireCheckout(form) {
     token = '';
     if (widget !== undefined) /** @type {any} */ (window).turnstile?.reset(widget);
   }
+
+  /** Whether the challenge is drawn and has given no token yet: a call that carries the cart waits for one. */
+  const unchallenged = () => challenge !== null && !challenge.hidden && token === '';
 
   /** What the form says of the buyer, as typed, and the address — none for a pick-up. */
   function details() {
@@ -439,22 +501,15 @@ export function wireCheckout(form) {
   }
 
   /**
-   * Sends a press and acts on its answer. The press is kept before it is sent, so an answer that is lost — the page closed,
-   * the network gone — leaves it for the next press to retry, the same.
+   * Sends a press and acts on its answer. The press is kept before it is sent, with what it is sent with and when, so an
+   * answer that is lost — the page closed, the network gone — leaves it for the next press on the same body to retry, the same.
    * @param {import('../lib/shop/checkout.mjs').Press} press
+   * @param {ReturnType<typeof readCart>} order the cart that was priced, with the method the total is of
+   * @param {import('../lib/shop/checkout.mjs').CheckoutForm} given
    */
-  async function send(press) {
+  async function send(press, order, given) {
     keepPress(press);
-    const { buyer, address: where } = details();
-    // The cart that was priced, with the method the total is of.
-    const body = checkoutBody(press, { ...(priced ?? cart), method: view?.method ?? (priced ?? cart).method }, {
-      buyer,
-      address: where,
-      total: shown ?? 0,
-      locale,
-      return: back,
-      turnstile: token,
-    });
+    const body = checkoutBody(press, order, given);
     const carries = press.order === '';
     const was = form.dataset.state ?? '';
     busy = true;
@@ -471,62 +526,107 @@ export function wireCheckout(form) {
     if (next.kind === 'go') return leave(next.url);
     if (next.kind === 'paid') return leave(orderPage(next.order));
     keepPress(next.press);
-    if (next.kind === 'ask_again') return say(words['error.try_again']);
-    if (next.kind === 'requote') {
-      // The shop's answer now, for the cart that was sent: shown and said, and the cart above priced again with it.
+    if (next.kind === 'ask_again') say(words['error.try_again']);
+    else if (next.kind === 'requote') {
+      // The shop's answer now, for the cart that was sent: shown and said, and the cart above priced again with it — the
+      // step does not hear its own word.
       quote = next.quote;
       fresh = true;
       draw();
       say(words[next.word] ?? words['error.refused']);
-      document.dispatchEvent(new CustomEvent('jtk:cart', { detail: key }));
-      return;
+      echo = true;
+      try {
+        document.dispatchEvent(new CustomEvent('jtk:cart', { detail: key }));
+      } finally {
+        echo = false;
+      }
+    } else {
+      // A sentence is the developer's to read: said in the console as the shop said it.
+      if (typeof answer?.body === 'string' && answer.body !== '') console.error(`checkout: the shop said ${answer.status} — ${answer.body}`);
+      if (!(next.fields !== undefined && next.fields.length > 0 && blameAll(next.fields))) {
+        say(words[next.word] ?? words['error.internal']);
+        // An address Stripe cannot tax: checked, and started again from it.
+        if (next.word === 'address' && address && !address.hidden) control('line1')?.focus();
+        // The shop wants a challenge this page has not drawn — its key could not be asked: asked again.
+        if (next.word === 'error.challenge' && challenge?.hidden) {
+          keyAsked = false;
+          void offerChallenge();
+        }
+      }
     }
-    // A sentence is the developer's to read: said in the console as the shop said it.
-    if (typeof answer?.body === 'string' && answer.body !== '') console.error(`checkout: the shop said ${answer.status} — ${answer.body}`);
-    if (next.fields !== undefined && next.fields.length > 0 && blameAll(next.fields)) return;
-    say(words[next.word] ?? words['error.internal']);
-    // An address Stripe cannot tax: checked, and started again from it.
-    if (next.word === 'address' && address && !address.hidden) control('line1')?.focus();
+    // The cart changed while the press was with the shop: priced now.
+    if (dirty) {
+      dirty = false;
+      void price();
+    }
   }
 
   // ── what the buyer does ─────────────────────────────────────────────────
-  async function onPay() {
-    if (busy || pricing) return;
-    say('');
-    // The press kept for its retries, or a new one — kept only once it is sent.
-    const press = pressFor(storedPress());
-    // An order the shop made and could not send the buyer to pay for: asked for again by its token, whatever else is typed.
-    if (press.order !== '') {
-      await send(press);
+  /**
+   * *Pay*. The same press with the shop: nothing more. While the shop is pricing: kept, and gone on with once it has answered.
+   * A total the shop has not said for the cart as it is: priced first, and gone on with if it is the one shown.
+   */
+  function onPay() {
+    if (busy) return;
+    if (pricing) {
+      if (!wanted) {
+        wanted = true;
+        seen = shown;
+      }
       return;
     }
+    say('');
     if (!load()) {
       say(words.cartUnavailable);
       return;
     }
-    // What is paid for is what the buyer was shown: a cart changed since, or a total the shop has not said again, is priced first.
     if (priced === null || !fresh || shown === null || !same(cart, priced)) {
-      const before = shown;
-      await price();
-      if (shown === null || !fresh) return;
-      if (before === null || shown !== before) {
-        if (before !== null) say(words['error.total']);
-        return;
-      }
+      wanted = true;
+      seen = shown;
+      void price();
+      return;
     }
+    void go();
+  }
+
+  /**
+   * A press that waited for the shop's price goes on with it: where the shop priced nothing, its answer says why; where the
+   * total is not the one the press was made on, the buyer is told and presses again on the new one.
+   * @param {number | null} was the total shown when *Pay* was pressed
+   */
+  function resume(was) {
+    if (busy || !fresh || shown === null) return;
+    if (was !== null && shown !== was) {
+      say(words['error.total']);
+      return;
+    }
+    void go();
+  }
+
+  /** The press: the details it cannot go without, then the same press for the same body (Ruling 223), or a new one. */
+  async function go() {
+    if (busy || priced === null || view === null || shown === null) return;
     unblame(undefined);
     const { buyer, address: where } = details();
     if (blameAll(missingDetails(buyer, where))) return;
-    if (widget !== undefined && token === '') {
+    const order = { ...priced, method: view.method };
+    const given = { buyer, address: where, total: shown, locale, return: back, turnstile: token };
+    const what = sentOf(order, given);
+    const now = Date.now();
+    // The press kept, where this is the same body within its hold; else a new one. An order's token is asked for only so:
+    // the step priced, and its total the one the order was made at (Ruling 225).
+    const press = pressFor(storedPress(), what, now);
+    // A call that carries the cart waits for the challenge's token; the order's token alone holds nothing, and needs none.
+    if (press.order === '' && unchallenged()) {
       say(words['error.challenge']);
       return;
     }
-    await send(press);
+    await send(keptPress(press, what, now), order, given);
   }
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();
-    void onPay();
+    onPay();
   });
   // A fault goes as its field is changed.
   form.addEventListener('input', (event) => {
@@ -539,10 +639,16 @@ export function wireCheckout(form) {
     form.hidden = false;
     opening.focus();
     void offerChallenge();
-    if (!busy) void price();
+    void price();
   }
 
-  // The cart hands on, or the page comes back from the browser's cache — from Stripe's page, without paying. The listeners go with the markup.
+  /** The cart changed — here, or in another tab — while the step is open: priced again, so the total is the cart's as shown. */
+  function changed() {
+    if (!form.hidden) void price();
+  }
+
+  // The cart hands on or changes, or the page comes back from the browser's cache — from Stripe's page, without paying.
+  // The listeners go with the markup.
   const stop = new AbortController();
   const heard = (when) => (event) => {
     if (!form.isConnected) stop.abort();
@@ -550,9 +656,12 @@ export function wireCheckout(form) {
   };
   const options = { signal: stop.signal };
   document.addEventListener('jtk:to-checkout', heard((event) => event.detail === key && open()), options);
+  document.addEventListener('jtk:cart', heard((event) => event.detail === key && !echo && changed()), options);
+  window.addEventListener('storage', heard((event) => (event.key === key || event.key === null) && changed()), options);
   window.addEventListener('pageshow', heard((event) => {
     if (!event.persisted) return;
     busy = false;
+    wanted = false;
     paying(false);
     if (form.dataset.state === 'paying') form.dataset.state = shown === null ? 'failed' : 'stale';
     fresh = false;

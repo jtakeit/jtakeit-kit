@@ -54,7 +54,11 @@ export class JtkCheckout extends HTMLElement {
 
 declare global {
   interface DocumentEventMap {
-    /** What a product's form says once a line is added: `jtk:cart` on the document, the cart's key (`jtk:cart:<api>`) in `detail`. */
+    /**
+     * The cart changed: `jtk:cart` on the document, the cart's key (`jtk:cart:<api>`) in `detail` — said by a product's form once a
+     * line is added, by the cart as the buyer changes it there (a quantity, a line taken out, the country, the method), and by the
+     * checkout after the shop answered a press with a new price. The cart and the checkout price it again; neither hears its own.
+     */
     'jtk:cart': CustomEvent<string>;
     /**
      * What the cart says when the buyer goes on to the checkout: the country and the method chosen are written into the cart

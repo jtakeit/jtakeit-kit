@@ -14,11 +14,20 @@
  * so is one answered with a refusal that says the order is gone, and the next
  * press mints a new `attempt`.
  *
+ * A press is for one body (Ruling 223): the cart's lines, its country and
+ * method, the buyer, the address and the total shown (Ruling 225) — not the
+ * challenge's token, which every call that carries the cart spends anew. Only
+ * *Pay* pressed again on the same body is a retry; a body that differs —
+ * a line taken out, an email corrected, a total the shop has said again — is a
+ * new press, with a new `attempt`. A press is also no older than the hold its
+ * order would have, 31 minutes from when it was first sent: past that, any
+ * order it made has been given up, and the next press starts afresh.
+ *
  * The press in flight is kept in the tab, `sessionStorage["jtk:checkout:" +
- * api]` (`pressKey`), as `{ attempt, order }`, from the moment it is pressed
- * until it is over — so a page reloaded after an answer that was lost asks for
- * the same order, and a page that has sent its buyer to Stripe starts the next
- * press afresh.
+ * api]` (`pressKey`), as `{ attempt, order, sent, at }` (`keptPress`), from the
+ * moment it is pressed until it is over — so a page reloaded after an answer
+ * that was lost asks for the same order, and a page that has sent its buyer to
+ * Stripe starts the next press afresh.
  *
  * Pure and framework-free, as the cart is: the element (elements/shop-checkout.js)
  * reads the storage, asks, and draws what `afterAnswer` says.
@@ -27,8 +36,12 @@
 /** What an `attempt` is, as the shop holds it (Ruling 92): anything else is refused `400`. */
 export const ATTEMPT = /^[A-Za-z0-9_-]{16,128}$/;
 
+/** How long a press is kept: the hold its order would have, 31 minutes (101 §7), in milliseconds. */
+export const HOLD = 31 * 60 * 1000;
+
 /**
- * @typedef {{ attempt: string; order: string }} Press `order` is `''` until the shop has made one
+ * @typedef {{ lines: object[]; country: string; method: string; buyer: object; address: object | null; total: number }} Sent what a press was sent with: its body less the token, the return and the language
+ * @typedef {{ attempt: string; order: string; sent?: Sent; at?: number }} Press `order` is `''` until the shop has made one; `sent` and `at` (when it was first sent, in milliseconds) once it has been
  * @typedef {import('./cart.mjs').Cart} Cart
  * @typedef {{ name: string; email: string; phone?: string }} Buyer
  * @typedef {{ line1: string; line2?: string; postal_code: string; city: string }} Address
@@ -74,16 +87,59 @@ export function freshPress() {
 }
 
 /**
- * The press a buyer's *Pay* goes on with: the one kept, where one is — a
- * retry of it — or a new one. What is kept is held to the shape, whatever
- * wrote it: an `attempt` the shop would refuse is no press, and starts a new.
+ * The press a buyer's *Pay* goes on with: the one kept, where it is a retry
+ * of it — the same body (`sentOf`), within the hold — or a new one. What is
+ * kept is held to the shape, whatever wrote it: an `attempt` the shop would
+ * refuse is no press, and starts a new.
  *
  * @param {Press | null | undefined} stored what the tab keeps under `pressKey`, read as JSON
+ * @param {Sent} [sent] what this *Pay* would send (`sentOf`): a kept press sent with anything else is a new one; left out, only the shape and the age are held
+ * @param {number} [now] the time of the press, in milliseconds
  * @returns {Press}
  */
-export function pressFor(stored) {
+export function pressFor(stored, sent, now = Date.now()) {
   if (!isObject(stored) || typeof stored.attempt !== 'string' || !ATTEMPT.test(stored.attempt)) return freshPress();
-  return { attempt: stored.attempt, order: typeof stored.order === 'string' ? stored.order.trim() : '' };
+  const at = typeof stored.at === 'number' && Number.isFinite(stored.at) ? stored.at : undefined;
+  // Past the hold, whatever order the press made has been given up: a retry of it would be answered that it lapsed.
+  if (at !== undefined && now - at > HOLD) return freshPress();
+  // Ruling 223: a press is for one body, and only the same body is a retry.
+  if (sent !== undefined && (!isObject(stored.sent) || JSON.stringify(stored.sent) !== JSON.stringify(sent))) return freshPress();
+  return {
+    attempt: stored.attempt,
+    order: typeof stored.order === 'string' ? stored.order.trim() : '',
+    ...(isObject(stored.sent) ? { sent: /** @type {Sent} */ (stored.sent) } : {}),
+    ...(at === undefined ? {} : { at }),
+  };
+}
+
+/**
+ * What a press is for: the body `checkoutBody` makes of the cart and the form,
+ * less what is not the buyer's choice — the challenge's token, spent by every
+ * call, the return and the page's language. Two presses sent with the same are
+ * one press (Ruling 223), and the total among it (Ruling 225) keeps an order's
+ * token from being asked for once the step shows another.
+ *
+ * @param {Cart} cart
+ * @param {CheckoutForm} form
+ * @returns {Sent}
+ */
+export function sentOf(cart, form) {
+  const body = /** @type {any} */ (checkoutBody({ attempt: '', order: '' }, cart, form));
+  return { lines: body.lines, country: body.country, method: body.method, buyer: body.buyer, address: body.address ?? null, total: body.total };
+}
+
+/**
+ * A press as the tab keeps it once it is sent: what it was sent with, and when
+ * it was first sent — a retry keeps the time of the first, as the order's hold
+ * does.
+ *
+ * @param {Press} press
+ * @param {Sent} sent
+ * @param {number} [now]
+ * @returns {Press}
+ */
+export function keptPress(press, sent, now = Date.now()) {
+  return { attempt: press.attempt, order: press.order, sent, at: press.at ?? now };
 }
 
 /**
@@ -168,6 +224,7 @@ const GONE = {
   '400 return': 'error.return',
   '400 nothing_to_pay': 'error.nothing_to_pay',
   '403 showcase': 'error.showcase',
+  '500 internal': 'error.internal',
 };
 
 /**
@@ -182,20 +239,25 @@ const GONE = {
  *   403 challenge · 400 buyer · 429       say, the press kept (400 buyer with its fields)
  *   409 attempt · 410 · 422 address ·     say, the press gone: the next press is a new one
  *   424 · 404 not_found · 400 return ·
- *   400 nothing_to_pay · 500 · a sentence
+ *   400 nothing_to_pay · 500 internal ·
+ *   a sentence
  *
  * And, outside the table, as safe as it can be for a buyer's money: a `201`
- * that names no Stripe page asks again for its order; a gateway that timed
- * out (`503`, `504`) is an answer that was lost; `403 showcase` is a sample's,
- * which never checks out; any other refusal in JSON keeps the press, so that
- * the next press can never be a second order of the same one.
+ * that names no Stripe page asks again for its order; every `5xx` but
+ * billing's own `500 internal`, and a `408` — a gateway, a timeout, a page of
+ * the network's — is an answer that was lost, the order perhaps made; a `429`
+ * with no word of the shop's, a rate limiter's, is too many and keeps the
+ * press; `403 showcase` is a sample's, which never checks out; any other
+ * refusal in JSON keeps the press, so that the next press can never be a
+ * second order of the same one. A press kept goes on with what it was sent
+ * with, and when (`sent`, `at`).
  *
  * @param {Press} press the press the answer is to
  * @param {{ status: number; body: any } | null} answer what `ask` gave: null where nothing answered
  * @returns {Next}
  */
 export function afterAnswer(press, answer) {
-  const kept = { attempt: press.attempt, order: press.order };
+  const kept = { ...press };
   if (answer === null || answer === undefined) return { kind: 'ask_again', press: kept };
   const { status } = answer;
   const body = isObject(answer.body) ? answer.body : null;
@@ -209,7 +271,10 @@ export function afterAnswer(press, answer) {
     // Made, and no page to send the buyer to: the order's token asks for it again.
     return { kind: 'ask_again', press: withOrder };
   }
-  if (status === 502 || status === 503 || status === 504) return { kind: 'ask_again', press: withOrder };
+  // Too many, whoever said it — the shop in its words, or a rate limiter in front of it with none: nothing was written.
+  if (status === 429) return { kind: 'say', word: code === 'open_checkouts' ? 'error.open_checkouts' : 'error.too_many', press: kept };
+  // Lost: the network's answer, not the shop's — the order may have been made, and is asked for again the same way.
+  if ((status >= 500 && !(status === 500 && code === 'internal')) || status === 408) return { kind: 'ask_again', press: withOrder };
   // A refusal that is a sentence is for the developer to read, and no press of this one will mend it.
   if (body === null) return { kind: 'say', word: 'error.internal', press: null };
   if (status === 409 && ['total', 'refused', 'method', 'short'].includes(code)) {
@@ -224,8 +289,7 @@ export function afterAnswer(press, answer) {
     if (code !== 'buyer') return said;
     return { ...said, fields: Array.isArray(body.fields) ? body.fields.filter((one) => typeof one === 'string') : [] };
   }
-  if (status === 429) return { kind: 'say', word: code === 'open_checkouts' ? 'error.open_checkouts' : 'error.too_many', press: kept };
-  const gone = GONE[`${status} ${code}`] ?? (status === 410 ? 'error.lapsed' : status === 500 ? 'error.internal' : undefined);
+  const gone = GONE[`${status} ${code}`] ?? (status === 410 ? 'error.lapsed' : undefined);
   if (gone !== undefined) return { kind: 'say', word: gone, press: null };
   return { kind: 'say', word: 'error.internal', press: kept };
 }
@@ -243,5 +307,4 @@ export const CHECKOUT_WORDS = Object.freeze([
   'error.too_many',
   'error.open_checkouts',
   ...new Set(Object.values(GONE)),
-  'error.internal',
 ]);

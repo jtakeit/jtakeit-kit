@@ -70,7 +70,10 @@
  *
  * What the buyer does is never dropped: a quantity or a removal is kept in the
  * browser's cart at once, the shop is asked again, and the newest answer is
- * what is shown; a line taken out leaves the page at once and the lines after
+ * what is shown; and every change the buyer makes here — a quantity, a line
+ * taken out, the country, the method — is said on the document as `jtk:cart`
+ * with the cart's key, so the checkout below prices the cart again (Ruling
+ * 224), while the cart does not hear its own; a line taken out leaves the page at once and the lines after
  * it take its place, so the next press is on the line it looks at. A shop that
  * cannot be asked keeps the rows as they were, held, says so (`cartFailed`) and
  * offers `[data-cart-retry]`; any change asks again as well.
@@ -189,6 +192,18 @@ export function wireCart(root) {
       console.error(`cart: the browser kept no cart (${why instanceof Error ? why.message : String(why)})`);
       cart = readCart(null);
       return false;
+    }
+  }
+
+  /** Whether `jtk:cart` is the cart's own, said as it changes: not heard again by the cart that said it. */
+  let echo = false;
+  /** Says on the document that the buyer changed the cart here: the checkout below prices it again (Ruling 224). */
+  function told() {
+    echo = true;
+    try {
+      document.dispatchEvent(new CustomEvent('jtk:cart', { detail: key }));
+    } finally {
+      echo = false;
     }
   }
 
@@ -496,8 +511,10 @@ export function wireCart(root) {
     const qty = Number.isFinite(n) && n >= 1 ? Math.min(n, MAX_QTY) : was;
     input.value = String(qty);
     if (qty === was) return;
-    if (save(setQty(cart, at, qty))) void show();
-    else input.value = String(was);
+    if (save(setQty(cart, at, qty))) {
+      told();
+      void show();
+    } else input.value = String(was);
   }
 
   /**
@@ -509,6 +526,7 @@ export function wireCart(root) {
     if (at < 0) return;
     const rest = removeLine(cart, at);
     if (!save(rest)) return;
+    told();
     if (rest.lines.length === 0) focusEmpty = true;
     else {
       button.closest('[data-cart-line]')?.remove();
@@ -525,11 +543,15 @@ export function wireCart(root) {
   }
 
   function onCountry(select) {
-    if (save({ ...cart, country: select.value })) void show();
+    if (!save({ ...cart, country: select.value })) return;
+    told();
+    void show();
   }
 
   function onMethod(radio) {
-    if (!save({ ...cart, method: radio.value }) || view === null) return;
+    if (!save({ ...cart, method: radio.value })) return;
+    told();
+    if (view === null) return;
     // The prices are the shop's and do not change with the method: what does is whether the parcel crosses the border.
     view = cartView(cart, quote, locale);
     drawSummary();
@@ -564,7 +586,7 @@ export function wireCart(root) {
     else when(event);
   };
   const options = { signal: stop.signal };
-  document.addEventListener('jtk:cart', heard((event) => event.detail === key && void show()), options);
+  document.addEventListener('jtk:cart', heard((event) => event.detail === key && !echo && void show()), options);
   window.addEventListener('storage', heard((event) => (event.key === key || event.key === null) && void show()), options);
   // Back to the page from the browser's cache, hours later, or the network back after a failure: priced again.
   window.addEventListener('pageshow', heard((event) => event.persisted && void show()), options);

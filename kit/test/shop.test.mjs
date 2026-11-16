@@ -22,7 +22,7 @@ import { SHOP_LOCALES, shopWordsFor } from '../lib/shop/words.mjs';
 import { PRODUCT, CART, CHECKOUT, ORDER, LISTING, lacking } from '../lib/shop/hooks.mjs';
 import { MAX_LINES, MAX_QTY, cartKey, readCart, addLine, removeLine, setQty, shippingBody, cartView } from '../lib/shop/cart.mjs';
 import { productFacts, variantFor, valueStates, answersOf, fromPrice } from '../lib/shop/product.mjs';
-import { ATTEMPT, CHECKOUT_WORDS, afterAnswer, checkoutBody, freshPress, missingDetails, pressFor, pressKey } from '../lib/shop/checkout.mjs';
+import { ATTEMPT, CHECKOUT_WORDS, HOLD, afterAnswer, checkoutBody, freshPress, keptPress, missingDetails, pressFor, pressKey, sentOf } from '../lib/shop/checkout.mjs';
 import * as barrel from '../index.mjs';
 
 const now = Date.parse('2026-11-15T12:00:00Z');
@@ -489,7 +489,6 @@ test("one attempt for a press and its retries, and a new one after Stripe's page
     [400, { error: 'return' }, 'error.return'],
     [400, { error: 'nothing_to_pay' }, 'error.nothing_to_pay'],
     [500, { error: 'internal', order: 'T9' }, 'error.internal'],
-    [500, 'internal error', 'error.internal'],
     [403, { error: 'showcase', message: 'a sample: it never checks out' }, 'error.showcase'],
     [409, "this site's schema does not turn the shop on", 'error.internal'],
     [400, "an attempt is a press's own token: 16 to 128 letters, digits, '-' or '_', or none", 'error.internal'],
@@ -498,6 +497,27 @@ test("one attempt for a press and its retries, and a new one after Stripe's page
   }
   // A refusal in JSON the table does not name keeps the press: the next press can never be a second order of this one.
   assert.deepEqual(afterAnswer(p, { status: 400, body: { error: 'JTK_E_SHOP_FIELD_UNKNOWN', fields: ['colour'], takes: [] } }), { kind: 'say', word: 'error.internal', press: p });
+  // The network's answers, not the shop's: every 5xx but billing's own 500 internal, and a timeout, are answers that were lost —
+  // the order may have been made, so the press is kept, its order with it where one is named (Ruling 225, M2).
+  for (const [status, body] of [
+    [500, 'internal error'], [500, '<html>Worker threw</html>'], [500, { error: 'something_else' }], [500, null],
+    [501, null], [505, 'HTTP Version Not Supported'], [520, '<html>Web server is returning an unknown error</html>'], [522, ''], [524, 'A timeout occurred'], [599, null],
+    [408, 'Request Timeout'], [408, null],
+  ]) {
+    assert.deepEqual(afterAnswer(p, { status, body }), { kind: 'ask_again', press: p }, `${status} ${JSON.stringify(body)}`);
+  }
+  assert.deepEqual(afterAnswer(p, { status: 524, body: { error: 'try_again', order: 'T9' } }), { kind: 'ask_again', press: { ...p, order: 'T9' } });
+  // Too many, said by a rate limiter in front of the shop, with no word or a sentence: too many, the press kept — nothing was written.
+  for (const body of [null, '', 'Too Many Requests', '<html>rate limited</html>', { error: 'something_else' }]) {
+    assert.deepEqual(afterAnswer(p, { status: 429, body }), { kind: 'say', word: 'error.too_many', press: p }, JSON.stringify(body));
+  }
+  // A press kept goes on with what it was sent with, and when: a retry is matched against it (Ruling 223), its age against the hold.
+  const sentOne = { lines: [], country: 'CH', method: 'economy', buyer: { name: 'Ada', email: 'ada@example.ch' }, address: null, total: 2990 };
+  const kept = { ...p, sent: sentOne, at: 1_000 };
+  assert.deepEqual(afterAnswer(kept, null), { kind: 'ask_again', press: kept });
+  assert.deepEqual(afterAnswer(kept, { status: 502, body: { error: 'try_again', order: 'T9' } }), { kind: 'ask_again', press: { ...kept, order: 'T9' } });
+  assert.deepEqual(afterAnswer(kept, { status: 409, body: { error: 'total', quote } }), { kind: 'requote', press: kept, quote, word: 'error.total' });
+  assert.deepEqual(afterAnswer(kept, { status: 403, body: { error: 'challenge' } }), { kind: 'say', word: 'error.challenge', press: kept });
 
   // Every word the checkout says is in every language the storefront speaks.
   for (const locale of SHOP_LOCALES) {
@@ -505,6 +525,67 @@ test("one attempt for a press and its retries, and a new one after Stripe's page
     for (const word of CHECKOUT_WORDS) assert.ok(typeof words[word] === 'string' && words[word] !== '', `${locale}: ${word}`);
   }
   assert.equal(new Set(CHECKOUT_WORDS).size, CHECKOUT_WORDS.length);
+});
+
+test('a press is for one body: only the same body is a retry, and no press outlives the hold of its order (Rulings 223, 225)', () => {
+  const t0 = Date.parse('2026-11-16T12:00:00Z');
+  const cart = readCart(JSON.stringify({ ...FOX_TWICE, lines: [FOX_TWICE.lines[0], { product: FOX, variant: 'v2', qty: 1, answers: {} }] }));
+  const sent = sentOf(cart, FORM);
+  // What a press is for: the body less the challenge's token, the return and the page's language.
+  assert.deepEqual(Object.keys(sent), ['lines', 'country', 'method', 'buyer', 'address', 'total']);
+  assert.deepEqual(sent.address, { line1: 'Bahnhofstrasse 1', postal_code: '8001', city: 'Zürich' });
+  assert.equal(sentOf(cart, { ...FORM, address: null }).address, null, 'a pick-up is sent with no address');
+  assert.deepEqual(sentOf(cart, { ...FORM, turnstile: '0.another', return: '/en/order', locale: 'en' }), sent, 'a fresh token, another language or return is the same body');
+
+  // The first press: a new attempt, kept with what it was sent with and when.
+  const first = pressFor(null, sent, t0);
+  assert.match(first.attempt, UUID4);
+  const kept = keptPress(first, sent, t0);
+  assert.deepEqual(kept, { attempt: first.attempt, order: '', sent, at: t0 });
+  const stored = JSON.parse(JSON.stringify(kept));
+
+  // Pay pressed again on the same body — after an answer that was lost — is the same press: a retry.
+  assert.deepEqual(pressFor(stored, sentOf(cart, { ...FORM, turnstile: '0.fresh' }), t0 + 60_000), kept);
+  // Anything the buyer changed is a new body, and a new press with a new attempt.
+  const changed = {
+    'a line taken out': sentOf(removeLine(cart, 1), { ...FORM, total: 2990 + 900 }),
+    'a quantity': sentOf(setQty(cart, 0, 3), FORM),
+    'another country': sentOf({ ...cart, country: 'LI' }, FORM),
+    'another method': sentOf({ ...cart, method: 'pickup' }, { ...FORM, address: null }),
+    'an email corrected': sentOf(cart, { ...FORM, buyer: { ...FORM.buyer, email: 'ada@example.org' } }),
+    'a phone added': sentOf(cart, { ...FORM, buyer: { name: 'Ada Lovelace', email: 'ada@example.ch', phone: '+41 79 111 11 11' } }),
+    'the address': sentOf(cart, { ...FORM, address: { ...FORM.address, city: 'Bern' } }),
+    'a new total the shop said': sentOf(cart, { ...FORM, total: FORM.total + 100 }),
+  };
+  for (const [what, other] of Object.entries(changed)) {
+    const next = pressFor(stored, other, t0 + 60_000);
+    assert.notEqual(next.attempt, first.attempt, what);
+    assert.deepEqual([next.order, next.sent, next.at], ['', undefined, undefined], what);
+  }
+
+  // A press that holds an order: its token is asked for again only for the same body, the total the step shows among it (Ruling 225).
+  const holding = JSON.parse(JSON.stringify({ ...kept, order: 'T9' }));
+  const again = pressFor(holding, sent, t0 + 120_000);
+  assert.equal(again.order, 'T9');
+  assert.deepEqual(checkoutBody(again, cart, FORM), { order: 'T9' });
+  const moved = pressFor(holding, sentOf(cart, { ...FORM, total: FORM.total + 100 }), t0 + 120_000);
+  assert.notEqual(moved.attempt, first.attempt, 'the step shows another total: a new press');
+  const sentAnew = /** @type {any} */ (checkoutBody(moved, cart, { ...FORM, total: FORM.total + 100 }));
+  assert.equal(sentAnew.order, undefined, 'not the order\'s token');
+  assert.deepEqual([sentAnew.attempt, sentAnew.total, sentAnew.lines.length], [moved.attempt, FORM.total + 100, 2], 'the cart, with the total shown');
+  // A retry keeps the time of the first send, as the order's hold does.
+  assert.equal(keptPress(again, sent, t0 + 120_000).at, t0);
+
+  // The hold: 31 minutes. Past it, whatever order the press made has been given up, and the next press starts afresh.
+  assert.equal(HOLD, 31 * 60 * 1000);
+  assert.deepEqual(pressFor(holding, sent, t0 + HOLD), { ...kept, order: 'T9' }, 'at the hold, still the press');
+  const late = pressFor(holding, sent, t0 + HOLD + 1);
+  assert.notEqual(late.attempt, first.attempt);
+  assert.equal(late.order, '');
+  assert.notEqual(pressFor(holding, undefined, t0 + HOLD + 1).attempt, first.attempt, 'with no body to match, the age still holds');
+  // A kept press with no time is matched by its body alone; with no body kept, it is no retry of any.
+  assert.equal(pressFor({ attempt: first.attempt, order: '', sent }, sent, t0 + 10 * HOLD).attempt, first.attempt);
+  assert.notEqual(pressFor({ attempt: first.attempt, order: 'T9' }, sent, t0).attempt, first.attempt);
 });
 
 test("the checkout sends the protocol's body", () => {

@@ -1,19 +1,38 @@
 import type { Cart } from './shop-cart';
 
+/** What a press was sent with: its body less the challenge's token, the return and the page's language (Rulings 223, 225). */
+export interface Sent {
+  lines: object[];
+  country: string;
+  method: string;
+  buyer: object;
+  address: object | null;
+  total: number;
+}
 /** A press of *Pay*: its `attempt`, the same for every retry of it, and the order's token once the shop has made one. */
 export interface Press {
   attempt: string;
   /** `''` until the shop has made the order. */
   order: string;
+  /** What it was sent with, once it has been: only the same body is a retry of it. */
+  sent?: Sent;
+  /** When it was first sent, in milliseconds: past `HOLD`, it is over. */
+  at?: number;
 }
 /** What an `attempt` is, as the shop holds it: 16 to 128 letters, digits, `-` and `_`. */
 export const ATTEMPT: RegExp;
+/** How long a press is kept: the 31 minutes of its order's hold, in milliseconds. */
+export const HOLD: number;
 /** Where a site's press in flight is kept in the tab: `jtk:checkout:` and the base of its addresses. */
 export function pressKey(api: string): string;
 /** A new press: a `crypto.randomUUID()` attempt, and no order. */
 export function freshPress(): Press;
-/** The stored press, where it is one, or a fresh one. */
-export function pressFor(stored: Press | null | undefined): Press;
+/** The stored press, where it is one, within the hold, and sent with `sent` where that is given; else a fresh one. */
+export function pressFor(stored: Press | null | undefined, sent?: Sent, now?: number): Press;
+/** What a press is for, as the cart and the form would send it: the body less the token, the return and the language. */
+export function sentOf(cart: Cart, form: CheckoutForm): Sent;
+/** A press as the tab keeps it once sent: what it was sent with, and when it was first sent. */
+export function keptPress(press: Press, sent: Sent, now?: number): Press;
 /** The buyer's details, as typed. */
 export interface Buyer {
   name: string;
