@@ -240,8 +240,10 @@ test('the contacts\' hints are in the site\'s language, as their label is: one s
   }
   const { block } = contactsOf([{ key: 'name', label: 'Название', kind: 'text', no_tap_target: true, client_editable: true }], 'ru');
   assert.equal(block.fields[0].hint, 'Название заведения, каким его знают поисковые системы и ассистенты.');
-  const two = contactsOf([{ key: 'name', label: 'Name', kind: 'text', no_tap_target: true, client_editable: true }], 'de-CH', ['en']);
+  const two = contactsOf([{ key: 'name', label: 'Firmenname', kind: 'text', no_tap_target: true, client_editable: true }], 'de-CH', ['en']);
   assert.deepEqual(Object.keys(two.block.fields[0].hint), ['de', 'en']);
+  // The scaffold's own English label keeps its English hint beside it, as jtk create writes it on contract 3.
+  assert.equal(contactsOf([{ key: 'city', label: 'City', kind: 'text', no_tap_target: true }], 'de-CH').block.fields[0].hint, 'The town of that address.');
   // A hint the developer wrote is theirs.
   assert.equal(contactsOf([{ key: 'name', label: 'Name', kind: 'text', hint: 'Mine', no_tap_target: true }], 'ru').block.fields[0].hint, 'Mine');
 });

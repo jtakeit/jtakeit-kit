@@ -299,6 +299,29 @@ const HINTS = {
 };
 
 /**
+ * The English words a fact's label is the scaffold's own in, by role: a
+ * declaration whose labels are these (`jtk create` writes «Name», «City»
+ * for every site) keeps the hints English beside them, as `jtk create` on
+ * contract 3 writes them; one whose developer wrote the labels in the
+ * site's language gets the hints in it too.
+ */
+const ENGLISH_LABELS = {
+  name: ['name', 'business name'],
+  phone: ['phone', 'telephone', 'phone number'],
+  email: ['email', 'e-mail'],
+  street: ['street', 'address', 'street address'],
+  postal_code: ['postcode', 'postal code', 'zip', 'zip code'],
+  city: ['city', 'town'],
+  region: ['region', 'state', 'canton'],
+  country: ['country'],
+  maps: ['map', 'maps', 'map link'],
+  social: ['social', 'links', 'instagram', 'facebook'],
+  price_range: ['price range'],
+  business_type: ['business type', 'type'],
+  hours: ['hours', 'opening hours'],
+};
+
+/**
  * A role's hint in the site's languages: one string where the site has one
  * language — the kit's words in it, or English where the kit has none —
  * and a map by language where it has more, as a label may be (§3.3).
@@ -388,7 +411,10 @@ export function contactsOf(facts, locale, others = []) {
     }
     if (mapped !== undefined) {
       field.role = mapped.role;
-      if (field.hint === undefined && field.no_tap_target === true) field.hint = hintOf(mapped.role, [locale, ...others].filter((one) => typeof one === 'string' && one !== ''));
+      if (field.hint === undefined && field.no_tap_target === true) {
+        const english = typeof label !== 'string' || (ENGLISH_LABELS[mapped.role] ?? []).includes(label.trim().toLowerCase());
+        field.hint = english ? HINTS.en[mapped.role] : hintOf(mapped.role, [locale, ...others].filter((one) => typeof one === 'string' && one !== ''));
+      }
       // The same in every language, words or not: nobody translates the
       // business's name, its street and postcode, the schema.org type or the
       // price range — counted as «to translate» they were most of a small
