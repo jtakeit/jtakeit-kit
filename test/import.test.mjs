@@ -794,7 +794,22 @@ test('a description holding HTML is made text, and one that holds none is kept a
   assert.equal(htmlText('Tom &amp; Jerry'), 'Tom & Jerry');
   assert.equal(htmlText('Write to <info@shop.ch> or call'), 'Write to <info@shop.ch> or call');
   assert.equal(htmlText('<p>Write to <info@shop.ch> &amp; <strong>call</strong></p>'), 'Write to <info@shop.ch> & call');
-  assert.equal(htmlText('<a href="x">link</a> and <abc> and <3'), 'link and <abc> and <3');
+  assert.equal(htmlText('<a href="x">link</a> and <abc> and <3'), 'link and and <3', 'a raw <abc> is tag-shaped and goes: the accepted cost');
+  // A tag is known by its shape, not by a list of names (Ruling 238): a name of letters, digits, `:` and `-` that begins with a letter.
+  assert.equal(htmlText('<meta charset="utf-8"><p>Hello</p>'), 'Hello');
+  assert.equal(htmlText('<html><head><title>t</title></head><body><p>z</p></body></html>'), 'tz', 'a title is text between tags: only the tags go');
+  assert.equal(htmlText('<html><body><p>z</p></body></html>'), 'z');
+  assert.equal(htmlText('<link rel="stylesheet" href="x"><big>b</big><o:p></o:p><select><option>o</option></select>'), 'bo');
+  assert.equal(htmlText('<my-element x=1>hi</my-element>'), 'hi');
+  assert.equal(htmlText('<!DOCTYPE html><?xml version="1.0"?><!-- a comment --><p>A<br>B<BR/>C</p>'), 'A\nB\nC');
+  // A script, a style and a template go with what they hold: a description of nothing else is none.
+  assert.equal(htmlText('<style>p { color: red }</style>'), '');
+  assert.equal(htmlText('<script>alert("x")</script>'), '');
+  assert.equal(htmlText('<template><p>hidden</p></template>shown'), 'shown');
+  // Entities are read after the tags are out: an escaped bracket is the text it says, and a mail address is no tag.
+  assert.equal(htmlText('<p>&lt;abc&gt;</p>'), '<abc>');
+  assert.equal(htmlText('<p>Mail <info@shop.ch> now</p>'), 'Mail <info@shop.ch> now');
+  assert.equal(htmlText('a < b and c > d'), 'a < b and c > d');
 });
 
 // ── fix round 1: the options of a WooCommerce product, the panel's addresses, what a sheet may skip and inherit ──
@@ -972,9 +987,10 @@ test('a number with more digits after the separator than its currency or unit ha
     // [price, weight, decimal, unit, what is refused]
     ['1,250', undefined, ',', 'g', 'Price', /«1,250» has 3 digits after the comma and CHF has 2 — nothing is rounded, and a zero at the end is no way round it: it could as well be a thousands separator/],
     ['1.250', undefined, '.', 'g', 'Price', /«1\.250» has 3 digits after the point and CHF has 2/],
-    ['12,50', '0,1800', ',', 'kg', 'Weight', /«0,1800» has 4 digits after the comma and a weight in kilograms has 3/],
-    ['12,50', '180,0', ',', 'g', 'Weight', /«180,0» has 1 digit after the comma and a weight in grams has none/],
-    ['12,50', '1,000', ',', 'g', 'Weight', /«1,000» has 3 digits after the comma and a weight in grams has none/],
+    ['12,50', '0,1800', ',', 'kg', 'Weight', /«0,1800» has 4 digits after the comma and kilograms take at most 3 — nothing is rounded, and a zero at the end is no way round it$/m],
+    ['12.50', '180.0', '.', 'g', 'Weight', /«180\.0» has 1 digit after the point and grams take no decimals — nothing is rounded, and a zero at the end is no way round it$/m],
+    ['12,50', '180,0', ',', 'g', 'Weight', /«180,0» has 1 digit after the comma and grams take no decimals/],
+    ['12,50', '1,000', ',', 'g', 'Weight', /«1,000» has 3 digits after the comma and grams take no decimals — nothing is rounded, and a zero at the end is no way round it: it could as well be a thousands separator/],
   ];
   for (const [price, weight, decimal, unit, column, why] of tries) {
     const { dir, site } = freshSite();
@@ -983,6 +999,7 @@ test('a number with more digits after the separator than its currency or unit ha
     assert.equal(refused.status, 1, `${price} ${weight}: ${said(refused)}`);
     assert.match(refused.stderr, new RegExp(`row 2, column «${column}»`), `${price} ${weight}`);
     assert.match(refused.stderr, why);
+    if (decimal === '.') assert.doesNotMatch(refused.stderr, /thousands/, 'a thousands separator is a comma, and the point is the decimal here');
     assert.deepEqual(entriesOf(site), [], 'nothing written, and nothing read as 1.25 or 1250');
   }
   // What is within the digits is exact: 0.180 kg is 180 g, however many zeros a person would not have written.
@@ -1156,4 +1173,65 @@ test('the stock files are the import\'s, replaced whole: one of an earlier impor
   assert.equal(run(site, dir, 'Name,SKU,Price,Stock\nBecher,MUG-1,6,4\n', withStock).status, 0);
   assert.equal(readFileSync(join(site, '.jtakeit/stock.txt'), 'utf8'), 'MUG-1 4\n');
   assert.equal(existsSync(join(site, '.jtakeit/stock-2.txt')), false);
+});
+
+// ── fix round 2 ───────────────────────────────────────────────────────────
+
+test('a description from a page\'s head and body is the text of it, and one that is only a style or a script is none', () => {
+  const mapping = { v: 1, decimal: '.', fields: { title: 'Name', description: 'Body', price: 'Price' } };
+  const cells = [
+    ['Mit Kopf', '<meta charset="utf-8"><p>Hello &amp; welcome</p>'],
+    ['Mit Seite', '<html><body><p>One</p><p>Two</p></body></html>'],
+    ['Nur Stil', '<style>p { margin: 0 }</style>'],
+    ['Nur Skript', '<script>track()</script>'],
+    ['Mit Mail', '<p>Write to <info@shop.ch></p>'],
+  ];
+  const { dir, site } = freshSite();
+  const sheet = `Name,Body,Price\n${cells.map(([name, body]) => `${name},"${body.replaceAll('"', '""')}",5`).join('\n')}\n`;
+  const result = run(site, dir, sheet, mapping);
+  assert.equal(result.status, 0, said(result));
+  assert.equal(entry(site, 'mit-kopf').fields.description, 'Hello & welcome');
+  assert.equal(entry(site, 'mit-seite').fields.description, 'One\nTwo');
+  assert.equal('description' in entry(site, 'nur-stil').fields, false, 'a style is no description');
+  assert.equal('description' in entry(site, 'nur-skript').fields, false, 'a script is no description');
+  assert.equal(entry(site, 'mit-mail').fields.description, 'Write to <info@shop.ch>');
+});
+
+test('a bad parent weight is refused once, on its own row, however many variations would have taken it', () => {
+  // The parent's 0.1805 kg is no whole gram; the four variations have none of their own and would each have taken it.
+  let sheet = withCell(fixture('woocommerce.csv'), 3, 'Weight (kg)', '0.1805');
+  for (const line of [4, 5, 6, 7]) sheet = withCell(sheet, line, 'Weight (kg)', '');
+  const { dir, site } = freshSite();
+  const refused = run(site, dir, sheet, fixtureMapping('woocommerce.json'));
+  assert.equal(refused.status, 1, said(refused));
+  assert.match(refused.stderr, /^jtk import products: 1 thing refused, and nothing was written:\n  row 3, column «Weight \(kg\)»: «0\.1805» kg is 180\.5 g, not whole grams/);
+  assert.equal(refused.stderr.match(/row 3/g).length, 1);
+  assert.deepEqual(entriesOf(site), []);
+
+  // A parent weight no variation takes is never read: each has its own.
+  const own = freshSite();
+  const ok = run(own.site, own.dir, withCell(fixture('woocommerce.csv'), 3, 'Weight (kg)', '0.1805'), fixtureMapping('woocommerce.json'));
+  assert.equal(ok.status, 0, said(ok));
+});
+
+test('a variation\'s attribute name is the product\'s option without regard to case or the spaces round it, and the option keeps the first row\'s spelling', () => {
+  // The variations write the names in their own case, with spaces, and in an order of their own.
+  const fixed = [
+    THREE,
+    '20,variable,TEE,Tee,1,,,Size,"S, M",Colour,"Red, Blue",,',
+    '21,variation,TEE-S-R,Tee S R,1,10,id:20, SIZE ,S,colour,Red,,',
+    '22,variation,TEE-M-B,Tee M B,1,10,id:20,Colour ,Blue,sIzE,M,,',
+  ].join('\n');
+  const { dir, site } = freshSite();
+  const result = run(site, dir, `${fixed}\n`, threeMapping());
+  assert.equal(result.status, 0, said(result));
+  const tee = entry(site, 'tee');
+  assert.deepEqual(tee.fields.options.map((one) => [one._key, one.name]), [['size', 'Size'], ['colour', 'Colour']], 'as the first row wrote them');
+  assert.deepEqual(tee.fields.variants.map((one) => one.picks), [{ size: 's', colour: 'red' }, { size: 'm', colour: 'blue' }]);
+
+  // Two option names of one product that differ in case alone are one name twice.
+  const twice = freshSite();
+  const clash = run(twice.site, twice.dir, `${THREE}\n20,variable,TEE,Tee,1,,,Size,"S, M",size,"Red, Blue",,\n21,variation,TEE-S-R,Tee S R,1,10,id:20,Size,S,,,,\n`, threeMapping());
+  assert.equal(clash.status, 1, said(clash));
+  assert.match(clash.stderr, /row 2, column «Attribute 2 name»: the option «size» is named twice/);
 });
