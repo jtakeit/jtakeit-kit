@@ -32,10 +32,11 @@
  * of contract 3 (`registry/testdata/contract3.json`) is sat by both. The
  * sentences are this kit's, in the platform's words where it has them.
  *
- * Besides the verdict, the one advice of the judge's that is about the
- * schema alone (`adviseSchema`): where the panel guesses an entry's card,
- * `JTK_W_PANEL_FORM_GUESSED` (form.go's `adviseForms`) — and the card itself,
- * resolved as the panel draws it (`formsOf`, `ResolveForm`).
+ * Besides the verdict, the advice of the judge's that is about the schema
+ * alone (`adviseSchema`): where the panel guesses an entry's card,
+ * `JTK_W_PANEL_FORM_GUESSED` (form.go's `adviseForms`), and a schema without
+ * `render: "live"`, `JTK_W_NOT_LIVE` — and the card itself, resolved as the
+ * panel draws it (`formsOf`, `ResolveForm`).
  *
  * What is not here, on purpose: the judge of the files beside the schema —
  * pages, entries, a module's settings, a translation (lib/translations.mjs) — which the
@@ -1901,11 +1902,27 @@ export function judgeSchema(raw) {
 }
 
 /**
+ * `adviseLive`: a schema that does not say `render: "live"` — the template
+ * not declared ready to draw a draft live (`RENDER` in the scaffold's
+ * blocks.ts, docs/live.md). A contract-3 site keeps it (the owner, 16
+ * November 2026); said at `render`, as the platform's `Advise` says it.
+ */
+function adviseLive(say, reg) {
+  if (reg.render === 'live') return;
+  say(
+    W.NOT_LIVE,
+    'render',
+    "the schema does not say `render: \"live\"`, so the panel shows the owner a change only after a build, and an entry's card cannot be previewed before it is saved — keep `RENDER = 'live'` in src/content/blocks.ts and the scaffold's src/live/, and take it out only where a page does at build what a server cannot; say why in BRIEF.md (docs/live.md)",
+  );
+}
+
+/**
  * The judge's advice on this text where it refuses nothing, as the
  * platform's `Advise` gives it beside an empty verdict: the panel guessing
  * where an entry's fields go (`JTK_W_PANEL_FORM_GUESSED`) — a form that
- * leaves fields to «More», or a type of seven fields or more with none.
- * Allowed, and unwise; `[]` for a schema it refuses.
+ * leaves fields to «More», or a type of seven fields or more with none —
+ * and a template not declared ready to draw a draft live
+ * (`JTK_W_NOT_LIVE`). Allowed, and unwise; `[]` for a schema it refuses.
  *
  * @param {string} raw the schema as text
  * @returns {{ code: string; path: string; says: string }[]}
@@ -1915,6 +1932,7 @@ export function adviseSchema(raw) {
   if (faults.length > 0 || reg === undefined) return [];
   const j = judgement();
   adviseForms(j.say, reg);
+  adviseLive(j.say, reg);
   return j.list;
 }
 
@@ -1982,6 +2000,7 @@ function judged(raw) {
       };
     }),
     pageSEO: fieldsOf(read.say, 'page_seo', file.pageSEO),
+    render: file.render,
   };
   reg.collections = file.collections.map((c, i) => collectionOf(read.say, at3('collections', c.name, i), c, file.locale));
   if (read.list.length > 0) return { faults: read.list };

@@ -100,8 +100,9 @@ export const E = Object.freeze({
  * The judge's second voice: advice, with `JTK_W_` codes. A finding here
  * refuses nothing — the catalogue is valid — and comes back from
  * `POST /v1/registry/validate` under `advice`, apart from the refusals. Of
- * the judge's own this checker raises one, `PANEL_FORM_GUESSED` — where the
- * panel guesses an entry's card (judge3.mjs, `adviseSchema`); the bookings
+ * the judge's own this checker raises two (judge3.mjs, `adviseSchema`):
+ * `PANEL_FORM_GUESSED`, where the panel guesses an entry's card, and
+ * `NOT_LIVE`, a schema that does not say `render: "live"`; the bookings
  * module's are the server's, so `--judge` prints them, and advice is left
  * out of the exam.
  *
@@ -115,6 +116,7 @@ export const W = Object.freeze({
   MODULE_POST: 'JTK_W_MODULE_POST',
   DATE_HIDES: 'JTK_W_DATE_HIDES',
   PANEL_FORM_GUESSED: 'JTK_W_PANEL_FORM_GUESSED',
+  NOT_LIVE: 'JTK_W_NOT_LIVE',
 });
 
 export const ADVICE = Object.freeze({
@@ -126,6 +128,8 @@ export const ADVICE = Object.freeze({
     "A template compares an entry's date with today to choose what it shows: a build freezes the comparison until the next build, and the panel cannot know the entry is gone. Declare `ends_by` on the collection and read the entries the door gives.",
   [W.PANEL_FORM_GUESSED]:
     'The panel placed fields of an entry type by itself: a `form` places no row for some — they are drawn after its sections, under More — or a type of seven fields or more says no `form`, and the panel lays them out in their order, short ones two to a row and pictures aside.',
+  [W.NOT_LIVE]:
+    "The schema does not say `render: \"live\"`: the panel shows the owner a change only after a build, and an entry's card cannot be previewed before it is saved. Keep `RENDER = 'live'` and the scaffold's src/live; take it out only where a page does at build what a server cannot, and say why in BRIEF.md.",
 });
 
 /** Advice from the judge, never a refusal. */

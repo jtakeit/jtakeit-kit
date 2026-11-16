@@ -42,8 +42,10 @@ test('the platform\'s corpus of forms: each card resolved as the panel draws it,
     }
     assert.deepEqual(found, [], one.name);
     assert.deepEqual(JSON.parse(JSON.stringify(formsOf(text).items)), one.resolved, one.name);
-    assert.deepEqual(adviseSchema(text).map((f) => f.path).sort(), one.advice ?? [], one.name);
-    for (const advice of adviseSchema(text)) assert.equal(advice.code, 'JTK_W_PANEL_FORM_GUESSED');
+    // The corpus's schemas say no `render`, and JTK_W_NOT_LIVE is not the form's (live.test.mjs).
+    const guessed = adviseSchema(text).filter((f) => f.code !== 'JTK_W_NOT_LIVE');
+    assert.deepEqual(guessed.map((f) => f.path).sort(), one.advice ?? [], one.name);
+    for (const advice of guessed) assert.equal(advice.code, 'JTK_W_PANEL_FORM_GUESSED');
   }
 });
 
@@ -168,7 +170,7 @@ test('the move gives the scaffold\'s post the scaffold\'s card, and no other typ
   assert.deepEqual(tables.BLOCKS[0].form, POST_FORM);
   assert.equal(tables.BLOCKS[1].form, undefined);
   // And the card is one the judge takes, and advises nothing of.
-  const schema = JSON.stringify({ contract: 3, locale: 'de', blocks: [{ ...post(), form: POST_FORM }], collections: [{ name: 'blog', label: 'Blog', type: 'post', route: { detail: '/blog/{slug}' } }] });
+  const schema = JSON.stringify({ contract: 3, locale: 'de', blocks: [{ ...post(), form: POST_FORM }], collections: [{ name: 'blog', label: 'Blog', type: 'post', route: { detail: '/blog/{slug}' } }], render: 'live' });
   assert.deepEqual(judgeSchema(schema), []);
   assert.deepEqual(adviseSchema(schema), []);
 });
