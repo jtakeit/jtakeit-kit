@@ -304,8 +304,9 @@ export function pagesAgainst({ files, schema, dist, advice = [] }) {
       continue;
     }
     // An entry without a page of its own, shown on another: named by its id
-    // wherever it is, unless it is hidden and so shown nowhere.
-    if (!isEntry || document.shown === false || !ID.test(document.id ?? '')) continue;
+    // wherever it is, unless it is hidden and so shown nowhere, or over and
+    // kept (ends_by, then keep), which the template places or not.
+    if (!isEntry || document.shown === false || document.ended === true || !ID.test(document.id ?? '')) continue;
     for (const place of entryPlaces(document)) {
       const tile = `entry:${document.id}:${place}`;
       if (!everywhere.has(tile)) out.push(`${document.collection}/${document.slug}: ${tile} is on no page — an entry without a page of its own is annotated where it is shown`);
