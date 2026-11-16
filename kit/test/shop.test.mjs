@@ -23,7 +23,7 @@ import { PRODUCT, CART, CHECKOUT, ORDER, LISTING, lacking } from '../lib/shop/ho
 import { MAX_LINES, MAX_QTY, cartKey, readCart, addLine, removeLine, setQty, shippingBody, cartView } from '../lib/shop/cart.mjs';
 import { productFacts, variantFor, valueStates, answersOf, fromPrice } from '../lib/shop/product.mjs';
 import { ATTEMPT, CHECKOUT_WORDS, HOLD, afterAnswer, checkoutBody, freshPress, keptPress, missingDetails, pressFor, pressKey, sentOf } from '../lib/shop/checkout.mjs';
-import { ASKS_MOST, ASK_EVERY_MS, ORDER_WORDS, frozenOrder, orderAddress, orderView } from '../lib/shop/order.mjs';
+import { ASKS_MOST, ASK_DEADLINE_MS, ASK_EVERY_MS, ORDER_WORDS, frozenOrder, orderAddress, orderView, paidFromKey, sentFromHere } from '../lib/shop/order.mjs';
 import * as barrel from '../index.mjs';
 
 const now = Date.parse('2026-11-15T12:00:00Z');
@@ -433,7 +433,10 @@ test("one attempt for a press and its retries, and a new one after Stripe's page
 
   // 201: Stripe's page; the press is over and forgotten, and the next press is a new one.
   const stripe = 'https://checkout.stripe.com/c/pay/cs_test_a1';
-  assert.deepEqual(afterAnswer(p, { status: 201, body: { order: 'T9', url: stripe, expires_at: '2026-11-16T12:31:00Z' } }), { kind: 'go', url: stripe });
+  assert.deepEqual(afterAnswer(p, { status: 201, body: { order: 'T9', url: stripe, expires_at: '2026-11-16T12:31:00Z' } }), { kind: 'go', url: stripe, order: 'T9' });
+  // The order the buyer is sent to pay for is the press's: the one the shop named, else the one the press held — and none where it is none.
+  assert.equal(/** @type {any} */ (afterAnswer({ attempt: p.attempt, order: 'T7' }, { status: 201, body: { url: stripe } })).order, 'T7');
+  assert.equal(/** @type {any} */ (afterAnswer(p, { status: 201, body: { url: stripe } })).order, '');
   const next = pressFor(null);
   assert.notEqual(next.attempt, p.attempt, 'the press after Stripe\'s page was given mints a new attempt');
   assert.match(next.attempt, UUID4);
@@ -720,16 +723,21 @@ test('the page after payment needs no cart, and stops asking', () => {
   assert.equal(unknown.emptiesCart, false);
   assert.equal(orderView({ status: 404, body: { error: 'not_found' } }, { left: true }, 40).state, 'unknown');
   // Paid: its number, and the cart emptied — a cart already empty included: nothing here reads the cart.
-  const paid = orderView({ status: 200, body: ORDER_PAID }, { left: false }, 1);
+  const paid = orderView({ status: 200, body: ORDER_PAID }, { left: false, mine: true }, 1);
   assert.equal(paid.state, 'paid');
   assert.equal(paid.word, 'state.paid');
   assert.equal(paid.number, 1001);
-  assert.equal(paid.emptiesCart, true);
+  assert.equal(paid.emptiesCart, true, 'the order this tab sent the buyer to pay for: the cart is emptied');
   assert.equal(paid.askAgain, false);
   assert.equal(paid.payUrl, undefined);
   // The page the buyer left, paid in another tab: paid all the same.
-  assert.equal(orderView({ status: 200, body: ORDER_PAID }, { left: true }, 17).word, 'state.paid');
-  assert.deepEqual(Object.keys(orderView({ status: 200, body: ORDER_PAID }, { left: false }, 1)).sort(), ['askAgain', 'emptiesCart', 'number', 'state', 'word']);
+  assert.equal(orderView({ status: 200, body: ORDER_PAID }, { left: true, mine: true }, 17).word, 'state.paid');
+  assert.deepEqual(Object.keys(orderView({ status: 200, body: ORDER_PAID }, { left: false, mine: true }, 1)).sort(), ['askAgain', 'emptiesCart', 'number', 'state', 'word']);
+  // The number is the buyer's reference and does not wait on the lines.
+  for (const body of [{ state: 'paid', number: 1002 }, { state: 'paid', number: 1002, lines: null }, { state: 'paid', number: 1002, lines: 'none' }]) {
+    const bare = orderView({ status: 200, body }, { left: false, mine: true }, 1);
+    assert.deepEqual([bare.state, bare.number, bare.emptiesCart], ['paid', 1002, true], JSON.stringify(body));
+  }
 
   // Asked for two minutes — forty times, every three seconds — and then stopped, said, with Stripe's page while it lasts.
   const waiting = { status: 200, body: { state: 'waiting', lines: FROZEN, pay_url: STRIPE_PAGE } };
@@ -762,6 +770,51 @@ test('the page after payment needs no cart, and stops asking', () => {
   assert.equal(orderAddress('/api', '?order=T9'), '/api/order?token=T9', 'a base without its slash is the same base');
   assert.equal(orderAddress('/api/', '?order=a%26b%3Dc%20d'), '/api/order?token=a%26b%3Dc%20d', 'a token is put into the query as one value');
   assert.equal(orderAddress('/api/', '?order=T1&order=T2'), '/api/order?token=T1', 'the first');
+});
+
+test('the cart is emptied only for the press that went to Stripe from this tab (Ruling 227)', () => {
+  assert.equal(paidFromKey('/api/'), 'jtk:paid-from:/api/');
+  assert.equal(paidFromKey('/p/fox/api/'), 'jtk:paid-from:/p/fox/api/', 'a preview keeps a mark of its own, as it keeps a cart and a press');
+  // The mark is the order's token: this tab's, and no other.
+  assert.equal(sentFromHere('T9', 'T9'), true);
+  for (const [mark, token] of [['T8', 'T9'], ['', ''], [null, 'T9'], [undefined, 'T9'], [9, '9'], [{}, 'T9'], ['T9 ', 'T9'], ['t9', 'T9']]) assert.equal(sentFromHere(mark, token), false, JSON.stringify([mark, token]));
+  // A paid order opened anywhere else — later, on another device, in another tab — is read as paid, and the cart there is kept.
+  for (const query of [{ left: false }, { left: true }, { left: false, mine: false }, { left: true, mine: undefined }]) {
+    const view = orderView({ status: 200, body: ORDER_PAID }, query, 1);
+    assert.deepEqual([view.state, view.word, view.number, view.emptiesCart, view.askAgain], ['paid', 'state.paid', 1001, false, false], JSON.stringify(query));
+  }
+  // …and only the one the press went to Stripe with empties it, whether or not the buyer came back by leaving.
+  for (const left of [true, false]) assert.equal(orderView({ status: 200, body: ORDER_PAID }, { left, mine: true }, 1).emptiesCart, true);
+  // An order that is not paid empties nothing, whoever's it is.
+  for (const state of ['waiting', 'lapsed', 'cancelled']) assert.equal(orderView({ status: 200, body: { ...ORDER_PAID, state } }, { left: false, mine: true }, 1).emptiesCart, false, state);
+  assert.equal(orderView({ status: 404, body: null }, { left: false, mine: true }, 1).emptiesCart, false);
+  assert.equal(orderView(null, { left: false, mine: true }, 1).emptiesCart, false);
+});
+
+test('a request that never answers is given up and counts as no answer, so the stop is always reached', async () => {
+  assert.equal(ASK_DEADLINE_MS, 10000);
+  const { createServer } = await import('node:http');
+  const { ask } = await import('../elements/shop-wire.js');
+  const held = [];
+  const server = createServer((req, res) => {
+    held.push(res);
+    // Never answered, until the test lets go.
+  });
+  await new Promise((done) => server.listen(0, '127.0.0.1', done));
+  const base = `http://127.0.0.1:${server.address().port}/api/`;
+  try {
+    const deadline = new AbortController();
+    const asked = ask(base, 'order?token=T9', { signal: deadline.signal });
+    // The server has the request and holds it: nothing answers, and nothing will.
+    await new Promise((done) => { const wait = () => (held.length > 0 ? done(undefined) : setTimeout(wait, 5)); wait(); });
+    deadline.abort();
+    assert.equal(await asked, null, 'a request aborted is no answer, as a network gone is');
+    // The same through an already aborted signal.
+    assert.equal(await ask(base, 'order?token=T9', { signal: AbortSignal.abort() }), null);
+  } finally {
+    for (const res of held) res.destroy();
+    await new Promise((done) => server.close(done));
+  }
 });
 
 test('the order as it was frozen is read for the page to draw, whatever the answer says', () => {
@@ -810,7 +863,7 @@ test('every word the page after payment may say is in every language, the three 
 
 // ── a product's facts ─────────────────────────────────────────────────────
 
-const OPTION =(key, ...values) => ({ _key: key, name: key, values: values.map((value) => ({ _key: value, label: value.toUpperCase() })) });
+const OPTION = (key, ...values) => ({ _key: key, name: key, values: values.map((value) => ({ _key: value, label: value.toUpperCase() })) });
 
 /** A product of three options — size, colour and fit — through the door, one variant to a combination written. */
 function threeOptions(picked, extra = {}) {
@@ -1209,6 +1262,15 @@ test("the order's element loads without a DOM, speaks over the same wire, and is
   for (const name of ['orderView', 'orderAddress', 'frozenOrder']) assert.match(source, new RegExp(`\\b${name}\\(`), `the element calls ${name}`);
   assert.doesNotMatch(source, /localStorage\.getItem|readCart/, 'the page after payment reads the order from its address alone, never the cart');
   assert.match(source, /localStorage\.removeItem/, 'and empties it once the order is paid');
+  // …only for the press that went to Stripe from this tab (Ruling 227): the mark is read and forgotten, and each ask has its deadline (Ruling 228).
+  for (const name of ['sentFromHere', 'paidFromKey']) assert.match(source, new RegExp(`\\b${name}\\(`), `the element calls ${name}`);
+  assert.match(source, /sessionStorage\.getItem/, 'the mark is read from the tab');
+  assert.match(source, /sessionStorage\.removeItem/, 'and forgotten once the cart is emptied');
+  assert.match(source, /ASK_DEADLINE_MS/, 'each ask has its deadline');
+  // The checkout writes the mark, as it sends the buyer on.
+  const sender = readFileSync(new URL('../elements/shop-checkout.js', import.meta.url), 'utf8');
+  assert.match(sender, /paidFromKey\(/, 'the checkout names where the mark is kept');
+  assert.match(sender, /sessionStorage\.setItem\(paidFrom,/, 'and writes it');
 });
 
 test('ask names the protocol on every request, is never cached, sends JSON, and is null where nothing answered', async () => {

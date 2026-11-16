@@ -28,7 +28,7 @@ export const SHOP_PROTOCOL = 1;
  *
  * @param {string} api the base, `/api/`, as a piece's root carries it in `data-api`
  * @param {string} path `stock?product=<id>`, `shipping`, `checkout`, `order?token=<token>`
- * @param {{ method?: 'GET' | 'POST'; body?: unknown }} [init] a body is sent as JSON, and makes the request a POST unless a method is said
+ * @param {{ method?: 'GET' | 'POST'; body?: unknown; signal?: AbortSignal }} [init] a body is sent as JSON, and makes the request a POST unless a method is said; a `signal` that aborts the request makes its answer `null`, as a network gone does
  * @returns {Promise<{ status: number; body: any } | null>}
  */
 export async function ask(api, path, init = {}) {
@@ -43,6 +43,7 @@ export async function ask(api, path, init = {}) {
       cache: 'no-store',
       headers,
       ...(sends ? { body: JSON.stringify(init.body) } : {}),
+      ...(init.signal === undefined ? {} : { signal: init.signal }),
     });
     const text = await answer.text();
     let body = null;

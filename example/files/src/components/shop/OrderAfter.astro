@@ -35,7 +35,10 @@
  * page is still open; the element gives it its address. *Back to your cart* is
  * shown where the cart is to pay with — a buyer who left, an order not yet
  * confirmed, lapsed, cancelled or not found: the cart is kept for them. Once
- * the order is paid the element empties the cart, and nothing else.
+ * the order is paid the element empties the cart, and nothing else — but only for
+ * the press that went to Stripe from this tab: the checkout marks the order it
+ * sends the buyer to pay for, and a paid order's link opened later, on another
+ * device or in another tab, leaves the cart where it is.
  *
  * The page needs JavaScript to ask the shop; its `<noscript>` says so, and that
  * the confirmation comes by email.

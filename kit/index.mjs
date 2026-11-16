@@ -14,7 +14,7 @@
  * and the enquiry form the same way: `@jtakeit/kit/lead`,
  * `@jtakeit/kit/elements/lead`, `@jtakeit/kit/lead.css`.
  *
- * The shop's storefront shares five things between its five pieces, each
+ * The shop's storefront shares six things among its five pieces, each
  * with its own entry (`@jtakeit/kit/shop`, `/shop/words`, `/shop/hooks`,
  * `/shop/cart`, `/shop/checkout`, `/shop/order`): a product's facts, the words in
  * eight languages, the hooks each piece's markup keeps, the cart as the
@@ -31,4 +31,4 @@ export { PRODUCT, CART, CHECKOUT, ORDER, LISTING } from './lib/shop/hooks.mjs';
 export { MAX_LINES, MAX_QTY, cartKey, readCart, addLine, removeLine, setQty, shippingBody, cartView } from './lib/shop/cart.mjs';
 export { productFacts, variantFor, valueStates, answersOf, fromPrice } from './lib/shop/product.mjs';
 export { ATTEMPT, HOLD, pressKey, freshPress, pressFor, sentOf, keptPress, checkoutBody, missingDetails, afterAnswer, CHECKOUT_WORDS } from './lib/shop/checkout.mjs';
-export { ASK_EVERY_MS, ASKS_MOST, ORDER_WORDS, orderView, orderAddress, frozenOrder } from './lib/shop/order.mjs';
+export { ASK_EVERY_MS, ASKS_MOST, ASK_DEADLINE_MS, ORDER_WORDS, orderView, orderAddress, paidFromKey, sentFromHere, frozenOrder } from './lib/shop/order.mjs';

@@ -49,7 +49,7 @@ export const HOLD = 31 * 60 * 1000;
  * @typedef {{ name: string; email: string; phone?: string }} Buyer
  * @typedef {{ line1: string; line2?: string; postal_code: string; city: string }} Address
  * @typedef {{ buyer: Buyer; address: Address | null; total: number; locale: string; return: string; turnstile: string }} CheckoutForm
- * @typedef {{ kind: 'go'; url: string }
+ * @typedef {{ kind: 'go'; url: string; order: string }
  *   | { kind: 'paid'; order: string }
  *   | { kind: 'ask_again'; press: Press }
  *   | { kind: 'requote'; press: Press; quote: object; word: string }
@@ -264,7 +264,7 @@ const GONE = {
  * What follows an answer of `POST /api/checkout` to a press (Ruling 202),
  * every answer the protocol gives the checkout named:
  *
- *   201                                   go: to Stripe's page; the press is over
+ *   201                                   go: to Stripe's page, with the order's token; the press is over
  *   502 with an order                     ask_again with the order's token alone
  *   502 with none, or no answer           ask_again: the same press, its cart again
  *   409 total · refused · method · short  requote: the same press, the shop's new answer shown
@@ -300,7 +300,8 @@ export function afterAnswer(press, answer) {
 
   if (status === 201) {
     const url = body?.url;
-    if (typeof url === 'string' && /^https?:\/\//i.test(url)) return { kind: 'go', url };
+    // `order`: the order's token, which the page marks as the one this tab's press went to Stripe with (Ruling 227); `''` if none.
+    if (typeof url === 'string' && /^https?:\/\//i.test(url)) return { kind: 'go', url, order: withOrder.order };
     // Made, and no page to send the buyer to: the order's token asks for it again.
     return { kind: 'ask_again', press: withOrder };
   }

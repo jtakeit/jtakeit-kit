@@ -84,7 +84,9 @@
  *     be asked is asked again after the shop says `403 challenge`, and a widget
  *     that does not load is said;
  *   - acts on the answer: Stripe's page, or the order's page where it is paid
- *     already, the press then over and forgotten; the same press asked again —
+ *     already, the press then over and forgotten and the order marked as this
+ *     tab's (`sessionStorage[paidFromKey(api)]`: the order's page empties the
+ *     cart only for that order, Ruling 227); the same press asked again —
  *     by the order's token alone where the shop made one — after an answer that
  *     was lost; a new total shown and said, the cart above priced again
  *     (`jtk:cart`); a detail the shop refuses said at its field; and any other
@@ -100,6 +102,7 @@ import { shopWordsFor } from '../lib/shop/words.mjs';
 import { CHECKOUT, lacking } from '../lib/shop/hooks.mjs';
 import { cartKey, cartView, readCart, shippingBody } from '../lib/shop/cart.mjs';
 import { afterAnswer, checkoutBody, keptPress, missingDetails, pressFor, pressKey, sentOf } from '../lib/shop/checkout.mjs';
+import { paidFromKey } from '../lib/shop/order.mjs';
 import { BaseElement, ask, defineOnce, parsed, putBase } from './shop-wire.js';
 import { onAlive } from './alive.js';
 
@@ -144,6 +147,7 @@ export function wireCheckout(form) {
   const back = form.dataset.return ?? '/';
   const key = cartKey(api);
   const kept = pressKey(api);
+  const paidFrom = paidFromKey(api);
   /** @type {Record<string, string>} */
   const words = { ...shopWordsFor(locale), ...parsed(form.dataset.words, {}) };
   const prefix = `jtk-checkout-${++wiredCount}`;
@@ -492,9 +496,24 @@ export function wireCheckout(form) {
     return at.pathname + at.search + at.hash;
   }
 
-  /** On the way: the press over and forgotten, *Pay* held while the page is left. */
-  function leave(to) {
+  /**
+   * Marks the order this tab's press is sending the buyer to pay for (Ruling 227): the order's page empties the cart only for
+   * this token, so a paid order's link opened later, on another device or in another tab, leaves the cart there. A browser that
+   * will not keep the mark is said in the console: the page keeps the cart, and says so if it cannot read the mark either.
+   */
+  function markOrder(order) {
+    if (order === '') return;
+    try {
+      sessionStorage.setItem(paidFrom, order);
+    } catch (why) {
+      console.error(`checkout: the browser keeps no mark of this order, so its page will not empty the cart (${why instanceof Error ? why.message : String(why)})`);
+    }
+  }
+
+  /** On the way: the press over and forgotten, the order marked as this tab's, *Pay* held while the page is left. */
+  function leave(to, order) {
     keepPress(null);
+    markOrder(order);
     busy = true;
     form.dataset.state = 'paying';
     paying(true);
@@ -528,8 +547,8 @@ export function wireCheckout(form) {
     // A sentence is the developer's to read, whatever follows it — a refusal, or a gateway's page retried as a lost answer:
     // said in the console as it was said.
     if (typeof answer?.body === 'string' && answer.body !== '') console.error(`checkout: the shop said ${answer.status} — ${answer.body}`);
-    if (next.kind === 'go') return leave(next.url);
-    if (next.kind === 'paid') return leave(orderPage(next.order));
+    if (next.kind === 'go') return leave(next.url, next.order);
+    if (next.kind === 'paid') return leave(orderPage(next.order), next.order);
     keepPress(next.press);
     if (next.kind === 'ask_again') say(words['error.try_again']);
     else if (next.kind === 'requote') {

@@ -2,6 +2,8 @@
 export const ASK_EVERY_MS: 3000;
 /** How many times it asks at most: forty, every three seconds, is two minutes; then it says so and stops. */
 export const ASKS_MOST: 40;
+/** How long one ask may take, in milliseconds: ten seconds. A request that has not answered by then counts as no answer, and the loop goes on. */
+export const ASK_DEADLINE_MS: 10000;
 /** What an order is, as the page tells it: `unknown` is a token that is nobody's, or none on the address. */
 export type OrderState = 'waiting' | 'paid' | 'lapsed' | 'cancelled' | 'unknown';
 /** What the page after payment shows and does for the shop's answer. */
@@ -13,7 +15,7 @@ export interface OrderView {
   number?: number;
   /** Stripe's page, to go back to paying: while the order waits and the answer carries it, an address of the web. */
   payUrl?: string;
-  /** Paid: the cart is emptied, a cart already empty included. */
+  /** Paid, and the order is the one this tab's press went to Stripe with: the cart is emptied, a cart already empty included. */
   emptiesCart: boolean;
   /** Whether to ask again: a waiting order, until `ASKS_MOST`; no other state. */
   askAgain: boolean;
@@ -25,10 +27,14 @@ export interface OrderView {
  * or cancelled one is said and the cart kept; no answer is asked again as if waiting.
  *
  * @param answer what `ask` gave: `null` where nothing answered
- * @param query what the page's address says
+ * @param query `left`: what the page's address says; `mine`: this tab's press went to Stripe with this order — a paid order empties the cart only then
  * @param asked how many times the shop has been asked, this answer's ask included
  */
-export function orderView(answer: { status: number; body: any } | null | undefined, query: { left: boolean }, asked: number): OrderView;
+export function orderView(answer: { status: number; body: any } | null | undefined, query: { left: boolean; mine?: boolean }, asked: number): OrderView;
+/** Where a tab keeps the token of the order its press went to Stripe with: `jtk:paid-from:` and the base of the site's addresses. */
+export function paidFromKey(api: string): string;
+/** Whether the order a page is for is the one this tab's press went to Stripe with: the mark is its token. */
+export function sentFromHere(mark: unknown, token: string): boolean;
 /**
  * Where an order is asked, from the address the buyer is on: `<api>order?token=<the query's order>`; `null` where the address names
  * no order.

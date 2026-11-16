@@ -10,9 +10,9 @@ export const SHOP_PROTOCOL: number;
 /**
  * A request to shop/1 at a page's api base: the protocol's header, no-store, a JSON body where one is
  * given (a POST unless a method is said). The body answered is JSON where it is JSON, its sentence where
- * it is not, and `null` where empty; a fetch that throws is `null`.
+ * it is not, and `null` where empty; a fetch that throws — or is aborted by the `signal` — is `null`.
  */
-export function ask(api: string, path: string, init?: { method?: 'GET' | 'POST'; body?: unknown }): Promise<{ status: number; body: any } | null>;
+export function ask(api: string, path: string, init?: { method?: 'GET' | 'POST'; body?: unknown; signal?: AbortSignal }): Promise<{ status: number; body: any } | null>;
 
 /** JSON from an attribute, or what is given where it is none. */
 export function parsed<T>(text: string | undefined, otherwise: T): any | T;

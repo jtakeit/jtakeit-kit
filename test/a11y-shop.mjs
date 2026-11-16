@@ -103,15 +103,21 @@ const ORDER_DRIVE = [
   "order: back from Stripe's page without paying",
   'order: Back to paying, by the keyboard',
   'order: Back to your cart, by the keyboard',
+  "order: a paid order's page opened again in the same tab keeps the cart",
+  "order: a paid order's link opened in another tab is read as paid, and keeps the cart there",
   "order: a press after the buyer left Stripe's page is a new order",
   'order: a browser that will not let the page empty the cart',
+  "order: a browser that will not say whether the order is this tab's",
   'order: a buyer who has just paid and waits for Stripe to say',
   'order: a hidden tab asks the shop nothing',
   'order: a tab shown again asks once',
   'order: after two minutes of asking',
   'order: a page that has stopped asking asks no more',
+  'order: a request that never answers is given up at its deadline',
+  'order: asks that never answer end in the stop all the same',
   'order: a lapsed order is said',
   'order: a cancelled order is said',
+  'order: a paid answer with no lines still says it is paid',
   "order: a token that is nobody's is said so",
   'order: an order that is paid, lapsed, cancelled or not found is asked after once',
 ];
@@ -227,7 +233,20 @@ try {
   if (bare.status !== 0) lines.push(`jtk a11y /cart/ — exit ${bare.status}, though a cart with no line is a correct page:\n${bare.stdout}\n${bare.stderr}`);
   const empty = reached(bare.stdout, '/cart/');
   if (empty.length === 0 || empty.some((one) => one !== 1)) lines.push(`jtk a11y /cart/ — the empty cart was not held to its one check (shop checks per scheme: ${empty.join(', ') || 'none'}):\n${bare.stdout}`);
-  console.log(`jtk a11y: exit ${walked.status}, the cart pages' shop checks ${withLine.join(', ')}; jtk a11y /cart/: exit ${bare.status}, ${empty.join(', ')}`);
+  // The order's page, with no order on its address — as the command reads every page of the site, and as it reads it alone: it says
+  // so and asks the shop nothing, which is its one shop check, in each scheme it was read in. Both languages.
+  const orderPages = ['/order/', '/en/order/'];
+  const atOrder = orderPages.map((path) => [path, reached(walked.stdout, path)]);
+  for (const [path, got] of atOrder) {
+    if (got.length === 0 || got.some((one) => one !== 1)) lines.push(`jtk a11y — ${path} was not held to its one shop check, an address with no order (shop checks per scheme: ${got.join(', ') || 'none'}):\n${walked.stdout}`);
+  }
+  const alone = command(...orderPages);
+  if (alone.status !== 0) lines.push(`jtk a11y ${orderPages.join(' ')} — exit ${alone.status}, though an address with no order is a correct page:\n${alone.stdout}\n${alone.stderr}`);
+  const atAlone = orderPages.map((path) => [path, reached(alone.stdout, path)]);
+  for (const [path, got] of atAlone) {
+    if (got.length === 0 || got.some((one) => one !== 1)) lines.push(`jtk a11y ${orderPages.join(' ')} — ${path} was not held to its one shop check (shop checks per scheme: ${got.join(', ') || 'none'}):\n${alone.stdout}`);
+  }
+  console.log(`jtk a11y: exit ${walked.status}, the cart pages' shop checks ${withLine.join(', ')}, the order pages' ${atOrder.map(([, got]) => got.join('/')).join(', ')}; jtk a11y /cart/: exit ${bare.status}, ${empty.join(', ')}; jtk a11y /order/ /en/order/: exit ${alone.status}, ${atAlone.map(([, got]) => got.join('/')).join(', ')}`);
 } finally {
   if (!args.includes('--keep')) rmSync(scratch, { recursive: true, force: true });
   else console.log(`a11y-shop: kept ${scratch}`);

@@ -17,7 +17,12 @@
  *              then said and stopped, with Stripe's page still offered where
  *              the answer carries it
  *   paid       its number; the cart is emptied — the one thing the page does
- *              to the browser, and it never reads the cart to decide
+ *              to the browser, and it never reads the cart to decide — but only
+ *              for the press that went to Stripe from this tab (Ruling 227): the
+ *              checkout marks the order it sent the buyer to pay for, and the
+ *              page empties the cart only for that order's token. A paid
+ *              order's link opened later, on another device or in another tab
+ *              is read as it is, and the cart there is kept
  *   lapsed     the payment page expired, or the order was given up: nothing was
  *              taken, and the cart is kept, to pay again
  *   cancelled  paid and refunded in full: its number is still its own, and the
@@ -34,6 +39,12 @@
 export const ASK_EVERY_MS = 3000;
 /** How many times it asks at most: forty, every three seconds, is two minutes; then it says so and stops. */
 export const ASKS_MOST = 40;
+/**
+ * How long one ask may take, in milliseconds. A request that has not answered by then counts as no answer and the loop goes on,
+ * so that one that never answers cannot hold the page at *loading* and the stop is always reached (Ruling 228): at most forty
+ * asks, each at most this long, with `ASK_EVERY_MS` between them.
+ */
+export const ASK_DEADLINE_MS = 10000;
 
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const finite = (value) => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
@@ -49,6 +60,29 @@ const finite = (value) => (typeof value === 'number' && Number.isFinite(value) ?
  *   askAgain: boolean;
  * }} OrderView
  */
+
+/**
+ * Where a tab keeps the token of the order its press went to Stripe with (Ruling 227): `sessionStorage["jtk:paid-from:" + api]`,
+ * one a site, and a preview's `/p/<slug>/api/` one of its own, as its cart and its press are. The checkout writes it as it sends
+ * the buyer to Stripe's page (or to the page of an order it finds already paid); the order's page empties the cart only for
+ * that token, and forgets the mark.
+ *
+ * @param {string} api the base of the site's addresses, as the pieces carry it in `data-api`
+ */
+export function paidFromKey(api) {
+  return `jtk:paid-from:${api}`;
+}
+
+/**
+ * Whether the order a page is for is the one this tab's press went to Stripe with: the mark is its token. A tab with no mark,
+ * an empty one and another order's are none.
+ *
+ * @param {unknown} mark what the tab keeps under `paidFromKey`
+ * @param {string} token the order's token on the page's address
+ */
+export function sentFromHere(mark, token) {
+  return typeof mark === 'string' && mark !== '' && mark === token;
+}
 
 /**
  * Where an order is asked, from the address the buyer is on: the shop's
@@ -81,8 +115,10 @@ function stripePage(value) {
  *                       `payUrl` while the answer carries it; asked again
  *                       while `asked` < `ASKS_MOST`, then `state.stillWaiting`,
  *                       stopped, the `payUrl` kept
- *   paid                its number, and `emptiesCart` — a cart already empty
- *                       included
+ *   paid                its number, and `emptiesCart` — where the order is the
+ *                       one this tab's press went to Stripe with (`query.mine`,
+ *                       Ruling 227), a cart already empty included; the cart of
+ *                       a paid order's link opened anywhere else is kept
  *   lapsed, cancelled   said, the cart kept, to pay again; a cancelled order
  *                       has the number it had
  *   no answer           asked again, as if waiting: the network gone, a
@@ -90,7 +126,7 @@ function stripePage(value) {
  *                       the shop's — and so is a state this kit does not know
  *
  * @param {{ status: number; body: any } | null | undefined} answer what `ask` gave: null where nothing answered
- * @param {{ left: boolean }} query what the page's address says: the buyer came back from Stripe's page without paying
+ * @param {{ left: boolean; mine?: boolean }} query `left`: what the page's address says, the buyer came back from Stripe's page without paying; `mine`: this tab's press went to Stripe with this order (`sentFromHere`) — left out, it did not
  * @param {number} asked how many times the shop has been asked, this answer's ask included
  * @returns {OrderView}
  */
@@ -98,7 +134,7 @@ export function orderView(answer, query, asked) {
   if (answer?.status === 404) return { state: 'unknown', word: 'state.unknown', emptiesCart: false, askAgain: false };
   const body = answer?.status === 200 && isObject(answer.body) ? answer.body : null;
   const number = Number.isInteger(body?.number) && body.number > 0 ? body.number : undefined;
-  const given = (state, word, extra = {}) => ({ state, word, ...extra, emptiesCart: state === 'paid', askAgain: false });
+  const given = (state, word, extra = {}) => ({ state, word, ...extra, emptiesCart: state === 'paid' && query.mine === true, askAgain: false });
   if (body?.state === 'paid') return given('paid', 'state.paid', number === undefined ? {} : { number });
   if (body?.state === 'lapsed') return given('lapsed', 'state.lapsed');
   if (body?.state === 'cancelled') return given('cancelled', 'state.cancelled', number === undefined ? {} : { number });

@@ -59,8 +59,8 @@ export function checkoutBody(press: Press, cart: Cart, form: CheckoutForm): obje
 export function missingDetails(buyer: Buyer, address: Address | null): string[];
 /** What follows an answer of the checkout. */
 export type Next =
-  /** The press is over: to Stripe's page. */
-  | { kind: 'go'; url: string }
+  /** The press is over: to Stripe's page, for the order `order` (`''` if the shop named none), which the page marks as this tab's. */
+  | { kind: 'go'; url: string; order: string }
   /** Already paid: to the order's page. */
   | { kind: 'paid'; order: string }
   /** The same press again: with its order alone, or with its cart and a fresh token. */

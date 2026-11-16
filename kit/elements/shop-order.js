@@ -56,10 +56,18 @@
  *     page, one whose order is still not confirmed, and an order lapsed,
  *     cancelled or not found;
  *   - once the order is paid, empties this device's cart — the one thing it does
- *     to the browser. It never reads the cart: it decides nothing by it. A
- *     browser that will not let it is said (`orderCartKept`).
+ *     to the browser — but only for the press that went to Stripe from this tab
+ *     (Ruling 227): the checkout marks the order it sent the buyer to pay for in
+ *     `sessionStorage[paidFromKey(api)]`, and the page empties the cart only where
+ *     its token is that one, and forgets the mark. A paid order's link opened later,
+ *     on another device or in another tab, leaves the cart there. It never reads the
+ *     cart: it decides nothing by it. A browser that will not let it empty the cart,
+ *     or will not say whether the order is this tab's, keeps the cart and says so
+ *     (`orderCartKept`).
  *
- * The asking is one loop: every `ASK_EVERY_MS`, at most `ASKS_MOST` times, and
+ * The asking is one loop: every `ASK_EVERY_MS`, each ask given `ASK_DEADLINE_MS` to
+ * answer — one that has not by then is no answer, and the loop goes on, so that a
+ * request that never answers cannot hold the page at *loading* — at most `ASKS_MOST` times, and
  * never while the tab is hidden — a tab shown again asks once it has waited out
  * the three seconds since its last ask, and carries on — and never after it has
  * stopped, or been shown again after it did. A page the browser restores from
@@ -69,7 +77,7 @@ import { money } from '../lib/money.mjs';
 import { shopWordsFor } from '../lib/shop/words.mjs';
 import { ORDER, lacking } from '../lib/shop/hooks.mjs';
 import { cartKey } from '../lib/shop/cart.mjs';
-import { ASK_EVERY_MS, frozenOrder, orderAddress, orderView } from '../lib/shop/order.mjs';
+import { ASK_DEADLINE_MS, ASK_EVERY_MS, frozenOrder, orderAddress, orderView, paidFromKey, sentFromHere } from '../lib/shop/order.mjs';
 import { BaseElement, ask, defineOnce, parsed, putBase } from './shop-wire.js';
 import { onAlive } from './alive.js';
 
@@ -129,6 +137,21 @@ export function wireOrder(root) {
   const query = new URLSearchParams(location.search);
   const address = orderAddress(api, location.search);
   const left = query.get('left') === '1';
+  /**
+   * Whether this tab's press went to Stripe with this order (Ruling 227): the mark the checkout wrote. Read once, as the page loads —
+   * the tab is the buyer's, and the mark was written before they left. A tab that will not say is none, and said once a paid
+   * order would have emptied the cart.
+   */
+  let mine = false;
+  let unreadable = false;
+  if (address !== null) {
+    try {
+      mine = sentFromHere(sessionStorage.getItem(paidFromKey(api)), (query.get('order') ?? '').trim());
+    } catch (why) {
+      unreadable = true;
+      console.error(`order: the browser would not say whether this tab sent the buyer to pay for this order (${why instanceof Error ? why.message : String(why)})`);
+    }
+  }
 
   // ── what is drawn ───────────────────────────────────────────────────────
   /** What the lines were drawn from, so a waiting order asked again every three seconds is not redrawn for nothing. */
@@ -196,11 +219,12 @@ export function wireOrder(root) {
     put(stated, `${words[view.word]}${kept ? `. ${words.orderCartKept}` : ''}`);
     if (back) back.hidden = !CART_NEXT.has(view.word);
     const body = answer?.status === 200 ? answer.body : null;
-    const frozen = frozenOrder(body, words.yes);
-    const usable = frozen !== null && ['waiting', 'paid', 'lapsed', 'cancelled'].includes(body?.state);
+    // The shop's answer is one that says a state it knows: its number and Stripe's page do not wait on its lines.
+    const usable = ['waiting', 'paid', 'lapsed', 'cancelled'].includes(body?.state);
     if (view.state !== 'unknown' && !usable) return;
-    if (usable) drawOrder(frozen);
-    else clearOrder();
+    const frozen = usable ? frozenOrder(body, words.yes) : null;
+    if (frozen !== null) drawOrder(frozen);
+    else if (!usable) clearOrder();
     if (number) {
       if (view.number === undefined) number.hidden = true;
       else {
@@ -221,13 +245,22 @@ export function wireOrder(root) {
     }
   }
 
-  /** Empties the cart: the one thing this page does to the browser. Never read, only emptied. */
+  /**
+   * Empties the cart: the one thing this page does to the browser. Never read, only emptied — and only for the order this tab's press
+   * went to Stripe with, whose mark is spent: the same page opened again, or the order's link opened elsewhere, keeps the cart.
+   */
   function emptyCart() {
     try {
       localStorage.removeItem(cartKey(api));
     } catch (why) {
       console.error(`order: the browser would not let this page empty the cart (${why instanceof Error ? why.message : String(why)})`);
       kept = true;
+      return;
+    }
+    try {
+      sessionStorage.removeItem(paidFromKey(api));
+    } catch (why) {
+      console.error(`order: the browser would not let this page forget the mark of the order (${why instanceof Error ? why.message : String(why)})`);
     }
   }
 
@@ -265,8 +298,12 @@ export function wireOrder(root) {
     if (stopped || inflight || address === null) return;
     inflight = true;
     asked += 1;
-    // The address is whole — `orderAddress` made it of the page's api base — so it is asked at the site's root.
-    const answer = await ask('/', address);
+    // The address is whole — `orderAddress` made it of the page's api base — so it is asked at the site's root. An ask that has
+    // not answered in its deadline is no answer (Ruling 228): the loop goes on, and the stop is reached.
+    const deadline = new AbortController();
+    const giveUp = setTimeout(() => deadline.abort(), ASK_DEADLINE_MS);
+    const answer = await ask('/', address, { signal: deadline.signal });
+    clearTimeout(giveUp);
     inflight = false;
     lastAt = Date.now();
     if (!root.isConnected) {
@@ -274,9 +311,11 @@ export function wireOrder(root) {
       stop.abort();
       return;
     }
-    const view = orderView(answer, { left }, asked);
+    const view = orderView(answer, { left, mine }, asked);
     // Emptied before it is said paid, so that the page that says it has nothing left in the cart to be paid for again.
     if (view.emptiesCart) emptyCart();
+    // A tab that would not say whether the order is its own keeps the cart, and the buyer is told so.
+    else if (view.state === 'paid' && unreadable) kept = true;
     show(view, answer);
     if (view.askAgain) later();
     else stopped = true;
