@@ -602,7 +602,8 @@ export function collection3(collection, ownListings = new Set()) {
 
 /**
  * A block type in contract 3's words (§3.2): its fields and asks as fields
- * are, a view's `sample` gone and a view's bound of 0 with it.
+ * are, a view's `sample` gone and a view's bound of 0 with it — and, where
+ * `how.form` says one, the entry's card in the panel (`scaffoldFormsOf`).
  */
 export function block3(block, how = {}) {
   if (!isObject(block)) return block;
@@ -617,6 +618,62 @@ export function block3(block, how = {}) {
         return rest;
       });
     } else out[attr] = value;
+  }
+  if (how.form !== undefined && out.form === undefined) out.form = clone(how.form);
+  return out;
+}
+
+/**
+ * The card the scaffold lays its blog's post out with in the panel
+ * (template/contract-3's BLOG_POST, the example's): the title with its date
+ * beside it, what the blog's list shows under a heading of its own, the cover
+ * aside. Contract 2 had no `form`, and a site's post that is the scaffold's —
+ * the same five fields — is given it on the move, so `jtk create` and
+ * `--contract 2` moved lay out one schema (test/create3.mjs).
+ */
+export const POST_FORM = Object.freeze({
+  sections: [
+    { rows: [[{ field: 'title', span: 4 }, 'date']] },
+    {
+      title: { uk: 'У списку', en: 'In the list', de: 'In der Liste', ru: 'В списке', es: 'En la lista', it: 'Nell’elenco', pt: 'Na lista', fr: 'Dans la liste' },
+      note: {
+        uk: 'Що список блогу показує про цей допис',
+        en: 'What the blog’s list shows for this post',
+        de: 'Was die Liste des Blogs zu diesem Beitrag zeigt',
+        ru: 'Что список блога показывает об этой записи',
+        es: 'Lo que la lista del blog muestra de esta entrada',
+        it: 'Ciò che l’elenco del blog mostra di questo articolo',
+        pt: 'O que a lista do blog mostra deste artigo',
+        fr: 'Ce que la liste du blog montre de cet article',
+      },
+      rows: [['excerpt']],
+    },
+  ],
+  aside: ['cover'],
+});
+
+/** The scaffold's post, by its fields: what POST_FORM lays out, and nothing else. */
+const POST_FIELDS = { title: 'text', date: 'date', excerpt: 'textarea', cover: 'media', body: 'markdown' };
+
+/**
+ * Per block type, the card the move gives it (`block3`'s `how.form`): the
+ * scaffold's post, a collection's entry type with the scaffold's five fields
+ * and no others, gets POST_FORM. Any other type keeps none, and the panel
+ * lays it out by its kinds.
+ *
+ * @param {Record<string, any>} declared
+ * @returns {Map<string, any>}
+ */
+export function scaffoldFormsOf(declared) {
+  const collections = Array.isArray(declared.COLLECTIONS) ? declared.COLLECTIONS : [];
+  const entryTypes = new Set(collections.filter(isObject).map((one) => one.type));
+  const out = new Map();
+  for (const block of Array.isArray(declared.BLOCKS) ? declared.BLOCKS : []) {
+    if (!isObject(block) || !entryTypes.has(block.type) || !Array.isArray(block.fields)) continue;
+    const fields = block.fields.filter(isObject);
+    const scaffolds = fields.length === Object.keys(POST_FIELDS).length
+      && fields.every((one) => POST_FIELDS[one.key] === one.kind && one.multiple !== true && one.deprecated !== true);
+    if (scaffolds) out.set(block.type, POST_FORM);
   }
   return out;
 }
@@ -664,7 +721,8 @@ export function tablesOf(declared, ctx = {}) {
   const modules = isObject(declared.MODULES) ? declared.MODULES : {};
   const collections = Array.isArray(declared.COLLECTIONS) ? declared.COLLECTIONS : [];
   const whole = wholeOf(declared);
-  const blocks = (Array.isArray(declared.BLOCKS) ? declared.BLOCKS : []).map((one) => block3(one, { whole: whole.get(one?.type) ?? [] }));
+  const forms = scaffoldFormsOf(declared);
+  const blocks = (Array.isArray(declared.BLOCKS) ? declared.BLOCKS : []).map((one) => block3(one, { whole: whole.get(one?.type) ?? [], form: forms.get(one?.type) }));
   const shared = [...new Set(ctx.sharedTypes ?? [])];
   const facts = Array.isArray(declared.BUSINESS_FACTS) ? declared.BUSINESS_FACTS : [];
   let contacts;

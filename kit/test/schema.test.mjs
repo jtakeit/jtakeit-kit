@@ -4,10 +4,10 @@
 // by key — and contract 2's declaration and file left as they were.
 //
 // Two fixtures are the platform's, copied read-only from jtakeit-core
-// (backend/api/registry/testdata, at 4ce8af97): kit-schema.json, which is the
+// (backend/api/registry/testdata): kit-schema.json (at 4ce8af97), which is the
 // schema content-v3.test.mjs reads, as the platform's registry is tested on
-// it; and contract3-exam.json, the exam the platform's judge of contract 3
-// sits (TestTheContract3Exam). Copied, not fetched, so this suite runs
+// it; and contract3-exam.json (at 358dc217, with its upcasters and forms), the
+// exam the platform's judge of contract 3 sits (TestTheContract3Exam). Copied, not fetched, so this suite runs
 // offline; a change on the platform's side is found by `jtk schema --judge`.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
