@@ -115,7 +115,8 @@ test("every piece's hooks are data or names, never a class", () => {
     assert.match(piece.always[0].hook, /^(form)?\[data-[a-z-]+\]$/, `${name}: the root first`);
     assert.ok(Object.isFrozen(piece) && Object.isFrozen(piece.always) && Object.isFrozen(piece.said), `${name} is not for writing over`);
   }
-  // Each piece's lists exactly as the brief of Task 9.10 gives them, root first: Tasks 9.12 to 9.16 read these as the truth.
+  // Each piece's lists exactly as the brief of Task 9.10 gives them, root first: Tasks 9.12 to 9.16 read these as the truth. The
+  // listing's `said` gains `[data-listing-empty]` (Ruling 229): additive, so no `always` hook moved.
   const pinned = {
     PRODUCT: [
       ['form[data-product]', '[name^="option:"]', '[data-price]', '[data-stock]', '[name=qty]', '[data-add]', '[data-product-error]', '[data-added]'],
@@ -138,7 +139,7 @@ test("every piece's hooks are data or names, never a class", () => {
     ],
     LISTING: [
       ['[data-listing]', '[data-product-tile]'],
-      ['[data-listing-group]'],
+      ['[data-listing-group]', '[data-listing-empty]'],
     ],
   };
   for (const [name, piece] of Object.entries(pieces)) {
@@ -1127,6 +1128,31 @@ test("a product's facts are read through the door", async () => {
   });
   assert.deepEqual(tasche.customizations[1], { key: 'zipper', name: 'Reissverschluss', kind: 'yes_no', required: false, adds: 500, choices: [] });
   assert.deepEqual(tasche.customizations[2], { key: 'tag', name: 'Name auf dem Etikett', kind: 'text', required: false, max: 20, choices: [] });
+});
+
+test("the lowest price on sale is the cheapest of the variants on sale, wherever it is — not the first's, and not one taken off sale", () => {
+  const site = content({
+    '/jtk/schema.json': schema,
+    '/jtk/entries/products/dearer-first.json': {
+      id: '0193a5c3-6b1c-7d20-9a31-5e4d3c2b1c05', collection: 'products', slug: 'dearer-first', visible: true,
+      fields: {
+        title: 'Dearer first',
+        // The first on sale is the dearest; a cheaper one is off sale and does not count; the least on sale comes after them.
+        variants: [
+          { _key: 'a', sku: 'A', price: { minor: 11900 } },
+          { _key: 'b', sku: 'B', price: { minor: 5000 }, on_sale: false },
+          { _key: 'c', sku: 'C', price: { minor: 8900 } },
+          { _key: 'd', sku: 'D', price: { minor: 9900 } },
+        ],
+      },
+    },
+  }, { now });
+  const facts = productFacts(site.entry('products', 'dearer-first'), 'CHF');
+  assert.equal(fromPrice(facts), 8900, 'the cheapest on sale: neither the first variant\'s 11900 nor the off-sale 5000');
+  assert.equal(facts.variants.find((one) => one.onSale && one.price === fromPrice(facts))?.key, 'c', 'and it is the third variant, the one a tile annotates');
+  // Taking the cheap one off sale or putting the first at the least moves it; every variant on sale with the one price is that price.
+  assert.equal(fromPrice({ ...facts, variants: facts.variants.map((one) => (one.key === 'a' ? { ...one, price: 700 } : one)) }), 700);
+  assert.equal(fromPrice({ ...facts, variants: facts.variants.map((one) => ({ ...one, onSale: true })) }), 5000, 'on sale again, the 5000 counts');
 });
 
 test('a product that is taken off sale, not counted, or says what the shop would refuse, is read as the shop reads it', () => {

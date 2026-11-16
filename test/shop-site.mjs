@@ -97,3 +97,19 @@ export function groupShop(site) {
   }
   jtk('schema', '--emit-only', '--root', site);
 }
+
+/**
+ * The bag's two variants with their prices swapped, so that the cheaper one on sale is not the first: the least price of the bag
+ * is 89.00 and its first variant is 119.00 (what a tile of «from» says, and which variant it annotates). Thrown where the bag is
+ * not as the test shop has it.
+ * @param {string} site a site `layShop` laid, or a copy of one
+ */
+export function dearerFirst(site) {
+  const file = join(site, 'jtk/entries/products/tasche-nach-mass.json');
+  const bag = JSON.parse(readFileSync(file, 'utf8'));
+  const [first, second] = bag.fields.variants;
+  if (first?.price?.minor !== 8900 || second?.price?.minor !== 11900) throw new Error(`the bag's variants are not 89.00 then 119.00 as the test shop has them: ${file}`);
+  first.price = { minor: 11900 };
+  second.price = { minor: 8900 };
+  writeFileSync(file, `${JSON.stringify(bag, null, 2)}\n`);
+}

@@ -119,7 +119,11 @@ test('the copied listing carries every hook, hides nothing unless asked, imports
   // The root's own: what the element reads off it. `data-hide-sold-out` is there with `hideSoldOut` and only with it:
   // the page's choice, off by default, and the build lists every product either way.
   const root = /<[a-z]+\b[^>]*\sdata-listing[\s>=][^>]*>/.exec(astro)?.[0] ?? '';
-  for (const attribute of ['data-listing', 'data-api']) assert.match(root, new RegExp(`\\s${attribute}[\\s=>]`), `the listing says ${attribute}`);
+  for (const attribute of ['data-listing', 'data-api', 'data-locale', 'data-words']) assert.match(root, new RegExp(`\\s${attribute}[\\s=>]`), `the listing says ${attribute}`);
+  // The sentence for a listing hiding leaves empty is the element's to write: the word is handed over, the place is hidden and a status.
+  assert.match(astro, /const SAID = \['listingEmpty'\]/, 'the word the element says is handed over');
+  assert.match(astro, /<p\b[^>]*\sdata-listing-empty[^>]*\shidden[^>]*><\/p>|<p\b[^>]*\shidden[^>]*\sdata-listing-empty[^>]*><\/p>/, 'an empty place for the sentence, hidden');
+  assert.match(astro, /<p\b[^>]*\sdata-listing-empty[^>]*\srole="status"|<p\b[^>]*\srole="status"[^>]*\sdata-listing-empty/, 'which is a status');
   assert.match(root, /\sdata-hide-sold-out=\{hideSoldOut \? '' : undefined\}/, 'data-hide-sold-out only where hideSoldOut is');
   assert.match(astro, /hideSoldOut\??:\s*boolean/, 'hideSoldOut is a boolean prop');
   assert.match(astro, /hideSoldOut\s*=\s*false/, 'and off unless the page says it');
@@ -136,9 +140,13 @@ test('the copied listing carries every hook, hides nothing unless asked, imports
   // The page: at the products' route, the page's choice written once, built only where the schema turns the shop on.
   const page = readFileSync(join(here, '../../example/files/src/pages/[...lang]/shop/index.astro'), 'utf8');
   const markup = page.slice(page.lastIndexOf('\n---\n'));
-  assert.match(markup, /<ProductListing\b[^>]*\shideSoldOut=\{HIDE_SOLD_OUT\}/, 'the page passes its choice');
+  assert.match(markup, /<ProductListing\b[^>]*\shideSoldOut=\{HIDE_SOLD_OUT && shopIsOn\}/, 'the page passes its choice, and never asks a shop that is off');
   assert.match(page, /const HIDE_SOLD_OUT = false;/, 'which is no, as the unit lays it');
-  assert.match(page, /site\.rolesOf\('shop'\)/, 'built only where the schema turns the shop on');
+  // Built wherever the products are listed at /shop, the shop on or not: the sitemap and llms.txt name every listing the scaffold leaves to a page.
+  const paths = /export function getStaticPaths\(\) \{[\s\S]*?\n\}/.exec(page)?.[0] ?? '';
+  assert.match(paths, /site\.rolesOf\('shop'\) !== undefined \|\| here/, 'built where the shop is on');
+  assert.match(paths, /site\.listingOf\(one\.name, ''\) === '\/shop'/, 'and where a collection is listed at /shop with the shop off');
+  assert.match(page, /site\.rolesOf\('shop'\)\?\.products \?\? listedHere\(\)/, 'the products of the shop\'s role, else the collection listed there');
 });
 
 test("the shop's elements find nothing by a class alone", () => {

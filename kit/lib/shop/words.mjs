@@ -133,6 +133,8 @@ const BASE = {
     order: 'Ваше замовлення',
     orderNoScript: 'Щоб показати замовлення, потрібен JavaScript. Якщо ви заплатили, підтвердження прийде на пошту',
     orderCartKept: 'Не вдалося очистити ваш кошик: браузер не дозволив сайту змінити свої дані',
+    // the products' listing
+    listingEmpty: 'Наразі все розпродано',
   },
   de: {
     // the product page
@@ -235,6 +237,8 @@ const BASE = {
     order: 'Ihre Bestellung',
     orderNoScript: 'Zum Anzeigen Ihrer Bestellung ist JavaScript nötig. Falls Sie bezahlt haben, kommt die Bestätigung per E-Mail',
     orderCartKept: 'Ihr Warenkorb konnte nicht geleert werden: Der Browser erlaubt der Seite nicht, ihre Daten zu ändern',
+    // the products' listing
+    listingEmpty: 'Im Moment ist alles ausverkauft',
   },
   en: {
     // the product page
@@ -337,6 +341,8 @@ const BASE = {
     order: 'Your order',
     orderNoScript: 'Showing your order needs JavaScript. If you paid, the confirmation will arrive by email',
     orderCartKept: 'Your cart could not be emptied: this browser would not let the site change its data',
+    // the products' listing
+    listingEmpty: 'Everything here is sold out for now',
   },
   ru: {
     // the product page
@@ -439,6 +445,8 @@ const BASE = {
     order: 'Ваш заказ',
     orderNoScript: 'Чтобы показать заказ, нужен JavaScript. Если вы заплатили, подтверждение придёт на почту',
     orderCartKept: 'Не удалось очистить вашу корзину: браузер не позволил сайту изменить свои данные',
+    // the products' listing
+    listingEmpty: 'Сейчас всё распродано',
   },
   es: {
     // the product page
@@ -541,6 +549,8 @@ const BASE = {
     order: 'Su pedido',
     orderNoScript: 'Para mostrar su pedido hace falta JavaScript. Si ha pagado, la confirmación llegará por correo',
     orderCartKept: 'No se pudo vaciar su carrito: el navegador no permite que el sitio cambie sus datos',
+    // the products' listing
+    listingEmpty: 'Por ahora todo está agotado',
   },
   it: {
     // the product page
@@ -643,6 +653,8 @@ const BASE = {
     order: 'Il suo ordine',
     orderNoScript: 'Per mostrare il suo ordine serve JavaScript. Se ha pagato, la conferma arriverà via e-mail',
     orderCartKept: 'Non è stato possibile svuotare il suo carrello: il browser non consente al sito di modificare i propri dati',
+    // the products' listing
+    listingEmpty: 'Per ora è tutto esaurito',
   },
   pt: {
     // the product page
@@ -745,6 +757,8 @@ const BASE = {
     order: 'A sua encomenda',
     orderNoScript: 'Para mostrar a sua encomenda é preciso JavaScript. Se pagou, a confirmação chegará por e-mail',
     orderCartKept: 'Não foi possível esvaziar o seu carrinho: o navegador não deixa o site alterar os seus dados',
+    // the products' listing
+    listingEmpty: 'De momento está tudo esgotado',
   },
   fr: {
     // the product page
@@ -847,6 +861,8 @@ const BASE = {
     order: 'Votre commande',
     orderNoScript: 'L’affichage de votre commande nécessite JavaScript. Si vous avez payé, la confirmation arrivera par e-mail',
     orderCartKept: 'Votre panier n’a pas pu être vidé : le navigateur n’autorise pas le site à modifier ses données',
+    // the products' listing
+    listingEmpty: 'Tout est épuisé pour le moment',
   },
 };
 

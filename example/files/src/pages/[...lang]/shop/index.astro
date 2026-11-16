@@ -11,7 +11,10 @@
  * (`[...listing].astro`) leaves `/shop` to it (`ownListing` in lib/entries),
  * and with it the paging: this page lists every product, whatever `per_page`
  * says. It is where `listing` says: a site that moves its listing moves this
- * file with it. It is built only where the schema turns the shop on.
+ * file with it. It is built wherever the products are listed at `/shop` —
+ * also where the schema does not turn the shop on, since the sitemap and
+ * `llms.txt` name every listing the scaffold leaves to a page of its own — and
+ * it asks the shop for what is sold out only where the shop is on.
  *
  * `HIDE_SOLD_OUT` is that choice: `true`, and the listing hides what is sold
  * out once the page has loaded (the element asks the shop, a hundred products
@@ -25,12 +28,18 @@ import { site } from '../../../lib/site';
 
 const HIDE_SOLD_OUT = false;
 
+/** The collection listed at `/shop` where the shop's `products` role names none: the shop is off and its files were left. */
+const listedHere = () => site.collections.find((one) => one.pages && site.listingOf(one.name, '') === '/shop');
+
+// `getStaticPaths` runs apart from the rest of this file, so it says the same in its own words.
 export function getStaticPaths() {
-  return site.rolesOf('shop') === undefined ? [] : localeParams();
+  const here = site.collections.some((one) => one.pages && site.listingOf(one.name, '') === '/shop');
+  return site.rolesOf('shop') !== undefined || here ? localeParams() : [];
 }
 
 const locale = localeOf(Astro.url.pathname);
-const name = site.rolesOf('shop')!.products;
+const shopIsOn = site.rolesOf('shop') !== undefined;
+const name = site.rolesOf('shop')?.products ?? listedHere()!.name;
 const collection = site.collection(name)!;
 const products = site.entries(name, { locale });
 const heading = site.words(collection.label, langOf(locale));
@@ -48,7 +57,7 @@ const alternates = EVERY_LOCALE.flatMap((one) => {
 <Layout title={seoWords('title') || ownPage?.name?.trim() || heading} description={seoWords('description')} alternates={alternates}>
   <main id="content" class="shop-page">
     <h1 data-jtk-fixed>{heading}</h1>
-    <ProductListing entries={products} collection={collection} locale={locale} hideSoldOut={HIDE_SOLD_OUT} />
+    <ProductListing entries={products} collection={collection} locale={locale} hideSoldOut={HIDE_SOLD_OUT && shopIsOn} />
   </main>
 </Layout>
 

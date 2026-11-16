@@ -117,11 +117,12 @@ export const ORDER = piece(
 /** A listing of products, which may hide what is sold out once the page has loaded. */
 export const LISTING = piece(
   [
-    { hook: '[data-listing]', says: 'the listing; `data-api`, and `data-hide-sold-out` where the site chooses to hide what is sold out — the element then asks the shop once the page has loaded and says what it did in `data-stock-read`: `yes`, or `failed` where a call did not answer, and the tiles of that call stay shown' },
+    { hook: '[data-listing]', says: 'the listing; `data-api`, and `data-hide-sold-out` where the site chooses to hide what is sold out — the element then asks the shop once the page has loaded and says what it did in `data-stock-read`: `yes` (also where there is no tile to ask after), or `failed` where a call did not answer, and the tiles of that call stay shown; `data-locale` and `data-words` carry the sentence it may write' },
     { hook: '[data-product-tile]', says: 'each product\'s tile; `data-product` the entry\'s `id`; the element sets `hidden` on it where the shop serves the product with no variant in stock, or does not serve it' },
   ],
   [
     { hook: '[data-listing-group]', says: 'around a group\'s heading and its tiles, so a group left with no tile shown is `hidden` with its heading' },
+    { hook: '[data-listing-empty]', says: 'empty and hidden, a status; where hiding leaves no tile the element writes its sentence into it (`listingEmpty`) and shows it' },
   ],
 );
 

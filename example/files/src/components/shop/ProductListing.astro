@@ -27,7 +27,10 @@
  * the element asks the shop what is left (`/api/stock`, a hundred products at
  * a time) and sets `hidden` on each tile whose product nobody can buy, and on
  * each group left with no tile — its heading with it, since the heading is in
- * the group. Nothing about stock is in this file or in the content. The built
+ * the group. Where that leaves no tile at all, the element writes
+ * `[data-listing-empty]`'s sentence (`listingEmpty`, handed over in
+ * `data-words`) and shows it, so a buyer is not left with a heading and nothing
+ * under it. Nothing about stock is in this file or in the content. The built
  * page lists every product either way: a crawler, a reader without script,
  * and a buyer whose stock read failed or stalled all see them all, and only
  * the element, only where it is asked, hides one.
@@ -43,6 +46,7 @@
 import { Image } from 'astro:assets';
 import type { Collection, Entry, Row } from '@jtakeit/kit/content';
 import { fromPrice, productFacts } from '@jtakeit/kit/shop';
+import { shopWordsFor } from '@jtakeit/kit/shop/words';
 import { money, priceWords } from '@jtakeit/kit/money';
 import { site } from '../../lib/site';
 import { href, titleOf } from '../../lib/entries';
@@ -64,6 +68,10 @@ interface Props {
 
 const { entries, collection, locale, hideSoldOut = false } = Astro.props;
 const LANG = langOf(locale);
+const W = shopWordsFor(LANG);
+// The word the element says where hiding leaves no tile, handed over in the page's language.
+const SAID = ['listingEmpty'];
+const words = Object.fromEntries(SAID.map((key) => [key, W[key]]));
 const say = (minor: number): string => money(minor, site.currency, LANG);
 // Under their headings where the collection is grouped; one run with none where it is not.
 const groups = (site.groupsOf(collection.name, entries, locale) ?? [{ entries }]).filter((run) => run.entries.length > 0);
@@ -97,7 +105,7 @@ const tileOf = (entry: Entry) => {
 ---
 
 <jtk-listing class="shop">
-  <div class="shop__in" data-listing data-api={under('/api/')} data-hide-sold-out={hideSoldOut ? '' : undefined}>
+  <div class="shop__in" data-listing data-api={under('/api/')} data-locale={LANG} data-words={JSON.stringify(words)} data-hide-sold-out={hideSoldOut ? '' : undefined}>
     {
       groups.map((run) => (
         <div class="shop__group" data-listing-group>
@@ -127,6 +135,7 @@ const tileOf = (entry: Entry) => {
         </div>
       ))
     }
+    <p class="shop__empty" data-listing-empty role="status" hidden></p>
   </div>
 </jtk-listing>
 
@@ -147,6 +156,11 @@ const tileOf = (entry: Entry) => {
   .shop__in {
     display: grid;
     gap: var(--space-6, 2.5rem);
+  }
+  .shop__empty {
+    margin: 0;
+    font-size: var(--step-1, 1.25rem);
+    color: var(--ink-quiet);
   }
   .shop__group {
     display: grid;

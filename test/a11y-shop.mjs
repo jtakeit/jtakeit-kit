@@ -35,7 +35,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { audit, report } from '../lib/a11y.mjs';
-import { copyShop, groupShop, hideSoldOut, layShop } from './shop-site.mjs';
+import { copyShop, dearerFirst, groupShop, hideSoldOut, layShop } from './shop-site.mjs';
 
 /** What the cart's drive must have said on each of its pages — the test shop's country and methods give it each of them to do. */
 const CART_DRIVE = [
@@ -136,7 +136,10 @@ const LISTING_DRIVE = [
   'shop: every request names the protocol version',
 ];
 
-/** And where the site chooses to hide what is sold out: the fox sold out in all its four SKUs, the products under two headings. */
+/**
+ * And where the site chooses to hide what is sold out: the fox sold out in all its four SKUs, the products under two headings, the
+ * bag's cheaper variant its second. Then every product sold out, by the walk's own answer to the page's call, and a listing with no tile.
+ */
 const HIDING_DRIVE = [
   'listing: every tile names its product',
   'listing: once the page has loaded the tiles of what the shop says nobody can buy are hidden',
@@ -144,6 +147,9 @@ const HIDING_DRIVE = [
   'listing: the keyboard goes through the tiles shown',
   'listing: a shop that cannot be asked, or answers with no stock, hides nothing',
   'listing: a shop that never answers is given up at its deadline',
+  'listing: where hiding leaves no tile, every group is hidden and no heading is left over nothing',
+  'listing: where hiding leaves no tile the sentence for it is shown',
+  'listing: a listing with no tile asks the shop nothing',
   'listing: more than 100 products are asked 100 at a time',
   'shop: every request names the protocol version',
 ];
@@ -266,6 +272,8 @@ try {
     const copy = copyShop(site, `${site}-hiding`);
     hideSoldOut(copy);
     groupShop(copy);
+    // The bag's dearer variant first: a tile built from the first variant on sale would say «ab CHF 119» and the walk's price check would fail.
+    dearerFirst(copy);
     const second = spawnSync('npm', ['run', 'build'], { cwd: copy, encoding: 'utf8' });
     if (second.status !== 0) throw new Error(`a11y-shop: the site that hides what is sold out does not build:\n${second.stdout}\n${second.stderr}`);
     const built = Date.now();
@@ -293,6 +301,14 @@ try {
     if (groups.length !== 2 || group('Kleidung')?.hidden !== true || group('Kleidung')?.shown !== 0 || group('Geschenke')?.hidden !== false || group('Geschenke')?.shown !== 2) {
       lines.push(`/shop/ — the group the fox left empty is not hidden with its heading, with the other shown: ${JSON.stringify(groups)}`);
     }
+    // And when every product is sold out: no tile, no group, no heading left over nothing, and the sentence said in the page's language.
+    const none = listing?.found.find((one) => one.check.startsWith('listing: where hiding leaves no tile, every group is hidden'));
+    const headings = none?.headings ?? [];
+    if (JSON.stringify(headings.map((one) => [one.text, one.shown])) !== JSON.stringify([['Kleidung', false], ['Geschenke', false]]) || none?.groups?.length !== 2 || none.groups.some((one) => !one.hidden || one.shown !== 0)) {
+      lines.push(`/shop/ — with every product sold out, both groups are not hidden with their headings: ${JSON.stringify({ headings, groups: none?.groups })}`);
+    }
+    const sentence = listing?.found.find((one) => one.check.startsWith('listing: where hiding leaves no tile the sentence for it is shown'));
+    if (sentence?.said?.startsWith('«Im Moment ist alles ausverkauft» shown') !== true) lines.push(`/shop/ — with every product sold out, the German listing does not say «Im Moment ist alles ausverkauft» as a shown status: ${sentence?.said}`);
     for (const said of listing?.found.filter((each) => /^(listing|shop):/.test(each.check)) ?? []) console.log(`${said.ok ? 'ok  ' : 'FAIL'} /shop/ (hiding) ${said.check}`);
     console.log(`a11y-shop: the second site (the listing hiding what is sold out, the products grouped) copied and built in ${((built - apart) / 1000).toFixed(1)} s, read in ${((Date.now() - built) / 1000).toFixed(1)} s`);
   }
