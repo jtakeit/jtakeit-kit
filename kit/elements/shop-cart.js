@@ -48,7 +48,9 @@
  *
  *   - writes a row for each line into `[data-cart-lines]`: the title, the
  *     labels, the answers and what they add, a quantity box and the line's
- *     total in the site's money, and a button that takes it out. A refused
+ *     total in the site's money, and a button that takes it out; the box and the
+ *     button are named by the title and the labels, «Fox T-shirt, M, Blue», and
+ *     by the place as well where two rows would be named the same. A refused
  *     line has no title the cart could keep, so it says its place — «Item 2» —
  *     and why, and its box and its button are named by the place and described
  *     by the reason; all of them are summed up in `[data-cart-error]`
@@ -168,6 +170,8 @@ export function wireCart(root) {
   let focusEmpty = false;
   /** The rows' lines, as each was drawn: a control is obeyed only while its row is still the cart's line there. */
   const drawnAs = new WeakMap();
+  /** What each row is called — its title and labels, or nothing — before the place is added where two are alike. */
+  const called = new WeakMap();
   let rowCount = 0;
 
   const say = (minor) => money(minor, view?.currency || undefined, locale);
@@ -237,16 +241,28 @@ export function wireCart(root) {
   }
 
   /**
-   * The place of a line the cart keeps no title for — «Item 2» — in the row, and in the names of its box and its button,
-   * so that two such lines are told apart by more than their reason. A title is put in as written: `() =>`, so that a
-   * `$&` in it is no pattern.
+   * What each row is called, in the names of its box and its button: a line's title and its labels — «Fox T-shirt, M, Blue» —
+   * and where two rows would still be called the same (one variant, other answers), the place as well; a line the cart keeps
+   * no title for is called by its place alone, «Item 2», which is also written in the row. A name is put in as written:
+   * `() =>`, so that a `$&` in a shop's title is no pattern.
    */
-  function place(node, at) {
-    const said = words.itemNumber.replace('{n}', () => String(at + 1));
-    const note = node.querySelector('[data-line-place]');
-    if (note) note.textContent = said;
-    node.querySelector('[data-line-qty]')?.setAttribute('aria-label', `${words.quantity}: ${said}`);
-    node.querySelector('[data-line-remove]')?.setAttribute('aria-label', words.removeNamed.replace('{title}', () => said));
+  function renameAll() {
+    const rows = [...(lines?.querySelectorAll('[data-cart-line]') ?? [])];
+    /** @type {Map<string, number>} */
+    const alike = new Map();
+    for (const row of rows) {
+      const base = called.get(row) ?? '';
+      if (base !== '') alike.set(base, (alike.get(base) ?? 0) + 1);
+    }
+    for (const row of rows) {
+      const here = words.itemNumber.replace('{n}', () => String(Number(/** @type {HTMLElement} */ (row).dataset.line) + 1));
+      const base = called.get(row) ?? '';
+      const said = base === '' ? here : (alike.get(base) ?? 0) > 1 ? `${base}, ${here}` : base;
+      const note = row.querySelector('[data-line-place]');
+      if (note) note.textContent = here;
+      row.querySelector('[data-line-qty]')?.setAttribute('aria-label', `${words.quantity}: ${said}`);
+      row.querySelector('[data-line-remove]')?.setAttribute('aria-label', words.removeNamed.replace('{title}', () => said));
+    }
   }
 
   /** One line of the cart: what the shop priced it at, or why it would not, a box for how many, and a way to take it out. */
@@ -256,6 +272,8 @@ export function wireCart(root) {
     node.setAttribute('data-cart-line', '');
     node.dataset.line = String(row.at);
     drawnAs.set(node, identity(row.line));
+    // What the row is called: the title and the labels; nothing for a line the cart keeps no title for.
+    called.set(node, row.quoted === undefined ? '' : [row.quoted.title, ...row.quoted.labels].filter((one) => one !== '').join(', '));
     // A line the answer says nothing of is as good as refused: the cart goes no further with it.
     const why = row.refused?.word ?? (row.quoted === undefined ? words['error.refused'] : '');
     node.dataset.state = why === '' ? 'priced' : 'refused';
@@ -288,7 +306,6 @@ export function wireCart(root) {
     const input = /** @type {HTMLInputElement} */ (part('input', 'line-qty'));
     Object.assign(input, { type: 'number', id, min: '1', max: String(MAX_QTY), step: '1', value: String(row.line.qty) });
     input.inputMode = 'numeric';
-    if (title !== '') input.setAttribute('aria-label', `${words.quantity}: ${title}`);
     if (note) input.setAttribute('aria-describedby', note.id);
     box.append(label, input);
     node.append(box);
@@ -296,11 +313,9 @@ export function wireCart(root) {
     if (row.quoted !== undefined) node.append(part('p', 'line-total', say(row.quoted.total)));
     const remove = /** @type {HTMLButtonElement} */ (part('button', 'line-remove', words.remove));
     remove.type = 'button';
-    // The visible word is in the name, whole: «Remove Mug».
-    if (title !== '') remove.setAttribute('aria-label', words.removeNamed.replace('{title}', () => title));
+    // The names of the box and the button are `renameAll`'s, once the rows are all there: the visible word is in them, whole.
     if (note) remove.setAttribute('aria-describedby', note.id);
     node.append(remove);
-    if (title === '') place(node, row.at);
     return node;
   }
 
@@ -308,6 +323,7 @@ export function wireCart(root) {
     if (!lines || !view) return;
     const item = itemTag();
     lines.replaceChildren(...view.rows.map((row) => rowNode(row, item)));
+    renameAll();
   }
 
   function drawMethods() {
@@ -500,9 +516,9 @@ export function wireCart(root) {
         const line = Number(/** @type {HTMLElement} */ (row).dataset.line);
         if (line <= at) continue;
         /** @type {HTMLElement} */ (row).dataset.line = String(line - 1);
-        // A line with no title says its place: the place has moved up.
-        if (row.querySelector('[data-line-place]')) place(row, line - 1);
       }
+      // The places have moved up, and with them what two alike rows are called.
+      renameAll();
       refocus({ kind: 'remove', line: Math.min(at, rest.lines.length - 1) });
     }
     void show();

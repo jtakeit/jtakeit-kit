@@ -36,6 +36,7 @@ const CART_DRIVE = [
   'cart: the customs sentence is said for a parcel that crosses the border, and not for a pick-up',
   'cart: a quantity changed by the keyboard',
   'cart: a quantity changed while the shop is still answering',
+  'cart: two variants of one product are named apart',
   'cart: a line the shop refuses is said',
   'cart: two lines the shop refuses are told apart',
   'cart: a line taken out by the keyboard is gone',
@@ -91,7 +92,7 @@ const PIECES = [
   },
 ];
 const SOLD_OUT = ['FOX-M-BLUE'];
-/** The fox's first variant: what the cart's drive writes into a cart it finds empty. */
+/** The fox's first variant: what the cart's drive writes into a cart it finds empty; and its second, for two variants named apart. */
 const FOX_LINE = { product: '0193a5c3-6b1c-7d20-9a31-5e4d3c2b1a02', variant: 'v1', qty: 1, answers: {} };
 
 const args = process.argv.slice(2);
@@ -110,7 +111,7 @@ try {
     schemes: ['light'],
     from: site,
     soldOut: SOLD_OUT,
-    cart: { line: FOX_LINE },
+    cart: { line: FOX_LINE, second: { ...FOX_LINE, variant: 'v2' } },
     log: (line) => console.log(`[shop] ${line}`),
   });
   lines = report(results);
