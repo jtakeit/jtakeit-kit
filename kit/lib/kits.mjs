@@ -187,7 +187,7 @@ export function kitEntries(kit, locale) {
 export const CONTRACT_3_ONLY = Object.freeze({
   catalogue: Object.freeze(['shared']),
   field: Object.freeze(['localized', 'role', 'integer', 'qualifiers', 'to', 'many', 'on_delete', 'option_defs', 'min_zero', 'max_zero']),
-  collection: Object.freeze(['route', 'shown_on', 'untranslated']),
+  collection: Object.freeze(['route', 'shown_on', 'untranslated', 'ends_by']),
 });
 
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);

@@ -493,3 +493,59 @@ kit (`@jtakeit/kit`'s `lib/schedule.mjs`, which the door asks) leaves a
 scheduled entry out of the listings, and `jtk schema --dist` treats it as
 hidden — an entry without a page that is not out yet is owed no annotation on
 its listing, exactly as one with `visible: false` is not.
+
+## Entries that are over by their own date — `ends_by`
+
+A party, an offer, a course: an entry whose date is in its own fields. When
+it is over is the platform's to say; what the site does with it then is
+yours. Say the first once, on the collection (contract 3):
+
+```ts
+export const COLLECTIONS: Collection[] = [
+  { name: 'nights', label: 'Вечеринки', type: 'night',
+    route: { detail: '/afisha/{slug}', listing: '/afisha' },
+    order: { by: 'date' },
+    ends_by: { date: 'date', time: 'starts', after: 480, zone: 'Europe/Zurich', then: 'keep' } },
+];
+```
+
+A night is over eight hours after its doors open: its `date` (a `date` field
+of the entry type) at its `starts` (a `time_of_day` field, minutes from
+midnight), on Zürich's clock, and `after` 480 minutes. `time` may be left
+out — the start of the day — and so may `after`: none with a time, the whole
+day (1440) without one, at most a week (10080). `zone` is an IANA zone and
+required. An entry with no date yet is never over.
+
+The platform works the moment out whenever the entry is written — in the
+panel, by an import, a copy or a CSV — keeps it on the entry (not in the
+`jtk/` files), says «over» in the owner's panel and rebuilds the site at the
+moment. `then` is what becomes of an entry that is over:
+
+- **`keep`**, the default: it stays on the site — in `site.entries(…)`, the
+  listing, the feed, the sitemap — and the template places it. Every entry
+  of the collection says `ended` (over at the build's moment) and `endsAt`
+  (RFC 3339, or `null` with no date).
+- **`hide`**: the platform takes it off — its `hide_at` is the moment, one in
+  the file is written over — and the door leaves it out of `site.entries(…)`.
+
+An entry of a collection without `ends_by` says `ended: false`,
+`endsAt: null`. The door works the same moment out on the dev server and in
+a local build, so a fresh entry the platform has never saved is placed the
+same way. KAIF's home links the next night, and `/afisha` lists the coming
+ones soonest first, then the past ones latest first:
+
+```astro
+---
+const nights = site.entries('nights', { locale });          // ordered by date
+const next = nights.find((night) => !night.ended);           // the home's ticket
+const coming = nights.filter((night) => !night.ended);
+const past = nights.filter((night) => night.ended).reverse(); // the archive
+---
+```
+
+Never compare the date with today in the template —
+`nights.filter((night) => night.date >= today)`, a script that marks a
+ticket over: a build freezes the comparison until the next build, a visitor
+sees a night that is over as ahead, and the panel cannot know. `jtk schema`
+says so (`JTK_W_DATE_HIDES`), as advice. A countdown in the visitor's
+browser only draws, and may stay.

@@ -37,12 +37,13 @@
  * platform's import applies and `--judge` asks it for; and `JTK_W_` advice,
  * the bookings module's, which `--judge` prints.
  *
- * Imports nothing but the codes and the merge's notion of what a module books
- * (content/overlay.mjs, which imports nothing): the dev server runs it on
- * every save.
+ * Imports nothing but the codes, the merge's notion of what a module books
+ * (content/overlay.mjs) and what a zone is (endsBy.mjs), which import
+ * nothing: the dev server runs it on every save.
  */
 import { E } from './codes.mjs';
 import { bookedIn } from './content/overlay.mjs';
+import { ENDS_AFTER_MAX, isZone } from './endsBy.mjs';
 
 // ── the platform's constants, by their Go names ────────────────────────────
 
@@ -149,9 +150,10 @@ const KEYS = {
   ],
   option: ['value', 'label'],
   ref: ['to', 'many', 'on_delete'],
-  collection: ['name', 'label', 'one', 'intro', 'place', 'icon', 'type', 'order', 'group', 'blocks', 'untranslated', 'route', 'shown_on'],
+  collection: ['name', 'label', 'one', 'intro', 'place', 'icon', 'type', 'order', 'group', 'blocks', 'untranslated', 'route', 'shown_on', 'ends_by'],
   route: ['detail', 'listing', 'per_page'],
   order: ['by', 'desc'],
+  ends_by: ['date', 'time', 'after', 'zone', 'then'],
 };
 
 /** What contract 3 says instead of a word of contract 2's (`replacedIn3`). */
@@ -242,6 +244,7 @@ function strayKeys(top) {
     say(at, collection, 'collection');
     if (isObject(collection.route)) say(`${at}.route`, collection.route, 'route');
     if (isObject(collection.order)) say(`${at}.order`, collection.order, 'order');
+    if (isObject(collection.ends_by)) say(`${at}.ends_by`, collection.ends_by, 'ends_by');
   });
   return out;
 }
@@ -412,6 +415,20 @@ function wireCollection(raw, at) {
     untranslated: str(value.untranslated, `${at}.untranslated`),
     route: route(value.route, `${at}.route`),
     shownOn: list(value.shown_on, `${at}.shown_on`, pattern),
+    endsBy: endsBy(value.ends_by, `${at}.ends_by`),
+  };
+}
+
+/** `EndsBy`: when the entries are over, by their own date — `{"date": …, "time": …, "after": …, "zone": …, "then": …}`. */
+function endsBy(raw, at) {
+  const value = object(raw, at);
+  if (value === undefined) return undefined;
+  return {
+    date: str(value.date, `${at}.date`),
+    time: str(value.time, `${at}.time`),
+    after: intOrNone(value.after, `${at}.after`),
+    zone: str(value.zone, `${at}.zone`),
+    then: str(value.then, `${at}.then`),
   };
 }
 
@@ -516,7 +533,7 @@ const refersTo = (field) => (field.to.length > 0 ? field.to : field.ref !== '' ?
 function collectionOf(say, at, c, locale) {
   const out = {
     name: c.name, label: c.label, one: c.one, intro: c.intro, place: c.place, icon: c.icon, type: c.type,
-    group: c.group, body: c.blocks, untranslated: c.untranslated, shownOn: c.shownOn,
+    group: c.group, body: c.blocks, untranslated: c.untranslated, shownOn: c.shownOn, endsBy: c.endsBy,
     route: c.route ?? { none: false, detail: pattern(undefined), listing: pattern(undefined), perPage: 0 },
     order: { by: '', desc: false },
     prefix: '',
@@ -1066,7 +1083,12 @@ function validateEntryType(say, c, entry) {
     }
   }
 
-  // The group: a select, or a reference to one entry of one other collection.
+  validateEntryGroup(say, c, entry, path);
+  validateEndsBy(say, c, entry, path);
+}
+
+/** `validateEntryGroup`: a select, or a reference to one entry of one other collection. */
+function validateEntryGroup(say, c, entry, path) {
   if (c.group !== '') {
     const where = `${path}.group`;
     const by = fieldIn(entry.fields, c.group);
@@ -1080,6 +1102,48 @@ function validateEntryType(say, c, entry) {
     if (by.kind !== 'select' && by.kind !== 'ref') {
       say(E.COLLECTION, where, `collection ${q(c.name)} is grouped by ${c.type}.${c.group}, which is ${q(by.kind)} — group by a select, or by a ref to another collection`);
     }
+  }
+}
+
+/**
+ * `validateEndsBy`: a collection whose entries are over by their own date
+ * (the owner, 16 November 2026, on KAIF's nights) is held to the entry type
+ * it reads — a date field of kind "date", a time field of kind
+ * "time_of_day", at most a week after, `then` "keep" or "hide", on an IANA
+ * zone's clock. Each part is judged on its own, as the platform's
+ * `validateEndsBy` judges them (registry/endsBy.go).
+ */
+function validateEndsBy(say, c, entry, path) {
+  const e = c.endsBy;
+  if (e === undefined) return;
+  const where = `${path}.ends_by`;
+  const shape = '"ends_by": {"date": "<a date field>", "time": "<a time_of_day field>", "after": <minutes>, "zone": "Europe/Zurich"}';
+  if (e.date === '') {
+    say(E.COLLECTION, `${where}.date`, `collection ${q(c.name)} goes by a date it does not name — ${shape}`);
+  } else {
+    const field = fieldIn(entry.fields, e.date);
+    if (field === undefined) say(E.COLLECTION, `${where}.date`, `collection ${q(c.name)} goes by ${c.type}.${e.date}, which ${q(c.type)} does not declare`);
+    else if (field.kind !== 'date') {
+      say(E.COLLECTION, `${where}.date`, `collection ${q(c.name)} goes by ${c.type}.${e.date}, which is ${q(field.kind)} — ends_by.date names a field of kind "date"`);
+    }
+  }
+  if (e.time !== '') {
+    const field = fieldIn(entry.fields, e.time);
+    if (field === undefined) say(E.COLLECTION, `${where}.time`, `collection ${q(c.name)} goes at the time in ${c.type}.${e.time}, which ${q(c.type)} does not declare`);
+    else if (field.kind !== 'time_of_day') {
+      say(E.COLLECTION, `${where}.time`, `collection ${q(c.name)} goes at the time in ${c.type}.${e.time}, which is ${q(field.kind)} — ends_by.time names a field of kind "time_of_day"`);
+    }
+  }
+  if (e.after !== undefined && (e.after < 0 || e.after > ENDS_AFTER_MAX)) {
+    say(E.COLLECTION, `${where}.after`, `collection ${q(c.name)} goes ${e.after} minutes after its moment — between 0 and ${ENDS_AFTER_MAX} (a week)`);
+  }
+  if (e.then !== '' && e.then !== 'keep' && e.then !== 'hide') {
+    say(E.COLLECTION, `${where}.then`, `collection ${q(c.name)} does ${q(e.then)} with an entry that is over — "keep" leaves it on the site for the template to place (the default), "hide" takes it off`);
+  }
+  if (e.zone === '') {
+    say(E.COLLECTION, `${where}.zone`, `collection ${q(c.name)} goes by a date on no clock — ends_by.zone is the IANA zone the date is in, "Europe/Zurich"`);
+  } else if (!isZone(e.zone)) {
+    say(E.COLLECTION, `${where}.zone`, `collection ${q(c.name)} goes by a date in ${q(e.zone)}, which is no IANA zone — "Europe/Zurich", "Europe/Kyiv"`);
   }
 }
 

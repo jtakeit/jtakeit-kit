@@ -98,12 +98,19 @@ export const E = Object.freeze({
  * The judge's second voice: advice, with `JTK_W_` codes. A finding here
  * refuses nothing — the catalogue is valid — and comes back from
  * `POST /v1/registry/validate` under `advice`, apart from the refusals. This
- * checker raises none of them (the rules are the server's, about the bookings
- * module it runs), so `--judge` prints them and leaves them out of the exam.
+ * checker raises none of the judge's (the rules are the server's, about the
+ * bookings module it runs), so `--judge` prints them and leaves them out of
+ * the exam.
+ *
+ * `DATE_HIDES` is `jtk schema`'s own, of the site's code rather than of the
+ * schema (dateHides.mjs): a template that compares an entry's date with the
+ * clock to choose what is shown, where the collection's `ends_by` says it
+ * once for the site, the panel and the build.
  */
 export const W = Object.freeze({
   MODULE_TWIN: 'JTK_W_MODULE_TWIN',
   MODULE_POST: 'JTK_W_MODULE_POST',
+  DATE_HIDES: 'JTK_W_DATE_HIDES',
 });
 
 export const ADVICE = Object.freeze({
@@ -111,6 +118,8 @@ export const ADVICE = Object.freeze({
     'A page block types again a fact the bookings module holds — the owner\'s hours, the services\' prices — so the site has two copies and one goes stale.',
   [W.MODULE_POST]:
     'An entry type the bookings module reads is shaped as a post — a body, or excerpt, cover and body — or its services get a page each; a service is filled in, not written.',
+  [W.DATE_HIDES]:
+    "A template compares an entry's date with today to choose what it shows: a build freezes the comparison until the next build, and the panel cannot know the entry is gone. Declare `ends_by` on the collection and read the entries the door gives.",
 });
 
 /** Advice from the judge, never a refusal. */

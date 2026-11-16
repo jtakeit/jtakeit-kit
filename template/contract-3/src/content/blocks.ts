@@ -11,7 +11,10 @@
  *   SHARED          the block types the shared text holds (jtk/shared.json): here
  *                   `contacts`, the business's own facts, each field with its role
  *   COLLECTIONS     name, label, type, route — { detail, listing?, per_page? }, or
- *                   'none' with shown_on — for the entries the owner creates
+ *                   'none' with shown_on — for the entries the owner creates;
+ *                   ends_by — { date, time?, after?, zone, then? } — for entries
+ *                   over by their own date: each says `ended` (docs/collections.md);
+ *                   never a comparison with today in the template
  *   MODULES         { bookings: { services: '<collection>', resources: '<collection>' } }
  *   PAGE_SEO        the title and description of every page
  *

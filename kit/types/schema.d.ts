@@ -218,6 +218,35 @@ export type Pattern = string | Record<string, string>;
  */
 export type Route = 'none' | { detail: Pattern; listing?: Pattern; per_page?: number };
 
+/**
+ * When a collection's entries are over, by their own date (the owner, 16
+ * November 2026). The platform works the moment out on every save, says
+ * «over» in the panel and rebuilds the site at it; the door gives each entry
+ * `ended` and `endsAt`, so a template never compares the date with today
+ * itself. What becomes of an entry that is over is `then`'s.
+ *
+ *   { date: 'date', time: 'starts', after: 480, zone: 'Europe/Zurich', then: 'keep' }
+ *
+ * The moment is the date at the time (the start of the day without one) on
+ * the zone's clock, and `after` minutes.
+ */
+export interface EndsBy {
+  /** A field of kind `date` of the entry type. An entry with no date stays. */
+  date: string;
+  /** A field of kind `time_of_day` (minutes from midnight); absent is the start of the day. */
+  time?: string;
+  /** Minutes after that moment, 0 to 10080 (a week); absent is 0 with a time, 1440 without one. */
+  after?: number;
+  /** The IANA zone the date and the time are on the clock of: `Europe/Zurich`. */
+  zone: string;
+  /**
+   * What becomes of an entry that is over: `keep` (absent) leaves it on the site — in the listing,
+   * the feed, the sitemap — for the template to place by `ended`, an archive of past nights; `hide`
+   * takes it off, its `hide_at` the moment.
+   */
+  then?: 'keep' | 'hide';
+}
+
 /** A set of entries of one block type (§3.5). */
 export interface Collection {
   /** Its entries' directory, `jtk/entries/<name>/`; fixed once it has entries. */
@@ -241,6 +270,8 @@ export interface Collection {
   blocks?: string[];
   /** What a language with no translation does with an entry: shows the original, or leaves it out. */
   untranslated?: 'base' | 'hide';
+  /** When its entries are over, by their own date, and what becomes of them then. */
+  ends_by?: EndsBy;
 }
 
 /** The domain modules the site turns on, each pointed at its collections by role: `{ bookings: { services: 'services', resources: 'masters' } }`. */
