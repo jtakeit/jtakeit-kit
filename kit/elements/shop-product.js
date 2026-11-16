@@ -41,7 +41,10 @@
  *     has `disabled` and is said «Not available»;
  *   - says the chosen variant's state in `[data-stock]` — «In stock», «3
  *     left» (a count of FEW or fewer, where the shop tells one), «Sold out» —
- *     and holds `[data-add]` while it cannot be bought;
+ *     and holds `[data-add]` while it cannot be bought. The price and the state
+ *     are one polite live region (`aria-live` on what holds both, `.buy__state`
+ *     in the copy; the element makes one where a copy left it out), so a variant
+ *     chosen is one announcement of both;
  *   - writes the chosen variant's price into `[data-price]` and moves the
  *     annotation's `[<key>]` to it, so a tap edits the price that is shown —
  *     and the build's words and annotation back where no variant with a price
@@ -78,6 +81,34 @@ const BASE = `
 `;
 
 let wiredCount = 0;
+
+/**
+ * Puts the price and what is left in one polite live region, where the copy did not: the closest element around both that holds
+ * no control of the form (the copy's `.buy__state`), made `aria-live="polite"` and `aria-atomic="true"`, so that a variant chosen
+ * says its price and its stock in one announcement. A part already in a live region is left as it is, and where the two share no
+ * such element — a copy that draws them apart — each is a region of its own.
+ * @param {HTMLFormElement} form
+ * @param {HTMLElement | null} price
+ * @param {HTMLElement | null} stock
+ */
+function liveRegion(form, price, stock) {
+  const live = (part) => part.closest('[aria-live]') !== null;
+  const parts = [price, stock].filter((part) => part !== null);
+  if (parts.every(live)) return;
+  if (price !== null && stock !== null) {
+    /** @type {HTMLElement | null} */
+    let around = price.parentElement;
+    while (around !== null && around !== form && !around.contains(stock)) around = around.parentElement;
+    if (around !== null && around !== form && around.querySelector('input, select, textarea, button') === null) {
+      around.setAttribute('aria-live', 'polite');
+      around.setAttribute('aria-atomic', 'true');
+      // A copy from before had one on what is left alone: a region inside this one would say it twice.
+      for (const part of parts) if (part.getAttribute('aria-live') === 'polite') part.removeAttribute('aria-live');
+      return;
+    }
+  }
+  for (const part of parts) if (!live(part)) part.setAttribute('aria-live', 'polite');
+}
 
 /**
  * Wires one product's form. Idempotent: a form already wired is left alone.
@@ -125,9 +156,11 @@ export function wireProduct(form) {
   // What the build wrote there, said again where no variant with a price is chosen.
   const built = { text: price?.textContent ?? '', at: price?.getAttribute('data-jtk-path') ?? null };
 
-  // The ARIA the behaviour depends on, whatever the copy kept: what is left is
-  // read as it changes, a refusal as it appears, «added» takes the focus.
-  if (stockSaid && !stockSaid.hasAttribute('aria-live')) stockSaid.setAttribute('aria-live', 'polite');
+  // The ARIA the behaviour depends on, whatever the copy kept: the price and what
+  // is left are read as they change — both in one polite region, so that choosing
+  // a variant is one announcement and not two (Ruling 251) — a refusal as it
+  // appears, «added» takes the focus.
+  liveRegion(form, price, stockSaid);
   if (error && !error.getAttribute('role')) error.setAttribute('role', 'alert');
   if (added) {
     if (!added.getAttribute('role')) added.setAttribute('role', 'status');
@@ -210,6 +243,11 @@ export function wireProduct(form) {
     note.hidden = said === '';
   }
 
+  /** A part's words, written only where they differ: a live region reads what is written, so the same words again are said again. */
+  function write(part, text) {
+    if (part.textContent !== text) part.textContent = text;
+  }
+
   function render() {
     const picks = chosen();
     const states = valueStates(facts, stock, picks);
@@ -228,12 +266,12 @@ export function wireProduct(form) {
     const state = variant === undefined ? undefined : stateOf(variant);
 
     if (price && variant?.price !== undefined) {
-      price.textContent = money(variant.price, facts.currency, locale);
+      write(price, money(variant.price, facts.currency, locale));
       const at = price.getAttribute('data-jtk-path');
       if (at && KEY.test(variant.key)) price.setAttribute('data-jtk-path', at.replace(/\[[^\]]*\](?=[^[]*$)/, `[${variant.key}]`));
     } else if (price) {
       // No variant chosen, or one with no price: the build's words, not the last one's price.
-      price.textContent = built.text;
+      write(price, built.text);
       if (built.at !== null) price.setAttribute('data-jtk-path', built.at);
     }
 
@@ -249,7 +287,7 @@ export function wireProduct(form) {
       said = count !== undefined && count <= FEW ? words.left.replace('{n}', String(count)) : words.inStock;
     }
     if (stockSaid) {
-      stockSaid.textContent = said;
+      write(stockSaid, said);
       stockSaid.dataset.state = state ?? 'none';
     }
     if (add) add.disabled = state !== 'in_stock';

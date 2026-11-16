@@ -48,7 +48,7 @@ export interface CartRow {
   /** The line's place in the cart, from 0. */
   at: number;
   line: CartLine;
-  quoted?: { title: string; labels: string[]; answers: QuotedAnswer[]; unit: number; total: number };
+  quoted?: { sku: string; title: string; labels: string[]; answers: QuotedAnswer[]; unit: number; total: number };
   refused?: CartRefusal;
 }
 /** What a cart shows once the shop has priced it, as one value for the element to draw. */

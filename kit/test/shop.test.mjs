@@ -22,7 +22,7 @@ import { SHOP_LOCALES, shopWordsFor } from '../lib/shop/words.mjs';
 import { PRODUCT, CART, CHECKOUT, ORDER, LISTING, lacking } from '../lib/shop/hooks.mjs';
 import { MAX_LINES, MAX_QTY, cartKey, readCart, addLine, removeLine, setQty, shippingBody, cartView } from '../lib/shop/cart.mjs';
 import { productFacts, variantFor, valueStates, answersOf, fromPrice } from '../lib/shop/product.mjs';
-import { ATTEMPT, CHECKOUT_WORDS, HOLD, afterAnswer, checkoutBody, freshPress, keptPress, missingDetails, pressFor, pressKey, sentOf } from '../lib/shop/checkout.mjs';
+import { ATTEMPT, CHECKOUT_WORDS, HOLD, afterAnswer, checkoutBody, freshPress, keptPress, missingDetails, pressFor, pressKey, sentOf, shortOf, shortSaid, shortSentence } from '../lib/shop/checkout.mjs';
 import { ASKS_MOST, ASK_DEADLINE_MS, ASK_EVERY_MS, ORDER_WORDS, frozenOrder, orderAddress, orderView, paidFromKey, sentFromHere } from '../lib/shop/order.mjs';
 import { STOCK_ASKS_MOST, STOCK_DEADLINE_MS, hiddenTiles, stockAsks } from '../lib/shop/listing.mjs';
 import * as barrel from '../index.mjs';
@@ -315,7 +315,7 @@ test('a line the shop refuses is said with its reason, and the rest is priced as
   assert.equal(view.rows[0].quoted, undefined, 'a refused line is not priced');
   assert.equal(view.rows[1].refused, undefined);
   assert.equal(view.rows[1].quoted.total, 3000);
-  assert.deepEqual(view.rows[1].quoted, { title: 'Mug', labels: ['Blue'], answers: [], unit: 1500, total: 3000 });
+  assert.deepEqual(view.rows[1].quoted, { sku: 'MUG-1', title: 'Mug', labels: ['Blue'], answers: [], unit: 1500, total: 3000 }, 'a row keeps the SKU a 409 short names the line by');
   assert.equal(view.subtotal, 3000, 'the subtotal is the shop\'s, of what it priced');
   assert.equal(view.currency, 'chf');
   assert.equal(view.ready, false, 'a cart with a line refused goes no further');
@@ -468,7 +468,9 @@ test("one attempt for a press and its retries, and a new one after Stripe's page
   // A price that changed, a line refused, a method no longer offered, a last item gone: the same press, the new answer shown.
   const quote = { currency: 'chf', lines: [], refused: [], subtotal: 6200, methods: [] };
   for (const code of ['total', 'refused', 'method', 'short']) {
-    assert.deepEqual(afterAnswer(p, { status: 409, body: { error: code, quote, ...(code === 'short' ? { short: [{ sku: 'FOX-S-RED', wanted: 2, available: 1 }] } : {}) } }), { kind: 'requote', press: p, quote, word: `error.${code}` }, code);
+    // A `short` names its lines, which the page says by name and what is left (Ruling 250); the others carry nothing but the quote.
+    const lines = [{ sku: 'FOX-S-RED', wanted: 2, available: 1 }];
+    assert.deepEqual(afterAnswer(p, { status: 409, body: { error: code, quote, ...(code === 'short' ? { short: lines } : {}) } }), { kind: 'requote', press: p, quote, word: `error.${code}`, ...(code === 'short' ? { short: lines } : {}) }, code);
   }
   assert.deepEqual(afterAnswer(p, { status: 409, body: { error: 'total' } }), { kind: 'say', word: 'error.total', press: p }, 'without its quote: said, and the press kept');
   // Already paid: to its page, the press over.
@@ -531,6 +533,55 @@ test("one attempt for a press and its retries, and a new one after Stripe's page
     for (const word of CHECKOUT_WORDS) assert.ok(typeof words[word] === 'string' && words[word] !== '', `${locale}: ${word}`);
   }
   assert.equal(new Set(CHECKOUT_WORDS).size, CHECKOUT_WORDS.length);
+});
+
+test('a 409 short names each line the shop has too little of, by its title and labels and what is left, in every language (Ruling 250)', () => {
+  const p = freshPress();
+  // The quote the shop sends with it: its lines carry each SKU's title and labels, in the buyer's language.
+  const quote = {
+    currency: 'chf', refused: [], subtotal: 8970, methods: [],
+    lines: [
+      { line: 0, sku: 'FOX-M-BLUE', title: 'Fox T-shirt', labels: ['M', 'Blue'], answers: [], unit: 2990, qty: 2, total: 5980 },
+      { line: 1, sku: 'MUG-1', title: 'Mug', labels: [], answers: [], unit: 1500, qty: 2, total: 3000 },
+      { line: 2, sku: 'FOX-M-BLUE', title: 'Fox T-shirt', labels: ['M', 'Blue'], answers: [{ key: 'tag', name: 'Tag', text: 'Ada', adds: 0 }], unit: 2990, qty: 1, total: 2990 },
+    ],
+  };
+  const lines = [{ sku: 'FOX-M-BLUE', wanted: 3, available: 1 }, { sku: 'MUG-1', wanted: 2, available: 0 }];
+  const next = afterAnswer(p, { status: 409, body: { error: 'short', short: lines, quote } });
+  assert.deepEqual(next, { kind: 'requote', press: p, quote, word: 'error.short', short: lines });
+
+  // Two lines, said in the shop's order, each by what the quote calls it and what is left; none left is said so.
+  const en = shopWordsFor('en');
+  assert.deepEqual(shortSaid(quote, /** @type {any} */ (next).short, en).map((one) => one.text), ['Fox T-shirt, M, Blue: 1 left', 'Mug: none left']);
+  assert.deepEqual(shortSaid(quote, /** @type {any} */ (next).short, shopWordsFor('de')).map((one) => one.text), ['Fox T-shirt, M, Blue: nur noch 1 verfügbar', 'Mug: nicht mehr verfügbar']);
+  // Each SKU once however many lines have it; a SKU the quote does not name is called by itself; no quote at all does no harm.
+  assert.deepEqual(shortSaid(quote, [{ sku: 'GONE-1', wanted: 1, available: 0 }], en).map((one) => one.text), ['GONE-1: none left']);
+  assert.deepEqual(shortSaid(null, [{ sku: 'GONE-1', wanted: 1, available: 2 }], en).map((one) => one.text), ['GONE-1: 2 left']);
+  assert.deepEqual(shortSaid({ lines: [{ sku: 'X', title: '', labels: [] }] }, [{ sku: 'X', wanted: 1, available: 1 }], en).map((one) => one.text), ['X: 1 left'], 'a line with no title is its SKU');
+  // A title is a shop's free text, put in as written: no pattern in it is one.
+  assert.equal(shortSentence(en, 'Gift $& {n} card', 3), 'Gift $& {n} card: 3 left');
+  assert.equal(shortSentence(en, 'Gift $$ card', 0), 'Gift $$ card: none left');
+
+  // What a refusal says is held to what it is: no SKU is no line, and a count that is no whole number from 0 is 0.
+  assert.deepEqual(shortOf([{ sku: 'A', wanted: 2, available: 1 }, { wanted: 1, available: 1 }, { sku: '', wanted: 1 }, null, 'B', { sku: 'C', wanted: '2', available: -3 }, { sku: 'D', wanted: 2.9, available: 1.9 }]), [
+    { sku: 'A', wanted: 2, available: 1 }, { sku: 'C', wanted: 0, available: 0 }, { sku: 'D', wanted: 2, available: 1 },
+  ]);
+  for (const raw of [undefined, null, 'A', {}, 7]) assert.deepEqual(shortOf(raw), [], String(raw));
+  // A short with no list is still a refusal of the press, said as the sentence and the quote: the page says no line.
+  assert.deepEqual(afterAnswer(p, { status: 409, body: { error: 'short', quote } }), { kind: 'requote', press: p, quote, word: 'error.short', short: [] });
+  assert.deepEqual(afterAnswer(p, { status: 409, body: { error: 'short', short: lines } }), { kind: 'say', word: 'error.short', press: p }, 'without its quote: said, and the press kept');
+
+  // The two words are in every language, with the title and the count where they go.
+  for (const locale of SHOP_LOCALES) {
+    const words = shopWordsFor(locale);
+    assert.match(words['short.some'], /\{title\}/, `${locale}: short.some names the line`);
+    assert.match(words['short.some'], /\{n\}/, `${locale}: short.some says how many`);
+    assert.match(words['short.none'], /\{title\}/, `${locale}: short.none names the line`);
+    assert.doesNotMatch(words['short.none'], /\{n\}/, `${locale}: short.none says no number`);
+    assert.equal(shortSentence(words, 'Fox', 2).includes('Fox'), true, locale);
+    assert.equal(shortSentence(words, 'Fox', 2).includes('2'), true, locale);
+    assert.equal(shortSentence(words, 'Fox', 0).includes('{'), false, locale);
+  }
 });
 
 test('a press is for one body: only the same body is a retry, and no press outlives the hold of its order (Rulings 223, 225)', () => {
@@ -791,6 +842,21 @@ test('the cart is emptied only for the press that went to Stripe from this tab (
   for (const state of ['waiting', 'lapsed', 'cancelled']) assert.equal(orderView({ status: 200, body: { ...ORDER_PAID, state } }, { left: false, mine: true }, 1).emptiesCart, false, state);
   assert.equal(orderView({ status: 404, body: null }, { left: false, mine: true }, 1).emptiesCart, false);
   assert.equal(orderView(null, { left: false, mine: true }, 1).emptiesCart, false);
+
+  // The one path that empties the cart without Stripe's page (Ruling 253): a press answered `409 paid` sends the buyer to the order's page, and
+  // the checkout marks the order the answer names as this tab's — `afterAnswer`'s `order`, which the element writes under `paidFromKey` — so the
+  // page empties the cart for that order, and for no other. The element's own write of the mark is the walk's (`409 paid`, lib/a11y-shop.mjs).
+  const press = { attempt: 'a'.repeat(16), order: 'T9' };
+  const paidNow = afterAnswer(press, { status: 409, body: { error: 'paid', order: 'T9' } });
+  assert.deepEqual(paidNow, { kind: 'paid', order: 'T9' });
+  const marked = /** @type {any} */ (paidNow).order;
+  assert.equal(orderView({ status: 200, body: ORDER_PAID }, { left: false, mine: sentFromHere(marked, 'T9') }, 1).emptiesCart, true, 'the order the press found paid empties the cart on its page');
+  // Another order's page — opened from the tab's history, or another device's link — empties nothing, though the tab holds this mark.
+  assert.equal(orderView({ status: 200, body: ORDER_PAID }, { left: false, mine: sentFromHere(marked, 'T8') }, 1).emptiesCart, false);
+  // The answer names the order, or else the press does; with neither there is no page to send the buyer to, and nothing is marked.
+  assert.deepEqual(afterAnswer({ attempt: press.attempt, order: '' }, { status: 409, body: { error: 'paid', order: 'T8' } }), { kind: 'paid', order: 'T8' });
+  assert.deepEqual(afterAnswer({ attempt: press.attempt, order: 'T9' }, { status: 409, body: { error: 'paid' } }), { kind: 'paid', order: 'T9' });
+  assert.deepEqual(afterAnswer({ attempt: press.attempt, order: '' }, { status: 409, body: { error: 'paid' } }), { kind: 'say', word: 'error.paid', press: null });
 });
 
 test('a request that never answers is given up and counts as no answer, so the stop is always reached', async () => {
@@ -1240,7 +1306,7 @@ test('the storefront is in the package under its own entries, and in the barrel'
   }
   // `lib` and `types` are packed whole, so none of it can be left out of a release.
   assert.ok(manifest.files.includes('lib') && manifest.files.includes('types'));
-  for (const name of ['SHOP_LOCALES', 'shopWordsFor', 'PRODUCT', 'CART', 'CHECKOUT', 'ORDER', 'LISTING', 'MAX_LINES', 'MAX_QTY', 'cartKey', 'readCart', 'addLine', 'removeLine', 'setQty', 'shippingBody', 'cartView', 'pressKey', 'freshPress', 'pressFor', 'checkoutBody', 'missingDetails', 'afterAnswer', 'ASK_EVERY_MS', 'ASKS_MOST', 'ORDER_WORDS', 'orderView', 'orderAddress', 'frozenOrder', 'STOCK_ASKS_MOST', 'STOCK_DEADLINE_MS', 'stockAsks', 'hiddenTiles', 'productFacts', 'variantFor', 'valueStates', 'answersOf', 'fromPrice']) {
+  for (const name of ['SHOP_LOCALES', 'shopWordsFor', 'PRODUCT', 'CART', 'CHECKOUT', 'ORDER', 'LISTING', 'MAX_LINES', 'MAX_QTY', 'cartKey', 'readCart', 'addLine', 'removeLine', 'setQty', 'shippingBody', 'cartView', 'pressKey', 'freshPress', 'pressFor', 'checkoutBody', 'missingDetails', 'afterAnswer', 'shortOf', 'shortSentence', 'shortSaid', 'ASK_EVERY_MS', 'ASKS_MOST', 'ORDER_WORDS', 'orderView', 'orderAddress', 'frozenOrder', 'STOCK_ASKS_MOST', 'STOCK_DEADLINE_MS', 'stockAsks', 'hiddenTiles', 'productFacts', 'variantFor', 'valueStates', 'answersOf', 'fromPrice']) {
     assert.ok(name in barrel, `index.mjs exports ${name}`);
   }
 });
@@ -1264,7 +1330,7 @@ test("the product's element and its wire load without a DOM, and speak shop/1", 
   }
   assert.ok(manifest.files.includes('elements'));
   const types = readFileSync(new URL('../types/elements-shop.d.ts', import.meta.url), 'utf8');
-  for (const name of ['SHOP_PROTOCOL', 'ask', 'wireProduct', 'defineProduct', 'JtkProduct', "'jtk:cart'"]) assert.ok(types.includes(name), `elements-shop.d.ts declares ${name}`);
+  for (const name of ['SHOP_PROTOCOL', 'ask', 'wireProduct', 'defineProduct', 'JtkProduct', "'jtk:cart'", "'jtk:short'"]) assert.ok(types.includes(name), `elements-shop.d.ts declares ${name}`);
 });
 
 test('the pieces\' shared helpers: JSON from an attribute or what is given, and nothing defined where there is no document', async () => {

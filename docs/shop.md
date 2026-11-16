@@ -219,7 +219,8 @@ show a part by and for a walk to wait on:
 
 **What an element draws itself** carries a data attribute, never a class, to
 style: `data-cart-line`, `data-line-title`, `data-line-qty`, `data-line-total`,
-`data-line-remove`, `data-method-choice` in the cart, `data-order-line`,
+`data-line-remove`, `data-line-short` (what is left of a line the shop had too
+little of), `data-method-choice` in the cart, `data-order-line`,
 `data-order-line-title`, `data-order-line-qty`, `data-order-line-total` on the
 order's. Style a drawn part by attribute, and reach it from Astro's scoped
 `<style>` as `.cart :global([data-cart-line])` — what the element draws has no
@@ -234,7 +235,10 @@ Every request names the protocol, `X-Jtk-Shop: 1`, and is never cached.
 
 1. **The product** asks once, when it is wired: `GET /api/stock?product=<id>`.
    It draws which value of which option is sold out («Sold out», «3 left»,
-   «In stock») and holds *Add* while the chosen variant cannot be bought. A read
+   «In stock») and holds *Add* while the chosen variant cannot be bought. The
+   price and what is left are one polite live region (`aria-live` on the
+   element that holds both, `.buy__state` in the copy; the element makes one
+   where a copy left it out), so a variant chosen is announced once. A read
    that fails says nothing and leaves *Add* on — the checkout holds the stock
    either way. *Add* asks nothing: it holds the answers to what the product
    asks, each fault said beside its field, and puts the line in the browser's
@@ -253,9 +257,12 @@ Every request names the protocol, `X-Jtk-Shop: 1`, and is never cached.
    the cart changes while it is open. *Pay* sends `POST /api/checkout` with the
    buyer, the address unless a pick-up, the `total` as shown, one `attempt` and
    the page to come back to; the answer is Stripe's page. Every other answer of
-   the protocol is acted on: a new price shown, a short stock said, an order
-   already paid shown, a detail refused said beside its field, a lost answer
-   asked again with the order's token. After `422 address` the order is
+   the protocol is acted on: a new price shown, a short stock said — each line
+   the shop has too little of, by its title and labels and what is left («Fox
+   T-shirt, M, Blue: 1 left»), in `[data-checkout-error]`, and on the cart's row
+   above, where its box takes the focus (`jtk:short`) — an order already paid
+   shown, a detail refused said beside its field, a lost answer asked again with
+   the order's token. After `422 address` the order is
    given up and the buyer checks the address and starts again.
 4. **The page after payment** asks `GET /api/order?token=<order>` from the
    token on its own address, every three seconds while the order waits, for two
@@ -803,10 +810,12 @@ hook, whatever generator wrote it ([accessibility.md](accessibility.md)).
 
 ## What not to do
 
-- **Do not work out a price on the page.** Not a total, not a sum of two prices,
-  not a discount, not shipping. The shop prices every line and the cart again each
-  time it is shown, and the checkout holds the buyer to the `total` it priced.
-  What the page may draw is the variant's price, which the shop prices again.
+- **Do not work out a price on the page.** Not a discount, not shipping, not a
+  sum of lines. The shop prices every line and the cart again each time it is
+  shown, and the checkout holds the buyer to the `total` it priced. What the page
+  may draw is the variant's price, which the shop prices again. The one sum a
+  page makes is the `total`: the shipping answer's `subtotal` plus the chosen
+  method's `price`, which the shop checks (`409 total`) — nothing else.
 - **Do not keep a price in the cart**, nor a title: the cart holds the protocol's
   line and nothing else, and what it shows is the last shipping answer.
 - **Do not show a count as content.** What is left changes with every checkout:

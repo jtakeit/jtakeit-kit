@@ -77,6 +77,7 @@ const CART_DRIVE = [
   'cart: a country the shop does not send to, and a parcel no method carries, are each said',
   'cart: a quantity changed by the keyboard',
   'cart: a quantity changed while the shop is still answering',
+  'cart: a quantity typed in a box and not yet kept is not undone by an answer that lands meanwhile',
   'cart: two variants of one product are named apart',
   'cart: a line the shop refuses is said',
   'cart: two lines the shop refuses are told apart',
@@ -106,6 +107,9 @@ const CHECKOUT_DRIVE = [
   'checkout: a pick-up asks no address',
   'checkout: the customs sentence is said beside the total',
   'checkout: incl. VAT is said beside the total, and the buyer\'s own currency beside Pay',
+  'checkout: a line the shop has none of is said by its title and labels',
+  'checkout: a line the shop has some of is said by what is left',
+  'checkout: a line taken out of the cart takes what was said of its shortage with it',
   'checkout: a parcel no method carries is said as an alert',
   'checkout: a cart changed while the step is open',
   'checkout: Pay pressed while the shop is pricing, the cart changed again meanwhile, goes on with the newest price',
@@ -126,6 +130,7 @@ const CHECKOUT_DRIVE = [
   'checkout: an answer lost, then a line taken out of the cart, then Pay is a new press',
   "checkout: a press that holds an order is not asked for by the order's token once the step shows another total",
   'checkout: an order already paid is not paid again',
+  "checkout: an order the press found paid is marked as this tab's",
   'checkout: a browser that keeps no cart is told so as the step opens',
   'checkout: a browser that keeps no cart is told so as Pay is pressed',
   'checkout: a tab that keeps nothing keeps the press in the page',
@@ -189,6 +194,7 @@ const HIDING_DRIVE = [
 
 /** What the product page's drive must have said on each of the test shop's three products. */
 const FOX_DRIVE = [
+  'product: the price and what is left are one polite live region',
   'product: a chosen option is drawn unlike an empty one in forced colors',
   "product: each option's value chosen by the keyboard",
   "product: the price shown is the chosen variant's",
@@ -198,6 +204,7 @@ const FOX_DRIVE = [
   'shop: every request names the protocol version',
 ];
 const BAG_DRIVE = [
+  'product: the price and what is left are one polite live region',
   'product: a chosen option is drawn unlike an empty one in forced colors',
   "product: each option's value chosen by the keyboard",
   "product: the price shown is the chosen variant's",
@@ -206,7 +213,7 @@ const BAG_DRIVE = [
   'product: a cart the browser cannot keep is said',
   'shop: every request names the protocol version',
 ];
-const CANDLE_DRIVE = ['product: «added» is said', 'product: a cart the browser cannot keep is said', 'shop: every request names the protocol version'];
+const CANDLE_DRIVE = ['product: the price and what is left are one polite live region', 'product: «added» is said', 'product: a cart the browser cannot keep is said', 'shop: every request names the protocol version'];
 
 /**
  * The storefront's pieces, in a buyer's order: the pages each adds to the
@@ -437,6 +444,9 @@ function asAnAgentLeavesIt(site) {
         .replace(/(<noscript><p class="mine-buy__note">[^\n]*<\/noscript>)/, '$1\n        <div class="mine-row">')
         .replace(/(<div class="mine-buy__qty">[\s\S]*?<\/div>)/, '$1\n        </div>');
       if (!copy.includes('mine-row')) throw new Error(`a11y-shop: the product's fields were not wrapped in a row in ${file}`);
+      // A copy that left out the live region around the price and what is left (Ruling 251): the element makes one, which the walk asks for.
+      if (!copy.includes('<div class="mine-buy__state" aria-live="polite" aria-atomic="true">')) throw new Error(`a11y-shop: the product's price and stock are not in the live region this copy leaves out, in ${file}`);
+      copy = copy.replace('<div class="mine-buy__state" aria-live="polite" aria-atomic="true">', '<div class="mine-buy__state">');
     }
     const classes = [...copy.matchAll(/class="([^"]+)"/g)].map((one) => one[1].split(' '));
     // A component says its classes; a page may say none, but a <style> it says is gone with the rest.

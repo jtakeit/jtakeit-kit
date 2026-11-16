@@ -66,7 +66,13 @@
  *     cart's storage and dispatches `jtk:to-checkout` on the document, the
  *     cart's key as its `detail`. No quote goes with it: the checkout asks the
  *     shop again with the stored cart, so the total it says is what the shop
- *     prices at that moment.
+ *     prices at that moment;
+ *   - says on a row what the shop has too little of, where the checkout tells it
+ *     (`jtk:short`, after a press was answered `409 short`: the SKUs and what is
+ *     left): «1 left», or «Sold out» where nothing is, in `[data-line-short]`,
+ *     which describes the row's box, and gives the first such box the focus —
+ *     the box is where the buyer takes some out. It stays until the buyer changes
+ *     a quantity, takes a line out or chooses another country (Ruling 250).
  *
  * What the buyer does is never dropped: a quantity or a removal is kept in the
  * browser's cart at once, the shop is asked again, and the newest answer is
@@ -79,8 +85,11 @@
  * offers `[data-cart-retry]`; any change asks again as well.
  *
  * The focus stays where the buyer put it: a changed quantity keeps it on its
- * box, a method chosen by the arrow keys on its radio, a line taken out hands
- * it to the line that takes its place, or the one before it, or to
+ * box, and a quantity typed in the box and not yet kept (no `change` yet) is
+ * left as it is — the box is not taken out of the page — when an answer lands
+ * meanwhile, the rows waiting until the buyer is done to be drawn; a method
+ * chosen by the arrow keys keeps it on its radio, a line taken out hands it to
+ * the line that takes its place, or the one before it, or to
  * `[data-cart-empty]` when none is left. A browser that keeps no cart (site
  * data blocked) is said in `[data-cart-error]` (`cartUnavailable`), and nothing
  * is handed on.
@@ -175,6 +184,12 @@ export function wireCart(root) {
   const drawnAs = new WeakMap();
   /** What each row is called — its title and labels, or nothing — before the place is added where two are alike. */
   const called = new WeakMap();
+  /** The quantity each row was drawn with, to tell what the buyer has typed in its box and not yet kept from what the row was drawn as. */
+  const drawnQty = new WeakMap();
+  /** Whether the rows were left as they were because a quantity is being typed in one of them: they are drawn once the buyer is done. */
+  let held = false;
+  /** What the shop has too little of, by SKU, as the checkout told it (`jtk:short`): how many are left. Until the buyer changes the cart. */
+  const shorts = new Map();
   let rowCount = 0;
 
   const say = (minor) => money(minor, view?.currency || undefined, locale);
@@ -204,6 +219,26 @@ export function wireCart(root) {
       document.dispatchEvent(new CustomEvent('jtk:cart', { detail: key }));
     } finally {
       echo = false;
+    }
+  }
+
+  /** Whether the buyer is typing a quantity in a box: it holds other than its row was drawn with, and no `change` has kept it yet. */
+  function typing() {
+    const at = document.activeElement;
+    if (!(at instanceof HTMLInputElement) || !at.matches('[data-line-qty]') || !root.contains(at)) return false;
+    const row = at.closest('[data-cart-line]');
+    return row !== null && at.value !== String(drawnQty.get(row));
+  }
+
+  /** What the shop was said to have too little of, taken back where the buyer changes the cart: the notes on the rows go with it. */
+  function forgetShort() {
+    shorts.clear();
+    for (const note of lines?.querySelectorAll('[data-line-short]') ?? []) {
+      const box = note.closest('[data-cart-line]')?.querySelector('[data-line-qty]');
+      const rest = (box?.getAttribute('aria-describedby') ?? '').split(/\s+/).filter((id) => id && id !== note.id);
+      if (rest.length > 0) box?.setAttribute('aria-describedby', rest.join(' '));
+      else box?.removeAttribute('aria-describedby');
+      note.remove();
     }
   }
 
@@ -287,6 +322,7 @@ export function wireCart(root) {
     node.setAttribute('data-cart-line', '');
     node.dataset.line = String(row.at);
     drawnAs.set(node, identity(row.line));
+    drawnQty.set(node, row.line.qty);
     // What the row is called: the title and the labels; nothing for a line the cart keeps no title for.
     called.set(node, row.quoted === undefined ? '' : [row.quoted.title, ...row.quoted.labels].filter((one) => one !== '').join(', '));
     // A line the answer says nothing of is as good as refused: the cart goes no further with it.
@@ -312,6 +348,15 @@ export function wireCart(root) {
       note.id = `${prefix}-why-${n}`;
       node.append(note);
     }
+    // What the shop has too little of, which the checkout told (`jtk:short`): said on the row whose box takes some out.
+    const left = row.quoted === undefined ? undefined : shorts.get(row.quoted.sku);
+    /** @type {HTMLElement | null} */
+    let short = null;
+    if (left !== undefined) {
+      short = part('p', 'line-short', left > 0 ? words.left.replace('{n}', String(left)) : words.soldOut);
+      short.id = `${prefix}-short-${n}`;
+      node.append(short);
+    }
 
     const box = part('div', 'line-quantity');
     const id = `${prefix}-qty-${n}`;
@@ -321,7 +366,8 @@ export function wireCart(root) {
     const input = /** @type {HTMLInputElement} */ (part('input', 'line-qty'));
     Object.assign(input, { type: 'number', id, min: '1', max: String(MAX_QTY), step: '1', value: String(row.line.qty) });
     input.inputMode = 'numeric';
-    if (note) input.setAttribute('aria-describedby', note.id);
+    const describing = [note, short].filter((one) => one !== null).map((one) => one.id);
+    if (describing.length > 0) input.setAttribute('aria-describedby', describing.join(' '));
     box.append(label, input);
     node.append(box);
 
@@ -448,10 +494,14 @@ export function wireCart(root) {
     root.dataset.state = 'priced';
     if (empty) empty.hidden = true;
     if (retry) retry.hidden = true;
-    drawLines();
+    // A quantity the buyer is typing in a box and has not kept yet is theirs, and its box is not touched — taking it out of the page to draw
+    // it again would take the focus and what is typed with it (and some browsers say `change` as it goes, others never do): the rows wait
+    // until they are done (`typing`, `focusout` below), the rest is drawn.
+    held = typing();
+    if (!held) drawLines();
     drawMethods();
     drawSummary();
-    refocus(was);
+    if (!held) refocus(was);
   }
 
   // ── asking the shop ─────────────────────────────────────────────────────
@@ -512,6 +562,10 @@ export function wireCart(root) {
     input.value = String(qty);
     if (qty === was) return;
     if (save(setQty(cart, at, qty))) {
+      // Kept: the box is no longer one being typed in, whatever the rows are drawn with next.
+      const row = input.closest('[data-cart-line]');
+      if (row) drawnQty.set(row, qty);
+      forgetShort();
       told();
       void show();
     } else input.value = String(was);
@@ -526,6 +580,7 @@ export function wireCart(root) {
     if (at < 0) return;
     const rest = removeLine(cart, at);
     if (!save(rest)) return;
+    forgetShort();
     told();
     if (rest.lines.length === 0) focusEmpty = true;
     else {
@@ -544,6 +599,7 @@ export function wireCart(root) {
 
   function onCountry(select) {
     if (!save({ ...cart, country: select.value })) return;
+    forgetShort();
     told();
     void show();
   }
@@ -579,6 +635,16 @@ export function wireCart(root) {
     else if (target?.closest('[data-to-checkout]')) onCheckout();
   });
 
+  // The buyer is done typing a quantity — kept by `change`, or left as it was: the rows that waited are drawn. After the focus has gone where it
+  // is going, so that what takes it is the row that is drawn and not the one that is about to go.
+  root.addEventListener('focusout', (event) => {
+    if (!held || !(event.target instanceof Element) || !event.target.matches('[data-line-qty]')) return;
+    setTimeout(() => {
+      // An answer still to come draws them itself, as it lands.
+      if (held && !typing() && view !== null && !pending && root.isConnected) draw();
+    }, 0);
+  });
+
   // The cart changed somewhere else: another tab, or a product's form on this page. The listeners go with the markup.
   const stop = new AbortController();
   const heard = (when) => (event) => {
@@ -587,6 +653,18 @@ export function wireCart(root) {
   };
   const options = { signal: stop.signal };
   document.addEventListener('jtk:cart', heard((event) => event.detail === key && !echo && void show()), options);
+  // The checkout was answered `409 short`: the rows say which lines the shop has too little of, and the first takes the focus.
+  document.addEventListener('jtk:short', heard((event) => {
+    const said = event.detail;
+    if (said?.key !== key || !Array.isArray(said.short)) return;
+    shorts.clear();
+    for (const one of said.short) if (typeof one?.sku === 'string' && one.sku !== '') shorts.set(one.sku, Math.max(0, Math.trunc(Number(one.available) || 0)));
+    // Not drawn yet, or the shop being asked: the answer to come draws the rows with it.
+    if (view === null || stale || pending) return;
+    draw();
+    const box = lines?.querySelector('[data-cart-line] [data-line-short]')?.closest('[data-cart-line]')?.querySelector('[data-line-qty]');
+    if (box instanceof HTMLElement) box.focus();
+  }), options);
   window.addEventListener('storage', heard((event) => (event.key === key || event.key === null) && void show()), options);
   // Back to the page from the browser's cache, hours later, or the network back after a failure: priced again.
   window.addEventListener('pageshow', heard((event) => event.persisted && void show()), options);

@@ -42,7 +42,7 @@ export const PRODUCT = piece(
     { hook: 'form[data-product]', says: 'the form; `data-product` the entry\'s `id`, and `data-api`, `data-locale`, `data-facts` (the product\'s facts), `data-words` and `data-jtk-fixed` on it' },
     { hook: '[name^="option:"]', says: 'a radio group or a `<select>` for each option, named `option:<key>`, the value of each a value\'s `_key`' },
     { hook: '[data-price]', says: 'the chosen variant\'s price; it carries the first variant\'s annotation, which the element moves to the chosen one' },
-    { hook: '[data-stock]', says: 'what is left of the chosen variant: «Sold out», «3 left», «In stock»' },
+    { hook: '[data-stock]', says: 'what is left of the chosen variant: «Sold out», «3 left», «In stock»; with `[data-price]` it is one polite live region (`aria-live` on what holds both), so a variant chosen is one announcement' },
     { hook: '[name=qty]', says: 'how many, a number from 1 to 999' },
     { hook: '[data-add]', says: 'the button that puts the chosen variant in the cart' },
     { hook: '[data-product-error]', says: 'what is wrong, said; tied to the fields it is about' },

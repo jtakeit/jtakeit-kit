@@ -85,5 +85,12 @@ declare global {
      * price, so the cart above is priced again with it.
      */
     'jtk:to-checkout': CustomEvent<string>;
+    /**
+     * What the checkout says when the shop answered a press `409 short` — a last item gone to another buyer: the cart's key in
+     * `key` and, in `short`, each SKU the shop has too little of, how many were asked for and how many are left. It is said just
+     * before `jtk:cart`, and the cart writes it on the rows of those lines and gives the first its box the focus; the buyer's next
+     * change to the cart takes it back (Ruling 250).
+     */
+    'jtk:short': CustomEvent<{ key: string; short: { sku: string; wanted: number; available: number }[] }>;
   }
 }

@@ -179,7 +179,7 @@ export function shippingBody(cart, locale) {
 
 /**
  * @typedef {{ code: string; word: string }} Refusal
- * @typedef {{ at: number; line: CartLine; quoted?: { title: string; labels: string[]; answers: object[]; unit: number; total: number }; refused?: Refusal }} CartRow
+ * @typedef {{ at: number; line: CartLine; quoted?: { sku: string; title: string; labels: string[]; answers: object[]; unit: number; total: number }; refused?: Refusal }} CartRow
  */
 
 /** What the shop says of a refused line in the page's language; a code the kit has no word for says the order has changed. */
@@ -223,6 +223,8 @@ export function cartView(cart, quote, locale) {
     return {
       ...row,
       quoted: {
+        // The variant's SKU, which a `409 short` names a line by.
+        sku: String(line.sku ?? ''),
         title: String(line.title ?? ''),
         labels: Array.isArray(line.labels) ? line.labels.map(String) : [],
         answers: Array.isArray(line.answers) ? line.answers.filter(isObject).map((each) => ({ ...each })) : [],

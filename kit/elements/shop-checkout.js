@@ -89,7 +89,11 @@
  *     cart only for that order, Ruling 227); the same press asked again —
  *     by the order's token alone where the shop made one — after an answer that
  *     was lost; a new total shown and said, the cart above priced again
- *     (`jtk:cart`); a detail the shop refuses said at its field; and any other
+ *     (`jtk:cart`); a line the shop has too little of said by its title and
+ *     labels and what is left, «Fox T-shirt, M, Blue: 1 left», in
+ *     `[data-checkout-error]`, and the cart told (`jtk:short`, the SKUs and
+ *     what is left) so that its row says it too and its box takes the focus
+ *     (Ruling 250); a detail the shop refuses said at its field; and any other
  *     refusal said, the press kept or given up as the protocol says, so that the
  *     next press is a new one only once this one can make no order.
  *
@@ -101,7 +105,7 @@ import { money } from '../lib/money.mjs';
 import { shopWordsFor } from '../lib/shop/words.mjs';
 import { CHECKOUT, lacking } from '../lib/shop/hooks.mjs';
 import { cartKey, cartView, readCart, shippingBody } from '../lib/shop/cart.mjs';
-import { afterAnswer, checkoutBody, keptPress, missingDetails, pressFor, pressKey, sentOf } from '../lib/shop/checkout.mjs';
+import { afterAnswer, checkoutBody, keptPress, missingDetails, pressFor, pressKey, sentOf, shortSaid } from '../lib/shop/checkout.mjs';
 import { paidFromKey } from '../lib/shop/order.mjs';
 import { BaseElement, ask, defineOnce, parsed, putBase } from './shop-wire.js';
 import { onAlive } from './alive.js';
@@ -557,9 +561,14 @@ export function wireCheckout(form) {
       quote = next.quote;
       fresh = true;
       draw();
-      say(words[next.word] ?? words['error.refused']);
+      // A last item gone to another buyer: each line short said by name and by what is left, beside the sentence for it (Ruling 250).
+      const short = next.short ?? [];
+      const lines = shortSaid(next.quote, short, words).map((one) => one.text);
+      say([words[next.word] ?? words['error.refused'], ...lines].join(' · '));
       echo = true;
       try {
+        // The cart above says it on its rows first, and is then priced again with the rest: `jtk:short` carries the SKUs, `jtk:cart` the change.
+        if (short.length > 0) document.dispatchEvent(new CustomEvent('jtk:short', { detail: { key, short } }));
         document.dispatchEvent(new CustomEvent('jtk:cart', { detail: key }));
       } finally {
         echo = false;

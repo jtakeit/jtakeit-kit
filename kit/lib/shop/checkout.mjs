@@ -49,10 +49,11 @@ export const HOLD = 31 * 60 * 1000;
  * @typedef {{ name: string; email: string; phone?: string }} Buyer
  * @typedef {{ line1: string; line2?: string; postal_code: string; city: string }} Address
  * @typedef {{ buyer: Buyer; address: Address | null; total: number; locale: string; return: string; turnstile: string }} CheckoutForm
+ * @typedef {{ sku: string; wanted: number; available: number }} Short a SKU the shop has too little of for the cart: how many it was asked for, and how many are left
  * @typedef {{ kind: 'go'; url: string; order: string }
  *   | { kind: 'paid'; order: string }
  *   | { kind: 'ask_again'; press: Press }
- *   | { kind: 'requote'; press: Press; quote: object; word: string }
+ *   | { kind: 'requote'; press: Press; quote: object; word: string; short?: Short[] }
  *   | { kind: 'say'; word: string; press: Press | null; fields?: string[] }} Next
  */
 
@@ -261,13 +262,55 @@ const GONE = {
 };
 
 /**
+ * The lines a `409 short` names: `short: [{ sku, wanted, available }]`, each SKU the shop has too little of — held to what it
+ * is, whatever came: an entry with no SKU is none, and a count that is no whole number from 0 is 0.
+ * @param {unknown} raw
+ * @returns {Short[]}
+ */
+export function shortOf(raw) {
+  if (!Array.isArray(raw)) return [];
+  const count = (value) => (typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : 0);
+  return raw.filter((one) => isObject(one) && filled(one.sku)).map((one) => ({ sku: String(one.sku), wanted: count(one.wanted), available: count(one.available) }));
+}
+
+/**
+ * What a line short of stock is called, and how many of it are left, in a sentence: «Fox T-shirt, M, Blue: 1 left»,
+ * «Fox T-shirt, M, Blue: none left» (`short.some`, `short.none`). The title is put in as written, after the number, so that a
+ * `$&` or a `{n}` in a shop's title is no pattern.
+ * @param {Record<string, string>} words the storefront's words in the page's language
+ * @param {string} name the line as the shop names it: its title and labels
+ * @param {number} available how many are left
+ */
+export function shortSentence(words, name, available) {
+  const word = available > 0 ? words['short.some'] : words['short.none'];
+  return String(word ?? '').replace('{n}', String(available)).replace('{title}', () => name);
+}
+
+/**
+ * Each SKU a `409 short` names, with the line it is in the answer's quote — its title and labels, as the cart shows it — and the
+ * sentence that says it (`shortSentence`), in the order the shop gave them. A SKU the quote has no line for is called by its SKU.
+ * @param {any} quote the quote the refusal came with: its `lines` carry each one's `sku`, `title` and `labels`
+ * @param {Short[]} short
+ * @param {Record<string, string>} words
+ * @returns {{ sku: string; available: number; text: string }[]}
+ */
+export function shortSaid(quote, short, words) {
+  const lines = Array.isArray(quote?.lines) ? quote.lines.filter(isObject) : [];
+  return short.map((one) => {
+    const line = lines.find((each) => each.sku === one.sku);
+    const named = line === undefined ? '' : [String(line.title ?? ''), ...(Array.isArray(line.labels) ? line.labels.map(String) : [])].filter((part) => part !== '').join(', ');
+    return { sku: one.sku, available: one.available, text: shortSentence(words, named === '' ? one.sku : named, one.available) };
+  });
+}
+
+/**
  * What follows an answer of `POST /api/checkout` to a press (Ruling 202),
  * every answer the protocol gives the checkout named:
  *
  *   201                                   go: to Stripe's page, with the order's token; the press is over
  *   502 with an order                     ask_again with the order's token alone
  *   502 with none, or no answer           ask_again: the same press, its cart again
- *   409 total · refused · method · short  requote: the same press, the shop's new answer shown
+ *   409 total · refused · method · short  requote: the same press, the shop's new answer shown; `short` names each line short (Ruling 250)
  *   409 paid                              paid: to the order's page; the press is over
  *   403 challenge · 400 buyer · 429       say, the press kept (400 buyer with its fields)
  *   409 attempt · 410 · 422 address ·     say, the press gone: the next press is a new one
@@ -312,8 +355,10 @@ export function afterAnswer(press, answer) {
   // A refusal that is a sentence is for the developer to read, and no press of this one will mend it.
   if (body === null) return { kind: 'say', word: 'error.internal', press: null };
   if (status === 409 && ['total', 'refused', 'method', 'short'].includes(code)) {
-    if (isObject(body.quote)) return { kind: 'requote', press: kept, quote: body.quote, word: `error.${code}` };
-    return { kind: 'say', word: `error.${code}`, press: kept };
+    if (!isObject(body.quote)) return { kind: 'say', word: `error.${code}`, press: kept };
+    const requote = { kind: /** @type {'requote'} */ ('requote'), press: kept, quote: body.quote, word: `error.${code}` };
+    // The lines short of stock, which the page says by name and the cart says on their rows (Ruling 250).
+    return code === 'short' ? { ...requote, short: shortOf(body.short) } : requote;
   }
   if (status === 409 && code === 'paid') {
     return withOrder.order === '' ? { kind: 'say', word: 'error.paid', press: null } : { kind: 'paid', order: withOrder.order };
@@ -328,13 +373,15 @@ export function afterAnswer(press, answer) {
   return { kind: 'say', word: 'error.internal', press: kept };
 }
 
-/** Every word `afterAnswer` may name, for a page to hand its element and a test to hold in every language. */
+/** Every word `afterAnswer` may name, and the two a `409 short` says of each line, for a page to hand its element and a test to hold in every language. */
 export const CHECKOUT_WORDS = Object.freeze([
   'error.try_again',
   'error.total',
   'error.refused',
   'error.method',
   'error.short',
+  'short.some',
+  'short.none',
   'error.paid',
   'error.challenge',
   'error.buyer',

@@ -17,7 +17,10 @@
  * the name the protocol gives it (docs/reference/shop-protocol.md of the
  * platform). `fault.*` are what a field says: an answer to a customization
  * (`required`, `too_long`, `not_a_choice`) and a buyer's detail by the field's
- * name. A price's qualifiers («from {amount}») are `priceWords` in
+ * name. `short.*` is what a `409 short` says of each line the shop has too
+ * little of: `{title}` is the line's title and labels as the shop names them,
+ * `{n}` what is left (`short.none` where nothing is) — worded so that no
+ * number needs a plural. A price's qualifiers («from {amount}») are `priceWords` in
  * money.mjs, which every price on a site shares.
  *
  * A word that is one sentence has no full stop at the end: the markup it is
@@ -105,6 +108,8 @@ const BASE = {
     'error.total': 'Ціна змінилася. Перевірте нову суму та продовжте',
     'error.refused': 'Дещо в замовленні змінилося. Перевірте кошик',
     'error.short': 'Деяких товарів у кошику залишилось менше, ніж потрібно',
+    'short.some': '{title}: залишилось {n}',
+    'short.none': '{title}: більше немає',
     'error.lapsed': 'Термін цього замовлення минув. Почніть знову',
     'error.too_many': 'Звідси відкрито забагато оформлень. Завершіть одне або спробуйте пізніше',
     'error.too_small': 'Сума менша за мінімальну для онлайн-оплати',
@@ -209,6 +214,8 @@ const BASE = {
     'error.total': 'Der Preis hat sich geändert. Bitte prüfen Sie den neuen Gesamtbetrag und fahren Sie fort',
     'error.refused': 'In Ihrer Bestellung hat sich etwas geändert. Bitte prüfen Sie den Warenkorb',
     'error.short': 'Von einigen Artikeln im Warenkorb ist nicht mehr genug da',
+    'short.some': '{title}: nur noch {n} verfügbar',
+    'short.none': '{title}: nicht mehr verfügbar',
     'error.lapsed': 'Diese Bestellung ist abgelaufen. Bitte beginnen Sie von vorn',
     'error.too_many': 'Von hier sind zu viele Bestellungen offen. Schliessen Sie eine ab oder versuchen Sie es später erneut',
     'error.too_small': 'Der Betrag liegt unter dem Minimum für die Online-Zahlung',
@@ -313,6 +320,8 @@ const BASE = {
     'error.total': 'The price changed in the meantime. Please check the new total and go on',
     'error.refused': 'Something in your order changed. Please check your cart',
     'error.short': 'There is not enough left of some of the items in your cart',
+    'short.some': '{title}: {n} left',
+    'short.none': '{title}: none left',
     'error.lapsed': 'This order has expired. Please start again',
     'error.too_many': 'Too many checkouts are open from here. Finish one, or try again later',
     'error.too_small': 'The total is under the least amount that can be paid online',
@@ -417,6 +426,8 @@ const BASE = {
     'error.total': 'Цена изменилась. Проверьте новую сумму и продолжайте',
     'error.refused': 'Что-то в заказе изменилось. Проверьте корзину',
     'error.short': 'Некоторых товаров в корзине осталось меньше, чем нужно',
+    'short.some': '{title}: осталось {n}',
+    'short.none': '{title}: больше нет',
     'error.lapsed': 'Срок этого заказа истёк. Начните заново',
     'error.too_many': 'Отсюда открыто слишком много оформлений. Завершите одно или попробуйте позже',
     'error.too_small': 'Сумма меньше минимальной для оплаты онлайн',
@@ -521,6 +532,8 @@ const BASE = {
     'error.total': 'El precio ha cambiado. Compruebe el nuevo total y continúe',
     'error.refused': 'Algo ha cambiado en su pedido. Compruebe el carrito',
     'error.short': 'De algunos artículos del carrito ya no queda suficiente',
+    'short.some': '{title}: unidades disponibles: {n}',
+    'short.none': '{title}: ya no quedan',
     'error.lapsed': 'Este pedido ha caducado. Empiece de nuevo',
     'error.too_many': 'Desde aquí hay demasiados pedidos abiertos. Termine uno o inténtelo más tarde',
     'error.too_small': 'El importe es inferior al mínimo para pagar en línea',
@@ -625,6 +638,8 @@ const BASE = {
     'error.total': 'Il prezzo è cambiato. Controlli il nuovo totale e prosegua',
     'error.refused': 'Qualcosa nel suo ordine è cambiato. Controlli il carrello',
     'error.short': 'Di alcuni articoli nel carrello ne restano meno del necessario',
+    'short.some': '{title}: disponibili: {n}',
+    'short.none': '{title}: esaurito',
     'error.lapsed': 'Questo ordine è scaduto. Ricominci',
     'error.too_many': 'Da qui ci sono troppi ordini aperti. Ne completi uno o riprovi più tardi',
     'error.too_small': 'L’importo è inferiore al minimo per il pagamento online',
@@ -729,6 +744,8 @@ const BASE = {
     'error.total': 'O preço mudou. Verifique o novo total e continue',
     'error.refused': 'Algo mudou na sua encomenda. Verifique o carrinho',
     'error.short': 'De alguns artigos do carrinho já não resta quantidade suficiente',
+    'short.some': '{title}: disponíveis: {n}',
+    'short.none': '{title}: esgotado',
     'error.lapsed': 'Esta encomenda expirou. Comece de novo',
     'error.too_many': 'Há demasiadas encomendas abertas a partir daqui. Conclua uma ou tente mais tarde',
     'error.too_small': 'O valor é inferior ao mínimo para pagar online',
@@ -833,6 +850,8 @@ const BASE = {
     'error.total': 'Le prix a changé. Vérifiez le nouveau total et continuez',
     'error.refused': 'Quelque chose a changé dans votre commande. Vérifiez le panier',
     'error.short': 'Il ne reste pas assez de certains articles du panier',
+    'short.some': '{title} : il en reste {n}',
+    'short.none': '{title} : il n’en reste plus',
     'error.lapsed': 'Cette commande a expiré. Veuillez recommencer',
     'error.too_many': 'Trop de commandes sont ouvertes depuis ici. Terminez-en une ou réessayez plus tard',
     'error.too_small': 'Le montant est inférieur au minimum pour payer en ligne',

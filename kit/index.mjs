@@ -31,6 +31,6 @@ export { SHOP_LOCALES, shopWordsFor } from './lib/shop/words.mjs';
 export { PRODUCT, CART, CHECKOUT, ORDER, LISTING } from './lib/shop/hooks.mjs';
 export { MAX_LINES, MAX_QTY, cartKey, readCart, addLine, removeLine, setQty, shippingBody, cartView } from './lib/shop/cart.mjs';
 export { productFacts, variantFor, valueStates, answersOf, fromPrice } from './lib/shop/product.mjs';
-export { ATTEMPT, HOLD, pressKey, freshPress, pressFor, sentOf, keptPress, checkoutBody, missingDetails, afterAnswer, CHECKOUT_WORDS } from './lib/shop/checkout.mjs';
+export { ATTEMPT, HOLD, pressKey, freshPress, pressFor, sentOf, keptPress, checkoutBody, missingDetails, afterAnswer, shortOf, shortSentence, shortSaid, CHECKOUT_WORDS } from './lib/shop/checkout.mjs';
 export { ASK_EVERY_MS, ASKS_MOST, ASK_DEADLINE_MS, ORDER_WORDS, orderView, orderAddress, paidFromKey, sentFromHere, frozenOrder } from './lib/shop/order.mjs';
 export { STOCK_ASKS_MOST, STOCK_DEADLINE_MS, stockAsks, hiddenTiles } from './lib/shop/listing.mjs';

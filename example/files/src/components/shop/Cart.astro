@@ -30,7 +30,10 @@
  * again: the last rows, held, and a button to ask again), `empty`, `failed` —
  * and this file's CSS shows each part for its own. A line the shop refuses has
  * no title to be called by — the cart keeps none — so it says its place, «Item
- * 2», and why.
+ * 2», and why. A line the shop has too little of — the last item went to another
+ * buyer first, which the checkout says when a press is answered `409 short` —
+ * says what is left on its row (`data-line-short`) and takes the focus, at its
+ * box, until the buyer changes a quantity.
  *
  * The countries are those of the shop's zones, from its settings at the build,
  * in their order and each once, named in the page's language — the one
@@ -56,7 +59,7 @@ const W = shopWordsFor(LANG);
 
 // The words the element says as the cart changes, handed over in the page's language.
 const SAID = [
-  'cartEmpty', 'pricing', 'cartFailed', 'tryAgain', 'cartUnavailable', 'quantity', 'remove', 'removeNamed', 'itemNumber', 'free', 'yes', 'vat', 'customs', 'doesNotSend', 'cannotSend',
+  'cartEmpty', 'pricing', 'cartFailed', 'tryAgain', 'cartUnavailable', 'quantity', 'remove', 'removeNamed', 'itemNumber', 'free', 'yes', 'vat', 'customs', 'doesNotSend', 'cannotSend', 'left', 'soldOut',
   'error.refused', 'refused.not_sold', 'refused.off_sale', 'refused.quantity', 'refused.answer', 'refused.too_large',
 ];
 const words = Object.fromEntries(SAID.map((key) => [key, W[key]]));
@@ -189,7 +192,8 @@ const countries = codes.map((code) => ({ code, name: nameOf(code) }));
   .cart :global([data-line-place]),
   .cart :global([data-line-labels]),
   .cart :global([data-line-answers]),
-  .cart :global([data-line-refused]) {
+  .cart :global([data-line-refused]),
+  .cart :global([data-line-short]) {
     grid-column: 1;
     margin: 0;
   }
@@ -251,6 +255,7 @@ const countries = codes.map((code) => ({ code, name: nameOf(code) }));
   }
   /* The danger colour mixed with the ink, so it keeps its contrast on any palette (WCAG 1.4.3). */
   .cart :global([data-line-refused]),
+  .cart :global([data-line-short]),
   .cart__error {
     margin: 0;
     font-size: 0.875rem;
@@ -264,7 +269,8 @@ const countries = codes.map((code) => ({ code, name: nameOf(code) }));
     .cart :global([data-line-place]),
     .cart :global([data-line-labels]),
     .cart :global([data-line-answers]),
-    .cart :global([data-line-refused]) {
+    .cart :global([data-line-refused]),
+    .cart :global([data-line-short]) {
       grid-column: 1 / -1;
     }
     .cart :global([data-line-quantity]) {

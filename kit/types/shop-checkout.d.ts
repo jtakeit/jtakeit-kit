@@ -57,6 +57,18 @@ export interface CheckoutForm {
 export function checkoutBody(press: Press, cart: Cart, form: CheckoutForm): object;
 /** The details a press cannot go without, by the protocol's paths (`buyer.name`, `address.line1`, …): only what is plainly missing. */
 export function missingDetails(buyer: Buyer, address: Address | null): string[];
+/** A SKU the shop has too little of for the cart, as a `409 short` names it: how many it was asked for, and how many are left. */
+export interface Short {
+  sku: string;
+  wanted: number;
+  available: number;
+}
+/** The lines a `409 short` names, held to what they are: an entry with no SKU is none, and a count that is no whole number from 0 is 0. */
+export function shortOf(raw: unknown): Short[];
+/** A line short of stock, said: «Fox T-shirt, M, Blue: 1 left», or «…: none left» where nothing is (`short.some`, `short.none`); the title put in as written. */
+export function shortSentence(words: Record<string, string>, name: string, available: number): string;
+/** Each SKU a `409 short` names, with the sentence that says it, by the title and labels the quote gives its line (the SKU where it has none), in the shop's order. */
+export function shortSaid(quote: any, short: Short[], words: Record<string, string>): { sku: string; available: number; text: string }[];
 /** What follows an answer of the checkout. */
 export type Next =
   /** The press is over: to Stripe's page, for the order `order` (`''` if the shop named none), which the page marks as this tab's. */
@@ -66,10 +78,10 @@ export type Next =
   /** The same press again: with its order alone, or with its cart and a fresh token. */
   | { kind: 'ask_again'; press: Press }
   /** The same press, the buyer shown the shop's new answer, and `word` said. */
-  | { kind: 'requote'; press: Press; quote: object; word: string }
+  | { kind: 'requote'; press: Press; quote: object; word: string; /** For `error.short`: the lines short, which the page says by name and the cart says on their rows. */ short?: Short[] }
   /** `word` said, the `fields` it is about where the shop named them; `press` null where the next press mints a new attempt. */
   | { kind: 'say'; word: string; press: Press | null; fields?: string[] };
 /** What follows an answer of `POST /api/checkout` to a press: every answer the protocol gives the checkout. `null` is no answer. */
 export function afterAnswer(press: Press, answer: { status: number; body: any } | null): Next;
-/** Every word `afterAnswer` may name. */
+/** Every word `afterAnswer` may name, and the two a `409 short` says of each line. */
 export const CHECKOUT_WORDS: readonly string[];

@@ -189,9 +189,9 @@ const details = collection.fields
           })
         }
 
-        <div class="buy__state">
+        <div class="buy__state" aria-live="polite" aria-atomic="true">
           <p class="buy__price"><span data-price {...(shown === undefined ? {} : rowOf(variantRows, shown.key)?.at('price'))}>{shown?.price === undefined ? '' : say(shown.price)}</span></p>
-          <p class="buy__stock" data-stock aria-live="polite"></p>
+          <p class="buy__stock" data-stock></p>
         </div>
 
         {
