@@ -1,10 +1,29 @@
 // The shop's walk (jtakeit-core wiki/102 stage 9, decision 13, Ruling 195):
 // the storefront on the test shop (test/shop-site.mjs, Ruling 200), built, and
 // walked in a real Chrome by `jtk a11y` (lib/a11y.mjs, its shop drives in
-// lib/a11y-shop.mjs) over `devShop` — the
-// shop's addresses answered from the site's own files, FOX-M-BLUE sold out —
-// in the site's own language and the light palette, against WCAG 2.1 AA and
-// the shop's own checks.
+// lib/a11y-shop.mjs) over `devShop` — the shop's addresses answered from the
+// site's own files, FOX-M-BLUE sold out — against WCAG 2.1 AA and the shop's
+// own checks. Made whole in Task 9.17:
+//
+//   every page of the shop, in de-CH and in en, in the light palette and in
+//     the dark one — the kit's own tokens, and `test/a11y.mjs`'s dark page with
+//     a light accent, written to jtk/design.json and built again — each read
+//     with every drive: the listing, three products, the cart with the checkout
+//     below it and the page after payment. The cart is read with its rows drawn
+//     at 320 px wide as well, and with the sentences the shop says only where
+//     they hold: incl. VAT, a country it does not send to, a parcel no method
+//     carries, the buyer's own currency
+//   the listing that hides what is sold out, in both languages and both
+//     palettes: a copy of the site whose listing page says `HIDE_SOLD_OUT`, its
+//     products under two headings, all four of the fox's SKUs sold out
+//   the storefront as an agent leaves it (the booking form's copied walk,
+//     test/a11y.mjs): every component of `SHOP_FILES` with each class renamed
+//     (`mine-…`), no `<style>`, the product's fields in a row of their own —
+//     built and walked again, in de-CH and the light palette, the pieces and the
+//     listing that hides. The hooks are all it keeps, and the elements must still
+//     draw, price, refuse and pay with only the rules they put on the page
+//     themselves
+//   and the command, as a developer runs it in a site's directory (below)
 //
 // The pages are read in a buyer's order, one browser's storage throughout, so
 // what a product page puts in the cart is there when a later piece's page is
@@ -27,22 +46,28 @@
 // hide nothing there, is held to its two checks. All through `jtk a11y`, on
 // this site.
 //
-//   CHROME_PATH=/usr/bin/chromium node test/a11y-shop.mjs [--keep]
+//   CHROME_PATH=/usr/bin/chromium node test/a11y-shop.mjs [--keep] [--verbose]
 //
-// Not in `npm test`: it needs a Chrome.
+// `--verbose` says every shop check of every read, not only the findings. It takes
+// about seven minutes (6 min 45 s on a 16-core machine; the time of each part is said as it
+// ends); CI runs it as its own step with a bound. Not in `npm test`: it needs a Chrome.
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { audit, report } from '../lib/a11y.mjs';
+import { SHOP_FILES } from '../lib/units/shop.mjs';
 import { copyShop, dearerFirst, groupShop, hideSoldOut, layShop } from './shop-site.mjs';
 
 /** What the cart's drive must have said on each of its pages — the test shop's country and methods give it each of them to do. */
 const CART_DRIVE = [
   "cart: every line is the shop's own",
+  'cart: with its rows drawn nothing of the cart is cut off at 320 px wide',
   'cart: a country chosen by the keyboard',
   'cart: a method chosen by the keyboard',
   'cart: the customs sentence is said for a parcel that crosses the border, and not for a pick-up',
+  'cart: incl. VAT is said beside the subtotal',
+  'cart: a country the shop does not send to, and a parcel no method carries, are each said',
   'cart: a quantity changed by the keyboard',
   'cart: a quantity changed while the shop is still answering',
   'cart: two variants of one product are named apart',
@@ -73,7 +98,8 @@ const CHECKOUT_DRIVE = [
   'checkout: Pay pressed with nothing filled in',
   'checkout: a pick-up asks no address',
   'checkout: the customs sentence is said beside the total',
-  'checkout: incl. VAT is said beside the total',
+  'checkout: incl. VAT is said beside the total, and the buyer\'s own currency beside Pay',
+  'checkout: a parcel no method carries is said as an alert',
   'checkout: a cart changed while the step is open',
   'checkout: Pay pressed while the shop is pricing, the cart changed again meanwhile, goes on with the newest price',
   'checkout: Pay pressed while the shop is pricing is kept',
@@ -154,10 +180,29 @@ const HIDING_DRIVE = [
   'shop: every request names the protocol version',
 ];
 
+/** What the product page's drive must have said on each of the test shop's three products. */
+const FOX_DRIVE = [
+  "product: each option's value chosen by the keyboard",
+  "product: the price shown is the chosen variant's",
+  'product: a variant sold out is said in words',
+  'product: «added» is said',
+  'product: a cart the browser cannot keep is said',
+  'shop: every request names the protocol version',
+];
+const BAG_DRIVE = [
+  "product: each option's value chosen by the keyboard",
+  "product: the price shown is the chosen variant's",
+  'product: a question left unanswered is said',
+  'product: «added» is said',
+  'product: a cart the browser cannot keep is said',
+  'shop: every request names the protocol version',
+];
+const CANDLE_DRIVE = ['product: «added» is said', 'product: a cart the browser cannot keep is said', 'shop: every request names the protocol version'];
+
 /**
  * The storefront's pieces, in a buyer's order: the pages each adds to the
- * walk, and the checks its drive must have said on each — by the start of
- * the check's words.
+ * walk, in German and in English, and the checks its drive must have said on
+ * each — by the start of the check's words.
  */
 const PIECES = [
   {
@@ -169,25 +214,14 @@ const PIECES = [
   },
   {
     piece: 'the product',
-    pages: ['/shop/t-shirt-fox/', '/shop/tasche-nach-mass/', '/shop/kerzenstaender/'],
+    pages: ['/shop/t-shirt-fox/', '/shop/tasche-nach-mass/', '/shop/kerzenstaender/', '/en/shop/t-shirt-fox/', '/en/shop/tasche-nach-mass/', '/en/shop/kerzenstaender/'],
     reaches: {
-      '/shop/t-shirt-fox/': [
-        "product: each option's value chosen by the keyboard",
-        "product: the price shown is the chosen variant's",
-        'product: a variant sold out is said in words',
-        'product: «added» is said',
-        'product: a cart the browser cannot keep is said',
-        'shop: every request names the protocol version',
-      ],
-      '/shop/tasche-nach-mass/': [
-        "product: each option's value chosen by the keyboard",
-        "product: the price shown is the chosen variant's",
-        'product: a question left unanswered is said',
-        'product: «added» is said',
-        'product: a cart the browser cannot keep is said',
-        'shop: every request names the protocol version',
-      ],
-      '/shop/kerzenstaender/': ['product: «added» is said', 'product: a cart the browser cannot keep is said', 'shop: every request names the protocol version'],
+      '/shop/t-shirt-fox/': FOX_DRIVE,
+      '/shop/tasche-nach-mass/': BAG_DRIVE,
+      '/shop/kerzenstaender/': CANDLE_DRIVE,
+      '/en/shop/t-shirt-fox/': FOX_DRIVE,
+      '/en/shop/tasche-nach-mass/': BAG_DRIVE,
+      '/en/shop/kerzenstaender/': CANDLE_DRIVE,
     },
   },
   {
@@ -227,135 +261,271 @@ const CANDLE = '0193a5c3-6b1c-7d20-9a31-5e4d3c2b1a01';
 /** The fox's first variant: what the cart's drive writes into a cart it finds empty; and its second, for two variants named apart. */
 const FOX_LINE = { product: '0193a5c3-6b1c-7d20-9a31-5e4d3c2b1a02', variant: 'v1', qty: 1, answers: {} };
 
+/**
+ * The dark palette: `test/a11y.mjs`'s own — a dark page with a light accent and the hero's field on, the tokens a
+ * design pass sets — over the site's `jtk/design.json`. The light palette is the kit's own tokens, which is what `jtk create` lays.
+ * The example site is dressed dark the way its tokens ask (`src/styles/tokens.css`): the body says it is dark (`data-ground`, which
+ * turns its glass dark) and the lifted paper of its language switch and its form, which `design.json` does not reach, is dark too.
+ */
+const DARK = { paper: '#16130f', ink: '#f3eee6', accent: '#e3b04b', field: 'aurora', ground: '#16130f', colors: ['#2b2620', '#5a4630', '#8a6a3c', '#e3b04b'] };
+/** What the listing says where hiding leaves no tile, in each language of the site (the unit's words, written out so the check does not read what it checks). */
+const SOLD_OUT_SAYS = { '/shop/': 'Im Moment ist alles ausverkauft', '/en/shop/': 'Everything here is sold out for now' };
+
 const args = process.argv.slice(2);
+const verbose = args.includes('--verbose');
 const started = Date.now();
 const scratch = mkdtempSync(join(tmpdir(), 'jtk-a11y-shop-'));
-let lines = [];
-let results = [];
-let hiding = [];
-try {
-  const site = await layShop(scratch);
-  const built = spawnSync('npm', ['run', 'build'], { cwd: site, encoding: 'utf8' });
+/** @type {string[]} */ const lines = [];
+/** @type {any[]} */ const everything = [];
+/** The time of each part, for the report: a walk that grows is seen where it grew. */
+/** @type {string[]} */ const times = [];
+const since = (from) => `${((Date.now() - from) / 1000).toFixed(1)} s`;
+const timed = async (what, work) => {
+  const from = Date.now();
+  const done = await work();
+  times.push(`${what} ${since(from)}`);
+  console.log(`a11y-shop: ${what} — ${since(from)}`);
+  return done;
+};
+const built = (site, what) => {
+  const one = spawnSync('npm', ['run', 'build'], { cwd: site, encoding: 'utf8' });
   // Thrown, not exited: the `finally` below takes the site away either way.
-  if (built.status !== 0) throw new Error(`a11y-shop: the shop does not build:\n${built.stdout}\n${built.stderr}`);
-  results = await audit({
+  if (one.status !== 0) throw new Error(`a11y-shop: ${what} does not build:\n${one.stdout}\n${one.stderr}`);
+};
+/** A copy of a site, its palette the dark one where asked. A copy costs a build (about a second and a half), and no install. */
+const copied = (site, name, palette = 'light') => {
+  const copy = copyShop(site, `${site}-${name}`);
+  if (palette === 'dark') {
+    const file = join(copy, 'jtk/design.json');
+    writeFileSync(file, JSON.stringify({ ...JSON.parse(readFileSync(file, 'utf8')), ...DARK }, null, 2));
+    const tokens = join(copy, 'src/styles/tokens.css');
+    writeFileSync(tokens, `${readFileSync(tokens, 'utf8')}\nhtml:root {\n  --paper-lift: #26221c;\n}\n`);
+    const layout = join(copy, 'src/layouts/Layout.astro');
+    const page = readFileSync(layout, 'utf8');
+    if (!page.includes('<body class={bodyClass}>')) throw new Error(`a11y-shop: ${layout} has not the <body> line the dark palette says it is dark on`);
+    writeFileSync(layout, page.replace('<body class={bodyClass}>', '<body class={bodyClass} data-ground="dark">'));
+  }
+  return copy;
+};
+const German = (path) => !path.startsWith('/en/');
+
+/**
+ * What a drive must have reached and has not, as findings: for each page of the pieces given, each check it names by the start of its words.
+ * @param {any[]} results the pages read
+ * @param {typeof PIECES} pieces
+ * @param {string} said whose read this is
+ */
+function unreached(results, pieces, said) {
+  const out = [];
+  for (const { piece, reaches } of pieces) {
+    for (const [path, checks] of Object.entries(reaches)) {
+      const read = results.find((one) => one.path === path);
+      for (const check of checks) {
+        if (!read?.found.some((one) => one.check.startsWith(check))) out.push(`${path} (${said}) — ${piece}'s drive never reached «${check}…»`);
+      }
+    }
+  }
+  return out;
+}
+
+/** The pieces, read in a site's palette: the pages of every piece in a buyer's order, the drives' checks held to what they must reach. */
+async function readPieces(site, { label, palette, pieces = PIECES }) {
+  const results = await audit({
     dist: join(site, 'dist'),
-    pages: PIECES.flatMap((one) => one.pages),
+    pages: pieces.flatMap((one) => one.pages),
     schemes: ['light'],
     from: site,
     soldOut: SOLD_OUT,
     cart: { line: FOX_LINE, second: { ...FOX_LINE, variant: 'v2' } },
-    log: (line) => console.log(`[shop] ${line}`),
+    log: (line) => console.log(`[shop, ${label}] ${line}`),
   });
-  lines = report(results);
-  for (const { piece, reaches } of PIECES) {
-    for (const [path, checks] of Object.entries(reaches)) {
-      const read = results.find((one) => one.path === path);
-      for (const check of checks) {
-        if (!read?.found.some((one) => one.check.startsWith(check))) lines.push(`${path} — ${piece}'s drive never reached «${check}…»`);
-      }
-    }
-  }
+  for (const one of results) one.scheme = palette;
+  everything.push(...results);
+  lines.push(...report(results), ...unreached(results, pieces, palette));
   // The Review Focus's two languages, by the words: the English cart titles the line the German fox page added «Fox T-shirt».
   const english = results.find((one) => one.path === '/en/cart/')?.found.find((one) => one.check.startsWith("cart: a line added on a page in another language"));
-  if (english !== undefined && !(english.said ?? '').includes('«Fox T-shirt»')) lines.push(`/en/cart/ — the line the German fox page added is not titled «Fox T-shirt»: ${english.said}`);
+  if (english !== undefined && !(english.said ?? '').includes('«Fox T-shirt»')) lines.push(`/en/cart/ (${palette}) — the line the German fox page added is not titled «Fox T-shirt»: ${english.said}`);
   for (const one of results) {
-    for (const said of one.found.filter((each) => /^(product|cart|checkout|order|listing|shop):/.test(each.check))) console.log(`${said.ok ? 'ok  ' : 'FAIL'} ${one.path} ${said.check}`);
+    for (const said of one.found.filter((each) => /^(product|cart|checkout|order|listing|shop):/.test(each.check))) {
+      if (verbose || !said.ok) console.log(`${said.ok ? 'ok  ' : 'FAIL'} ${one.path} (${label}) ${said.check}`);
+    }
   }
+  return results;
+}
 
-  // ── the listing that hides what is sold out: the walk's site built a second time ─
-  // A copy of the site, its node_modules linked rather than copied, so it costs a build (about a second and a half) and a Chrome read.
-  // The listing page says `HIDE_SOLD_OUT`, the products are listed under two headings, and the shop answers all four of the fox's SKUs
-  // sold out: the fox's tile is hidden and the other two are shown, and the group the fox left empty is hidden with its heading.
-  {
-    const apart = Date.now();
-    const copy = copyShop(site, `${site}-hiding`);
-    hideSoldOut(copy);
-    groupShop(copy);
-    // The bag's dearer variant first: a tile built from the first variant on sale would say «ab CHF 119» and the walk's price check would fail.
-    dearerFirst(copy);
-    const second = spawnSync('npm', ['run', 'build'], { cwd: copy, encoding: 'utf8' });
-    if (second.status !== 0) throw new Error(`a11y-shop: the site that hides what is sold out does not build:\n${second.stdout}\n${second.stderr}`);
-    const built = Date.now();
-    hiding = await audit({
-      dist: join(copy, 'dist'),
-      pages: ['/shop/'],
-      schemes: ['light'],
-      from: copy,
-      soldOut: FOX_SOLD_OUT,
-      log: (line) => console.log(`[shop, hiding] ${line}`),
-    });
-    lines.push(...report(hiding));
-    const listing = hiding.find((one) => one.path === '/shop/');
+/**
+ * The listing in a site whose listing hides what is sold out, in the pages given: the fox's four SKUs sold out, so its tile is hidden
+ * and the other two are shown, and the group it left empty is hidden with its heading — and with every product sold out no group, no
+ * heading, and the sentence for it in the page's language.
+ */
+async function readHiding(site, { label, palette, pages }) {
+  const results = await audit({
+    dist: join(site, 'dist'),
+    pages,
+    schemes: ['light'],
+    from: site,
+    soldOut: FOX_SOLD_OUT,
+    log: (line) => console.log(`[shop, ${label}] ${line}`),
+  });
+  for (const one of results) one.scheme = palette;
+  everything.push(...results);
+  lines.push(...report(results));
+  for (const path of pages) {
+    const listing = results.find((one) => one.path === path);
+    const where = `${path} (${palette})`;
     for (const check of HIDING_DRIVE) {
-      if (!listing?.found.some((one) => one.check.startsWith(check))) lines.push(`/shop/ — the listing that hides what is sold out: the drive never reached «${check}…»`);
+      if (!listing?.found.some((one) => one.check.startsWith(check))) lines.push(`${where} — the listing that hides what is sold out: the drive never reached «${check}…»`);
     }
     // What the fox's four SKUs sold out do to this listing: its tile hidden, and the others shown; its group hidden, and theirs shown.
     const tiles = listing?.found.find((one) => one.check.startsWith('listing: once the page has loaded'))?.tiles ?? [];
     const hid = (id) => tiles.find((one) => one.id === id)?.hidden;
     if (tiles.length !== 3 || hid(FOX) !== true || hid(BAG) !== false || hid(CANDLE) !== false) {
-      lines.push(`/shop/ — with all four of the fox's SKUs sold out, the fox's tile is not the one hidden, with the other two shown: ${JSON.stringify(tiles.map((one) => [one.title, one.hidden]))}`);
+      lines.push(`${where} — with all four of the fox's SKUs sold out, the fox's tile is not the one hidden, with the other two shown: ${JSON.stringify(tiles.map((one) => [one.title, one.hidden]))}`);
     }
+    // A select's label is the repository's and fixed, so the headings are the same in every language.
     const groups = listing?.found.find((one) => one.check.startsWith('listing: a group made empty by hiding'))?.groups ?? [];
     const group = (heading) => groups.find((one) => one.heading === heading);
     if (groups.length !== 2 || group('Kleidung')?.hidden !== true || group('Kleidung')?.shown !== 0 || group('Geschenke')?.hidden !== false || group('Geschenke')?.shown !== 2) {
-      lines.push(`/shop/ — the group the fox left empty is not hidden with its heading, with the other shown: ${JSON.stringify(groups)}`);
+      lines.push(`${where} — the group the fox left empty is not hidden with its heading, with the other shown: ${JSON.stringify(groups)}`);
     }
     // And when every product is sold out: no tile, no group, no heading left over nothing, and the sentence said in the page's language.
     const none = listing?.found.find((one) => one.check.startsWith('listing: where hiding leaves no tile, every group is hidden'));
     const headings = none?.headings ?? [];
     if (JSON.stringify(headings.map((one) => [one.text, one.shown])) !== JSON.stringify([['Kleidung', false], ['Geschenke', false]]) || none?.groups?.length !== 2 || none.groups.some((one) => !one.hidden || one.shown !== 0)) {
-      lines.push(`/shop/ — with every product sold out, both groups are not hidden with their headings: ${JSON.stringify({ headings, groups: none?.groups })}`);
+      lines.push(`${where} — with every product sold out, both groups are not hidden with their headings: ${JSON.stringify({ headings, groups: none?.groups })}`);
     }
     const sentence = listing?.found.find((one) => one.check.startsWith('listing: where hiding leaves no tile the sentence for it is shown'));
-    if (sentence?.said?.startsWith('«Im Moment ist alles ausverkauft» shown') !== true) lines.push(`/shop/ — with every product sold out, the German listing does not say «Im Moment ist alles ausverkauft» as a shown status: ${sentence?.said}`);
-    for (const said of listing?.found.filter((each) => /^(listing|shop):/.test(each.check)) ?? []) console.log(`${said.ok ? 'ok  ' : 'FAIL'} /shop/ (hiding) ${said.check}`);
-    console.log(`a11y-shop: the second site (the listing hiding what is sold out, the products grouped) copied and built in ${((built - apart) / 1000).toFixed(1)} s, read in ${((Date.now() - built) / 1000).toFixed(1)} s`);
+    if (sentence?.said?.startsWith(`«${SOLD_OUT_SAYS[path]}» shown`) !== true) lines.push(`${where} — with every product sold out, the listing does not say «${SOLD_OUT_SAYS[path]}» as a shown status: ${sentence?.said}`);
+    for (const said of listing?.found.filter((each) => /^(listing|shop):/.test(each.check)) ?? []) {
+      if (verbose || !said.ok) console.log(`${said.ok ? 'ok  ' : 'FAIL'} ${path} (${label}) ${said.check}`);
+    }
   }
+  return results;
+}
+
+/**
+ * The storefront as an agent leaves it, in a copy of a site (the booking form's copied walk, test/a11y.mjs; docs/booking.md): every
+ * component of `SHOP_FILES` with each class renamed — `mine-…` — and the look gone, the `<style>`; and the product's fields — its options, the
+ * price and what is left, its questions and the quantity — wrapped in a row of their own. The hooks are all it keeps. Thrown where the copy
+ * was not made as meant, so that a component that says its classes some other way is seen here and not passed for the wrong reason.
+ * @param {string} site a copy of a site `layShop` laid
+ */
+function asAnAgentLeavesIt(site) {
+  const components = SHOP_FILES.filter((file) => file.startsWith('src/components/'));
+  if (components.length < 5) throw new Error(`a11y-shop: SHOP_FILES has ${components.length} component(s) where the storefront has five: ${SHOP_FILES.join(', ')}`);
+  for (const file of components) {
+    const at = join(site, file);
+    const original = readFileSync(at, 'utf8');
+    let copy = original
+      .replace(/\n<style>[\s\S]*?<\/style>/, '')
+      .replace(/class="([^"]+)"/g, (_, names) => `class="${names.split(' ').map((one) => `mine-${one}`).join(' ')}"`);
+    if (file.endsWith('/Product.astro')) {
+      copy = copy
+        .replace(/(<noscript><p class="mine-buy__note">[^\n]*<\/noscript>)/, '$1\n        <div class="mine-row">')
+        .replace(/(<div class="mine-buy__qty">[\s\S]*?<\/div>)/, '$1\n        </div>');
+      if (!copy.includes('mine-row')) throw new Error(`a11y-shop: the product's fields were not wrapped in a row in ${file}`);
+    }
+    const classes = [...copy.matchAll(/class="([^"]+)"/g)].map((one) => one[1].split(' '));
+    if (!/class="/.test(original) || classes.some((names) => names.some((one) => !one.startsWith('mine-'))) || /<style[\s>]/.test(copy) || /class[:=]\{|class:list/.test(copy)) {
+      throw new Error(`a11y-shop: the copied ${file} was not made as meant: a class left as it was, a <style> left, or a class this copy cannot rename`);
+    }
+    writeFileSync(at, copy);
+  }
+}
+
+try {
+  const site = await timed('the shop laid out, installed and built', async () => {
+    const laid = await layShop(scratch);
+    built(laid, 'the shop');
+    return laid;
+  });
+
+  // ── every page of the shop, in both languages, in the light palette and in the dark one ─
+  await timed('the pieces in the light palette, in de-CH and en', () => readPieces(site, { label: 'light', palette: 'light' }));
+  await timed('the pieces in the dark palette, in de-CH and en', async () => {
+    const copy = copied(site, 'dark', 'dark');
+    built(copy, 'the site on the dark palette');
+    return readPieces(copy, { label: 'dark', palette: 'dark' });
+  });
+
+  // ── the listing that hides what is sold out: the walk's site built again, on each palette ─
+  // The listing page says `HIDE_SOLD_OUT`, the products are listed under two headings, and the shop answers all four of the fox's SKUs
+  // sold out: the fox's tile is hidden and the other two are shown, and the group the fox left empty is hidden with its heading.
+  const hiding = copied(site, 'hiding');
+  hideSoldOut(hiding);
+  groupShop(hiding);
+  // The bag's dearer variant first: a tile built from the first variant on sale would say «ab CHF 119» and the walk's price check would fail.
+  dearerFirst(hiding);
+  built(hiding, 'the site that hides what is sold out');
+  const LISTINGS = ['/shop/', '/en/shop/'];
+  await timed('the listing that hides, in de-CH and en, in the light palette', () => readHiding(hiding, { label: 'hiding', palette: 'light, hiding', pages: LISTINGS }));
+  await timed('the listing that hides, in de-CH and en, in the dark palette', async () => {
+    const copy = copied(hiding, 'dark', 'dark');
+    built(copy, 'the site that hides what is sold out, on the dark palette');
+    return readHiding(copy, { label: 'hiding, dark', palette: 'dark, hiding', pages: LISTINGS });
+  });
+
+  // ── the storefront as an agent leaves it: every class renamed, no <style>, the product's fields in a row ─
+  // Walked again as the site's own language and the light palette — the words and the palette change no markup — the pieces and then the
+  // listing that hides, whose group, tile and sentence are found by their hooks alone.
+  await timed('the storefront as an agent leaves it, in de-CH and the light palette', async () => {
+    const mine = copied(site, 'mine');
+    asAnAgentLeavesIt(mine);
+    built(mine, 'the storefront as an agent leaves it');
+    const pieces = PIECES.map((one) => ({ ...one, pages: one.pages.filter(German), reaches: Object.fromEntries(Object.entries(one.reaches).filter(([path]) => German(path))) }));
+    await readPieces(mine, { label: 'copy', palette: 'copy', pieces });
+    const mineHiding = copied(hiding, 'mine');
+    asAnAgentLeavesIt(mineHiding);
+    built(mineHiding, 'the listing that hides, as an agent leaves it');
+    await readHiding(mineHiding, { label: 'copy, hiding', palette: 'copy, hiding', pages: ['/shop/'] });
+  });
 
   // The command as a developer runs it, in the site's directory, on the pages it is given: `jtk a11y` has no cart to start from.
-  const command = (...pages) => spawnSync('node', [resolve(import.meta.dirname, '../bin/jtk.mjs'), 'a11y', ...pages], { cwd: site, encoding: 'utf8', env: process.env });
-  /** The shop checks the command says it reached on a page, one number for each scheme it read it in. */
-  const reached = (out, path) => [...out.matchAll(new RegExp(`^ok   ${path.replace(/\//g, '\\/')} \\((\\w+)\\)(?: · (\\d+) shop check)?`, 'gm'))].map((one) => Number(one[2] ?? 0));
-  // The whole site, as `jtk a11y` reads it with no pages named: the cart pages come before the product pages, a new browser has no cart,
-  // and each is given the first product page's first variant on sale and walked. Every page of it passes.
-  const walked = command();
-  if (walked.status !== 0) lines.push(`jtk a11y — exit ${walked.status}:\n${walked.stdout}\n${walked.stderr}`);
-  const withLine = [...reached(walked.stdout, '/cart/'), ...reached(walked.stdout, '/en/cart/')];
-  if (withLine.length === 0 || withLine.some((one) => one < 10)) lines.push(`jtk a11y — a cart's drive did not reach its checks with the product's line in the cart (shop checks per cart page: ${withLine.join(', ') || 'none'}):\n${walked.stdout}`);
-  // The listing, as the command reads it with the whole site: it chooses to hide nothing, so its two checks and no request to the shop.
-  const atListing = ['/shop/', '/en/shop/'].map((path) => [path, reached(walked.stdout, path)]);
-  for (const [path, got] of atListing) {
-    if (got.length === 0 || got.some((one) => one !== 2)) lines.push(`jtk a11y — ${path} was not held to its two listing checks (shop checks per scheme: ${got.join(', ') || 'none'}):\n${walked.stdout}`);
-  }
-  // A cart page with no product page to give it a line: held to its empty state, which passes.
-  const bare = command('/cart/');
-  if (bare.status !== 0) lines.push(`jtk a11y /cart/ — exit ${bare.status}, though a cart with no line is a correct page:\n${bare.stdout}\n${bare.stderr}`);
-  const empty = reached(bare.stdout, '/cart/');
-  if (empty.length === 0 || empty.some((one) => one !== 1)) lines.push(`jtk a11y /cart/ — the empty cart was not held to its one check (shop checks per scheme: ${empty.join(', ') || 'none'}):\n${bare.stdout}`);
-  // The order's page, with no order on its address — as the command reads every page of the site, and as it reads it alone: it says
-  // so and asks the shop nothing, which is its one shop check, in each scheme it was read in. Both languages.
-  const orderPages = ['/order/', '/en/order/'];
-  const atOrder = orderPages.map((path) => [path, reached(walked.stdout, path)]);
-  for (const [path, got] of atOrder) {
-    if (got.length === 0 || got.some((one) => one !== 1)) lines.push(`jtk a11y — ${path} was not held to its one shop check, an address with no order (shop checks per scheme: ${got.join(', ') || 'none'}):\n${walked.stdout}`);
-  }
-  const alone = command(...orderPages);
-  if (alone.status !== 0) lines.push(`jtk a11y ${orderPages.join(' ')} — exit ${alone.status}, though an address with no order is a correct page:\n${alone.stdout}\n${alone.stderr}`);
-  const atAlone = orderPages.map((path) => [path, reached(alone.stdout, path)]);
-  for (const [path, got] of atAlone) {
-    if (got.length === 0 || got.some((one) => one !== 1)) lines.push(`jtk a11y ${orderPages.join(' ')} — ${path} was not held to its one shop check (shop checks per scheme: ${got.join(', ') || 'none'}):\n${alone.stdout}`);
-  }
-  console.log(`jtk a11y: exit ${walked.status}, the listing pages' shop checks ${atListing.map(([, got]) => got.join('/')).join(', ')}, the cart pages' ${withLine.join(', ')}, the order pages' ${atOrder.map(([, got]) => got.join('/')).join(', ')}; jtk a11y /cart/: exit ${bare.status}, ${empty.join(', ')}; jtk a11y /order/ /en/order/: exit ${alone.status}, ${atAlone.map(([, got]) => got.join('/')).join(', ')}`);
+  await timed('jtk a11y, on the whole site and on the pages it is given', async () => {
+    const command = (...pages) => spawnSync('node', [resolve(import.meta.dirname, '../bin/jtk.mjs'), 'a11y', ...pages], { cwd: site, encoding: 'utf8', env: process.env });
+    /** The shop checks the command says it reached on a page, one number for each scheme it read it in. */
+    const reached = (out, path) => [...out.matchAll(new RegExp(`^ok   ${path.replace(/\//g, '\\/')} \\((\\w+)\\)(?: · (\\d+) shop check)?`, 'gm'))].map((one) => Number(one[2] ?? 0));
+    // The whole site, as `jtk a11y` reads it with no pages named: the cart pages come before the product pages, a new browser has no cart,
+    // and each is given the first product page's first variant on sale and walked. Every page of it passes.
+    const walked = command();
+    if (walked.status !== 0) lines.push(`jtk a11y — exit ${walked.status}:\n${walked.stdout}\n${walked.stderr}`);
+    const withLine = [...reached(walked.stdout, '/cart/'), ...reached(walked.stdout, '/en/cart/')];
+    if (withLine.length === 0 || withLine.some((one) => one < 10)) lines.push(`jtk a11y — a cart's drive did not reach its checks with the product's line in the cart (shop checks per cart page: ${withLine.join(', ') || 'none'}):\n${walked.stdout}`);
+    // The listing, as the command reads it with the whole site: it chooses to hide nothing, so its two checks and no request to the shop.
+    const atListing = ['/shop/', '/en/shop/'].map((path) => [path, reached(walked.stdout, path)]);
+    for (const [path, got] of atListing) {
+      if (got.length === 0 || got.some((one) => one !== 2)) lines.push(`jtk a11y — ${path} was not held to its two listing checks (shop checks per scheme: ${got.join(', ') || 'none'}):\n${walked.stdout}`);
+    }
+    // A cart page with no product page to give it a line: held to its empty state, which passes.
+    const bare = command('/cart/');
+    if (bare.status !== 0) lines.push(`jtk a11y /cart/ — exit ${bare.status}, though a cart with no line is a correct page:\n${bare.stdout}\n${bare.stderr}`);
+    const empty = reached(bare.stdout, '/cart/');
+    if (empty.length === 0 || empty.some((one) => one !== 1)) lines.push(`jtk a11y /cart/ — the empty cart was not held to its one check (shop checks per scheme: ${empty.join(', ') || 'none'}):\n${bare.stdout}`);
+    // The order's page, with no order on its address — as the command reads every page of the site, and as it reads it alone: it says
+    // so and asks the shop nothing, which is its one shop check, in each scheme it was read in. Both languages.
+    const orderPages = ['/order/', '/en/order/'];
+    const atOrder = orderPages.map((path) => [path, reached(walked.stdout, path)]);
+    for (const [path, got] of atOrder) {
+      if (got.length === 0 || got.some((one) => one !== 1)) lines.push(`jtk a11y — ${path} was not held to its one shop check, an address with no order (shop checks per scheme: ${got.join(', ') || 'none'}):\n${walked.stdout}`);
+    }
+    const alone = command(...orderPages);
+    if (alone.status !== 0) lines.push(`jtk a11y ${orderPages.join(' ')} — exit ${alone.status}, though an address with no order is a correct page:\n${alone.stdout}\n${alone.stderr}`);
+    const atAlone = orderPages.map((path) => [path, reached(alone.stdout, path)]);
+    for (const [path, got] of atAlone) {
+      if (got.length === 0 || got.some((one) => one !== 1)) lines.push(`jtk a11y ${orderPages.join(' ')} — ${path} was not held to its one shop check (shop checks per scheme: ${got.join(', ') || 'none'}):\n${alone.stdout}`);
+    }
+    console.log(`jtk a11y: exit ${walked.status}, the listing pages' shop checks ${atListing.map(([, got]) => got.join('/')).join(', ')}, the cart pages' ${withLine.join(', ')}, the order pages' ${atOrder.map(([, got]) => got.join('/')).join(', ')}; jtk a11y /cart/: exit ${bare.status}, ${empty.join(', ')}; jtk a11y /order/ /en/order/: exit ${alone.status}, ${atAlone.map(([, got]) => got.join('/')).join(', ')}`);
+  });
 } finally {
   if (!args.includes('--keep')) rmSync(scratch, { recursive: true, force: true });
   else console.log(`a11y-shop: kept ${scratch}`);
 }
 
 const seconds = ((Date.now() - started) / 1000).toFixed(1);
+console.log(`a11y-shop: ${times.join('; ')}`);
 if (lines.length) {
   console.error(`\n${lines.join('\n')}\n`);
-  console.error(`a11y: ${lines.filter((one) => !one.startsWith('    ')).length} finding(s) on ${results.length + hiding.length} page read(s) of the shop, ${seconds}s`);
+  console.error(`a11y: ${lines.filter((one) => !one.startsWith('    ')).length} finding(s) on ${everything.length} page read(s) of the shop, ${seconds}s`);
   process.exit(1);
 }
-console.log(`a11y: ${results.length} page read(s) of the shop and ${hiding.length} of its listing hiding what is sold out, in de-CH and the light palette, nothing found against WCAG 2.1 AA, and every shop check ok, ${seconds}s`);
+console.log(`a11y: ${everything.length} page read(s) of the shop in light and dark, in de-CH and en, and as an agent leaves it, nothing found against WCAG 2.1 AA, and every shop check ok, ${seconds}s`);

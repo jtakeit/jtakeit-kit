@@ -50,3 +50,17 @@ jobs:
         # What `jtk create` lays out by default (jtakeit-core wiki/110), in
         # German and English, every page, read by `jtk a11y`.
         run: node test/a11y-example.mjs
+      - name: The shop's storefront walked against WCAG 2.1 AA
+        # The test shop (test/shop-site.mjs) laid out with `jtk add shop`, built,
+        # and driven in the runner's Chrome by `jtk a11y` over devShop: every
+        # page in German and English, in a light and a dark palette, the
+        # listing that hides what is sold out, the storefront as an agent
+        # leaves it (every class renamed, no <style>), and the command as a
+        # developer runs it. It is long: the cart and its checkout and the page
+        # after payment are walked state by state, so it is long: 6 min 45 s on
+        # a 16-core machine, most of it the walk's own waits (a held request,
+        # a stopped clock), which a slower runner does not lengthen much. The
+        # bound is three times that. A walk that hangs is a finding after its
+        # own deadlines, never after this one.
+        timeout-minutes: 20
+        run: node test/a11y-shop.mjs
