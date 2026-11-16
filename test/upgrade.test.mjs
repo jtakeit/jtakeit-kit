@@ -70,7 +70,7 @@ test('a scaffold moves: the declaration in contract 3\'s words, every file at it
     assert.equal(schema.locale, 'de-CH');
     const page = read(site, 'jtk/pages/index.json');
     assert.match(page.id, /^[0-9a-f-]{36}$/);
-    assert.equal(page.name, 'Willkommen');
+    assert.equal(page.name, 'Startseite', 'the home page by the word for it, not its heading');
     assert.deepEqual(page.blocks[0].image, { src: 'media/x/a.jpg', alt: 'Der Laden' });
     assert.match(page.blocks[2].items[0]._key, /^k[0-9a-f]{7}$/);
     assert.deepEqual(read(site, 'jtk/shared.json').blocks.map((one) => one.type), ['contacts']);
