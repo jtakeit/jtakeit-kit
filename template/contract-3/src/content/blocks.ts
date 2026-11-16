@@ -14,7 +14,9 @@
  *                   'none' with shown_on — for the entries the owner creates;
  *                   ends_by — { date, time?, after?, zone, then? } — for entries
  *                   over by their own date: each says `ended` (docs/collections.md);
- *                   never a comparison with today in the template
+ *                   never a comparison with today in the template; and on its
+ *                   entry type, form — { sections, aside?, widgets? } — the
+ *                   entry's card in the panel, as BLOG_POST's below
  *   MODULES         { bookings: { services: '<collection>', resources: '<collection>' } }
  *   PAGE_SEO        the title and description of every page
  *
@@ -589,6 +591,29 @@ export const BLOG_POST: Block = {
       client_editable: true,
     },
   ],
+  // The entry's card in the panel, where the owner writes a post — on a phone
+  // as often as not: the title with its date beside it, what the blog's list
+  // shows under a heading of its own, the cover aside (docs/collections.md).
+  form: {
+    sections: [
+      { rows: [[{ field: 'title', span: 4 }, 'date']] },
+      {
+        title: { uk: 'У списку', en: 'In the list', de: 'In der Liste', ru: 'В списке', es: 'En la lista', it: 'Nell’elenco', pt: 'Na lista', fr: 'Dans la liste' },
+        note: {
+          uk: 'Що список блогу показує про цей допис',
+          en: 'What the blog’s list shows for this post',
+          de: 'Was die Liste des Blogs zu diesem Beitrag zeigt',
+          ru: 'Что список блога показывает об этой записи',
+          es: 'Lo que la lista del blog muestra de esta entrada',
+          it: 'Ciò che l’elenco del blog mostra di questo articolo',
+          pt: 'O que a lista do blog mostra deste artigo',
+          fr: 'Ce que la liste du blog montre de cet article',
+        },
+        rows: [['excerpt']],
+      },
+    ],
+    aside: ['cover'],
+  },
 };
 
 export const BLOG_COLLECTION: Collection = {

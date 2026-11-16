@@ -224,6 +224,52 @@ The entry's *file* says the rest — `id`, `collection`, `slug`, `rank`,
 `visible`, `show_at`, `hide_at`, `seo` — beside its values under `fields`
 («Writing an entry by hand», below).
 
+## The entry's card: `form`
+
+The owner fills an entry in on its card in the panel, and as often as not on a
+phone. Without a `form`, the panel guesses: `title` first (with `date` beside
+it), then every field **in the order the type declares them**, short ones two
+to a row, single pictures aside — the order you wrote the fields for the
+template, not the order someone thinks about a concert or a price. Say the card
+on the entry type:
+
+```ts
+{
+  type: 'night',
+  v: 1,
+  label: 'Night',
+  fields: [ /* title, date, starts, price, tickets, poster, lineup, about … */ ],
+  form: {
+    sections: [
+      { rows: [['title'], ['date', 'starts'], ['price', 'tickets']] },
+      { title: 'On the page', note: 'What the poster and the listing show', rows: [['lineup'], ['about']] },
+    ],
+    aside: ['poster'],
+    widgets: { about: 'tall' },
+  },
+}
+```
+
+- **sections** — at most eight, each `rows` of one to three fields on a grid
+  of six columns (`{ field: 'title', span: 4 }` to say how many; the rest share
+  what is left evenly). A phone draws each row as one column. `title` and
+  `note` (one line) where a heading helps the owner; the first section rarely
+  needs one.
+- **aside** — at most six: what the entry is at a glance — its picture, a
+  category, a switch. No paragraph, gallery or list.
+- **widgets** — a control of the field's kind: `presets` for a duration,
+  `radio` or `segmented` for a short select, `stepper` for a bounded whole
+  number, `tall` for a long paragraph (the platform's reference, «A form's
+  widgets»).
+
+Every required field needs a place, `body` never has one (it is written
+beside the page), and a gallery, a list or a document takes a row alone.
+`jtk schema` refuses what the panel cannot draw (`JTK_E_PANEL_FORM_INVALID`,
+the rule in the sentence) and advises where the panel would still guess
+(`JTK_W_PANEL_FORM_GUESSED`): a field the form places nowhere, drawn after
+the sections under «More», or a type of seven fields or more with no form.
+The scaffold's post, service and person come with theirs.
+
 ## Annotation: two rules
 
 **An entry's own values are its `fields`**, so on its own page their paths are
