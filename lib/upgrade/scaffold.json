@@ -1844,12 +1844,12 @@
    ]
   },
   "src/components/shop/Cart.astro": {
-   "700627b18ad130708731806287bbd5430dd05e9c953168960ebcb324e6e92fb0": [
+   "a9114aa4827d720ac75ad952ef2f440c8fba308eed0398e67614ec502ef715d5": [
     "0.18.0"
    ]
   },
   "src/components/shop/Checkout.astro": {
-   "20acbba75f5a40b1b194915fadf548de1fc6b484b514a12c2c41c6ad67e62c93": [
+   "b93356b4b2b0752c26d0ce175f01606f8b58b08f664764fd32151b3012fa555f": [
     "0.18.0"
    ]
   },
@@ -1859,7 +1859,7 @@
    ]
   },
   "src/components/shop/Product.astro": {
-   "15aa615c0d6bdad42e10de980d5adc5dcdb7d5b6ed3548d7ceb441cc87f49b11": [
+   "875c4d4488b64306c1286bacde7c417491d185f6d87ffba5cb73234824674b44": [
     "0.18.0"
    ]
   },
@@ -1909,7 +1909,7 @@
    ]
   },
   "src/content/blocks.ts": {
-   "99a7f5e1a576ad5fb22e4ed0c052ae5461ac168be6526a0b556aea1297ff87b2": [
+   "b1f4c9938cb02ffe8ee34f5f15ec04cda049dc96ab8ac525bb59165104467ff1": [
     "0.18.0"
    ]
   },
