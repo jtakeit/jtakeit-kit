@@ -155,24 +155,191 @@ const COUNTRIES =
 /**
  * What each role's field is for, said under it in the panel: a field of the
  * shared text is the owner's and on no page by itself, and the platform's
- * judge asks it to say what it does (JTK_W_HIDDEN_UNEXPLAINED). English, as
- * the scaffold's labels are (src/content/blocks.ts says why).
+ * judge asks it to say what it does (JTK_W_HIDDEN_UNEXPLAINED). In the
+ * languages the contacts' label comes in (`CONTACTS_LABEL`), and written
+ * into the declaration in the site's own: a Russian site's owner read
+ * «Контакты» over English hints (the KAIF move, 16 November 2026).
  */
 const HINTS = {
-  name: "The business's name, as search engines and assistants are told it.",
-  phone: 'The number to call, written as it is dialled; the site shows it formatted.',
-  email: 'Where a visitor writes to.',
-  street: 'The street and the number, for the address search engines are told.',
-  postal_code: 'The postcode of that address.',
-  city: 'The town of that address.',
-  region: 'The canton, state or region of that address.',
-  country: 'The country of that address.',
-  maps: 'The link to the business on a map.',
-  social: "The business's own profiles, one link each.",
-  price_range: "How dear it is, in search engines' words: '€€', 'CHF 30–120'.",
-  business_type: 'What kind of business it is, as schema.org names it: HairSalon, Restaurant.',
-  hours: 'The opening hours, as search engines are told them.',
+  en: {
+    name: "The business's name, as search engines and assistants are told it.",
+    phone: 'The number to call, written as it is dialled; the site shows it formatted.',
+    email: 'Where a visitor writes to.',
+    street: 'The street and the number, for the address search engines are told.',
+    postal_code: 'The postcode of that address.',
+    city: 'The town of that address.',
+    region: 'The canton, state or region of that address.',
+    country: 'The country of that address.',
+    maps: 'The link to the business on a map.',
+    social: "The business's own profiles, one link each.",
+    price_range: "How dear it is, in search engines' words: '€€', 'CHF 30–120'.",
+    business_type: 'What kind of business it is, as schema.org names it: HairSalon, Restaurant.',
+    hours: 'The opening hours, as search engines are told them.',
+  },
+  de: {
+    name: 'Der Name des Geschäfts, wie Suchmaschinen und Assistenten ihn erfahren.',
+    phone: 'Die Nummer zum Anrufen, so geschrieben, wie sie gewählt wird; die Website zeigt sie formatiert.',
+    email: 'Wohin Besucher schreiben.',
+    street: 'Strasse und Hausnummer, für die Adresse, die Suchmaschinen erfahren.',
+    postal_code: 'Die Postleitzahl dieser Adresse.',
+    city: 'Der Ort dieser Adresse.',
+    region: 'Kanton, Bundesland oder Region dieser Adresse.',
+    country: 'Das Land dieser Adresse.',
+    maps: 'Der Link zum Geschäft auf einer Karte.',
+    social: 'Die eigenen Profile des Geschäfts, ein Link je Profil.',
+    price_range: "Wie teuer es ist, in den Worten der Suchmaschinen: '€€', 'CHF 30–120'.",
+    business_type: 'Was für ein Geschäft es ist, wie schema.org es nennt: HairSalon, Restaurant.',
+    hours: 'Die Öffnungszeiten, wie Suchmaschinen sie erfahren.',
+  },
+  fr: {
+    name: "Le nom de l'établissement, tel que les moteurs de recherche et les assistants le connaissent.",
+    phone: "Le numéro à appeler, écrit tel qu'on le compose ; le site l'affiche mis en forme.",
+    email: "L'adresse à laquelle un visiteur écrit.",
+    street: "La rue et le numéro, pour l'adresse communiquée aux moteurs de recherche.",
+    postal_code: 'Le code postal de cette adresse.',
+    city: 'La localité de cette adresse.',
+    region: "Le canton, l'État ou la région de cette adresse.",
+    country: 'Le pays de cette adresse.',
+    maps: "Le lien vers l'établissement sur une carte.",
+    social: "Les profils de l'établissement, un lien chacun.",
+    price_range: "Son niveau de prix, dans les mots des moteurs de recherche : '€€', 'CHF 30–120'.",
+    business_type: "Le genre d'établissement, tel que schema.org le nomme : HairSalon, Restaurant.",
+    hours: "Les heures d'ouverture, telles que les moteurs de recherche les connaissent.",
+  },
+  it: {
+    name: "Il nome dell'attività, come lo conoscono i motori di ricerca e gli assistenti.",
+    phone: 'Il numero da chiamare, scritto come si compone; il sito lo mostra formattato.',
+    email: "L'indirizzo a cui scrive un visitatore.",
+    street: "Via e numero civico, per l'indirizzo comunicato ai motori di ricerca.",
+    postal_code: 'Il codice postale di questo indirizzo.',
+    city: 'La località di questo indirizzo.',
+    region: 'Il cantone, lo stato o la regione di questo indirizzo.',
+    country: 'Il paese di questo indirizzo.',
+    maps: "Il link all'attività su una mappa.",
+    social: "I profili dell'attività, un link ciascuno.",
+    price_range: "Quanto costa, con le parole dei motori di ricerca: '€€', 'CHF 30–120'.",
+    business_type: "Che tipo di attività è, come la chiama schema.org: HairSalon, Restaurant.",
+    hours: 'Gli orari di apertura, come li conoscono i motori di ricerca.',
+  },
+  es: {
+    name: 'El nombre del negocio, tal como lo conocen los buscadores y los asistentes.',
+    phone: 'El número al que llamar, escrito como se marca; la web lo muestra con formato.',
+    email: 'La dirección a la que escribe un visitante.',
+    street: 'La calle y el número, para la dirección que se comunica a los buscadores.',
+    postal_code: 'El código postal de esa dirección.',
+    city: 'La localidad de esa dirección.',
+    region: 'El cantón, estado o región de esa dirección.',
+    country: 'El país de esa dirección.',
+    maps: 'El enlace al negocio en un mapa.',
+    social: 'Los perfiles propios del negocio, un enlace cada uno.',
+    price_range: "Lo caro que es, en palabras de los buscadores: '€€', 'CHF 30–120'.",
+    business_type: 'Qué tipo de negocio es, como lo llama schema.org: HairSalon, Restaurant.',
+    hours: 'El horario de apertura, tal como lo conocen los buscadores.',
+  },
+  pt: {
+    name: 'O nome do negócio, tal como os motores de busca e os assistentes o conhecem.',
+    phone: 'O número para ligar, escrito como se marca; o site mostra-o formatado.',
+    email: 'O endereço para onde um visitante escreve.',
+    street: 'A rua e o número, para o endereço comunicado aos motores de busca.',
+    postal_code: 'O código postal desse endereço.',
+    city: 'A localidade desse endereço.',
+    region: 'O cantão, estado ou região desse endereço.',
+    country: 'O país desse endereço.',
+    maps: 'O link para o negócio num mapa.',
+    social: 'Os perfis do próprio negócio, um link cada.',
+    price_range: "Quão caro é, nas palavras dos motores de busca: '€€', 'CHF 30–120'.",
+    business_type: 'Que tipo de negócio é, como o schema.org o chama: HairSalon, Restaurant.',
+    hours: 'O horário de funcionamento, tal como os motores de busca o conhecem.',
+  },
+  pl: {
+    name: 'Nazwa firmy, tak jak poznają ją wyszukiwarki i asystenci.',
+    phone: 'Numer, pod który się dzwoni, zapisany tak, jak się go wybiera; strona pokazuje go sformatowany.',
+    email: 'Adres, na który pisze odwiedzający.',
+    street: 'Ulica i numer, do adresu podawanego wyszukiwarkom.',
+    postal_code: 'Kod pocztowy tego adresu.',
+    city: 'Miejscowość tego adresu.',
+    region: 'Kanton, województwo lub region tego adresu.',
+    country: 'Kraj tego adresu.',
+    maps: 'Link do firmy na mapie.',
+    social: 'Własne profile firmy, po jednym linku.',
+    price_range: "Jak drogo jest, słowami wyszukiwarek: '€€', 'CHF 30–120'.",
+    business_type: 'Rodzaj działalności, tak jak nazywa go schema.org: HairSalon, Restaurant.',
+    hours: 'Godziny otwarcia, tak jak poznają je wyszukiwarki.',
+  },
+  uk: {
+    name: 'Назва закладу, як її знають пошукові системи та асистенти.',
+    phone: 'Номер для дзвінка, записаний так, як його набирають; сайт показує його відформатованим.',
+    email: 'Куди пише відвідувач.',
+    street: 'Вулиця й номер будинку — для адреси, яку бачать пошукові системи.',
+    postal_code: 'Поштовий індекс цієї адреси.',
+    city: 'Населений пункт цієї адреси.',
+    region: 'Кантон, штат чи область цієї адреси.',
+    country: 'Країна цієї адреси.',
+    maps: 'Посилання на заклад на мапі.',
+    social: 'Власні профілі закладу, по одному посиланню на кожен.',
+    price_range: "Наскільки дорого, словами пошукових систем: '€€', 'CHF 30–120'.",
+    business_type: 'Що це за заклад, як його називає schema.org: HairSalon, Restaurant.',
+    hours: 'Години роботи, як їх знають пошукові системи.',
+  },
+  ru: {
+    name: 'Название заведения, каким его знают поисковые системы и ассистенты.',
+    phone: 'Номер для звонка, записанный так, как его набирают; сайт показывает его отформатированным.',
+    email: 'Куда пишет посетитель.',
+    street: 'Улица и номер дома — для адреса, который видят поисковые системы.',
+    postal_code: 'Почтовый индекс этого адреса.',
+    city: 'Населённый пункт этого адреса.',
+    region: 'Кантон, штат или область этого адреса.',
+    country: 'Страна этого адреса.',
+    maps: 'Ссылка на заведение на карте.',
+    social: 'Собственные профили заведения, по одной ссылке на каждый.',
+    price_range: "Насколько дорого, словами поисковых систем: '€€', 'CHF 30–120'.",
+    business_type: 'Что это за заведение, как его называет schema.org: HairSalon, Restaurant.',
+    hours: 'Часы работы, как их знают поисковые системы.',
+  },
 };
+
+/**
+ * The English words a fact's label is the scaffold's own in, by role: a
+ * declaration whose labels are these (`jtk create` writes «Name», «City»
+ * for every site) keeps the hints English beside them, as `jtk create` on
+ * contract 3 writes them; one whose developer wrote the labels in the
+ * site's language gets the hints in it too.
+ */
+const ENGLISH_LABELS = {
+  name: ['name', 'business name'],
+  phone: ['phone', 'telephone', 'phone number'],
+  email: ['email', 'e-mail'],
+  street: ['street', 'address', 'street address'],
+  postal_code: ['postcode', 'postal code', 'zip', 'zip code'],
+  city: ['city', 'town'],
+  region: ['region', 'state', 'canton'],
+  country: ['country'],
+  maps: ['map', 'maps', 'map link'],
+  social: ['social', 'links', 'instagram', 'facebook'],
+  price_range: ['price range'],
+  business_type: ['business type', 'type'],
+  hours: ['hours', 'opening hours'],
+};
+
+/**
+ * A role's hint in the site's languages: one string where the site has one
+ * language — the kit's words in it, or English where the kit has none —
+ * and a map by language where it has more, as a label may be (§3.3).
+ *
+ * @param {string} role
+ * @param {string[]} languages the site's own first, then its others
+ */
+export function hintOf(role, languages) {
+  const base = (tag) => (typeof tag === 'string' ? tag.split('-')[0].toLowerCase() : '');
+  const said = [];
+  for (const tag of languages) {
+    const words = HINTS[base(tag)]?.[role];
+    if (words !== undefined && !said.some(([one]) => one === base(tag))) said.push([base(tag), words]);
+  }
+  if (said.length === 0) return HINTS.en[role];
+  if (said.length === 1 && languages.length === 1) return said[0][1];
+  return Object.fromEntries(said);
+}
 
 /** What the shared contacts are called in the panel, in the languages the scaffold's labels come in. */
 const CONTACTS_LABEL = { en: 'Contacts', de: 'Kontakt', fr: 'Contact', it: 'Contatti', es: 'Contacto', pt: 'Contactos', pl: 'Kontakt', uk: 'Контакти', ru: 'Контакты' };
@@ -204,8 +371,9 @@ function countryCode(value, locale) {
  *
  * @param {any[]} facts BUSINESS_FACTS
  * @param {string} locale the site's language, for the countries' names
+ * @param {string[]} [others] its other languages, for the hints
  */
-export function contactsOf(facts, locale) {
+export function contactsOf(facts, locale, others = []) {
   const fields = [];
   const questions = [];
   const notes = [];
@@ -243,7 +411,10 @@ export function contactsOf(facts, locale) {
     }
     if (mapped !== undefined) {
       field.role = mapped.role;
-      if (field.hint === undefined && field.no_tap_target === true) field.hint = HINTS[mapped.role];
+      if (field.hint === undefined && field.no_tap_target === true) {
+        const english = typeof label !== 'string' || (ENGLISH_LABELS[mapped.role] ?? []).includes(label.trim().toLowerCase());
+        field.hint = english ? HINTS.en[mapped.role] : hintOf(mapped.role, [locale, ...others].filter((one) => typeof one === 'string' && one !== ''));
+      }
       // The same in every language, words or not: nobody translates the
       // business's name, its street and postcode, the schema.org type or the
       // price range — counted as «to translate» they were most of a small
@@ -431,7 +602,8 @@ export function collection3(collection, ownListings = new Set()) {
 
 /**
  * A block type in contract 3's words (§3.2): its fields and asks as fields
- * are, a view's `sample` gone and a view's bound of 0 with it.
+ * are, a view's `sample` gone and a view's bound of 0 with it — and, where
+ * `how.form` says one, the entry's card in the panel (`scaffoldFormsOf`).
  */
 export function block3(block, how = {}) {
   if (!isObject(block)) return block;
@@ -446,6 +618,62 @@ export function block3(block, how = {}) {
         return rest;
       });
     } else out[attr] = value;
+  }
+  if (how.form !== undefined && out.form === undefined) out.form = clone(how.form);
+  return out;
+}
+
+/**
+ * The card the scaffold lays its blog's post out with in the panel
+ * (template/contract-3's BLOG_POST, the example's): the title with its date
+ * beside it, what the blog's list shows under a heading of its own, the cover
+ * aside. Contract 2 had no `form`, and a site's post that is the scaffold's —
+ * the same five fields — is given it on the move, so `jtk create` and
+ * `--contract 2` moved lay out one schema (test/create3.mjs).
+ */
+export const POST_FORM = Object.freeze({
+  sections: [
+    { rows: [[{ field: 'title', span: 4 }, 'date']] },
+    {
+      title: { uk: 'У списку', en: 'In the list', de: 'In der Liste', ru: 'В списке', es: 'En la lista', it: 'Nell’elenco', pt: 'Na lista', fr: 'Dans la liste' },
+      note: {
+        uk: 'Що список блогу показує про цей допис',
+        en: 'What the blog’s list shows for this post',
+        de: 'Was die Liste des Blogs zu diesem Beitrag zeigt',
+        ru: 'Что список блога показывает об этой записи',
+        es: 'Lo que la lista del blog muestra de esta entrada',
+        it: 'Ciò che l’elenco del blog mostra di questo articolo',
+        pt: 'O que a lista do blog mostra deste artigo',
+        fr: 'Ce que la liste du blog montre de cet article',
+      },
+      rows: [['excerpt']],
+    },
+  ],
+  aside: ['cover'],
+});
+
+/** The scaffold's post, by its fields: what POST_FORM lays out, and nothing else. */
+const POST_FIELDS = { title: 'text', date: 'date', excerpt: 'textarea', cover: 'media', body: 'markdown' };
+
+/**
+ * Per block type, the card the move gives it (`block3`'s `how.form`): the
+ * scaffold's post, a collection's entry type with the scaffold's five fields
+ * and no others, gets POST_FORM. Any other type keeps none, and the panel
+ * lays it out by its kinds.
+ *
+ * @param {Record<string, any>} declared
+ * @returns {Map<string, any>}
+ */
+export function scaffoldFormsOf(declared) {
+  const collections = Array.isArray(declared.COLLECTIONS) ? declared.COLLECTIONS : [];
+  const entryTypes = new Set(collections.filter(isObject).map((one) => one.type));
+  const out = new Map();
+  for (const block of Array.isArray(declared.BLOCKS) ? declared.BLOCKS : []) {
+    if (!isObject(block) || !entryTypes.has(block.type) || !Array.isArray(block.fields)) continue;
+    const fields = block.fields.filter(isObject);
+    const scaffolds = fields.length === Object.keys(POST_FIELDS).length
+      && fields.every((one) => POST_FIELDS[one.key] === one.kind && one.multiple !== true && one.deprecated !== true);
+    if (scaffolds) out.set(block.type, POST_FORM);
   }
   return out;
 }
@@ -493,7 +721,8 @@ export function tablesOf(declared, ctx = {}) {
   const modules = isObject(declared.MODULES) ? declared.MODULES : {};
   const collections = Array.isArray(declared.COLLECTIONS) ? declared.COLLECTIONS : [];
   const whole = wholeOf(declared);
-  const blocks = (Array.isArray(declared.BLOCKS) ? declared.BLOCKS : []).map((one) => block3(one, { whole: whole.get(one?.type) ?? [] }));
+  const forms = scaffoldFormsOf(declared);
+  const blocks = (Array.isArray(declared.BLOCKS) ? declared.BLOCKS : []).map((one) => block3(one, { whole: whole.get(one?.type) ?? [], form: forms.get(one?.type) }));
   const shared = [...new Set(ctx.sharedTypes ?? [])];
   const facts = Array.isArray(declared.BUSINESS_FACTS) ? declared.BUSINESS_FACTS : [];
   let contacts;
@@ -506,7 +735,7 @@ export function tablesOf(declared, ctx = {}) {
         refused: 'the business facts become a shared block type called `contacts` (wiki/98 §4.5), and BLOCKS declares a type of that name already — rename it, or move the facts into it by hand; nothing was written.',
       };
     }
-    const made = contactsOf(facts, locale);
+    const made = contactsOf(facts, locale, locales);
     contacts = made.block;
     questions.push(...made.questions);
     notes.push(...made.notes);
@@ -579,20 +808,24 @@ export const entryFile3 = (collection, slug) => `/jtk/entries/${collection}/${sl
 
 /**
  * A page's name, once (§4.1): the first that exists of its navigation label,
- * its SEO title, its first heading, its address made readable.
+ * its SEO title, its first heading, its address made readable — and for the
+ * home page, the word for it in the site's language before its SEO title or
+ * heading: the panel's page list and every picker name it so, where «KAIF —
+ * вечеринки в Цюрихе для своих» is a search result, not a page's name (the
+ * KAIF move, 16 November 2026).
  */
 const HOME = { en: 'Home', de: 'Startseite', fr: 'Accueil', it: 'Home', es: 'Inicio', pt: 'Início', pl: 'Strona główna', uk: 'Головна', ru: 'Главная' };
 export function nameOfPage(raw, path, locale) {
   const words = (value) => (typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined);
   const nav = words(raw.name) ?? words(raw.nav_label) ?? words(raw.nav?.label);
   if (nav !== undefined) return nav;
+  if (path === '/') return HOME[(locale ?? '').split('-')[0]] ?? HOME.en;
   const title = words(raw.seo?.title);
   if (title !== undefined) return title;
   for (const block of Array.isArray(raw.blocks) ? raw.blocks : []) {
     const heading = isObject(block) ? words(block.title) ?? words(block.heading) : undefined;
     if (heading !== undefined) return heading;
   }
-  if (path === '/') return HOME[(locale ?? '').split('-')[0]] ?? HOME.en;
   const last = path.split('/').filter(Boolean).pop() ?? '';
   const readable = last.replace(/[-_]+/g, ' ').trim();
   return readable === '' ? path : readable[0].toLocaleUpperCase(locale || undefined) + readable.slice(1);
@@ -631,6 +864,8 @@ export function documentsOf(files, how) {
   const write = new Map();
   const remove = new Set();
   const minted = { ids: [], ranks: [], keys: 0, rekeyed: 0 };
+  /** The pages made here to back a collection's `shown_on`, which no contract-2 file was: the caller asks whether the route reads them. */
+  const backing = [];
   /** The text fields already asked about as prices, one question a field. */
   const priced = new Set();
   /**
@@ -1033,6 +1268,7 @@ export function documentsOf(files, how) {
       if (theirs === undefined) minted.ids.push(pageFile3(at));
       write.set(pageFile3(at), { id, path: at, name: typeof name === 'string' && name.trim() !== '' ? name : nameOfPage({}, at, locale) });
       pagesAt.add(at);
+      backing.push({ path: at, file: pageFile3(at), collection: collection.name });
       notes.push(`${pageFile3(at).slice(1)} — the page the ${collection.name} collection is shown on, which contract 2 drew from the collection alone and contract 3 names (wiki/98 §3.5)`);
     }
   }
@@ -1391,6 +1627,7 @@ export function documentsOf(files, how) {
     minted,
     differing,
     alone,
+    backing,
   };
 }
 

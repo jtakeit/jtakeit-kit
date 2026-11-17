@@ -42,8 +42,17 @@ switch (command) {
     const { readFileSync } = await import('node:fs');
     const version = JSON.parse(readFileSync(join(HERE, '..', 'package.json'), 'utf8')).version;
     const args = rest.includes('--generator') ? rest : [...rest, '--generator', `@jtakeit/astro@${version}`];
+    // The pages are checked against a build: the library's pictures the
+    // content names are pulled first, or the build draws each as its key
+    // and the check reads it as a sentence nobody owns (lib/media.mjs).
+    if (!rest.includes('--emit-only') && !rest.includes('--dist') && !rest.includes('--no-pull')) {
+      const { resolve } = await import('node:path');
+      const at = rest.indexOf('--root');
+      const { pullMissing } = await import(pathToFileURL(join(HERE, '..', 'lib', 'media.mjs')).href);
+      await pullMissing(resolve(at === -1 ? process.cwd() : rest[at + 1]));
+    }
     const { main } = await import('@jtakeit/kit/schema');
-    process.exit(await main(args));
+    process.exit(await main(args.filter((one) => one !== '--no-pull')));
   }
   case 'upgrade': {
     // A contract-2 site moved to contract 3 in one commit (lib/upgrade.mjs).
@@ -116,10 +125,11 @@ switch (command) {
                                   write jtk/catalogue.json from src/content/blocks.ts and
                                   check it against the built pages; on a contract-3 tree,
                                   mint the ids and _keys and write no catalogue
-  jtk schema [--emit-only] [--dist ./dist] [--judge]
+  jtk schema [--emit-only] [--dist ./dist] [--judge] [--no-pull]
                                   contract 3's: write jtk/schema.json from a blocks.ts that
                                   says CONTRACT = 3, mint the ids and _keys, and check it
-                                  against the built pages in the grammar by key
+                                  against the built pages in the grammar by key — the
+                                  library's pictures the content names pulled first
   ${units.usage()}
 ${imported.usage()}
   ${upgrade.usage()}

@@ -92,18 +92,31 @@ export const E = Object.freeze({
   REF: 'JTK_E_REF_INVALID',
   SHARED: 'JTK_E_SHARED_INVALID',
   ATTRIBUTE: 'JTK_E_ATTRIBUTE_INVALID',
+  UPCAST: 'JTK_E_UPCAST_INVALID',
+  PANEL_FORM: 'JTK_E_PANEL_FORM_INVALID',
 });
 
 /**
  * The judge's second voice: advice, with `JTK_W_` codes. A finding here
  * refuses nothing — the catalogue is valid — and comes back from
- * `POST /v1/registry/validate` under `advice`, apart from the refusals. This
- * checker raises none of them (the rules are the server's, about the bookings
- * module it runs), so `--judge` prints them and leaves them out of the exam.
+ * `POST /v1/registry/validate` under `advice`, apart from the refusals. Of
+ * the judge's own this checker raises two (judge3.mjs, `adviseSchema`):
+ * `PANEL_FORM_GUESSED`, where the panel guesses an entry's card, and
+ * `NOT_LIVE`, a schema that does not say `render: "live"`; the bookings
+ * module's are the server's, so `--judge` prints them, and advice is left
+ * out of the exam.
+ *
+ * `DATE_HIDES` is `jtk schema`'s own, of the site's code rather than of the
+ * schema (dateHides.mjs): a template that compares an entry's date with the
+ * clock to choose what is shown, where the collection's `ends_by` says it
+ * once for the site, the panel and the build.
  */
 export const W = Object.freeze({
   MODULE_TWIN: 'JTK_W_MODULE_TWIN',
   MODULE_POST: 'JTK_W_MODULE_POST',
+  DATE_HIDES: 'JTK_W_DATE_HIDES',
+  PANEL_FORM_GUESSED: 'JTK_W_PANEL_FORM_GUESSED',
+  NOT_LIVE: 'JTK_W_NOT_LIVE',
 });
 
 export const ADVICE = Object.freeze({
@@ -111,6 +124,12 @@ export const ADVICE = Object.freeze({
     'A page block types again a fact the bookings module holds — the owner\'s hours, the services\' prices — so the site has two copies and one goes stale.',
   [W.MODULE_POST]:
     'An entry type the bookings module reads is shaped as a post — a body, or excerpt, cover and body — or its services get a page each; a service is filled in, not written.',
+  [W.DATE_HIDES]:
+    "A template compares an entry's date with today to choose what it shows: a build freezes the comparison until the next build, and the panel cannot know the entry is gone. Declare `ends_by` on the collection and read the entries the door gives.",
+  [W.PANEL_FORM_GUESSED]:
+    'The panel placed fields of an entry type by itself: a `form` places no row for some — they are drawn after its sections, under More — or a type of seven fields or more says no `form`, and the panel lays them out in their order, short ones two to a row and pictures aside.',
+  [W.NOT_LIVE]:
+    "The schema does not say `render: \"live\"`: the panel shows the owner a change only after a build, and an entry's card cannot be previewed before it is saved. Keep `RENDER = 'live'` and the scaffold's src/live; take it out only where a page does at build what a server cannot, and say why in BRIEF.md.",
 });
 
 /** Advice from the judge, never a refusal. */
@@ -175,6 +194,10 @@ export const MEANS = Object.freeze({
     '`shared` names a block type the schema does not declare, or names one twice; or a field says a `role` that is not one of the list, sits outside the shared text, or says a role another field says already.',
   [E.ATTRIBUTE]:
     'A field says an attribute its kind does not take, or a value the attribute does not have: `localized` on a kind with no language, `integer` on anything but a number, `qualifiers` on anything but money or besides `from` and `on_request`, an `untranslated` that is neither `base` nor `hide`.',
+  [E.UPCAST]:
+    "A block type's `upcast` says a step that cannot be one: `from` a version the type has not had (each step is from 1 up to one below the type's `v`), two steps from one version, a name that is not a field's, a rename of two fields into one, or a last step that writes, renames into or changes the rows of a field the type does not declare now — or drops one it still does.",
+  [E.PANEL_FORM]:
+    "An entry type's `form` — how the panel lays out its card and a new entry — cannot be drawn as written: it names a field the type does not declare, `body`, or one field twice; a row holds more than three fields, spans more than six columns, or shares what is left unevenly; a gallery, a list or a document shares a row; a paragraph, a gallery or a list stands in the aside; a widget is not one of its field's kind or does not fit it; a required field has no place; or `form` is on a block type that is no collection's `type`. The sentence says which, at its place.",
 });
 
 /**

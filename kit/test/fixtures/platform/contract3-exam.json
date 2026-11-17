@@ -2,6 +2,8 @@
   "cases": [
     {
       "name": "the least a schema says",
+    "about": "The contract, the site's own language, and one block type with one field. Every other key may be left out; a field the owner edits says `client_editable: true` as well.",
+    "example": true,
       "expect": "",
       "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "hero", "v": 1, "label": "Hero", "fields": [{"key": "title", "label": "Titel", "kind": "text"}]}]}
     },
@@ -55,6 +57,8 @@
 
     {
       "name": "a diary whose resources do services by one reference to several",
+    "about": "The bookings pointed at two collections: services with no page of their own, shown on the price page by an anchor, and masters with a page each, who say what they do as one reference to several services and how many people fit as a whole number.",
+    "example": true,
       "expect": "",
       "catalogue": {
         "contract": 3, "locale": "de",
@@ -75,6 +79,39 @@
           {"name": "masters", "label": "Team", "type": "master", "route": {"detail": "/team/{slug}", "listing": "/team"}}
         ],
         "modules": {"bookings": {"services": "services", "resources": "masters"}}
+      }
+    },
+    {
+      "name": "an entry laid out for the person who fills it in",
+      "about": "A service's `form`: the name and its category on one row, the length beside the price, the words for the page under a title of their own, the photograph in the aside — and a row of buttons for the category, quick lengths a tap away. The panel draws it on the entry's card and on a new entry; a phone draws each row as one column.",
+      "example": true,
+      "expect": "",
+      "catalogue": {
+        "contract": 3,
+        "locale": "de",
+        "locales": ["en"],
+        "blocks": [
+          {"type": "service", "v": 1, "label": {"de": "Leistung", "en": "Service"}, "fields": [
+            {"key": "title", "label": "Name", "kind": "text", "required": true, "max": 80, "client_editable": true},
+            {"key": "category", "label": {"de": "Bereich", "en": "Category"}, "kind": "select", "client_editable": true,
+             "options": [{"value": "cut", "label": {"de": "Schnitt", "en": "Cut"}}, {"value": "colour", "label": {"de": "Farbe", "en": "Colour"}}, {"value": "care", "label": {"de": "Pflege", "en": "Care"}}]},
+            {"key": "takes", "label": {"de": "Dauer", "en": "Takes"}, "kind": "duration", "required": true, "client_editable": true},
+            {"key": "costs", "label": {"de": "Preis", "en": "Price"}, "kind": "money", "qualifiers": ["from"], "client_editable": true},
+            {"key": "about", "label": {"de": "Ein Satz dazu", "en": "A line about it"}, "kind": "textarea", "max": 280, "client_editable": true},
+            {"key": "photo", "label": {"de": "Foto", "en": "Photograph"}, "kind": "media", "ratio": "4:3", "client_editable": true}
+          ],
+          "form": {
+            "sections": [
+              {"rows": [[{"field": "title", "span": 4}, "category"], ["takes", "costs"]]},
+              {"title": {"de": "Auf der Seite", "en": "On the page"}, "note": {"de": "Was die Preisliste zeigt", "en": "What the price list shows"}, "rows": [["about"]]}
+            ],
+            "aside": ["photo"],
+            "widgets": {"category": "segmented", "takes": "presets"}
+          }}
+        ],
+        "collections": [
+          {"name": "services", "label": {"de": "Leistungen", "en": "Services"}, "type": "service", "route": "none", "shown_on": ["/#services-{slug}"]}
+        ]
       }
     },
     {
@@ -321,6 +358,23 @@
       "expect": "JTK_E_ATTRIBUTE_INVALID", "at": "collections.works.untranslated",
       "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "work", "v": 1, "label": "Werk", "fields": [{"key": "title", "label": "Titel", "kind": "text", "required": true}]}], "collections": [{"name": "works", "label": "Werke", "type": "work", "route": {"detail": "/werke/{slug}"}, "untranslated": "fallback"}]}
     },
+    {
+      "name": "a type that renamed a field, with the step that brings older content up",
+      "about": "A block type at version 2 whose version 1 called the title `heading` and spelt a value `centre`: the step from 1 renames both, and a block written at version 1 is read, and saved, as version 2.",
+      "example": true,
+      "expect": "",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "hero", "v": 2, "label": "Hero", "fields": [{"key": "title", "label": "Titel", "kind": "text"}, {"key": "align", "label": "Ausrichtung", "kind": "select", "options": [{"value": "left"}, {"value": "center"}]}], "upcast": [{"from": 1, "rename": {"heading": "title"}, "values": {"align": {"centre": "center"}}}]}]}
+    },
+    {
+      "name": "a step from the type's own version",
+      "expect": "JTK_E_UPCAST_INVALID", "at": "blocks.hero.upcast[0].from",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "hero", "v": 2, "label": "Hero", "fields": [{"key": "title", "label": "Titel", "kind": "text"}], "upcast": [{"from": 2}]}]}
+    },
+    {
+      "name": "a last step that writes a field the type does not declare",
+      "expect": "JTK_E_UPCAST_INVALID", "at": "blocks.hero.upcast[0].rename.heading",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "hero", "v": 2, "label": "Hero", "fields": [{"key": "title", "label": "Titel", "kind": "text"}], "upcast": [{"from": 1, "rename": {"heading": "headline"}}]}]}
+    },
 
     {
       "name": "no language of its own",
@@ -402,6 +456,11 @@
           "fields": {"title": "Tasche nach Mass", "variants": [{"_key": "v1", "sku": "TASCHE-S", "price": {"minor": 8900}}],
             "customizations": [{"_key": "tag", "name": "Name auf dem Etikett", "kind": "text"}]}}
       }
+    },
+    {
+      "name": "a form that puts a gallery beside a field",
+      "expect": "JTK_E_PANEL_FORM_INVALID", "at": "blocks.work.form.sections[0].rows[0][1]",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "work", "v": 1, "label": "Werk", "fields": [{"key": "title", "label": "Titel", "kind": "text", "required": true}, {"key": "photos", "label": "Fotos", "kind": "media", "multiple": true}], "form": {"sections": [{"rows": [["title", "photos"]]}]}}], "collections": [{"name": "works", "label": "Werke", "type": "work", "route": {"detail": "/werke/{slug}"}}]}
     }
   ]
 }

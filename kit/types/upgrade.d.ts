@@ -1,3 +1,4 @@
+import type { Form } from './schema';
 /**
  * `@jtakeit/kit/upgrade` — a contract-2 site's declaration and documents in
  * contract 3's words (jtakeit-core wiki/98 §7 · 2 and 3), as pure functions:
@@ -29,11 +30,13 @@ export function tablesOf(
 /** One field, a list of fields, a block type and a collection, each in contract 3's words. */
 export function field3(field: any, how?: { whole?: string[] }): any;
 export function fields3(fields: any[], how?: { whole?: string[] }): any[];
-export function block3(block: any, how?: { whole?: string[] }): any;
+export function block3(block: any, how?: { whole?: string[]; form?: Form }): any;
 export function collection3(collection: any, ownListings?: Set<string>): any;
 
 /** The business facts as the shared `contacts` block type with roles, and its values from the platform's facts. */
-export function contactsOf(facts: any[], locale: string): { block: any; questions: Question[]; notes: string[] };
+export function contactsOf(facts: any[], locale: string, others?: string[]): { block: any; questions: Question[]; notes: string[] };
+/** A contacts role's hint in the site's languages: one string for a site in one language, a map by language for more. */
+export function hintOf(role: string, languages: string[]): string | Record<string, string>;
 export function contactsValues(contacts: any, business: Record<string, unknown>, locale: string): { values: Record<string, unknown>; questions: Question[] };
 
 /** A list whose row is one reference, which contract 3 says as one reference to many. */
@@ -102,8 +105,14 @@ export function documentsOf(
   differing: Differing[];
   /** Copies in another language with no original in the site's own: nothing to be a translation of, and not moved. */
   alone: { file: string; locale: string; kind: 'page' | 'entry'; path?: string; collection?: string; slug?: string }[];
+  /** The pages made to back a collection's `shown_on`, which no contract-2 file was. */
+  backing: { path: string; file: string; collection: string }[];
 };
 
 /** Which language a contract-2 document is in: `''` for the site's own, else the canonical tag. */
 export function languageOfDocument(raw: Record<string, any>, others: string[], base?: string): string;
 export function wholeOf(declared: Record<string, any>): Map<string, string[]>;
+/** The card the scaffold lays its blog's post out with in the panel. */
+export const POST_FORM: Readonly<Form>;
+/** Per block type, the card the move gives it: the scaffold's post (its five fields, a collection's type) gets POST_FORM. */
+export function scaffoldFormsOf(declared: Record<string, any>): Map<string, Form>;

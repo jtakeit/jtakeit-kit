@@ -224,6 +224,60 @@ The entry's *file* says the rest — `id`, `collection`, `slug`, `rank`,
 `visible`, `show_at`, `hide_at`, `seo` — beside its values under `fields`
 («Writing an entry by hand», below).
 
+## The entry's card: `form`
+
+The owner fills an entry in on its card in the panel, and as often as not on a
+phone. Without a `form`, the panel guesses: `title` first (with `date` beside
+it), then every field **in the order the type declares them**, short ones two
+to a row, single pictures aside — the order you wrote the fields for the
+template, not the order someone thinks about a concert or a price. Say the card
+on the entry type:
+
+```ts
+{
+  type: 'night',
+  v: 1,
+  label: 'Night',
+  fields: [ /* title, date, starts, price, tickets, poster, lineup, about … */ ],
+  form: {
+    sections: [
+      { rows: [['title'], ['date', 'starts'], ['tickets', 'price']] },
+      { title: 'On the page', note: 'What the poster and the listing show', rows: [['lineup'], ['about']] },
+    ],
+    aside: ['poster'],
+    widgets: { about: 'tall' },
+  },
+}
+```
+
+- **sections** — at most eight, each `rows` of one to three fields on a grid
+  of six columns (`{ field: 'title', span: 4 }` to say how many; the rest share
+  what is left evenly). A phone draws each row as one column. `title` and
+  `note` (one line) where a heading helps the owner; the first section rarely
+  needs one.
+- **aside** — at most six: what the entry is at a glance — its picture, a
+  category, a switch. No paragraph, gallery or list.
+- **widgets** — a control of the field's kind: `presets` for a duration,
+  `radio` or `segmented` for a short select, `stepper` for a bounded whole
+  number, `tall` for a long paragraph (the platform's reference, «A form's
+  widgets»).
+
+**Lay it out for the eye.** What belongs together shares a section, in the
+order a person fills a new one in. Two short fields share a row; a paragraph,
+a picture or a list does not share one with a line. Where the controls of a
+row differ in height, the taller goes left — a link (its two choices, its box
+and a line under it) before a one-line label, as `tickets` before `price`
+above: the eye expects the bigger one first, and a short control left of a
+tall one leaves a hole under it. The panel draws the row as you wrote it.
+
+Every required field needs a place, `body` never has one (it is written
+beside the page), and a gallery, a list or a document takes a row alone.
+`jtk schema` refuses what the panel cannot draw (`JTK_E_PANEL_FORM_INVALID`,
+the rule in the sentence) and advises where the panel would still guess
+(`JTK_W_PANEL_FORM_GUESSED`): a field the form places nowhere, drawn after
+the sections under «More», or a type of seven fields or more with no form.
+The scaffold's post, service and person come with theirs.
+
 ## Annotation: two rules
 
 **An entry's own values are its `fields`**, so on its own page their paths are
@@ -493,3 +547,59 @@ kit (`@jtakeit/kit`'s `lib/schedule.mjs`, which the door asks) leaves a
 scheduled entry out of the listings, and `jtk schema --dist` treats it as
 hidden — an entry without a page that is not out yet is owed no annotation on
 its listing, exactly as one with `visible: false` is not.
+
+## Entries that are over by their own date — `ends_by`
+
+A party, an offer, a course: an entry whose date is in its own fields. When
+it is over is the platform's to say; what the site does with it then is
+yours. Say the first once, on the collection (contract 3):
+
+```ts
+export const COLLECTIONS: Collection[] = [
+  { name: 'nights', label: 'Вечеринки', type: 'night',
+    route: { detail: '/afisha/{slug}', listing: '/afisha' },
+    order: { by: 'date' },
+    ends_by: { date: 'date', time: 'starts', after: 480, zone: 'Europe/Zurich', then: 'keep' } },
+];
+```
+
+A night is over eight hours after its doors open: its `date` (a `date` field
+of the entry type) at its `starts` (a `time_of_day` field, minutes from
+midnight), on Zürich's clock, and `after` 480 minutes. `time` may be left
+out — the start of the day — and so may `after`: none with a time, the whole
+day (1440) without one, at most a week (10080). `zone` is an IANA zone and
+required. An entry with no date yet is never over.
+
+The platform works the moment out whenever the entry is written — in the
+panel, by an import, a copy or a CSV — keeps it on the entry (not in the
+`jtk/` files), says «over» in the owner's panel and rebuilds the site at the
+moment. `then` is what becomes of an entry that is over:
+
+- **`keep`**, the default: it stays on the site — in `site.entries(…)`, the
+  listing, the feed, the sitemap — and the template places it. Every entry
+  of the collection says `ended` (over at the build's moment) and `endsAt`
+  (RFC 3339, or `null` with no date).
+- **`hide`**: the platform takes it off — its `hide_at` is the moment, one in
+  the file is written over — and the door leaves it out of `site.entries(…)`.
+
+An entry of a collection without `ends_by` says `ended: false`,
+`endsAt: null`. The door works the same moment out on the dev server and in
+a local build, so a fresh entry the platform has never saved is placed the
+same way. KAIF's home links the next night, and `/afisha` lists the coming
+ones soonest first, then the past ones latest first:
+
+```astro
+---
+const nights = site.entries('nights', { locale });          // ordered by date
+const next = nights.find((night) => !night.ended);           // the home's ticket
+const coming = nights.filter((night) => !night.ended);
+const past = nights.filter((night) => night.ended).reverse(); // the archive
+---
+```
+
+Never compare the date with today in the template —
+`nights.filter((night) => night.date >= today)`, a script that marks a
+ticket over: a build freezes the comparison until the next build, a visitor
+sees a night that is over as ahead, and the panel cannot know. `jtk schema`
+says so (`JTK_W_DATE_HIDES`), as advice. A countdown in the visitor's
+browser only draws, and may stay.

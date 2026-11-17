@@ -116,7 +116,11 @@ exam.
 A contract-2 site — one made before contract 3 and not moved yet; a new site is
 always laid out on the latest contract — has `jtk/catalogue.json` instead, written and
 checked the same way by `npx @jtakeit/astro catalogue` ([docs/catalogue.md](docs/catalogue.md));
-`npx @jtakeit/astro upgrade contract-3` moves one in one commit.
+`npx @jtakeit/astro upgrade contract-3` moves one in one commit: it takes the platform's
+ids from `--site <id>` (with `JTK_API` and `JTK_TOKEN`, as `schema --judge` does) or from
+`--state <file>`, replaces the scaffold's untouched files only with what they import, lists
+every file that reads what moved with its lines, and ends by building the site and running
+`schema` against the build (`--no-check` skips that).
 
 ## The shop
 

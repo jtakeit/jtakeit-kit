@@ -29,7 +29,8 @@ import { LOCAL } from './codes.mjs';
 import { content as door, TAPPABLE, tappable } from './content/index.mjs';
 import { unnamed } from './content/identity.mjs';
 import { collectContent, contractOf, readJtk } from './content/node.mjs';
-import { DOCUMENT_ID, ID, isObject, placesIn, pricePaths, widened3 } from './places3.mjs';
+import { metaFaults } from './meta3.mjs';
+import { DOCUMENT_ID, ID, drawnOn, isObject, placesIn, pricePaths, seenOn, widened3 } from './places3.mjs';
 
 export { CODES, said, pricePaths };
 
@@ -550,7 +551,7 @@ async function lint3({ root, distDir, siteURL, now }) {
   const documents = site.documents();
   const own = documents.filter((one) => one.locale === '');
   const sharedBlocks = site.sharedDocuments().find((one) => one.locale === '')?.blocks ?? [];
-  const { types, collections, blockPlaces, entryPlaces, declares } = placesIn(schema, sharedBlocks);
+  const { types, collections, blockPlaces, entryPlaces, declares, valueAt } = placesIn(schema, sharedBlocks);
   for (const one of own) {
     if (one.collection !== undefined && !collections.has(one.collection)) {
       throw new Error(`${one.file.slice(1)}: the schema declares no collection "${one.collection}" — an entry is one of a collection jtk/schema.json declares, which says where its entries are; declare it, or move the entry`);
@@ -566,7 +567,7 @@ async function lint3({ root, distDir, siteURL, now }) {
   }
 
   {
-    const faults = await metaFaults(distDir);
+    const faults = metaFaults(distDir);
     if (faults.length > 0) {
       for (const one of faults) fault(CODES.META_INVALID, `dist/_meta.json: ${one}`);
       return verdict();
@@ -651,6 +652,20 @@ async function lint3({ root, distDir, siteURL, now }) {
     if (!everywhere.includes(`data-jtk-path="${place}"`)) fault(CODES.SHARED_NOT_RENDERED, `${place} is on no page — a shared field nothing renders is a control that edits nothing`);
   }
 
+  // A filled value a page does not annotate: refused where the page draws
+  // it — drawn and untappable — and advice where this build does not draw it
+  // at all, a template condition hiding it until another value is there
+  // (KAIF's footer draws the tickets' label only when the next night has a
+  // ticket link: the next build would draw and annotate it, B9). A picture
+  // or a body is drawn as something else than its value, and stays refused.
+  const hidden = [];
+  const unannotated = (path, html, document, place, entry) => {
+    const held = valueAt(document, place, entry);
+    if (held !== undefined && drawnOn(seenOn(html, unclaimedText(html)), held.field, held.value) === false) {
+      hidden.push({ code: 'JTK_W_UNANNOTATED_FIELD', says: `${path}: ${place} is filled and this build does not draw it at all — a condition in the template hides it; where it is drawn, annotate it` });
+    } else fault(CODES.UNANNOTATED_FIELD, `${path}: ${place} is not annotated`);
+  };
+
   // Each page, built and annotated.
   for (const page of pages) {
     const html = htmlByPath.get(page.path);
@@ -659,7 +674,7 @@ async function lint3({ root, distDir, siteURL, now }) {
       continue;
     }
     for (const place of blockPlaces(page.blocks)) {
-      if (!html.includes(`data-jtk-path="${place}"`)) fault(CODES.UNANNOTATED_FIELD, `${page.path}: ${place} is not annotated`);
+      if (!html.includes(`data-jtk-path="${place}"`)) unannotated(page.path, html, page, place, false);
     }
   }
 
@@ -675,11 +690,13 @@ async function lint3({ root, distDir, siteURL, now }) {
         continue;
       }
       for (const place of entryPlaces(entry)) {
-        if (!html.includes(`data-jtk-path="${place}"`)) fault(CODES.UNANNOTATED_FIELD, `${entry.path}: ${place} is not annotated`);
+        if (!html.includes(`data-jtk-path="${place}"`)) unannotated(entry.path, html, entry, place, true);
       }
       continue;
     }
-    if (!entry.shown || !ID.test(entry.id ?? '')) continue;
+    // Over and kept (ends_by, then keep): the template places it or not —
+    // an archive, or the coming ones only — as the platform's lint says.
+    if (!entry.shown || entry.ended === true || !ID.test(entry.id ?? '')) continue;
     for (const place of entryPlaces(entry)) {
       const tile = `entry:${entry.id}:${place}`;
       if (!everywhere.includes(`data-jtk-path="${tile}"`)) {
@@ -735,6 +752,22 @@ async function lint3({ root, distDir, siteURL, now }) {
       }
     }
     for (const [, path] of html.matchAll(/data-jtk-href="([^"]*)"/g)) {
+      // A link set on another document — a night's ticket link drawn on the
+      // home page — names it by its id, as a tile does (B4).
+      if (path.startsWith('page:') || path.startsWith('entry:')) {
+        const found = DOCUMENT_ID.exec(path);
+        if (found === null) {
+          fault(CODES.ANNOTATION_UNKNOWN, `${where}: leads a link to where ${path} says, which names no document by its id — contract 3 names another page or an entry by its id: page:<id>:… and entry:<id>:…`);
+          continue;
+        }
+        const [, kind, id, place] = found;
+        const document = (kind === 'page' ? pagesById : entriesById).get(id);
+        if (document === undefined) fault(CODES.ANNOTATION_UNKNOWN, `${where}: leads a link to where ${path} says, and this site has no such ${kind}`);
+        else if (place.startsWith('shared:') || !declares(document, place, kind === 'entry')) {
+          fault(CODES.ANNOTATION_UNKNOWN, `${where}: leads a link to ${place} on ${kind}:${id}, which that ${kind}'s document has no field for`);
+        }
+        continue;
+      }
       if (!declares(mine?.document, path, mine?.entry === true)) fault(CODES.ANNOTATION_UNKNOWN, `${where}: leads a link to where ${path} says, which this page's document has no field for`);
     }
   }
@@ -754,7 +787,7 @@ async function lint3({ root, distDir, siteURL, now }) {
   //
   // E3: a `data-jtk-from` names a source in its grammar that exists — refused
   // as JTK_E_ANNOTATION_UNKNOWN where it does not.
-  const warnings = [];
+  const warnings = [...hidden];
   {
     const wide = placesIn(schema, sharedBlocks, { which: widened3 });
     const warn = (says) => warnings.push({ code: 'JTK_W_UNANNOTATED_FIELD', says });
@@ -774,7 +807,7 @@ async function lint3({ root, distDir, siteURL, now }) {
         for (const place of wide.entryPlaces(entry)) if (!drawnAt(html, place)) warn(`${entry.path}: ${place} is not annotated`);
         continue;
       }
-      if (!entry.shown || !ID.test(entry.id ?? '')) continue;
+      if (!entry.shown || entry.ended === true || !ID.test(entry.id ?? '')) continue;
       for (const place of wide.entryPlaces(entry)) {
         if (!drawnAt(everywhere, `entry:${entry.id}:${place}`)) warn(`${entry.anchor ?? entry.slug}: entry:${entry.id}:${place} is on no page`);
       }
@@ -878,64 +911,6 @@ async function lint3({ root, distDir, siteURL, now }) {
   out.shared = sharedBlocks.length > 0;
   out.warnings = warnings;
   return out;
-}
-
-/**
- * What the build tells the platform beside its pages, `dist/_meta.json`, in
- * the shape the platform reads it (§6) — the build's `checkMeta3`, a fault
- * to a sentence: `redirects`, `immutable` and `cache`, and nothing else. A
- * build that writes no `_meta.json` declares nothing.
- *
- * @param {string} distDir
- * @returns {Promise<string[]>}
- */
-async function metaFaults(distDir) {
-  const raw = await readOrEmpty(join(distDir, '_meta.json'));
-  if (raw === '') return [];
-  const faults = [];
-  let meta;
-  try {
-    meta = JSON.parse(raw);
-  } catch (error) {
-    faults.push(`it is not JSON: ${error.message}`);
-  }
-  if (meta !== undefined && !isObject(meta)) faults.push('it is not an object of redirects, immutable and cache');
-  if (!isObject(meta)) return faults;
-  for (const key of Object.keys(meta)) {
-    if (key === 'drafts') {
-      faults.push(`"drafts" is contract 2's — on contract 3 which entries a visitor may not see is the platform's to say, from each entry's visible and its moments, for every build; leave it out`);
-    } else if (!['redirects', 'immutable', 'cache'].includes(key)) {
-      faults.push(`"${key}" is no key of it — the platform reads redirects, immutable and cache, and nothing else`);
-    }
-  }
-  const listOf = (key) => {
-    if (meta[key] === undefined) return [];
-    if (Array.isArray(meta[key])) return meta[key];
-    faults.push(`"${key}" is not a list`);
-    return [];
-  };
-  listOf('redirects').forEach((one, i) => {
-    if (!isObject(one) || typeof one.from !== 'string' || !one.from.startsWith('/') || typeof one.to !== 'string' || one.to === '') {
-      faults.push(`redirects[${i}] is not {"from": "/an/address", "to": "<where it leads>"}`);
-    } else if (one.status !== undefined && ![301, 302, 303, 307, 308].includes(one.status)) {
-      faults.push(`redirects[${i}].status is ${JSON.stringify(one.status)} — a redirect's status is 301, 302, 303, 307 or 308`);
-    }
-  });
-  listOf('immutable').forEach((one, i) => {
-    if (typeof one !== 'string' || one.replace(/^\/+|\/+$/g, '') === '') {
-      faults.push(`immutable[${i}] is ${JSON.stringify(one)} — a directory whose files are named by their contents, like "/_astro/", never the whole site`);
-    }
-  });
-  const cache = listOf('cache');
-  if (cache.length > 32) faults.push(`cache has ${cache.length} rules, and the edge reads the first 32`);
-  cache.forEach((one, i) => {
-    if (!isObject(one) || typeof one.prefix !== 'string' || one.prefix.replace(/^\/+|\/+$/g, '') === '') {
-      faults.push(`cache[${i}] names no directory — {"prefix": "/clips/", "maxAge": 86400}, never the whole site`);
-    } else if (typeof one.maxAge !== 'number' || !Number.isFinite(one.maxAge) || one.maxAge < 0) {
-      faults.push(`cache[${i}].maxAge is ${JSON.stringify(one.maxAge)} — a number of seconds, 0 or more`);
-    }
-  });
-  return faults;
 }
 
 // ── a price's currency ─────────────────────────────────────────────────────

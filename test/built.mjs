@@ -140,6 +140,12 @@ try {
     for (const address of ['', 'services/', 'blog/', 'privacy/', 'masters/anna/', 'blog/erster/']) {
       check(sitemap.includes(`<loc>https://salon-probe.example/${address}</loc>`), `6 · contract 3: the sitemap has no /${address}`);
     }
+    // Each address as its page's canonical link says it, its trailing slash and all (the KAIF move: its old sitemap said /afisha, the canonical /afisha/).
+    for (const [, loc] of sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)) {
+      const path = new URL(loc).pathname.replace(/^\/|\/$/g, '');
+      const file = path === '' ? 'dist/index.html' : `dist/${path}/index.html`;
+      check(existsSync(join(site, file)) && read(file).includes(`<link rel="canonical" href="${loc}">`), `6 · contract 3: the sitemap says ${loc}, and no page's canonical link says it so`);
+    }
     check(ld(page('blog/erster')).find((one) => one['@type'] === 'Article')?.['@context'] === 'https://schema.org', '7 · contract 3: a post\'s Article has no @context');
     check(!ld(page('masters/anna')).some((one) => one['@type'] === 'Article'), '7 · contract 3: a master is typed an Article');
     const services = page('services');

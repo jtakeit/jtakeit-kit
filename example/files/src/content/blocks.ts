@@ -30,7 +30,9 @@
  *   SHARED          the block types the shared text holds (jtk/shared.json): here
  *                   `contacts`, the business's own facts, each field with its role
  *   COLLECTIONS     name, label, type, route — { detail, listing?, per_page? }, or
- *                   'none' with shown_on — for the entries the owner creates
+ *                   'none' with shown_on — for the entries the owner creates; on
+ *                   its entry type, form — { sections, aside?, widgets? } — the
+ *                   entry's card in the panel (docs/collections.md)
  *   MODULES         { bookings: { services: '<collection>', resources: '<collection>' } }
  *   PAGE_SEO        the title and description of every page
  *
@@ -126,14 +128,36 @@ import type { Block, Collection, Field, Modules, Text } from '@jtakeit/kit/schem
 export const CONTRACT = 3;
 
 /**
- * This template draws a page the same way from a draft at request time as
- * from its files at build time (src/live/, src/lib/site.ts), so the panel may
- * show the owner a saved field in the preview at once, rather than after a
- * build. `jtk schema` writes it as `render: "live"`. The platform checks the
- * word at every build — it renders a few pages live and compares them with
- * the built ones — and shows the build where they differ, saying why; what is
- * published is always the build. Take the line out if the site's own pages
- * read content in a way a server cannot (docs/live.md).
+ * Keep this line. It says the template draws a page the same way from a
+ * draft at request time as from its files at build time (src/live/,
+ * src/lib/site.ts), and `jtk schema` writes it as `render: "live"`: the
+ * panel then shows the owner a saved field in the preview at once, and an
+ * entry's card before the entry is saved. Without it the owner sees a change
+ * only after a build. The platform checks the word at every build — it
+ * renders a few pages live and compares them with the built ones — and shows
+ * the build where they differ, saying why; what is published is always the
+ * build.
+ *
+ * The live renderer runs on the edge: no Node `fs`, no sharp, no network but
+ * the draft it is handed. A page stays drawable live when (docs/live.md):
+ *
+ *   - its content comes through the door, `site.page()`, `site.entries()`,
+ *     `site.shared()`, `site.settings()`, read in the frontmatter of the page
+ *     or section that draws it — never `import x from '…/jtk/…json'`, a glob
+ *     of jtk/, or a value read at a module's top level and kept;
+ *   - its pictures are library keys drawn through `<Shot>` (a block's or an
+ *     entry's `picture()`, a slot's name for what the code draws) — never a
+ *     directory scanned with `fs` to find them; a file the owner gives is a
+ *     key of the library in a field, read through the door too;
+ *   - its frontmatter does no build-time-only work: nothing read off the
+ *     disk, fetched from the network or resized with sharp. What the page
+ *     needs is written in jtk/ (the owner's) or in the code (yours); what
+ *     differs between two renders — today's date, a random order — is a
+ *     script in the browser or the build's (`YEAR`, `virtual:jtk/build`).
+ *
+ * Take the line out only for a page that does at build what a server cannot,
+ * and cannot be rewritten as above — and then write the reason in BRIEF.md,
+ * under Decisions, for the owner and the next developer.
  */
 export const RENDER = 'live';
 
@@ -692,6 +716,29 @@ export const BLOG_POST: Block = {
       client_editable: true,
     },
   ],
+  // The entry's card in the panel, where the owner writes a post — on a phone
+  // as often as not: the title with its date beside it, what the blog's list
+  // shows under a heading of its own, the cover aside (docs/collections.md).
+  form: {
+    sections: [
+      { rows: [[{ field: 'title', span: 4 }, 'date']] },
+      {
+        title: { uk: 'У списку', en: 'In the list', de: 'In der Liste', ru: 'В списке', es: 'En la lista', it: 'Nell’elenco', pt: 'Na lista', fr: 'Dans la liste' },
+        note: {
+          uk: 'Що список блогу показує про цей допис',
+          en: 'What the blog’s list shows for this post',
+          de: 'Was die Liste des Blogs zu diesem Beitrag zeigt',
+          ru: 'Что список блога показывает об этой записи',
+          es: 'Lo que la lista del blog muestra de esta entrada',
+          it: 'Ciò che l’elenco del blog mostra di questo articolo',
+          pt: 'O que a lista do blog mostra deste artigo',
+          fr: 'Ce que la liste du blog montre de cet article',
+        },
+        rows: [['excerpt']],
+      },
+    ],
+    aside: ['cover'],
+  },
 };
 
 export const BLOG_COLLECTION: Collection = {

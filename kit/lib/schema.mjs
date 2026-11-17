@@ -44,6 +44,19 @@
  * whatever order the exports come in, so a declaration that says the same
  * thing writes the same bytes.
  *
+ * ── what it advises ──────────────────────────────────────────────────────────
+ *
+ * A template that compares an entry's date with today to choose what it
+ * shows (`JTK_W_DATE_HIDES`, dateHides.mjs): the collection's `ends_by` says
+ * it once, for the site, the panel and the build. And the judge's own advice
+ * on a schema it accepts (`adviseSchema`): an entry type whose card the panel
+ * lays out by guessing (`JTK_W_PANEL_FORM_GUESSED`) — a `form` that leaves
+ * fields to «More», or seven fields or more and no `form` — and a schema
+ * without `render: "live"` (`JTK_W_NOT_LIVE`): the owner previews no change
+ * before a build, so a contract-3 site keeps `RENDER = 'live'`, and one that
+ * cannot says why in BRIEF.md (docs/live.md). Said in every
+ * mode, with `--emit-only` too, and counted in no exit code.
+ *
  * ── what it never writes ────────────────────────────────────────────────────
  *
  * `jtk/catalogue.json`: the platform refuses a tree holding both (§16), and
@@ -52,7 +65,7 @@
  * asked about a file this copy turned down.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -60,13 +73,16 @@ import { isAdvice, isPlatformCode, LOCAL } from './codes.mjs';
 import { unnamed } from './content/identity.mjs';
 import { content } from './content/index.mjs';
 import { contractOf, mintJtk, readJtk } from './content/node.mjs';
-import { canonicalTag, judgeSchema } from './judge3.mjs';
+import { adviseSchema, canonicalTag, judgeSchema } from './judge3.mjs';
+import { CODE_FILE, dateHides } from './dateHides.mjs';
 import { filesBeside, judgeRequest } from './judgeFiles.mjs';
 import { copiesMissing, copyMissingSays, judgeTranslations } from './translations.mjs';
-import { BY_INDEX, DOCUMENT_ID, ID, isEmpty, KEY, placesIn, tappable3 } from './places3.mjs';
+import { BY_INDEX, DOCUMENT_ID, ID, drawnOn, isEmpty, KEY, placesIn, seenOn, tappable3 } from './places3.mjs';
+import { unclaimedText } from './lint.mjs';
+import { metaFaults } from './meta3.mjs';
 import { builtPages, prefixBuild, servedFaults, unboundedHeights, unowned } from './served.mjs';
 
-export { judgeSchema };
+export { adviseSchema, judgeSchema };
 
 const TOOL_VERSION = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
 
@@ -154,6 +170,9 @@ export function schemaText(schema) {
 /** A module's settings by the module's name; its fields are the module's, not the schema's. */
 const MODULE = /^module:([a-z][a-z0-9_]*):([a-z][a-z0-9_]{0,39}(?:\[[a-z][a-z0-9-]{0,31}\]\.[a-z][a-z0-9_]{0,39}){0,2}(?:\.(?:src|alt|focus|poster))?)$/;
 
+/** A key of the site's media library (jtakeit-core wiki/108), as a picture the build could not find is drawn. */
+const LIBRARY_KEY = /^media\/[0-9a-f-]{36}\/[^\s]+\.[a-z0-9]+$/i;
+
 /** The kinds whose value a page draws as it is stored, so the page's text can be searched for it. */
 const SAID_AS_STORED = new Set(['text', 'textarea', 'richtext_lite', 'markdown', 'tel', 'email', 'url', 'select', 'number']);
 
@@ -168,10 +187,20 @@ function decoded(html) {
 /**
  * Every place the schema and the built pages disagree, as sentences.
  *
- * @param {{ files: Record<string, unknown>; schema: any; dist: string }} input
- *   `files`: the working tree's jtk/, as `readJtk` hands it; `schema`: the one just written
+ * A filled value a page neither annotates nor draws at all — a template
+ * condition hides it on this build, as KAIF's footer hides the tickets'
+ * label while the next night has no ticket link — is advice, said in
+ * `advice` and not among the sentences: the next build, with another night
+ * first, draws and annotates it. One whose words are on the page without
+ * its annotation is drawn and cannot be tapped, and stays a disagreement;
+ * so does a picture or a body, which a page draws as something else than
+ * its value and so cannot be looked for (places3.mjs, `drawnOn`).
+ *
+ * @param {{ files: Record<string, unknown>; schema: any; dist: string; advice?: string[] }} input
+ *   `files`: the working tree's jtk/, as `readJtk` hands it; `schema`: the one just written;
+ *   `advice`: where what is allowed and unwise is said, if anywhere
  */
-export function pagesAgainst({ files, schema, dist }) {
+export function pagesAgainst({ files, schema, dist, advice = [] }) {
   const out = [];
   const modules = isObject(schema.modules) ? schema.modules : {};
 
@@ -179,7 +208,7 @@ export function pagesAgainst({ files, schema, dist }) {
   const documents = site.documents();
   const own = documents.filter((one) => one.locale === '');
   const shared = site.sharedDocuments().flatMap((one) => one.blocks);
-  const { types, blockPlaces, entryPlaces, declares } = placesIn(schema, shared);
+  const { types, blockPlaces, entryPlaces, declares, valueAt } = placesIn(schema, shared);
   const fieldsOfType = (name) => (Array.isArray(types.get(name)?.fields) ? types.get(name).fields.filter(isObject) : []);
   const byId = { page: new Map(), entry: new Map() };
   for (const one of own) byId[one.collection === undefined ? 'page' : 'entry'].set(one.id, one);
@@ -196,6 +225,7 @@ export function pagesAgainst({ files, schema, dist }) {
     const html = readFileSync(file, 'utf8');
     corpus += `\n${decoded(html)}`;
     built.set(page, {
+      seen: seenOn(html, unclaimedText(html)),
       paths: new Set([...html.matchAll(/data-jtk-path="([^"]+)"/g)].map((one) => one[1])),
       binds: [...html.matchAll(/data-jtk-bind="([^"]*)"/g)].flatMap((one) => one[1].split(/\s+/).filter(Boolean)),
       hrefs: [...html.matchAll(/data-jtk-href="([^"]*)"/g)].map((one) => one[1]),
@@ -265,13 +295,18 @@ export function pagesAgainst({ files, schema, dist }) {
         continue;
       }
       for (const place of isEntry ? entryPlaces(document) : blockPlaces(document.blocks)) {
-        if (!page.paths.has(place)) out.push(`${document.path}: ${place} is declared and the page does not render it`);
+        if (page.paths.has(place)) continue;
+        const held = valueAt(document, place, isEntry);
+        if (held !== undefined && drawnOn(page.seen, held.field, held.value) === false) {
+          advice.push(`${document.path}: ${place} is filled and this build does not draw it at all — a condition in the template hides it; where it is drawn, annotate it`);
+        } else out.push(`${document.path}: ${place} is declared and the page does not render it`);
       }
       continue;
     }
     // An entry without a page of its own, shown on another: named by its id
-    // wherever it is, unless it is hidden and so shown nowhere.
-    if (!isEntry || document.shown === false || !ID.test(document.id ?? '')) continue;
+    // wherever it is, unless it is hidden and so shown nowhere, or over and
+    // kept (ends_by, then keep), which the template places or not.
+    if (!isEntry || document.shown === false || document.ended === true || !ID.test(document.id ?? '')) continue;
     for (const place of entryPlaces(document)) {
       const tile = `entry:${document.id}:${place}`;
       if (!everywhere.has(tile)) out.push(`${document.collection}/${document.slug}: ${tile} is on no page — an entry without a page of its own is annotated where it is shown`);
@@ -326,7 +361,21 @@ export function pagesAgainst({ files, schema, dist }) {
       if (!/^data-[a-z0-9-]+$/.test(name)) out.push(`${page}: binds "${pair}" — a bind is data-<name>:<path>, and the editor writes only data- attributes`);
       else if (!declares(mine?.document, path, mine?.entry === true)) out.push(`${page}: binds ${name} to ${path}, which this page's document has no field for`);
     }
+    // A link set on another document — a night's ticket link drawn on the
+    // home page — names that document by its id, as a tile does (B4).
     for (const path of found.hrefs) {
+      if (path.startsWith('page:') || path.startsWith('entry:')) {
+        const named = DOCUMENT_ID.exec(path);
+        if (named === null) {
+          out.push(`${page}: leads a link to where ${path} says, which names no document by its id — contract 3 names another page or an entry by its id: page:<id>:… and entry:<id>:…`);
+          continue;
+        }
+        const [, kind, id, place] = named;
+        const document = byId[kind].get(id);
+        if (document === undefined) out.push(`${page}: leads a link to where ${path} says, and this site has no such ${kind}`);
+        else if (place.startsWith('shared:') || !declares(document, place, kind === 'entry')) out.push(`${page}: leads a link to where ${path} says, which that ${kind}'s document has no field for`);
+        continue;
+      }
       if (!declares(mine?.document, path, mine?.entry === true)) out.push(`${page}: leads a link to where ${path} says, which this page's document has no field for`);
     }
   }
@@ -344,7 +393,7 @@ export function pagesAgainst({ files, schema, dist }) {
 // for nothing. The files' findings (`jtk/…`) and the judge's advice are the
 // platform's alone, printed and not examined.
 
-async function sitTheExam(root, text, ours) {
+async function sitTheExam(root, text, ours, said = []) {
   if (!process.env.JTK_API || !process.env.JTK_TOKEN) {
     console.error(`
 jtk schema: --judge needs somewhere to ask and something to ask with.
@@ -394,7 +443,9 @@ beside it judges the whole working tree before any push.`);
   const findings = all.filter((one) => !ofFiles.includes(one));
   for (const one of ofFiles) console.error(`  ✗ ${one.code}  ${one.path}: ${one.says}`);
   if (ofFiles.length > 0) console.error(`  ${ofFiles.length} finding(s) in the files beside the schema (${files.length} sent) — refused at import until fixed.\n`);
-  const advice = [...(verdict.advice ?? []), ...findings.filter((one) => isAdvice(one.code))];
+  // What this copy advised already is not said twice.
+  const already = new Set(said.map((one) => `${one.code} ${one.path}`));
+  const advice = [...(verdict.advice ?? []), ...findings.filter((one) => isAdvice(one.code))].filter((one) => !already.has(`${one.code} ${one.path ?? ''}`));
   for (const one of advice) console.log(`  ~ ${one.code}  ${one.path || '(the file)'}: ${one.says}`);
   if (advice.length > 0) console.log(`  ${advice.length} piece(s) of advice from the judge — allowed, and unwise. Act on them before the first build.\n`);
 
@@ -429,6 +480,32 @@ the rule here into line, or add the one it is missing.`);
  * @param {string[]} argv
  * @returns {Promise<number>} the exit code
  */
+/**
+ * The site's own code under `src/`, by its path from the root — what a
+ * template may compare an entry's date with the clock in.
+ * @param {string} root
+ * @returns {Record<string, string>}
+ */
+export function codeFiles(root) {
+  const out = {};
+  const walk = (dir) => {
+    let entries;
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+      const file = join(dir, entry.name);
+      if (entry.isDirectory()) walk(file);
+      else if (CODE_FILE.test(entry.name)) out[relative(root, file).split(sep).join('/')] = readFileSync(file, 'utf8');
+    }
+  };
+  walk(join(root, 'src'));
+  return out;
+}
+
 export async function main(argv) {
   const has = (name) => argv.includes(`--${name}`);
   const flag = (name, fallback) => {
@@ -486,7 +563,10 @@ A JTK_E_… code is the platform's own name for that fault, the one POST
 /v1/registry/validate returns for this text. ${LOCAL} is the kit's own — the
 studio's preview arrangement, which the schema has nothing to say about.`);
   }
-  const exam = has('judge') ? await sitTheExam(root, text, problems) : { divergences: 0, ofFiles: 0 };
+  // The judge's advice on a schema it accepts (none on one it refuses): allowed, and unwise.
+  const advised = adviseSchema(text);
+  for (const one of advised) console.log(`  ~ ${one.code}  ${one.path}: ${one.says}`);
+  const exam = has('judge') ? await sitTheExam(root, text, problems, advised) : { divergences: 0, ofFiles: 0 };
   if (exam.failed) return 1;
 
   // Written only when the platform would read it, and only when it changed:
@@ -561,6 +641,11 @@ studio's preview arrangement, which the schema has nothing to say about.`);
     }
   }
 
+  // A template that chooses what it shows by comparing an entry's date with
+  // the clock (dateHides.mjs): advice, counted nowhere.
+  const dated = dateHides(codeFiles(root), schema);
+  for (const one of dated) console.log(`  ~ ${one.code}  ${one.path}: ${one.says}`);
+
   const before = nameless.length + (stray ? 1 : 0) + exam.ofFiles + translations;
   if (problems.length > 0) return capped(problems.length + before);
   // A divergence is the copy's failure and not the site's, so the schema is
@@ -593,7 +678,13 @@ studio's preview arrangement, which the schema has nothing to say about.`);
     return capped(1 + before);
   }
 
-  const disagreements = pagesAgainst({ files: await readJtk(root), schema, dist });
+  const advice = [];
+  const disagreements = pagesAgainst({ files: await readJtk(root), schema, dist, advice });
+  // What the build tells the platform beside its pages, held to the shape
+  // the platform's build lint holds it to (sitebuild/annotation-lint.mjs,
+  // `checkMeta3`): contract 2's `drafts` passed here and was refused there
+  // (the KAIF move, B3).
+  const meta = metaFaults(dist);
 
   // Built again under a path, into a directory that is thrown away (served.mjs).
   if (!flag('dist') && !existsSync(join(root, 'astro.config.mjs'))) {
@@ -617,6 +708,13 @@ studio's preview arrangement, which the schema has nothing to say about.`);
     }
   }
 
+  for (const one of advice) console.log(`  ~ ${one}`);
+  if (meta.length > 0) {
+    console.error("\njtk schema: dist/_meta.json is not what the platform's build reads on contract 3\n");
+    for (const one of meta) console.error(`  ✗ JTK_E_META_INVALID  dist/_meta.json: ${one}`);
+    console.error("\nThe build refuses it as it is. A site's own writer of _meta.json (an astro:build:done hook) writes redirects, immutable and cache, and nothing else.");
+    return capped(meta.length + disagreements.length + before);
+  }
   if (disagreements.length > 0) {
     console.error('\njtk schema: the schema and the page disagree\n');
     for (const one of disagreements) console.error(`  ✗ ${one}`);
@@ -637,6 +735,15 @@ studio's preview arrangement, which the schema has nothing to say about.`);
     console.error(`\njtk schema: ${loose.length} sentence(s) on the page belong to nobody\n`);
     for (const one of loose.slice(0, 30)) console.error(`  ✗ <${one.where}>  ${one.words.length > 70 ? `${one.words.slice(0, 67)}…` : one.words}`);
     if (loose.length > 30) console.error(`  … and ${loose.length - 30} more`);
+    // A picture of the library the content names and this machine has not
+    // got is drawn as its key, and read here as a sentence (the KAIF move,
+    // manual fix 13): not the page's fault, and said as what it is.
+    const keys = loose.filter((one) => LIBRARY_KEY.test(one.words.trim()));
+    if (keys.length > 0) {
+      console.error(`\n  ${keys.length === loose.length ? 'Each one is' : `${keys.length} of them ${keys.length === 1 ? 'is' : 'are'}`} a picture of the site's media library drawn as its key: this machine has not got the file.
+  Run npx jtk media pull (npx @jtakeit/astro media pull), then this again — the platform's build has the library and draws the pictures.`);
+      if (keys.length === loose.length) return capped(loose.length + before);
+    }
     console.error(`
 Each one is the owner's or the design's, and the repository has to say which:
 declare the owner's — in the shared text where they are on every page — and

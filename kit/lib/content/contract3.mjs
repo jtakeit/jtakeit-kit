@@ -77,11 +77,23 @@
  * with `ref` the one collection where `to` names one. The rest of a
  * declaration is passed as the schema writes it.
  *
- * Imports nothing outside the kit's content and money: the door runs in a
- * Vite build, in Node and in a test alike.
+ * **An entry may be over by its own date** (`ends_by` on its collection, the
+ * owner, 16 November 2026): the moment is the date at its time, on the
+ * zone's clock, and `after` minutes, worked out as the platform works it out
+ * (endsBy.mjs). Every entry of such a collection says `ended` — the moment
+ * has passed by the door's clock, the build's — and `endsAt`, so a template
+ * puts the next night first and the past ones in an archive without a
+ * comparison with today of its own. On `then: "hide"` the moment is the
+ * entry's `hide_at` too, as the platform writes it on every save whatever
+ * the file says, and the door leaves the entry out of `site.entries(…)`.
+ * Every other entry says `ended: false` and `endsAt: null`.
+ *
+ * Imports nothing outside the kit's content, money and dates: the door runs
+ * in a Vite build, in Node and in a test alike.
  */
 import { money as priced, priceWords } from '../money.mjs';
 import { shownAt } from '../schedule.mjs';
+import { endsAt, endsByOf } from '../endsBy.mjs';
 import { ancestors, capped, descendants, grouped, groupField, selectHeadings } from './groups.mjs';
 import { canonicalLocale, baseAddressOf, inLocale, languagesOf, localeArg, localeOfAddress, sharedLocaleOf } from './locale.mjs';
 import { byRank, factsOf, labelLang, labelWords, minorOf, namesIn, specimenId, tappable } from './rules.mjs';
@@ -282,6 +294,10 @@ export function contract3(byPath, names, { annotate, now }) {
       untranslated: one.untranslated === 'hide' ? 'hide' : 'base',
       prefix: '',
     };
+    // That its entries go by their own date (endsBy.mjs): the door leaves
+    // out one whose moment has passed.
+    const ends = endsByOf(one.ends_by);
+    if (ends !== undefined) collection.ends_by = ends;
     collections.set(one.name, collection);
     // Contract 2's word for where a collection's entries live, kept for a
     // template that reads it: the listing it declares, in the site's own
@@ -468,7 +484,17 @@ export function contract3(byPath, names, { annotate, now }) {
     if (merged !== null) {
       const theirBody = over !== undefined && Array.isArray(over.raw.blocks) && over.raw.blocks.length > 0;
       const held = merged.visible === false && file.raw.visible !== false;
-      const shownBy = (at) => shownAt(file.raw, at) && !held;
+      // A collection whose entries are over by their date: the moment is the
+      // date's (registry.EndsBy, sites/endsBy.go), from the original's
+      // values — a translation's moments are its original's — and none for
+      // an entry with no date. On `then: "hide"` it is the hide_at the
+      // platform writes on every save, a hide_at in the file written over;
+      // on `keep` the file's own moments stand, and the entry stays.
+      const ends = collections.get(file.collection)?.ends_by;
+      const endsMs = ends === undefined ? undefined : endsAt(ends, isObject(file.raw.fields) ? file.raw.fields : undefined);
+      const iso = endsMs === undefined ? undefined : new Date(endsMs).toISOString().replace('.000Z', 'Z');
+      const moments = ends?.then === 'hide' ? { visible: file.raw.visible, show_at: file.raw.show_at, hide_at: iso } : file.raw;
+      const shownBy = (at) => shownAt(moments, at) && !held;
       doc = {
         kind: 'entry',
         file: over?.file ?? file.file,
@@ -487,6 +513,8 @@ export function contract3(byPath, names, { annotate, now }) {
         specimen: false,
         shownBy,
         shown: shownBy(now),
+        ended: endsMs !== undefined && now >= endsMs,
+        endsAt: iso ?? null,
         fromBase,
         translated: over !== undefined,
       };
@@ -840,6 +868,10 @@ export function contract3(byPath, names, { annotate, now }) {
         baseSlug: doc.original?.slug ?? doc.slug,
         locale: doc.language,
         visible: doc.shown,
+        // Over by its date (`ends_by`), by the door's clock; false and null
+        // for an entry of a collection without one.
+        ended: doc.ended === true,
+        endsAt: doc.endsAt ?? null,
         seo: doc.seo,
         file: doc.file,
         specimen: doc.specimen,
@@ -1367,6 +1399,8 @@ export function contract3(byPath, names, { annotate, now }) {
             blocks: doc.body,
             visible: file.raw.visible,
             shown: doc.shown,
+            // Over by its date (ends_by): what the checks ask no place of.
+            ended: doc.ended === true,
           });
         }
       }

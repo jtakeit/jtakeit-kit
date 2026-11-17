@@ -35,3 +35,6 @@ src/assets/media/
 # no code named it — never deleted, never committed; and the library's index.
 .jtakeit/adopted/
 .jtakeit/media.json
+
+# The server build of the panel's live preview (JTK_RENDER=live), made beside the checkout by the platform.
+.jtk-live/
