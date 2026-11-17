@@ -105,7 +105,11 @@ with a blog and a booking kit added — to its built twin:
   its own frontmatter too. `SECTIONS` holds components, never values.
 - **Nothing that differs between two renders.** The footer's year is the
   build's (`YEAR`, `virtual:jtk/build`); «open now» is a script over the hours'
-  rows, never markup; the gallery's arrangement is the block's.
+  rows, never markup, and it reads the business's clock, never the browser's:
+  the markup names the zone (`data-zone` — the diary's `zone`, else the
+  country's, `zoneOf` in `src/components/site/words.ts`) and the script asks
+  `Intl.DateTimeFormat` with that `timeZone`; where no zone is known it says
+  nothing. The gallery's arrangement is the block's.
 - **Pictures through `<Shot>`**, so one uploaded in the panel since the build is
   the bucket's at its measured size.
 - **The imprint** is `src/pages/[...lang]/imprint.astro`, which reads no

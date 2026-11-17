@@ -12,6 +12,10 @@
  *
  * Every value is the block's, annotated through the door (`block.at`); the
  * photograph is the page's largest picture and the one loaded eagerly.
+ *
+ * Without a photograph (`hx--bare`) the plate has nothing to stand over: the
+ * heading takes the whole width and the plate follows it in the flow, at
+ * every width — never lifted over the heading.
  */
 import type { Block } from '@jtakeit/kit/content';
 import Shot from '../Shot.astro';
@@ -35,7 +39,7 @@ const go = (href: string): string => {
 const title = block.text('title');
 ---
 
-<section class="hx">
+<section class:list={['hx', !shot.src && 'hx--bare']}>
   <div class="hx__in">
     <div class="hx__words">
       {block.text('eyebrow') && <p class="label hx__eyebrow" {...{ ...block.at('eyebrow'), ...block.lang('eyebrow') }}>{block.text('eyebrow')}</p>}
@@ -182,6 +186,21 @@ const title = block.text('title');
       max-inline-size: none;
       margin: -4.5rem 0.75rem 0;
     }
+  }
+
+  /*
+   * No photograph: the heading the whole width, the plate under it in the
+   * flow. Two classes, so it holds over the phone's rule above as well.
+   */
+  .hx--bare .hx__title {
+    max-inline-size: none;
+    text-wrap: balance;
+  }
+  .hx--bare .hx__plate {
+    position: static;
+    inset: auto;
+    max-inline-size: 40rem;
+    margin: 0;
   }
 
   @media (prefers-reduced-motion: reduce) {

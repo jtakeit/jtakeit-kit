@@ -5,8 +5,13 @@
  * hours have — said as a reader scans them: days that keep the same hours run
  * together («Monday – Friday 09:00–18:00»), a day with no row is closed.
  *
- * «Open now» is the visitor's clock's, so it is a script over the rows, never
- * markup: two renders of the same files must be the same page (docs/live.md).
+ * «Open now» is the moment the visitor reads it, so it is a script over the
+ * rows, never markup: two renders of the same files must be the same page
+ * (docs/live.md). The moment is read on the business's clock, never the
+ * browser's: the diary's zone where the site takes bookings, else its
+ * country's (`zoneOf`, words.ts) — the markup carries the zone, and the
+ * script asks `Intl` what day and time it is there. Where no zone is known,
+ * the hours are shown and nothing claims open or closed.
  *
  * Where the site takes bookings, the diary's hours are the hours
  * (`jtk add booking` moves the rows into jtk/modules/bookings.json) and this
@@ -14,7 +19,7 @@
  */
 import { site } from '../../lib/site';
 import { langOf } from '../../lib/locale';
-import { DAYS, clock, frameLang, frameWords } from './words';
+import { DAYS, clock, frameLang, frameWords, zoneOf } from './words';
 
 interface Props {
   locale: string;
@@ -33,6 +38,8 @@ const rows = fromDiary ? diary.rows('hours') : shared.rows('rows');
 // out from them, and names them as its source.
 const listAt = fromDiary ? diary.from() : shared.at('rows');
 const nowFrom = fromDiary ? diary.from() : shared.from();
+// The clock «open now» is read on: the diary's zone, else the country's; none, and it says nothing.
+const zone = zoneOf(diary?.text('zone'), site.facts(locale).text('country'));
 
 type Day = (typeof DAYS)[number];
 const spansOf = (day: Day) =>
@@ -56,7 +63,7 @@ const note = shared.text('note');
 
 {
   (rows.length > 0 || note) && (
-    <div class:list={['hours', extra]} data-hours={machine} data-days={rows.map((row) => row.value('day')).join(' ')}>
+    <div class:list={['hours', extra]} data-hours={machine} data-zone={zone || undefined} data-days={rows.map((row) => row.value('day')).join(' ')}>
       {rows.length > 0 && <dl class="hours__list" {...listAt}>
         {runs.map((run) => (
           <div class="hours__row">
@@ -72,7 +79,7 @@ const note = shared.text('note');
           {note}
         </p>
       )}
-      <p class="hours__now label" data-hours-now data-open={W.openNow} data-closed={W.closedNow} data-jtk-fixed {...nowFrom} lang={wordsLang} hidden />
+      {rows.length > 0 && zone !== '' && <p class="hours__now label" data-hours-now data-open={W.openNow} data-closed={W.closedNow} data-jtk-fixed {...nowFrom} lang={wordsLang} hidden />}
     </div>
   )
 }
@@ -121,20 +128,24 @@ const note = shared.text('note');
 </style>
 
 <script>
-  /* «Open now», by the visitor's own clock — the one thing on the page that is not the same for everybody. */
+  /*
+   * «Open now», at the moment the visitor reads it — the one thing on the page that is not the same for everybody —
+   * on the business's clock: the zone the markup names, never the browser's own. No zone, or one the browser
+   * does not know, and it stays hidden.
+   */
+  import { openAt, type Span } from './words';
+
   for (const box of document.querySelectorAll<HTMLElement>('[data-hours]')) {
     const now = box.querySelector<HTMLElement>('[data-hours-now]');
     if (!now) continue;
-    let rows: [number, number, number][] = [];
+    let rows: Span[] = [];
     try {
       rows = JSON.parse(box.dataset.hours ?? '[]');
     } catch {
       continue;
     }
-    const at = new Date();
-    const day = (at.getDay() + 6) % 7;
-    const minute = at.getHours() * 60 + at.getMinutes();
-    const open = rows.some(([d, from, to]) => d === day && minute >= from && minute < to);
+    const open = openAt(rows, box.dataset.zone ?? '', new Date());
+    if (open === undefined) continue;
     now.textContent = (open ? now.dataset.open : now.dataset.closed) ?? '';
     now.dataset.state = open ? 'open' : 'closed';
     now.hidden = false;
