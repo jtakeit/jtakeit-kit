@@ -119,8 +119,9 @@ hourly budget is not waited out — the push stops and says so.
 - a slot that names no file in `src/assets/`;
 - a GIF, a QuickTime movie, a HEIC — export a JPEG, a PNG or an MP4;
 - a file over 8 MB — a clip is cut first (`jt-clips`);
-- an address on the web — the library takes files, not addresses (yet):
-  download it into `_photos/` and push that;
+- an address on the web — `media push` takes files, not addresses (yet):
+  download it into `_photos/` and push that. `jtk import products` fetches a
+  sheet's picture addresses itself, on this machine ([shop.md](shop.md#pictures));
 - anything the platform refuses, with its sentence.
 
 Each is listed with its file and place; the rest goes on, and the command exits

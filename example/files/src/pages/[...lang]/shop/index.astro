@@ -1,0 +1,81 @@
+---
+/**
+ * The products' listing — `/shop`, and `/<lang>/shop` in each language the
+ * site has (jtakeit-core wiki/102 stage 9, decision 6): the collection the
+ * shop's `products` role names, listed at the `listing` its route declares.
+ *
+ * `jtk add shop` lays it with `src/components/shop/ProductListing.astro`,
+ * which draws the tiles — the markup and the look are the site's. This page
+ * is the frame: the heading, the SEO, and the one choice a site makes about
+ * what it lists. Because this file exists, the scaffold's own listing
+ * (`[...listing].astro`) leaves `/shop` to it (`ownListing` in lib/entries),
+ * and with it the paging: this page lists every product, whatever `per_page`
+ * says. It is where `listing` says: a site that moves its listing moves this
+ * file with it. It is built wherever the products are listed at `/shop` —
+ * also where the schema does not turn the shop on, since the sitemap and
+ * `llms.txt` name every listing the scaffold leaves to a page of its own — and
+ * it asks the shop for what is sold out only where the shop is on.
+ *
+ * `HIDE_SOLD_OUT` is that choice: `true`, and the listing hides what is sold
+ * out once the page has loaded (the element asks the shop, a hundred products
+ * at a time). The built page lists every product either way — a crawler, a
+ * reader without script, and a buyer whose stock read failed all see them all.
+ */
+import Layout from '../../../layouts/Layout.astro';
+import ProductListing from '../../../components/shop/ProductListing.astro';
+import { EVERY_LOCALE, langOf, localeOf, localeParams } from '../../../lib/locale';
+import { site } from '../../../lib/site';
+
+const HIDE_SOLD_OUT = false;
+
+/** The collection listed at `/shop` where the shop's `products` role names none: the shop is off and its files were left. */
+const listedHere = () => site.collections.find((one) => one.pages && site.listingOf(one.name, '') === '/shop');
+
+// `getStaticPaths` runs apart from the rest of this file, so it says the same in its own words.
+export function getStaticPaths() {
+  const here = site.collections.some((one) => one.pages && site.listingOf(one.name, '') === '/shop');
+  return site.rolesOf('shop') !== undefined || here ? localeParams() : [];
+}
+
+const locale = localeOf(Astro.url.pathname);
+const shopIsOn = site.rolesOf('shop') !== undefined;
+const name = site.rolesOf('shop')?.products ?? listedHere()!.name;
+const collection = site.collection(name)!;
+const products = site.entries(name, { locale });
+const heading = site.words(collection.label, langOf(locale));
+// The page the listing is, where the content has one: its SEO and its name, in this language.
+const listedAtBase = site.listingOf(name, '');
+const ownPage = listedAtBase === undefined ? undefined : site.page(listedAtBase, locale);
+const seoWords = (key: string): string => (typeof ownPage?.seo[key] === 'string' ? (ownPage.seo[key] as string).trim() : '');
+// A listing exists in every language the site has.
+const alternates = EVERY_LOCALE.flatMap((one) => {
+  const address = site.listingOf(name, one);
+  return address === undefined ? [] : [{ locale: one, address }];
+});
+---
+
+<Layout title={seoWords('title') || ownPage?.name?.trim() || heading} description={seoWords('description')} alternates={alternates}>
+  <main id="content" class="shop-page">
+    <h1 data-jtk-fixed>{heading}</h1>
+    <ProductListing entries={products} collection={collection} locale={locale} hideSoldOut={HIDE_SOLD_OUT && shopIsOn} />
+  </main>
+</Layout>
+
+<style>
+  .shop-page {
+    display: grid;
+    gap: var(--space-5, 1.5rem);
+    width: min(var(--shell, 72rem), 100%);
+    margin: 0 auto;
+    /* Clear of the header that floats over the page, as the example's entries are (look.css, `.entry`). */
+    padding: clamp(7rem, 16vh, 10rem) var(--gutter, 1.25rem) clamp(2.5rem, 6vw, 4.5rem);
+  }
+  .shop-page > * {
+    min-width: 0;
+  }
+  .shop-page h1 {
+    margin: 0;
+    font-size: var(--step-3, 2rem);
+    line-height: 1.05;
+  }
+</style>

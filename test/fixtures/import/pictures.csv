@@ -1,0 +1,3 @@
+Handle,Title,SKU,Price,Size,Images
+t-shirt-fox,T-Shirt Fox,FOX-S,29.90,S,"{{origin}}/fox-1.jpg, fox-2.jpg"
+t-shirt-fox,,FOX-M,29.90,M,{{origin}}/fox-1.jpg

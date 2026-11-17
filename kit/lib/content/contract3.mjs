@@ -63,7 +63,8 @@
  * **Values are typed** (§3.4): money `{ minor, from?, on_request? }`, a
  * picture `{ src, alt?, focus?, poster? }`, a gallery's pictures and a list's
  * rows each with a `_key`, a reference an entry's id (an array of them where
- * the field says `many`), a select's options `[{ value, label }]`. Empty is
+ * the field says `many`), a select's options `[{ value, label }]`, a variant's
+ * picks `{ "<option _key>": "<value _key>" }`. Empty is
  * absent: `null`, `""` and `[]` are no value, as in contract 2 (§1, 6).
  *
  * ── the schema, as a template reads it ──────────────────────────────────────
@@ -655,6 +656,21 @@ export function contract3(byPath, names, { annotate, now }) {
       tappable: (key) => tappable(field(key)),
       minor: (key) => minorOf(values[key]),
       refs: (key) => resolved(field(key), values[key], how.locale ?? ''),
+      /**
+       * A variant's picks: an option's `_key` to the `_key` of one of its
+       * values (§3.4, the shop's `picks`), the same in every language — a
+       * translation never gives them, and the original's are read. Only an
+       * object every key and every value of which is a `_key` is picks; any
+       * other value reads as nothing picked, `{}`, as every kind is read: the
+       * door reads and the platform's judge says the fault
+       * (`JTK_E_PICKS_INVALID`).
+       */
+      picks(key) {
+        const one = values[key];
+        if (!isObject(one)) return {};
+        const pairs = Object.entries(one);
+        return pairs.every(([option, value]) => KEY.test(option) && typeof value === 'string' && KEY.test(value)) ? Object.fromEntries(pairs) : {};
+      },
       fromBase,
       lang: (key) => langAttr(fromBase(key)),
       rows(key) {

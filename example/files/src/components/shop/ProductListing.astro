@@ -1,0 +1,223 @@
+---
+/**
+ * The products' listing — a working base to copy and dress in the site's design
+ * (jtakeit-core wiki/102 stage 9, decision 6; the booking form's way, wiki/80).
+ *
+ * `jtk add shop` lays this file and the page that draws it
+ * (`src/pages/[...lang]/shop/index.astro`, at the products' `listing`: `/shop`
+ * and `/<lang>/shop`). Everything here is the site's: the markup, its order and
+ * wrappers, the classes, the styles below. What is not the site's is the
+ * behaviour — `@jtakeit/kit`'s `<jtk-listing>`, imported at the bottom — and
+ * the hooks it finds things by: a `data-*` attribute, never a class. Rename
+ * every class, draw the tiles as rows, put the price above the title; keep the
+ * hooks, and the listing keeps working. The list of them, and what each is for,
+ * is `@jtakeit/kit/shop/hooks` (`LISTING`); a hook left out is said in the
+ * browser's console where the listing hides.
+ *
+ * ── what is the kit's, and what is the page's ───────────────────────────────
+ *
+ * Each tile is a product's: its title and cover, annotated as the entry's
+ * (the page-qualified path a tile has, as the blog's cards do), and its lowest
+ * price on sale — «from CHF 89» where its variants differ, the price where
+ * they do not — annotated as the cheapest variant's. A product with no
+ * variant on sale that has a price says none.
+ *
+ * `hideSoldOut` is the site's own choice, off in the page `jtk add shop` lays.
+ * With it, the root says `data-hide-sold-out`, and once the page has loaded
+ * the element asks the shop what is left (`/api/stock`, a hundred products at
+ * a time) and sets `hidden` on each tile whose product nobody can buy, and on
+ * each group left with no tile — its heading with it, since the heading is in
+ * the group. Where that leaves no tile at all, the element writes
+ * `[data-listing-empty]`'s sentence (`listingEmpty`, handed over in
+ * `data-words`) and shows it, so a buyer is not left with a heading and nothing
+ * under it. Nothing about stock is in this file or in the content. The built
+ * page lists every product either way: a crawler, a reader without script,
+ * and a buyer whose stock read failed or stalled all see them all, and only
+ * the element, only where it is asked, hides one.
+ *
+ * Grouped where the collection has a `group` (`site.groupsOf`): each group's
+ * heading is that category's, annotated as it, a select's label the
+ * repository's and fixed. A tile's title is the heading below it: `h2` in a
+ * flat listing, `h3` under a group's.
+ *
+ * There is no `<noscript>`: without script this is the whole listing, and it
+ * says nothing a reader who has none misses.
+ */
+import { Image } from 'astro:assets';
+import type { Collection, Entry, Row } from '@jtakeit/kit/content';
+import { fromPrice, productFacts } from '@jtakeit/kit/shop';
+import { shopWordsFor } from '@jtakeit/kit/shop/words';
+import { money, priceWords } from '@jtakeit/kit/money';
+import { site } from '../../lib/site';
+import { href, titleOf } from '../../lib/entries';
+import { langOf } from '../../lib/locale';
+import { under } from '../../lib/under';
+import { isUpload, uploaded } from '../../lib/uploads';
+import { photo } from '../../lib/photos';
+
+interface Props {
+  /** The products to list, in the listing's order, in the page's language (`site.entries`). */
+  entries: Entry[];
+  /** Their collection, the one the shop's `products` role names. */
+  collection: Collection;
+  /** The page's language: `''` for the site's own, the tag of any other. */
+  locale: string;
+  /** Hide the tiles of what is sold out once the page has loaded: the site's own choice, no unless the page says it. */
+  hideSoldOut?: boolean;
+}
+
+const { entries, collection, locale, hideSoldOut = false } = Astro.props;
+const LANG = langOf(locale);
+const W = shopWordsFor(LANG);
+// The word the element says where hiding leaves no tile, handed over in the page's language.
+const SAID = ['listingEmpty'];
+const words = Object.fromEntries(SAID.map((key) => [key, W[key]]));
+const say = (minor: number): string => money(minor, site.currency, LANG);
+// Under their headings where the collection is grouped; one run with none where it is not.
+const groups = (site.groupsOf(collection.name, entries, locale) ?? [{ entries }]).filter((run) => run.entries.length > 0);
+const isGrouped = groups.some((one) => one.heading !== undefined);
+const Title = isGrouped ? 'h3' : 'h2';
+
+/** A list's row by the key the facts name it by: its `_key`, or its place. */
+const rowOf = (rows: Row[], key: string): Row | undefined => rows.find((row) => (row.key ?? String(row.index)) === key);
+const fileOf = (src: string): ImageMetadata | undefined => (src === '' ? undefined : isUpload(src) ? uploaded(src) : photo(src));
+
+/** What a tile says of a product: its title, its cover, its lowest price on sale and the variant it is. */
+const tileOf = (entry: Entry) => {
+  const { fields } = entry;
+  const facts = productFacts(entry, site.currency);
+  const least = fromPrice(facts);
+  const onSale = facts.variants.filter((one) => one.onSale && one.price !== undefined);
+  const cheapest = least === undefined ? undefined : onSale.find((one) => one.price === least);
+  // «from CHF 89» where the variants on sale are not all one price, the price where they are.
+  const price = least === undefined ? '' : new Set(onSale.map((one) => one.price)).size > 1 ? priceWords(LANG).from.replace('{amount}', say(least)) : say(least);
+  const picture = fields.field('cover')?.kind === 'media' ? fields.picture('cover') : undefined;
+  return {
+    entry,
+    title: titleOf(entry),
+    cover: picture?.src ? fileOf(picture.src) : undefined,
+    alt: picture?.alt ?? '',
+    coverAt: fields.tappable('cover') ? picture?.['data-jtk-path'] : undefined,
+    price,
+    priceAt: cheapest === undefined ? undefined : rowOf(fields.rows('variants'), cheapest.key)?.at('price'),
+  };
+};
+---
+
+<jtk-listing class="shop">
+  <div class="shop__in" data-listing data-api={under('/api/')} data-locale={LANG} data-words={JSON.stringify(words)} data-hide-sold-out={hideSoldOut ? '' : undefined}>
+    {
+      groups.map((run) => (
+        <div class="shop__group" data-listing-group>
+          {run.heading && (
+            <h2 class="shop__heading" {...run.heading.at} {...(run.heading.entry?.fields.lang('title') ?? {})} data-jtk-fixed={run.heading.fixed ? true : undefined}>{run.heading.text}</h2>
+          )}
+          <ul class="shop__tiles">
+            {
+              run.entries.map((entry) => {
+                const tile = tileOf(entry);
+                return (
+                  <li class="tile" data-product-tile data-product={entry.id}>
+                    <a class="tile__link" href={href(entry)}>
+                      {tile.cover !== undefined && (
+                        <Image class="tile__cover" src={tile.cover} alt={tile.alt} data-jtk-path={tile.coverAt} widths={[480, 960]} sizes="(min-width: 900px) 20rem, 92vw" layout="none" />
+                      )}
+                      <div class="tile__body">
+                        <Title class="tile__title" {...tile.title.at} data-jtk-fixed={tile.title.fixed ? true : undefined}>{tile.title.text}</Title>
+                        {tile.price !== '' && <p class="tile__price" {...(tile.priceAt ?? { 'data-jtk-fixed': true })}>{tile.price}</p>}
+                      </div>
+                    </a>
+                  </li>
+                );
+              })
+            }
+          </ul>
+        </div>
+      ))
+    }
+    <p class="shop__empty" data-listing-empty role="status" hidden></p>
+  </div>
+</jtk-listing>
+
+<script>
+  import '@jtakeit/kit/elements/shop-listing';
+</script>
+
+<style>
+  /*
+   * The look — the scaffold's, and the first thing to change, in the site's
+   * tokens. Classes are scoped to this file. The rules the behaviour needs
+   * (`[hidden]` winning over the `display` below, a focus ring) the element
+   * puts on the page.
+   */
+  .shop {
+    display: block;
+  }
+  .shop__in {
+    display: grid;
+    gap: var(--space-6, 2.5rem);
+  }
+  .shop__empty {
+    margin: 0;
+    font-size: var(--step-1, 1.25rem);
+    color: var(--ink-quiet);
+  }
+  .shop__group {
+    display: grid;
+    gap: var(--space-4, 1rem);
+  }
+  .shop__heading {
+    margin: 0;
+    font-size: var(--step-2, 1.5rem);
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+  }
+  .shop__tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+    gap: var(--space-5, 1.5rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .tile {
+    display: grid;
+    min-width: 0;
+  }
+  .tile__link {
+    display: grid;
+    align-content: start;
+    height: 100%;
+    overflow: hidden;
+    color: inherit;
+    text-decoration: none;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--r-3, 1rem);
+  }
+  .tile__link:hover .tile__title {
+    text-decoration: underline;
+  }
+  .tile__cover {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    background: var(--paper-deep, var(--panel));
+  }
+  .tile__body {
+    display: grid;
+    gap: 0.25rem;
+    padding: var(--space-4, 1rem);
+  }
+  .tile__title {
+    margin: 0;
+    font-size: var(--step-1, 1.25rem);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+  .tile__price {
+    margin: 0;
+    color: var(--ink-quiet);
+  }
+</style>

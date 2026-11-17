@@ -1,0 +1,81 @@
+{
+  "v": 1,
+  "settings": {
+    "zones": [
+      {
+        "_key": "ch",
+        "name": "Schweiz",
+        "countries": [
+          {
+            "_key": "c1",
+            "country": "CH"
+          },
+          {
+            "_key": "c2",
+            "country": "LI"
+          }
+        ]
+      },
+      {
+        "_key": "eu",
+        "name": "EU",
+        "countries": [
+          {
+            "_key": "c1",
+            "country": "DE"
+          }
+        ]
+      }
+    ],
+    "methods": [
+      {
+        "_key": "economy",
+        "zone": "ch",
+        "name": "PostPac Economy",
+        "bands": [
+          {
+            "_key": "b1",
+            "class": "parcel",
+            "up_to": 2000,
+            "price": {
+              "minor": 900
+            }
+          },
+          {
+            "_key": "b2",
+            "class": "parcel",
+            "up_to": 10000,
+            "price": {
+              "minor": 1200
+            }
+          },
+          {
+            "_key": "b3",
+            "class": "parcel",
+            "up_to": 30000,
+            "price": {
+              "minor": 2100
+            }
+          }
+        ],
+        "free_above": {
+          "minor": 10000
+        }
+      },
+      {
+        "_key": "pickup",
+        "zone": "ch",
+        "name": "Abholung im Laden",
+        "pickup": true
+      },
+      {
+        "_key": "eu-post",
+        "zone": "eu",
+        "name": "Post EU",
+        "price": {
+          "minor": 1900
+        }
+      }
+    ]
+  }
+}

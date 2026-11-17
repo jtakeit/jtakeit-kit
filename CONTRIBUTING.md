@@ -14,7 +14,10 @@ server.
   scaffold laid out and built.
 - A release is `npm run release -- bump …` and `npm run release -- publish`
   (`scripts/release.mjs`): the versions in three files and the lockfile move
-  together, and nothing is published from a branch.
+  together, and nothing is published from a branch. A fix to the kit, the
+  scaffold or the example after `bump` changes the tarball the template's
+  lockfile names: `npm run release -- bump --again` writes it again at the same
+  versions, and `publish` refuses until it has.
 - The kit's checker is a copy of the platform's judge, kept honest by
   `jtk catalogue --judge` (see `kit/lib/codes.mjs`); a change to a code or a
   rule starts on the platform's side.

@@ -1,0 +1,285 @@
+---
+/**
+ * The checkout step — a working base to copy and dress in the site's design
+ * (jtakeit-core wiki/102 stage 9, decision 6; the booking form's way, wiki/80).
+ *
+ * `jtk add shop` lays this file, and the cart's page draws it under the cart
+ * (`src/pages/[...lang]/cart.astro`). Everything here is the site's: the
+ * markup, its order and wrappers, the classes, the styles below. What is not
+ * the site's is the behaviour — `@jtakeit/kit`'s `<jtk-checkout>`, imported at
+ * the bottom — and the hooks it finds things by: a `data-*` attribute or a
+ * control's `name`, never a class. Rename every class, put the address
+ * beside the buyer, draw *Pay* as you like; keep the hooks, and the checkout
+ * works. The list of them, and what each is for, is `@jtakeit/kit/shop/hooks`
+ * (`CHECKOUT`); a hook left out is said in the browser's console.
+ *
+ * ── what is the kit's, and what is the page's ───────────────────────────────
+ *
+ * The step is hidden until the cart's *To checkout* hands on: the cart writes
+ * the country and the method it chose into the browser's cart and says
+ * `jtk:to-checkout`, and the element shows this form, takes the focus to its
+ * heading and asks the shop what the stored cart comes to — so the total in
+ * `[data-total]` is what the shop prices at that moment, and that total is
+ * what is sent. A pick-up asks no address: `[data-address]` is hidden for one.
+ * *incl. VAT* (`[data-vat]`), the customs sentence (`[data-abroad]`) and *You
+ * can pay in your own currency* (`[data-own-currency]`) are said where the shop
+ * says them.
+ *
+ * *Pay* sends the buyer, the address and the total with one `attempt`, made
+ * when it is first pressed and sent again, the same, on every retry, so a
+ * press is never two orders; where the host has an anti-bot widget it is
+ * drawn into `[data-challenge]`, and a fresh token goes with every call that
+ * carries the cart. Then Stripe's page — or, for every answer the shop gives
+ * instead, what it says, beside the field it is about where it is one. The
+ * buyer comes back from Stripe's page to `data-return`: the order's page, in
+ * this page's language and under the build's base, `/order` and `/en/order`.
+ *
+ * The step needs JavaScript, as the cart above it does, and is only reached
+ * through it: the cart's own `<noscript>` sentence says so for both.
+ */
+import { shopWordsFor } from '@jtakeit/kit/shop/words';
+import { under } from '../../lib/under';
+import { langOf, withLocale } from '../../lib/locale';
+
+interface Props {
+  /** The page's language: `''` for the site's own, the tag of any other. */
+  locale: string;
+}
+
+const { locale } = Astro.props;
+const LANG = langOf(locale);
+const W = shopWordsFor(LANG);
+
+// The words the element says as the checkout goes, handed over in the page's language: every answer the shop can give a
+// press among them (`CHECKOUT_WORDS` of `@jtakeit/kit/shop/checkout`).
+const SAID = [
+  'vat', 'customs', 'ownCurrency', 'paying', 'cartEmpty', 'cartFailed', 'cartUnavailable', 'cannotSend', 'address',
+  'fault.name', 'fault.email', 'fault.phone', 'fault.line1', 'fault.line2', 'fault.postal_code', 'fault.city',
+  'error.try_again', 'error.total', 'error.refused', 'error.method', 'error.short', 'short.some', 'short.none', 'error.paid', 'error.challenge', 'challengeUnavailable', 'error.buyer',
+  'error.too_many', 'error.open_checkouts', 'error.attempt', 'error.lapsed', 'error.too_late', 'error.too_small', 'error.no_payee',
+  'error.return', 'error.nothing_to_pay', 'error.showcase', 'error.internal',
+];
+const words = Object.fromEntries(SAID.map((key) => [key, W[key]]));
+---
+
+<jtk-checkout class="checkout">
+  <form
+    class="checkout__in"
+    data-checkout
+    data-api={under('/api/')}
+    data-locale={LANG}
+    data-return={under(withLocale(locale, '/order'))}
+    data-words={JSON.stringify(words)}
+    data-jtk-fixed
+    novalidate
+    hidden
+    aria-labelledby="checkout-title"
+  >
+    <h2 class="checkout__title" id="checkout-title" tabindex="-1">{W.checkout}</h2>
+
+    <fieldset class="checkout__group">
+      <legend class="checkout__legend">{W.details}</legend>
+      <div class="checkout__field">
+        <label class="checkout__label" for="checkout-name">{W['field.name']}</label>
+        <input class="checkout__input" id="checkout-name" name="name" type="text" autocomplete="name" maxlength="120" required />
+      </div>
+      <div class="checkout__field">
+        <label class="checkout__label" for="checkout-email">{W['field.email']}</label>
+        <input class="checkout__input" id="checkout-email" name="email" type="email" autocomplete="email" maxlength="254" required />
+      </div>
+      <div class="checkout__field">
+        <label class="checkout__label" for="checkout-phone">{W['field.phone']}</label>
+        <input class="checkout__input" id="checkout-phone" name="phone" type="tel" autocomplete="tel" maxlength="40" />
+      </div>
+    </fieldset>
+
+    <fieldset class="checkout__group" data-address>
+      <legend class="checkout__legend">{W.delivery}</legend>
+      <div class="checkout__field">
+        <label class="checkout__label" for="checkout-line1">{W['field.line1']}</label>
+        <input class="checkout__input" id="checkout-line1" name="line1" type="text" autocomplete="address-line1" maxlength="200" required />
+      </div>
+      <div class="checkout__field">
+        <label class="checkout__label" for="checkout-line2">{W['field.line2']}</label>
+        <input class="checkout__input" id="checkout-line2" name="line2" type="text" autocomplete="address-line2" maxlength="200" />
+      </div>
+      <div class="checkout__pair">
+        <div class="checkout__field">
+          <label class="checkout__label" for="checkout-postal-code">{W['field.postal_code']}</label>
+          <input class="checkout__input" id="checkout-postal-code" name="postal_code" type="text" autocomplete="postal-code" maxlength="20" required />
+        </div>
+        <div class="checkout__field">
+          <label class="checkout__label" for="checkout-city">{W['field.city']}</label>
+          <input class="checkout__input" id="checkout-city" name="city" type="text" autocomplete="address-level2" maxlength="100" required />
+        </div>
+      </div>
+    </fieldset>
+
+    <p class="checkout__sum" aria-live="polite" aria-atomic="true">
+      <span class="checkout__label">{W.total}</span>
+      <span class="checkout__amount" data-total></span>
+      <span class="checkout__vat" data-vat hidden></span>
+    </p>
+    <p class="checkout__notice" data-abroad hidden></p>
+    <div class="checkout__challenge" data-challenge hidden></div>
+    <p class="checkout__error" data-checkout-error role="alert" hidden></p>
+    <div class="checkout__go">
+      <button class="checkout__pay" type="submit" data-pay>{W.pay}</button>
+      <p class="checkout__own" data-own-currency hidden></p>
+    </div>
+  </form>
+</jtk-checkout>
+
+<script>
+  import '@jtakeit/kit/elements/shop-checkout';
+</script>
+
+<style>
+  /*
+   * The look — the scaffold's, and the first thing to change, in the site's
+   * tokens. Classes are scoped to this file; what the element draws itself — a
+   * fault under a field — carries a data attribute and is styled with
+   * `:global(...)` under the checkout. The rules the behaviour needs
+   * (`[hidden]`, a focus ring) the element puts on the page; the step's own
+   * `hidden` is kept here too, so that it stays hidden where no script runs.
+   */
+  .checkout {
+    display: block;
+  }
+  .checkout__in {
+    display: grid;
+    gap: var(--space-5, 1.5rem);
+    max-width: 46rem;
+    padding-top: var(--space-5, 1.5rem);
+    border-top: 1px solid var(--line);
+  }
+  .checkout__in[hidden] {
+    display: none;
+  }
+  .checkout__in > * {
+    min-width: 0;
+  }
+  /* What takes the focus — the heading as the step opens, the first field said to be wrong — is scrolled to clear of
+     the header that floats over the page. */
+  .checkout__title,
+  .checkout__input,
+  .checkout__pay {
+    scroll-margin-block-start: 6rem;
+  }
+  .checkout__title {
+    margin: 0;
+    font-size: var(--step-2, 1.5rem);
+    line-height: 1.1;
+  }
+
+  /* the buyer and the address */
+  .checkout__group {
+    display: grid;
+    gap: var(--space-4, 1rem);
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .checkout__legend {
+    padding: 0;
+    margin-bottom: var(--space-2, 0.5rem);
+    font-weight: 600;
+  }
+  .checkout__field {
+    display: grid;
+    align-content: start;
+    gap: 0.35rem;
+    min-width: 0;
+  }
+  .checkout__pair {
+    display: grid;
+    grid-template-columns: minmax(0, 10rem) minmax(0, 1fr);
+    gap: var(--space-4, 1rem);
+  }
+  @media (max-width: 30rem) {
+    .checkout__pair {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  .checkout__label {
+    font-size: 0.875rem;
+    color: var(--ink-quiet);
+  }
+  .checkout__input {
+    font: inherit;
+    width: min(100%, 28rem);
+    min-height: 2.75rem;
+    padding: 0.5rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-2, 0.5rem);
+    background: var(--paper);
+    color: var(--ink);
+  }
+  .checkout__input[aria-invalid='true'] {
+    border-color: color-mix(in srgb, var(--danger, #b3261e) 55%, var(--ink));
+  }
+  /* A fault said under its field, and the summary: the danger colour mixed with the ink, so it keeps its contrast on any palette (WCAG 1.4.3). */
+  .checkout :global([data-fault]),
+  .checkout__error {
+    margin: 0;
+    font-size: 0.875rem;
+    color: color-mix(in srgb, var(--danger, #b3261e) 55%, var(--ink));
+  }
+
+  /* what it comes to, and the way on */
+  .checkout__sum {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.75rem;
+    margin: 0;
+    padding-top: var(--space-4, 1rem);
+    border-top: 1px solid var(--line);
+  }
+  .checkout__amount {
+    font-size: var(--step-2, 1.5rem);
+    font-weight: 600;
+  }
+  .checkout__vat,
+  .checkout__own {
+    color: var(--ink-quiet);
+  }
+  .checkout__notice {
+    margin: 0;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-2, 0.5rem);
+    background: var(--panel);
+  }
+  .checkout__go {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+  }
+  .checkout__own {
+    margin: 0;
+    font-size: 0.875rem;
+  }
+  .checkout__pay {
+    min-height: 2.75rem;
+    padding: 0.7rem 1.6rem;
+    border: 0;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--paper);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .checkout__pay[aria-disabled='true'] {
+    background: color-mix(in srgb, var(--ink) 10%, var(--paper));
+    color: var(--ink-quiet);
+  }
+  /* Forced colors drops the fill a button is drawn by, and with `border: 0` nothing is left of it but its words: it keeps an edge. */
+  @media (forced-colors: active) {
+    .checkout__pay {
+      border: 2px solid ButtonText;
+    }
+  }
+</style>

@@ -25,7 +25,11 @@ import { unnamed } from '../lib/content/identity.mjs';
 import { judgeTranslations } from '../lib/translations.mjs';
 
 const KITS = fileURLToPath(new URL('./fixtures/kits/', import.meta.url));
-const KINDS = readdirSync(KITS).filter((one) => one.endsWith('.json')).map((one) => one.slice(0, -'.json'.length)).sort();
+// The shop's kit (shop.json) is in the folder too, and is no kind of business's: it is the shop module's, in
+// contract 3's words, laid by `jtk add shop` (test/units.mjs) and refused here (meta-kits.test.mjs). It is
+// jtakeit-core's backend/api/kits/sets/shop.json, copied read-only at de68106d (wiki/102 stage 9: Ruling 217, the
+// tax code and the customs tariff number `no_tap_target`; Ruling 248, what the second question asks of *Advanced*).
+const KINDS = readdirSync(KITS).filter((one) => one.endsWith('.json') && one !== 'shop.json').map((one) => one.slice(0, -'.json'.length)).sort();
 const kitOf = (kind) => readKit(join(KITS, `${kind}.json`));
 const jtkit = fileURLToPath(new URL('../bin/jtkit.mjs', import.meta.url));
 const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -127,7 +131,7 @@ for (const kind of KINDS) {
       const services = kit.catalogue.collections.find((one) => one.name === kit.catalogue.modules.bookings.services);
       assert.equal(settings.v, 1);
       assert.equal(settings.settings.kit, kind);
-      assert.equal(settings.settings.kit_version, kit.version);
+      assert.equal(settings.settings.kit_version, String(kit.version), 'a file says a number, the settings say text');
       assert.equal(settings.settings.page, services.prefix);
 
       const files = await readJtk(dir);

@@ -1,0 +1,19 @@
+{
+  "v": 1,
+  "decimal": ".",
+  "group": { "by": "Handle" },
+  "fields": {
+    "title": "Title",
+    "description": "Body (HTML)",
+    "slug": "Handle",
+    "sku": "Variant SKU",
+    "price": "Variant Price",
+    "weight": "Variant Grams",
+    "stock": "Variant Inventory Qty",
+    "visible": { "column": "Status", "yes": ["active"] },
+    "options": [
+      { "name": "Option1 Name", "value": "Option1 Value", "none": ["Default Title"] },
+      { "name": "Option2 Name", "value": "Option2 Value" }
+    ]
+  }
+}

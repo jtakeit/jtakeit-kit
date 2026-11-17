@@ -12,12 +12,38 @@ export interface Kit {
   entries: { collection: string; slug: string; fields: Record<string, unknown> }[];
 }
 
+/**
+ * The platform's shop kit: the shop module's, in contract 3's words, laid over
+ * a contract-3 site by `jtk add shop`. A label is the words per language, and
+ * the settings' rows are written in the site's.
+ */
+export interface ShopKit {
+  kind: 'shop';
+  module: 'shop';
+  contract: 3;
+  /** As `GET /v1/kits/shop` says it: a file's number made text, which is what the settings record as `kit_version`. */
+  version: string;
+  sum: string;
+  changes?: { from: string; says: string }[];
+  about: string;
+  ask: string[];
+  catalogue: { blocks: Record<string, unknown>[]; collections: Record<string, unknown>[]; modules: { shop: { products: string } } };
+  settings: { zones: Record<string, unknown>[]; methods: Record<string, unknown>[] };
+  entries: [];
+}
+
 export const API: string;
 export function readKit(file: string): Kit;
 export function fetchKit(kind: string, api?: string): Promise<Kit>;
 export function loadKit(asked: string, api?: string): Promise<Kit>;
+/** A booking kit checked for its shape; the shop's kit is refused, naming `npx @jtakeit/astro add shop`. */
 export function checkKit(kit: unknown, from: string): Kit;
+/** The platform's shop kit: a file, or `GET <api>/v1/kits/shop` with the version it answers. */
+export function loadShopKit(file?: string, api?: string): Promise<ShopKit>;
+/** A kit checked for the shop's shape, wherever it came from; a booking kit is refused naming `add booking`. */
+export function checkShopKit(kit: unknown, from: string): ShopKit;
 export function kitLanguage(locale: string | undefined): 'uk' | 'en' | 'de' | 'ru' | 'es' | 'it' | 'pt' | 'fr';
+/** The diary's settings for a booking kit; `kit_version` is text, a file's number made so. */
 export function kitSettings(kit: Kit): Record<string, unknown>;
 export function kitEntries(kit: Kit, locale: string): [string, Record<string, unknown>][];
 /** The keys only contract 3 has, which a contract-2 schema is refused for: on the catalogue, on a field at any depth, on a collection. */

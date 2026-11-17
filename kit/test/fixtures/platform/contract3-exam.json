@@ -9,7 +9,7 @@
     },
     {
       "name": "everything contract 3 adds, said where it may be said",
-    "about": "Every word contract 3 has and contract 2 has not, each where it may be said: `sku`, a price's `qualifiers`, `integer`, options as `{value, label}`, references `{to, many, on_delete}`, a list in a row, `localized`, roles on the shared text, routes written per language, `untranslated`.",
+    "about": "Every word contract 3 has and contract 2 has not, each where it may be said: a variant's `sku`, its `picks` and an `integer` weight in its list's row, a price's `qualifiers`, options as `{value, label}`, references `{to, many, on_delete}`, a list in a row, `localized`, roles on the shared text, routes written per language, `untranslated`.",
     "example": true,
       "expect": "",
       "catalogue": {
@@ -17,9 +17,7 @@
         "blocks": [
           {"type": "product", "v": 1, "label": "Produkt", "fields": [
             {"key": "title", "label": "Name", "kind": "text", "required": true, "max": 80},
-            {"key": "sku", "label": "Artikelnummer", "kind": "sku"},
             {"key": "price", "label": "Preis", "kind": "money", "qualifiers": ["from", "on_request"], "min": 0},
-            {"key": "weight", "label": "Gewicht", "kind": "number", "integer": true},
             {"key": "colour", "label": "Farbe", "kind": "select", "options": [{"value": "red", "label": {"de": "Rot", "en": "Red"}}, {"value": "oak"}]},
             {"key": "category", "label": "Kategorie", "kind": "ref", "ref": {"to": ["categories"], "on_delete": "nullify"}},
             {"key": "related", "label": "Dazu", "kind": "ref", "ref": {"to": ["categories", "tags"], "many": true}},
@@ -28,6 +26,12 @@
             {"key": "options", "label": "Optionen", "kind": "list", "of": [
               {"key": "name", "label": "Name", "kind": "text"},
               {"key": "values", "label": "Werte", "kind": "list", "of": [{"key": "label", "label": "Wert", "kind": "text"}]}
+            ]},
+            {"key": "variants", "label": "Varianten", "kind": "list", "of": [
+              {"key": "sku", "label": "Artikelnummer", "kind": "sku"},
+              {"key": "price", "label": "Preis", "kind": "money"},
+              {"key": "weight", "label": "Gewicht", "kind": "number", "integer": true},
+              {"key": "picks", "label": "Wahl", "kind": "picks"}
             ]}
           ]},
           {"type": "category", "v": 1, "label": "Kategorie", "fields": [
@@ -396,6 +400,62 @@
       "name": "an order that is neither manual nor a field",
       "expect": "JTK_E_ORDER_INVALID", "at": "collections.works.order",
       "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "work", "v": 1, "label": "Werk", "fields": [{"key": "title", "label": "Titel", "kind": "text", "required": true}]}], "collections": [{"name": "works", "label": "Werke", "type": "work", "route": {"detail": "/werke/{slug}"}, "order": "alphabetical"}]}
+    },
+
+    {
+      "name": "a SKU two products say, one of them hidden, in two cases",
+      "about": "The shop's rule over its products, said of the tree's entries beside the schema: a SKU names one variant on the whole site, whatever its case, and a hidden product's SKUs are still the stock's.",
+      "expect": "JTK_E_SKU_TAKEN", "at": "jtk/entries/products/t-shirt-fox.json fields.variants[v1].sku",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "product", "v": 1, "label": "Produkt", "fields": [
+        {"key": "title", "label": "Titel", "kind": "text", "required": true},
+        {"key": "variants", "label": "Varianten", "kind": "list", "required": true, "of": [
+          {"key": "sku", "label": "Artikelnummer", "kind": "sku", "required": true}, {"key": "price", "label": "Preis", "kind": "money", "required": true}]}]}],
+        "collections": [{"name": "products", "label": "Produkte", "type": "product", "route": {"detail": "/produkte/{slug}"}}],
+        "modules": {"shop": {"products": "products"}}},
+      "entries": {
+        "jtk/entries/products/cap-fox.json": {"id": "0193a5c3-6b1c-7d20-9a31-5e4d3c2b1b01", "collection": "products", "slug": "cap-fox", "visible": false,
+          "fields": {"title": "Cap «Fox»", "variants": [{"_key": "c1", "sku": "FOX-S-RED", "price": {"minor": 1990}}]}},
+        "jtk/entries/products/t-shirt-fox.json": {"id": "0193a5c3-6b1c-7d20-9a31-5e4d3c2b1b02", "collection": "products", "slug": "t-shirt-fox", "visible": true,
+          "fields": {"title": "T-shirt «Fox»", "variants": [{"_key": "v1", "sku": "fox-s-red", "price": {"minor": 2990}}]}}
+      }
+    },
+    {
+      "name": "a variant that picks an option its product has not got",
+      "expect": "JTK_E_PICKS_INVALID", "at": "jtk/entries/products/t-shirt-fox.json fields.variants[v1].picks",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "product", "v": 1, "label": "Produkt", "fields": [
+        {"key": "title", "label": "Titel", "kind": "text", "required": true},
+        {"key": "options", "label": "Optionen", "kind": "list", "of": [
+          {"key": "name", "label": "Name", "kind": "text", "required": true},
+          {"key": "values", "label": "Werte", "kind": "list", "required": true, "of": [{"key": "label", "label": "Bezeichnung", "kind": "text", "required": true}]}]},
+        {"key": "variants", "label": "Varianten", "kind": "list", "required": true, "of": [
+          {"key": "sku", "label": "Artikelnummer", "kind": "sku", "required": true}, {"key": "price", "label": "Preis", "kind": "money", "required": true},
+          {"key": "picks", "label": "Wahl", "kind": "picks"}]}]}],
+        "collections": [{"name": "products", "label": "Produkte", "type": "product", "route": {"detail": "/produkte/{slug}"}}],
+        "modules": {"shop": {"products": "products"}}},
+      "entries": {
+        "jtk/entries/products/t-shirt-fox.json": {"id": "0193a5c3-6b1c-7d20-9a31-5e4d3c2b1b03", "collection": "products", "slug": "t-shirt-fox", "visible": true,
+          "fields": {"title": "T-shirt «Fox»", "options": [{"_key": "size", "name": "Size", "values": [{"_key": "s", "label": "S"}]}],
+            "variants": [{"_key": "v1", "sku": "FOX-S-RED", "price": {"minor": 2990}, "picks": {"size": "s", "colour": "red"}}]}}
+      }
+    },
+    {
+      "name": "a text a buyer writes, with no length",
+      "expect": "JTK_E_PRODUCT_INVALID", "at": "jtk/entries/products/tasche-nach-mass.json fields.customizations[tag].max",
+      "catalogue": {"contract": 3, "locale": "de", "blocks": [{"type": "product", "v": 1, "label": "Produkt", "fields": [
+        {"key": "title", "label": "Titel", "kind": "text", "required": true},
+        {"key": "variants", "label": "Varianten", "kind": "list", "required": true, "of": [
+          {"key": "sku", "label": "Artikelnummer", "kind": "sku", "required": true}, {"key": "price", "label": "Preis", "kind": "money", "required": true}]},
+        {"key": "customizations", "label": "Anpassungen", "kind": "list", "of": [
+          {"key": "name", "label": "Frage", "kind": "text", "required": true},
+          {"key": "kind", "label": "Art", "kind": "select", "required": true, "options": [{"value": "choice"}, {"value": "yes_no"}, {"value": "text"}]},
+          {"key": "max", "label": "Zeichen", "kind": "number", "integer": true}]}]}],
+        "collections": [{"name": "products", "label": "Produkte", "type": "product", "route": {"detail": "/produkte/{slug}"}}],
+        "modules": {"shop": {"products": "products"}}},
+      "entries": {
+        "jtk/entries/products/tasche-nach-mass.json": {"id": "0193a5c3-6b1c-7d20-9a31-5e4d3c2b1b04", "collection": "products", "slug": "tasche-nach-mass", "visible": true,
+          "fields": {"title": "Tasche nach Mass", "variants": [{"_key": "v1", "sku": "TASCHE-S", "price": {"minor": 8900}}],
+            "customizations": [{"_key": "tag", "name": "Name auf dem Etikett", "kind": "text"}]}}
+      }
     },
     {
       "name": "a form that puts a gallery beside a field",

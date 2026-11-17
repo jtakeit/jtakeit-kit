@@ -1,0 +1,89 @@
+{
+  "id": "0193a5c3-6b1c-7d20-9a31-5e4d3c2b1a03",
+  "collection": "products",
+  "slug": "tasche-nach-mass",
+  "rank": "c",
+  "visible": true,
+  "fields": {
+    "title": "Tasche nach Mass",
+    "options": [
+      {
+        "_key": "size",
+        "name": "Grösse",
+        "values": [
+          {
+            "_key": "s",
+            "label": "Klein"
+          },
+          {
+            "_key": "l",
+            "label": "Gross"
+          }
+        ]
+      }
+    ],
+    "variants": [
+      {
+        "_key": "v1",
+        "sku": "TASCHE-S",
+        "price": {
+          "minor": 8900
+        },
+        "weight": 600,
+        "picks": {
+          "size": "s"
+        }
+      },
+      {
+        "_key": "v2",
+        "sku": "TASCHE-L",
+        "price": {
+          "minor": 11900
+        },
+        "weight": 900,
+        "picks": {
+          "size": "l"
+        }
+      }
+    ],
+    "customizations": [
+      {
+        "_key": "body",
+        "name": "Farbe des Körpers",
+        "kind": "choice",
+        "required": true,
+        "choices": [
+          {
+            "_key": "natur",
+            "label": "Natur"
+          },
+          {
+            "_key": "schwarz",
+            "label": "Schwarz"
+          },
+          {
+            "_key": "rot",
+            "label": "Rot",
+            "adds": {
+              "minor": 1000
+            }
+          }
+        ]
+      },
+      {
+        "_key": "zipper",
+        "name": "Reissverschluss",
+        "kind": "yes_no",
+        "adds": {
+          "minor": 500
+        }
+      },
+      {
+        "_key": "tag",
+        "name": "Name auf dem Etikett",
+        "kind": "text",
+        "max": 20
+      }
+    ]
+  }
+}

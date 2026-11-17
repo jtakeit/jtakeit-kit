@@ -23,9 +23,9 @@ builds whatever writes a `dist/` that keeps the contract; on another generator
 the site is laid out by hand — the platform's guide *connecting a site*
 (`jtakeit:///guides/connecting-a-site.md`), under *On another generator* — and takes the pieces worth not writing twice from
 [`@jtakeit/kit`](https://github.com/jtakeit/jtakeit-kit/tree/main/kit), which this scaffold uses itself: the booking
-form and the enquiry form as markup and as elements, `_meta.json` and the
-specimen rule, a kit laid out on contract 3 (`npx @jtakeit/kit apply --kit
-<kind>`), and the schema tool.
+form and the enquiry form as markup and as elements, the storefront's five
+elements, `_meta.json` and the specimen rule, a kit laid out on contract 3
+(`npx @jtakeit/kit apply --kit <kind>`), and the schema tool.
 
 ## Scaffold
 
@@ -122,6 +122,26 @@ ids from `--site <id>` (with `JTK_API` and `JTK_TOKEN`, as `schema --judge` does
 every file that reads what moved with its lines, and ends by building the site and running
 `schema` against the build (`--no-check` skips that).
 
+## The shop
+
+A business that sells goods adds the platform's shop to its site (contract 3):
+
+```
+npx @jtakeit/astro add shop [--country CH]          the products, a zone and two methods to price, the storefront to copy
+npx @jtakeit/astro import products <file.csv> --map <mapping.json> [--media '<url>'] [--dry-run]
+```
+
+`add shop` lays the products collection bound to the shop module, the settings
+in `jtk/modules/shop.json`, and a product's page, the cart, the checkout, the page
+after payment and a listing as components to copy and dress — their behaviour is
+five elements of [`@jtakeit/kit`](https://github.com/jtakeit/jtakeit-kit/tree/main/kit),
+speaking `shop/1` to the platform. Stock, prices, shipping and VAT are the
+platform's, never computed on a page; on localhost the dev server answers the
+shop from the site's own files, and pays nothing. `import products` reads a
+WooCommerce or a Shopify export, or any CSV, through a mapping: the business's
+SKUs kept, the pictures fetched on this machine and sent with `media push`, the
+starting stock in a file for `set_stock`. [docs/shop.md](docs/shop.md).
+
 ## Pictures: the site's media library
 
 A picture the owner may change — every value of a `media` field, every picture in
@@ -169,7 +189,7 @@ refuses one that has not.
 
 The whole of it, with the reasons, is in [docs/](docs/): `kit.md` first, then
 `catalogue.md`, `pages.md`, `collections.md`, `lead-form.md`, `booking.md`,
-`photos.md` and `media.md`, and the rest as you need them — `live.md` for how the panel draws a
+`shop.md`, `photos.md` and `media.md`, and the rest as you need them — `live.md` for how the panel draws a
 saved draft at once. The platform's own reference —
 field kinds, modules, every error code — is what the MCP server hands an agent on
 `initialize`: `jtakeit:///` resources, starting with `jtakeit:///guides/start.md`.
@@ -177,8 +197,8 @@ It is not published on the web yet.
 
 ## Not here, on purpose
 
-No deploy: the platform builds and serves. No server code: the form and the diary
-are the platform's endpoints beside the site. No design system: what the site looks
+No deploy: the platform builds and serves. No server code: the form, the diary and
+the shop are the platform's endpoints beside the site. No design system: what the site looks
 like is the point of writing it.
 
 ## Licence

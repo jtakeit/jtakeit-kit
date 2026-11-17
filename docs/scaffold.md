@@ -247,9 +247,10 @@ scaffold's is a build that installs from scratch.
 
 **There is no deploy.** The platform builds and serves; a site has no
 `wrangler`, no Pages Functions, no server code of its own. The form posts to
-`/api/lead` and the diary to `/api/availability`, `/api/book` and the rest, all
-of which the platform answers beside the site ([lead-form.md](lead-form.md),
-[booking.md](booking.md)).
+`/api/lead` and the diary to `/api/availability`, `/api/book` and the rest, and
+a shop reads `/api/stock`, asks `/api/shipping` and `/api/checkout` and
+`/api/order` — all of which the platform answers beside the site
+([lead-form.md](lead-form.md), [booking.md](booking.md), [shop.md](shop.md)).
 
 ## Accessibility
 

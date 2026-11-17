@@ -1,0 +1,236 @@
+{
+  "contract": 3,
+  "generator": "test",
+  "locale": "de",
+  "blocks": [
+    {
+      "type": "text",
+      "v": 1,
+      "label": "Text",
+      "fields": [
+        {
+          "key": "body",
+          "label": "Text",
+          "kind": "markdown",
+          "client_editable": true
+        }
+      ]
+    },
+    {
+      "type": "product",
+      "v": 1,
+      "label": "Produkt",
+      "fields": [
+        {
+          "key": "title",
+          "label": "Titel",
+          "kind": "text",
+          "required": true,
+          "client_editable": true
+        },
+        {
+          "key": "options",
+          "label": "Optionen",
+          "kind": "list",
+          "client_editable": true,
+          "of": [
+            {
+              "key": "name",
+              "label": "Name",
+              "kind": "text",
+              "required": true,
+              "client_editable": true
+            },
+            {
+              "key": "values",
+              "label": "Werte",
+              "kind": "list",
+              "required": true,
+              "client_editable": true,
+              "of": [
+                {
+                  "key": "label",
+                  "label": "Bezeichnung",
+                  "kind": "text",
+                  "required": true,
+                  "client_editable": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "variants",
+          "label": "Varianten",
+          "kind": "list",
+          "required": true,
+          "client_editable": true,
+          "of": [
+            {
+              "key": "sku",
+              "label": "Artikelnummer",
+              "kind": "sku",
+              "required": true,
+              "client_editable": true
+            },
+            {
+              "key": "price",
+              "label": "Preis",
+              "kind": "money",
+              "required": true,
+              "client_editable": true
+            },
+            {
+              "key": "weight",
+              "label": "Gewicht (g)",
+              "kind": "number",
+              "integer": true,
+              "client_editable": true
+            },
+            {
+              "key": "picks",
+              "label": "Auswahl",
+              "kind": "picks",
+              "client_editable": true
+            },
+            {
+              "key": "on_sale",
+              "label": "Im Verkauf",
+              "kind": "bool",
+              "client_editable": true
+            }
+          ]
+        },
+        {
+          "key": "customizations",
+          "label": "Anpassungen",
+          "kind": "list",
+          "client_editable": true,
+          "of": [
+            {
+              "key": "name",
+              "label": "Frage",
+              "kind": "text",
+              "required": true,
+              "client_editable": true
+            },
+            {
+              "key": "kind",
+              "label": "Art",
+              "kind": "select",
+              "required": true,
+              "client_editable": true,
+              "options": [
+                {
+                  "value": "choice"
+                },
+                {
+                  "value": "yes_no"
+                },
+                {
+                  "value": "text"
+                }
+              ]
+            },
+            {
+              "key": "required",
+              "label": "Pflicht",
+              "kind": "bool",
+              "client_editable": true
+            },
+            {
+              "key": "max",
+              "label": "Höchstens (Zeichen)",
+              "kind": "number",
+              "integer": true,
+              "client_editable": true
+            },
+            {
+              "key": "choices",
+              "label": "Auswahl",
+              "kind": "list",
+              "client_editable": true,
+              "of": [
+                {
+                  "key": "label",
+                  "label": "Bezeichnung",
+                  "kind": "text",
+                  "required": true,
+                  "client_editable": true
+                },
+                {
+                  "key": "adds",
+                  "label": "Aufpreis",
+                  "kind": "money",
+                  "client_editable": true
+                }
+              ]
+            },
+            {
+              "key": "adds",
+              "label": "Aufpreis",
+              "kind": "money",
+              "client_editable": true
+            }
+          ]
+        },
+        {
+          "key": "tracked",
+          "label": "Bestand zählen",
+          "kind": "bool",
+          "client_editable": true
+        },
+        {
+          "key": "size_class",
+          "label": "Versandgrösse",
+          "kind": "select",
+          "client_editable": true,
+          "options": [
+            {
+              "value": "letter"
+            },
+            {
+              "value": "parcel"
+            },
+            {
+              "value": "bulky"
+            }
+          ]
+        },
+        {
+          "key": "tax_code",
+          "label": "Steuercode",
+          "kind": "text",
+          "client_editable": true
+        },
+        {
+          "key": "tariff_number",
+          "label": "Zolltarifnummer",
+          "kind": "text",
+          "client_editable": true
+        },
+        {
+          "key": "made_in",
+          "label": "Herkunftsland",
+          "kind": "text",
+          "client_editable": true
+        }
+      ]
+    }
+  ],
+  "collections": [
+    {
+      "name": "products",
+      "label": "Produkte",
+      "type": "product",
+      "route": {
+        "detail": "/produkte/{slug}"
+      }
+    }
+  ],
+  "modules": {
+    "shop": {
+      "products": "products"
+    }
+  }
+}

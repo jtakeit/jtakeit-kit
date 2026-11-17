@@ -1,0 +1,19 @@
+{
+  "v": 1,
+  "decimal": ".",
+  "group": { "parent": "Parent", "of": ["ID", "SKU"] },
+  "skip": { "column": "Type", "values": ["grouped", "external"] },
+  "fields": {
+    "title": { "de-CH": "Name", "en": "Name (EN)" },
+    "description": "Description",
+    "sku": "SKU",
+    "price": "Regular price",
+    "weight": { "column": "Weight (kg)", "unit": "kg" },
+    "stock": "Stock",
+    "visible": { "column": "Published", "yes": ["1"] },
+    "options": [
+      { "name": "Attribute 1 name", "value": "Attribute 1 value(s)" },
+      { "name": "Attribute 2 name", "value": "Attribute 2 value(s)" }
+    ]
+  }
+}

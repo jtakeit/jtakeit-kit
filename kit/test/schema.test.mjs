@@ -6,9 +6,19 @@
 // Two fixtures are the platform's, copied read-only from jtakeit-core
 // (backend/api/registry/testdata): kit-schema.json (at 4ce8af97), which is the
 // schema content-v3.test.mjs reads, as the platform's registry is tested on
-// it; and contract3-exam.json (at 358dc217, with its upcasters and forms), the
-// exam the platform's judge of contract 3 sits (TestTheContract3Exam). Copied, not fetched, so this suite runs
-// offline; a change on the platform's side is found by `jtk schema --judge`.
+// it; and contract3-exam.json, the exam the platform's judge of contract 3
+// sits (TestTheContract3Exam), every case as it stands at ec81f9c7 — its
+// upcasters and forms (358dc217) and the shop's, put together when the shop's
+// branch took this one's main (17 November 2026). Copied, not fetched, so this
+// suite runs offline; a change on the platform's side is found by `jtk schema
+// --judge`.
+//
+// The shop's are copied at jtakeit-core dca045af (wiki/102 stage 9, Task 9.7's
+// commit): from registry/testdata/contract3.json, the exam's *everything
+// contract 3 adds* case and its three product cases; shop-schema.json, the `jtk/schema.json` of
+// sites/testdata/layout3/shop.json, the golden shop's schema; and, in
+// fixtures/overlays, refused-shared-value-picks.json, from
+// sites/testdata/overlays.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync, spawn } from 'node:child_process';
@@ -135,9 +145,15 @@ test('the exports in any order write the same bytes', async () => {
 test('the platform\'s exam of contract 3, sat offline: every specimen gets its code at its place, every good schema nothing', () => {
   const exam = JSON.parse(fixture('contract3-exam.json'));
   assert.ok(exam.cases.length > 40);
+  assert.equal(exam.cases.filter((one) => one.entries !== undefined).length, 3, 'the shop\'s three cases, each with the entries the import judges');
   for (const specimen of exam.cases) {
     const found = judgeSchema(JSON.stringify(specimen.catalogue));
     if (specimen.expect === '') {
+      assert.deepEqual(found, [], specimen.name);
+    } else if (specimen.entries !== undefined) {
+      // The case is about its entries (the shop's rule over its products), which
+      // the import judges and `--judge` asks the platform for: the schema it
+      // sits on is a good one, and this copy holds it to no fault.
       assert.deepEqual(found, [], specimen.name);
     } else {
       assert.ok(found.some((one) => one.code === specimen.expect && (specimen.at === undefined || one.path === specimen.at)), `${specimen.name}: expected ${specimen.expect} at ${specimen.at}, said ${JSON.stringify(found)}`);
@@ -156,6 +172,41 @@ test('the kit\'s fixture: the one thing the platform says of it, and nothing wit
   const schema = JSON.parse(fixture('kit-schema.json'));
   schema.blocks.find((one) => one.type === 'rate').fields.push({ key: 'takes', label: 'Dauer', kind: 'duration' });
   assert.deepEqual(judgeSchema(JSON.stringify(schema)), []);
+});
+
+test("a shop's schema is judged as the platform judges it", () => {
+  const golden = JSON.parse(fixture('shop-schema.json'));
+  assert.deepEqual(judgeSchema(fixture('shop-schema.json')), [], 'the golden shop, as the platform holds it');
+
+  const product = (schema) => schema.blocks.find((one) => one.type === 'product');
+  const field = (schema, key) => product(schema).fields.find((one) => one.key === key);
+  const row = (schema, list, key) => field(schema, list).of.find((one) => one.key === key);
+  /** The golden schema with one change, and what the judge says of it: [code, path] of each finding. */
+  const changed = (change) => {
+    const schema = structuredClone(golden);
+    change(schema);
+    return judgeSchema(JSON.stringify(schema)).map((one) => [one.code, one.path]);
+  };
+  const ROLE = 'JTK_E_MODULE_ROLE_INVALID';
+
+  // The shop's own rules over a products type, each at the list it says it of.
+  assert.deepEqual(changed((schema) => { row(schema, 'variants', 'price').qualifiers = ['from']; }), [[ROLE, 'blocks.product.variants']], 'a price that may say from is not one amount');
+  assert.deepEqual(changed((schema) => { delete row(schema, 'variants', 'sku').required; }), [[ROLE, 'blocks.product.variants']], 'every variant needs its SKU');
+  assert.deepEqual(changed((schema) => { delete row(schema, 'variants', 'weight').integer; }), [[ROLE, 'blocks.product.variants']], 'a weight is whole grams');
+  assert.deepEqual(changed((schema) => { field(schema, 'variants').localized = true; }), [[ROLE, 'blocks.product.variants']], 'a SKU, a price and a pick are the original\'s in every language');
+
+  // What the registry reads of a role, at the depth the shop has it: a row of a row.
+  assert.deepEqual(changed((schema) => { row(schema, 'options', 'values').of = [{ key: 'note', label: 'Notiz', kind: 'text' }]; }), [[ROLE, 'blocks.product.options.values']], 'a value without its label, placed as the registry places a row of a row');
+  assert.deepEqual(changed((schema) => { row(schema, 'customizations', 'kind').options.push({ value: 'colour' }); }), [[ROLE, 'blocks.product.customizations']], 'a customization the shop does not read');
+
+  // The role itself.
+  assert.deepEqual(changed((schema) => { schema.modules.shop = {}; }), [[ROLE, 'modules.shop']]);
+  const none = judgeSchema(JSON.stringify({ ...golden, modules: { shop: {} } }));
+  assert.match(none[0].says, /the shop module needs "products": what the shop sells/);
+  assert.deepEqual(changed((schema) => { schema.collections[0].untranslated = 'hide'; }), [['JTK_E_ATTRIBUTE_INVALID', 'collections.products.untranslated']], 'what is sold is in every language, as what is booked is');
+  const cart = judgeSchema(JSON.stringify({ ...golden, modules: { ...golden.modules, cart: { products: 'products' } } }));
+  assert.deepEqual(cart.map((one) => [one.code, one.path]), [['JTK_E_MODULE_UNKNOWN', 'modules.cart']]);
+  assert.match(cart[0].says, /this service knows bookings, shop/);
 });
 
 test('jtk schema refuses what the platform refuses, writes what it reads, and the file is stable', () => {

@@ -1,0 +1,13 @@
+{
+  "v": 1,
+  "decimal": ".",
+  "group": { "by": "Handle" },
+  "fields": {
+    "title": "Title",
+    "slug": "Handle",
+    "sku": "SKU",
+    "price": "Price",
+    "options": [{ "name": { "is": "Size" }, "value": "Size" }],
+    "pictures": "Images"
+  }
+}

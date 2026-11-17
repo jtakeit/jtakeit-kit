@@ -1,0 +1,247 @@
+{
+  "name": "refused-shared-value-picks",
+  "schema": {
+    "contract": 3,
+    "locale": "de-CH",
+    "locales": [
+      "en",
+      "fr"
+    ],
+    "blocks": [
+      {
+        "type": "text",
+        "v": 1,
+        "label": "Text",
+        "fields": [
+          {
+            "key": "body",
+            "label": "Text",
+            "kind": "markdown",
+            "client_editable": true
+          }
+        ]
+      },
+      {
+        "type": "category",
+        "v": 1,
+        "label": "Category",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Name",
+            "kind": "text",
+            "required": true,
+            "client_editable": true
+          }
+        ]
+      },
+      {
+        "type": "product",
+        "v": 1,
+        "label": "Product",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Title",
+            "kind": "text",
+            "required": true,
+            "client_editable": true
+          },
+          {
+            "key": "options",
+            "label": "Options",
+            "kind": "list",
+            "of": [
+              {
+                "key": "name",
+                "label": "Name",
+                "kind": "text"
+              },
+              {
+                "key": "values",
+                "label": "Values",
+                "kind": "list",
+                "of": [
+                  {
+                    "key": "label",
+                    "label": "Label",
+                    "kind": "text"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "key": "variants",
+            "label": "Variants",
+            "kind": "list",
+            "of": [
+              {
+                "key": "sku",
+                "label": "SKU",
+                "kind": "sku"
+              },
+              {
+                "key": "picks",
+                "label": "Picks",
+                "kind": "picks"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "page_seo": [
+      {
+        "key": "title",
+        "label": "Title",
+        "kind": "text"
+      },
+      {
+        "key": "description",
+        "label": "Description",
+        "kind": "textarea"
+      }
+    ],
+    "collections": [
+      {
+        "name": "products",
+        "label": "Products",
+        "type": "product",
+        "route": {
+          "detail": "/produkte/{slug}"
+        }
+      },
+      {
+        "name": "categories",
+        "label": "Categories",
+        "type": "category",
+        "route": {
+          "detail": "/kategorien/{slug}"
+        },
+        "untranslated": "hide"
+      }
+    ]
+  },
+  "base": {
+    "id": "0193a5c3-2c3b-7e55-8b21-7d3a0e4f5c66",
+    "collection": "products",
+    "slug": "fuchs",
+    "rank": "a1",
+    "visible": true,
+    "seo": {
+      "title": "Fuchs"
+    },
+    "fields": {
+      "title": "Fuchs-Shirt",
+      "options": [
+        {
+          "_key": "size",
+          "name": "Grösse",
+          "values": [
+            {
+              "_key": "s",
+              "label": "S"
+            },
+            {
+              "_key": "m",
+              "label": "M"
+            }
+          ]
+        }
+      ],
+      "variants": [
+        {
+          "_key": "v1",
+          "sku": "FOX-S",
+          "picks": {
+            "size": "s"
+          }
+        },
+        {
+          "_key": "v2",
+          "sku": "FOX-M",
+          "picks": {
+            "size": "m"
+          }
+        }
+      ]
+    },
+    "blocks": []
+  },
+  "translation": {
+    "of": "0193a5c3-2c3b-7e55-8b21-7d3a0e4f5c66",
+    "locale": "en",
+    "slug": "fox",
+    "seo": {
+      "title": "Fox"
+    },
+    "fields": {
+      "title": "Fox shirt",
+      "variants": [
+        {
+          "_key": "v1",
+          "picks": {
+            "size": "m"
+          }
+        }
+      ]
+    },
+    "blocks": []
+  },
+  "locale": "en",
+  "merged": {
+    "id": "0193a5c3-2c3b-7e55-8b21-7d3a0e4f5c66",
+    "collection": "products",
+    "slug": "fox",
+    "rank": "a1",
+    "visible": true,
+    "seo": {
+      "title": "Fox"
+    },
+    "fields": {
+      "title": "Fox shirt",
+      "options": [
+        {
+          "_key": "size",
+          "name": "Grösse",
+          "values": [
+            {
+              "_key": "s",
+              "label": "S"
+            },
+            {
+              "_key": "m",
+              "label": "M"
+            }
+          ]
+        }
+      ],
+      "variants": [
+        {
+          "_key": "v1",
+          "sku": "FOX-S",
+          "picks": {
+            "size": "s"
+          }
+        },
+        {
+          "_key": "v2",
+          "sku": "FOX-M",
+          "picks": {
+            "size": "m"
+          }
+        }
+      ]
+    },
+    "blocks": []
+  },
+  "fromBase": [
+    "fields.options[size].name",
+    "fields.options[size].values[s].label",
+    "fields.options[size].values[m].label"
+  ],
+  "outdated": [],
+  "advice": [],
+  "refused": "JTK_E_TRANSLATION_SHARED"
+}

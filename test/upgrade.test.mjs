@@ -604,9 +604,12 @@ test('B2: a file replaced brings the scaffold\'s files it imports, or is left wi
     assert.match(run.stdout, /✗ the site will not be drawn live: the owner sees a change only after a build — the first thing for a person below \(docs\/live\.md\)/);
     assert.match(run.stdout, /\n {2}1\. the site will not be drawn live — the panel's preview will not draw this site live — the owner sees a change only after a build, and cannot preview an entry's card before it is saved\. RENDER = 'live' is not said, src\/live\/ is not laid in, because: .*src\/lib\/entryLoader\.ts is the site's own, not the scaffold's — it keeps beside each rendered body what it was made of.*\. Wire the site's own pages into src\/live as docs\/live\.md says/);
     assert.match(run.stdout, /say why in BRIEF\.md\./);
-    // Where the site came from, by its files, and not by the catalogue's generator.
-    assert.match(run.stdout, /the scaffold this site came from, by its files: 0\.17\.0 \(\d+ untouched files, most of them\)/);
-    // The planted loader is 0.16.0's, whose own imports (specimens.mjs, ./schedule) a 0.17.0 scaffold has not got: the developer's file, not the move's.
+    // Where the site came from, by its files, and not by the catalogue's generator: this
+    // package's scaffold, whatever version it is (it said 0.17.0 by hand, and the shop's bump broke it).
+    const version = JSON.parse(readFileSync(resolve('package.json'), 'utf8')).version;
+    assert.ok(run.stdout.includes(`the scaffold this site came from, by its files: ${version} (`), said(run));
+    assert.match(run.stdout, /by its files: [\d.]+ \(\d+ untouched files, most of them\)/);
+    // The planted loader is 0.16.0's, whose own imports (specimens.mjs, ./schedule) the scaffold has not got now: the developer's file, not the move's.
     assert.deepEqual(unresolved(site).filter((one) => !one.startsWith('src/lib/entryLoader.ts ')), []);
   } finally {
     rmSync(join(site, '..'), { recursive: true, force: true });

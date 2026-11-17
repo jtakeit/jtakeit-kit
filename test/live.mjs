@@ -32,6 +32,7 @@ import { tmpdir } from 'node:os';
 import { join, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { liveCheck } from './live-harness.mjs';
+import { layShop } from './shop-site.mjs';
 
 const bin = resolve('bin/jtk.mjs');
 const dir = mkdtempSync(join(tmpdir(), 'jtk-live-'));
@@ -243,6 +244,24 @@ try {
       execFileSync('node', [bin, 'schema', '--emit-only', '--root', example], { stdio: 'pipe' });
     }
     console.log('live: the example with each of its eight sections removed — judged, linted, and every page drawn live equal to its build');
+  }
+
+  // ── 7 · the test shop: a product drawn live ───────────────────────────────
+  // The storefront's product page is the entry page's (src/pages/[...entry]
+  // .astro draws Product.astro for the shop's products), so the live route
+  // draws it as it draws any entry: every page of the test shop equal to its
+  // build, and a price changed in the draft on the product's page at once,
+  // with no build between (jtakeit-core wiki/102 stage 10, wiki/89 §12).
+  {
+    const shop = await layShop(dir);
+    const drawn = await liveCheck(shop, { url: SITE_URL, fail, said: '7 · the test shop' });
+    const at = drawn.pages.find((path) => path.endsWith('/kerzenstaender/'));
+    if (at === undefined) fail(`7 · the test shop built no page for the Kerzenständer: ${drawn.pages.join(' ')}`);
+    drawn.state.draft['/jtk/entries/products/kerzenstaender.json'].fields.variants[0].price = { minor: 3150 };
+    const got = (await drawn.page(at)).text;
+    if (!got.includes('31.50')) fail(`7 · a price changed in a draft is not on ${at} drawn live`);
+    drawn.close();
+    console.log(`live: the test shop — ${drawn.pages.length} pages drawn live are the built ones; a product's price is drawn from the draft`);
   }
 } finally {
   server?.close();

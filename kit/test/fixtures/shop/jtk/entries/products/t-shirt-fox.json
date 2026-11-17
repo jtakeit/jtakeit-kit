@@ -1,0 +1,94 @@
+{
+  "id": "0193a5c3-6b1c-7d20-9a31-5e4d3c2b1a02",
+  "collection": "products",
+  "slug": "t-shirt-fox",
+  "rank": "b",
+  "visible": true,
+  "fields": {
+    "title": "T-shirt «Fox»",
+    "options": [
+      {
+        "_key": "size",
+        "name": "Size",
+        "values": [
+          {
+            "_key": "s",
+            "label": "S"
+          },
+          {
+            "_key": "m",
+            "label": "M"
+          }
+        ]
+      },
+      {
+        "_key": "colour",
+        "name": "Colour",
+        "values": [
+          {
+            "_key": "red",
+            "label": "Red"
+          },
+          {
+            "_key": "blue",
+            "label": "Blue"
+          }
+        ]
+      }
+    ],
+    "variants": [
+      {
+        "_key": "v1",
+        "sku": "FOX-S-RED",
+        "price": {
+          "minor": 2990
+        },
+        "weight": 180,
+        "picks": {
+          "size": "s",
+          "colour": "red"
+        },
+        "on_sale": true
+      },
+      {
+        "_key": "v2",
+        "sku": "FOX-M-RED",
+        "price": {
+          "minor": 2990
+        },
+        "weight": 190,
+        "picks": {
+          "size": "m",
+          "colour": "red"
+        },
+        "on_sale": true
+      },
+      {
+        "_key": "v3",
+        "sku": "FOX-S-BLUE",
+        "price": {
+          "minor": 2990
+        },
+        "weight": 180,
+        "picks": {
+          "size": "s",
+          "colour": "blue"
+        },
+        "on_sale": true
+      },
+      {
+        "_key": "v4",
+        "sku": "FOX-M-BLUE",
+        "price": {
+          "minor": 2990
+        },
+        "weight": 190,
+        "picks": {
+          "size": "m",
+          "colour": "blue"
+        },
+        "on_sale": true
+      }
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 {
   "name": "@jtakeit/kit",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "description": "The framework-free half of a site on jtakeit: the booking form as an element and as markup, for Astro through @jtakeit/astro and for any other generator directly",
   "license": "MIT",
   "type": "module",
@@ -27,6 +27,38 @@
     "./booking/hooks": {
       "types": "./types/hooks.d.ts",
       "default": "./lib/booking/hooks.mjs"
+    },
+    "./shop": {
+      "types": "./types/shop.d.ts",
+      "default": "./lib/shop/product.mjs"
+    },
+    "./shop/words": {
+      "types": "./types/shop-words.d.ts",
+      "default": "./lib/shop/words.mjs"
+    },
+    "./shop/hooks": {
+      "types": "./types/shop-hooks.d.ts",
+      "default": "./lib/shop/hooks.mjs"
+    },
+    "./shop/cart": {
+      "types": "./types/shop-cart.d.ts",
+      "default": "./lib/shop/cart.mjs"
+    },
+    "./shop/checkout": {
+      "types": "./types/shop-checkout.d.ts",
+      "default": "./lib/shop/checkout.mjs"
+    },
+    "./shop/order": {
+      "types": "./types/shop-order.d.ts",
+      "default": "./lib/shop/order.mjs"
+    },
+    "./shop/listing": {
+      "types": "./types/shop-listing.d.ts",
+      "default": "./lib/shop/listing.mjs"
+    },
+    "./shop/skus": {
+      "types": "./types/shop-skus.d.ts",
+      "default": "./lib/shop/skus.mjs"
     },
     "./lead": {
       "types": "./types/lead.d.ts",
@@ -58,6 +90,7 @@
       "default": "./lib/upgrade3.mjs"
     },
     "./devdiary": "./lib/devdiary.mjs",
+    "./devshop": "./lib/devshop.mjs",
     "./codes": "./lib/codes.mjs",
     "./elements/booking": {
       "types": "./types/elements-booking.d.ts",
@@ -74,6 +107,30 @@
     "./elements/alive": {
       "types": "./types/alive.d.ts",
       "default": "./elements/alive.js"
+    },
+    "./elements/shop-wire": {
+      "types": "./types/elements-shop.d.ts",
+      "default": "./elements/shop-wire.js"
+    },
+    "./elements/shop-product": {
+      "types": "./types/elements-shop.d.ts",
+      "default": "./elements/shop-product.js"
+    },
+    "./elements/shop-cart": {
+      "types": "./types/elements-shop.d.ts",
+      "default": "./elements/shop-cart.js"
+    },
+    "./elements/shop-checkout": {
+      "types": "./types/elements-shop.d.ts",
+      "default": "./elements/shop-checkout.js"
+    },
+    "./elements/shop-order": {
+      "types": "./types/elements-shop.d.ts",
+      "default": "./elements/shop-order.js"
+    },
+    "./elements/shop-listing": {
+      "types": "./types/elements-shop.d.ts",
+      "default": "./elements/shop-listing.js"
     },
     "./booking.css": "./booking.css",
     "./lead.css": "./lead.css",
@@ -100,6 +157,7 @@
       "types": "./types/content-node.d.ts",
       "default": "./lib/content/node.mjs"
     },
+    "./content/identity": "./lib/content/identity.mjs",
     "./live": {
       "types": "./types/live.d.ts",
       "default": "./lib/live.mjs"

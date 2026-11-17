@@ -1,0 +1,20 @@
+{
+  "id": "0193a5c3-6b1c-7d20-9a31-5e4d3c2b1a01",
+  "collection": "products",
+  "slug": "kerzenstaender",
+  "rank": "a",
+  "visible": true,
+  "fields": {
+    "title": "Kerzenständer",
+    "variants": [
+      {
+        "_key": "v1",
+        "sku": "KERZ-01",
+        "price": {
+          "minor": 2400
+        },
+        "weight": 450
+      }
+    ]
+  }
+}
