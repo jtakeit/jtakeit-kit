@@ -406,10 +406,34 @@ try {
     run = create('example-look', '--look', 'neon');
     if (run.status === 0 || !run.stderr.includes('brumy')) fail(`9 · --look neon was not refused with the list: ${run.stderr}`);
 
+    // The site without them is also one with no photograph in its hero and a country of several time zones
+    // (a barber's site on staging, 17 November 2026: the plate over the heading, «open» on the visitor's clock).
+    {
+      const index = json(without, 'jtk/pages/index.json');
+      delete index.blocks.find((one) => one.type === 'hero').image;
+      writeFileSync(join(without, 'jtk/pages/index.json'), `${JSON.stringify(index, null, 2)}\n`);
+      const shared = json(without, 'jtk/shared.json');
+      shared.blocks.find((one) => one.type === 'contacts').country = 'US';
+      writeFileSync(join(without, 'jtk/shared.json'), `${JSON.stringify(shared, null, 2)}\n`);
+    }
+
     // 9 · the example: built, judged and linted, and judged again built under a
     // path, where every address it writes must stay inside the site.
     judged(example, packed, 'the example');
     judged(join(dir, 'example-without'), packed, 'the example without the team and the testimonials');
+    {
+      // «Open now» on the business's clock: the zone of its country (CH) in the markup, the script's to read; none
+      // known (US), and the hours are shown with nothing claiming open or closed. The hero with no photograph is
+      // the bare one, its plate in the flow under the heading.
+      const home = text(example, 'dist/index.html');
+      const bare = text(without, 'dist/index.html');
+      // The attributes on their elements — the inlined script names `[data-hours-now]` too.
+      const nowDrawn = (html) => /<p class="hours__now[^"]*"[^>]* data-hours-now/.test(html);
+      if (!/<div class="hours[^"]*"[^>]* data-zone="Europe\/Zurich"/.test(home) || !nowDrawn(home)) fail('9 · the example\'s hours do not name the zone of its country, Europe/Zurich, for «open now»');
+      if (/class="hx hx--bare"/.test(home)) fail('9 · the example\'s hero, with its photograph, is drawn bare');
+      if (!/<div class="hours[^"]*"[^>]* data-hours=/.test(bare) || / data-zone="/.test(bare) || nowDrawn(bare)) fail('9 · a site in a country of several zones claims «open now», or draws no hours');
+      if (!/class="hx hx--bare"/.test(bare)) fail('9 · a hero with no photograph is not drawn bare (hx--bare)');
+    }
     {
       const prefixed = spawnSync('node', [bin, 'schema', '--root', example], { encoding: 'utf8' });
       if (prefixed.status !== 0 || !prefixed.stdout.includes('every address it emits stays inside the site')) fail(`9 · the example built under a path:\n${prefixed.stdout}\n${prefixed.stderr}`);

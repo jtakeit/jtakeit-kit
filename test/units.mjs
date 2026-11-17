@@ -25,6 +25,8 @@ import { join, relative, resolve } from 'node:path';
 import { judgeSchema } from '../kit/lib/judge3.mjs';
 import { loadShopKit } from '../kit/lib/kits.mjs';
 import { placeOf } from '../lib/units/photos.mjs';
+import { UNITS } from '../lib/units/index.mjs';
+import { wordsIn } from '../lib/units/units.mjs';
 
 const bin = resolve('bin/jtk.mjs');
 const kitFile = resolve('test/fixtures/kit-salon.json');
@@ -122,7 +124,7 @@ try {
     const site = copy(base, 'blog');
     ok(site, 'add', 'blog');
     const blocks = readFileSync(join(site, 'src/content/blocks.ts'), 'utf8');
-    if (!/^BLOCKS\.push\(BLOG_POST\);$/m.test(blocks) || !existsSync(join(site, 'jtk/entries/blog/a-morning-in-the-workshop.json')) || !existsSync(join(site, 'jtk/entries/blog/a-morning-in-the-workshop.en.json'))) fail('add blog did not turn the blog on with its example posts');
+    if (!/^BLOCKS\.push\(BLOG_POST\);$/m.test(blocks) || !existsSync(join(site, 'jtk/entries/blog/before-the-door-opens.json')) || !existsSync(join(site, 'jtk/entries/blog/before-the-door-opens.en.json'))) fail('add blog did not turn the blog on with its example posts');
     const home = JSON.parse(readFileSync(join(site, 'jtk/pages/index.json'), 'utf8'));
     if (home.blocks.map((one) => one.type).join() !== 'hero,values,services_list,gallery,team_list,testimonials,posts_latest,questions,cta_banner') fail(`add blog did not put the latest posts after the testimonials: ${home.blocks.map((one) => one.type)}`);
     const nav = JSON.parse(readFileSync(join(site, 'jtk/shared.json'), 'utf8')).blocks.find((one) => one.type === 'header').nav.map((one) => one.link).join();
@@ -130,6 +132,32 @@ try {
     ok(site, 'add', 'blog');
     ok(site, 'remove', 'blog');
     same(site, base, 'add blog then remove blog');
+  }
+  {
+    // A journal laid out by 0.18.0, in the words of a workshop the example no longer writes, is still the
+    // example's: `remove blog` takes it without --force (lib/units/modules.mjs, `former`).
+    const site = copy(base, 'blog-former');
+    ok(site, 'add', 'blog');
+    for (const [suffix, lang] of [['', 'de'], ['.en', 'en']]) {
+      const x = wordsIn(lang, 'Atelier Probe');
+      const now = UNITS.blog.entries(x);
+      const was = UNITS.blog.former.entries(x);
+      now.forEach((post, at) => {
+        const file = join(site, `jtk/entries/blog/${post.slug}${suffix}.json`);
+        const doc = JSON.parse(readFileSync(file, 'utf8'));
+        for (const key of Object.keys(doc.fields)) doc.fields[key] = was[at].fields[key];
+        if (suffix === '') doc.slug = was[at].slug;
+        rmSync(file);
+        writeFileSync(join(site, `jtk/entries/blog/${was[at].slug}${suffix}.json`), `${JSON.stringify(doc, null, 2)}\n`);
+      });
+      const page = join(site, `jtk/pages/index${suffix}.json`);
+      const home = JSON.parse(readFileSync(page, 'utf8'));
+      home.blocks.find((one) => one._key === 'post0001').title = UNITS.blog.former.home[0](x).title;
+      writeFileSync(page, `${JSON.stringify(home, null, 2)}\n`);
+    }
+    if (!existsSync(join(site, 'jtk/entries/blog/a-morning-in-the-workshop.json'))) fail('the former journal was not laid out for the test');
+    ok(site, 'remove', 'blog');
+    same(site, base, 'a journal of 0.18.0\'s words, removed');
   }
   {
     const site = copy(base, 'booking');

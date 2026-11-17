@@ -96,6 +96,13 @@ told so: the platform cannot fetch `media/jtk-example/…` for a build.
 A site laid out by 0.17.0 named them by slot — `example-hero`, a file in
 `src/assets/`. The same push adopts those.
 
+The example's words are any service business's — no sentence is a barber's,
+a clinic's or a workshop's — but its photographs are of one room (oak, linen,
+a workbench), and each one's description (`alt`) says what it shows. Replace
+a photograph and its description together; `example/prints.json` knows both,
+and the platform says where either is left. The hero without a photograph is
+drawn bare — the heading the whole width, the lead and the buttons under it.
+
 ## What comes next
 
 It ends by printing the platform's order (`jtakeit:///guides/start.md`), and

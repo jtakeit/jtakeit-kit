@@ -74,3 +74,65 @@ export function clock(minutes: unknown): string {
 
 /** The days in their order, Monday first. */
 export const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
+
+/**
+ * The time zone of a country that keeps one, by its two letters — what the
+ * shared contacts' `country` says. «Open now» is the business's clock, never
+ * the visitor's: a visitor abroad, or a browser on another zone, looking at a
+ * barber in Zurich at 18:58 Zurich time must read «closed» when the shop
+ * closes at 18:00. A country of several zones (the United States, Spain with
+ * the Canaries, Portugal with the Azores, Australia…) is not here: there the
+ * diary's own zone says it, or «open now» is not said at all.
+ */
+const COUNTRY_ZONES: Record<string, string> = {
+  AD: 'Europe/Andorra', AL: 'Europe/Tirane', AT: 'Europe/Vienna', BA: 'Europe/Sarajevo', BE: 'Europe/Brussels', BG: 'Europe/Sofia',
+  CH: 'Europe/Zurich', CZ: 'Europe/Prague', DE: 'Europe/Berlin', DK: 'Europe/Copenhagen', EE: 'Europe/Tallinn', FI: 'Europe/Helsinki',
+  FR: 'Europe/Paris', GB: 'Europe/London', GE: 'Asia/Tbilisi', GR: 'Europe/Athens', HR: 'Europe/Zagreb', HU: 'Europe/Budapest',
+  IE: 'Europe/Dublin', IS: 'Atlantic/Reykjavik', IT: 'Europe/Rome', LI: 'Europe/Vaduz', LT: 'Europe/Vilnius', LU: 'Europe/Luxembourg',
+  LV: 'Europe/Riga', MC: 'Europe/Monaco', MD: 'Europe/Chisinau', ME: 'Europe/Podgorica', MK: 'Europe/Skopje', MT: 'Europe/Malta',
+  NL: 'Europe/Amsterdam', NO: 'Europe/Oslo', PL: 'Europe/Warsaw', RO: 'Europe/Bucharest', RS: 'Europe/Belgrade', SE: 'Europe/Stockholm',
+  SI: 'Europe/Ljubljana', SK: 'Europe/Bratislava', SM: 'Europe/San_Marino', TR: 'Europe/Istanbul', UA: 'Europe/Kyiv', VA: 'Europe/Vatican',
+  AE: 'Asia/Dubai', IL: 'Asia/Jerusalem', IN: 'Asia/Kolkata', JP: 'Asia/Tokyo', KR: 'Asia/Seoul', SG: 'Asia/Singapore',
+};
+
+/**
+ * The zone the business's hours are on the clock of: the diary's own
+ * (`jtk/modules/bookings.json`'s `zone`) where the site takes bookings and
+ * says one, else its country's, where the country keeps one zone — `''`
+ * where neither says, and then nothing claims open or closed.
+ */
+export function zoneOf(diaryZone: unknown, country: unknown): string {
+  const said = typeof diaryZone === 'string' ? diaryZone.trim() : '';
+  if (said !== '') return said;
+  return COUNTRY_ZONES[typeof country === 'string' ? country.trim().toUpperCase() : ''] ?? '';
+}
+
+/** An opening span: the day (0 Monday … 6 Sunday), when it opens and when it closes, minutes from midnight. */
+export type Span = readonly [number, number, number];
+
+const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+/**
+ * Whether the hours are open at a moment, on the clock of a zone — the
+ * weekday and the time of day are the zone's (`Intl.DateTimeFormat` with
+ * `timeZone`), never the browser's own. A span that closes before it opens
+ * runs past midnight into the next day; one that closes as it opens is none. `undefined` where the zone is
+ * none, or one this browser does not know: then nothing is claimed.
+ */
+export function openAt(spans: readonly Span[], zone: string, at: Date): boolean | undefined {
+  if (zone === '') return undefined;
+  let parts: Intl.DateTimeFormatPart[];
+  try {
+    parts = new Intl.DateTimeFormat('en-GB', { timeZone: zone, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(at);
+  } catch {
+    return undefined;
+  }
+  const part = (type: string) => parts.find((one) => one.type === type)?.value ?? '';
+  const day = WEEKDAYS.indexOf(part('weekday'));
+  const minute = (Number(part('hour')) % 24) * 60 + Number(part('minute'));
+  if (day < 0 || !Number.isFinite(minute)) return undefined;
+  const yesterday = (day + 6) % 7;
+  return spans.some(([d, from, to]) =>
+    to >= from ? d === day && minute >= from && minute < to : (d === day && minute >= from) || (d === yesterday && minute < to),
+  );
+}
