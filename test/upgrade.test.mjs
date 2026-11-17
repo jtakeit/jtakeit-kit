@@ -76,7 +76,8 @@ test('a scaffold moves: the declaration in contract 3\'s words, every file at it
     assert.deepEqual(read(site, 'jtk/shared.json').blocks.map((one) => one.type), ['contacts']);
     // The form: contract 3's, every word on it the block's — the question's
     // words declared, and what a visitor read written in the site's language.
-    assert.match(run.stdout, /↻ src\/components\/LeadForm\.astro — the scaffold's [0-9.]+, untouched: replaced with the door's/);
+    // A version whose template moved nothing reads as a range (0.18.0–0.18.1): both are this file.
+    assert.match(run.stdout, /↻ src\/components\/LeadForm\.astro — the scaffold's [0-9.–]+, untouched: replaced with the door's/);
     assert.equal(readFileSync(join(site, 'src/components/LeadForm.astro'), 'utf8'), readFileSync(resolve('template/contract-3/src/components/LeadForm.astro'), 'utf8'));
     const banner = read(site, 'jtk/schema.json').blocks.find((one) => one.type === 'cta_banner');
     assert.deepEqual(banner.fields.at(-1), { key: 'topic_label', label: 'Label for the “topic” field', kind: 'text', max: 120, client_editable: true });
@@ -607,8 +608,9 @@ test('B2: a file replaced brings the scaffold\'s files it imports, or is left wi
     // Where the site came from, by its files, and not by the catalogue's generator: this
     // package's scaffold, whatever version it is (it said 0.17.0 by hand, and the shop's bump broke it).
     const version = JSON.parse(readFileSync(resolve('package.json'), 'utf8')).version;
-    assert.ok(run.stdout.includes(`the scaffold this site came from, by its files: ${version} (`), said(run));
-    assert.match(run.stdout, /by its files: [\d.]+ \(\d+ untouched files, most of them\)/);
+    // A release that moved no template file reads as a range ending in it (0.18.0–0.18.1).
+    assert.match(run.stdout, new RegExp(`the scaffold this site came from, by its files: (?:[\\d.]+–)?${version.replaceAll('.', '\\.')} \\(`), said(run));
+    assert.match(run.stdout, /by its files: [\d.–]+ \(\d+ untouched files, most of them\)/);
     // The planted loader is 0.16.0's, whose own imports (specimens.mjs, ./schedule) the scaffold has not got now: the developer's file, not the move's.
     assert.deepEqual(unresolved(site).filter((one) => !one.startsWith('src/lib/entryLoader.ts ')), []);
   } finally {
