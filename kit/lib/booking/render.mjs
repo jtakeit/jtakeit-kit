@@ -240,7 +240,7 @@ export function renderBookingForm(props) {
     : `<label class="field__label" for="booking-service" data-say="service">${esc(WORDS.service)}</label>
         <select class="field__input" id="booking-service" name="service" required>
           ${runs.map((run) => {
-            const options = run.items.map((one) => `<option value="${esc(one.slug)}"${langOf(one)}>${esc(one.label)}</option>`).join('\n');
+            const options = run.items.map((one) => `<option value="${esc(one.slug)}" data-name="${esc(one.title)}"${langOf(one)}>${esc(one.label)}</option>`).join('\n');
             return run.group !== '' ? `<optgroup label="${esc(run.group)}">${options}</optgroup>` : options;
           }).join('\n')}
         </select>`;

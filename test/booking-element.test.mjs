@@ -111,6 +111,8 @@ test('a link opens the form on its service, its day and its time, and on the sec
   assert.equal(await pressed(page).getAttribute('data-start'), `${DAY}T17:00:00Z`);
   assert.ok(asked.some((one) => one.get('service') === 'colour' && one.has('from')), 'the day asked of the platform for the linked service');
   assert.match(await page.locator('.booking__summary').innerText(), /Colour/);
+  // The summary names the service; its length and price have rows of their own.
+  assert.equal(await page.locator('.booking__summary-row dd').first().innerText(), 'Colour');
   assert.equal((await said(page)).at(-1)?.start, `${DAY}T17:00:00Z`);
   await context.close();
 });

@@ -304,7 +304,10 @@ export function twoSteps(form, words, lang) {
     const names = /** @type {HTMLInputElement[]} */ ([...form.querySelectorAll('input[name=service]:checked')])
       .map((box) => box.closest('[data-service-row], .booking__service, label')?.querySelector('[data-service-name], .booking__service-name')?.textContent?.trim() ?? box.value);
     const single = /** @type {HTMLSelectElement | null} */ (form.querySelector('select[name=service]'));
-    if (single) names.push(single.options[single.selectedIndex]?.textContent?.trim() ?? '');
+    // The option says the length and the price beside the name; the summary
+    // says them in rows of their own, so it takes the name the option carries.
+    const option = single?.options[single.selectedIndex];
+    if (single) names.push(option?.dataset.name?.trim() || option?.textContent?.trim() || '');
     // The one service a form offers, said as a line: its name, from the line.
     const lone = /** @type {HTMLInputElement | null} */ (form.querySelector('input[type=hidden][name=service]'));
     if (lone && lone.value) names.push(lone.closest('[data-field]')?.querySelector('[data-service-name]')?.textContent?.trim() || lone.value);

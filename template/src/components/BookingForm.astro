@@ -139,10 +139,10 @@ const w = form.words;
               {form.runs.map((run) =>
                 run.group ? (
                   <optgroup label={run.group}>
-                    {run.items.map((one) => <option value={one.slug} lang={one.lang}>{one.label}</option>)}
+                    {run.items.map((one) => <option value={one.slug} data-name={one.title} lang={one.lang}>{one.label}</option>)}
                   </optgroup>
                 ) : (
-                  run.items.map((one) => <option value={one.slug} lang={one.lang}>{one.label}</option>)
+                  run.items.map((one) => <option value={one.slug} data-name={one.title} lang={one.lang}>{one.label}</option>)
                 ),
               )}
             </select>

@@ -30,7 +30,7 @@ test('the form says what it sends, and is what preflight reads', () => {
 test('one choice by default, a checklist with the running total when combined', () => {
   const one = renderBookingForm({ services, locale: 'en', now });
   assert.ok(one.includes('<select class="field__input" id="booking-service" name="service" required>'));
-  assert.ok(one.includes('<option value="cut">Haircut · 45 min · 55</option>'), 'an option says how long and how much after its name');
+  assert.ok(one.includes('<option value="cut" data-name="Haircut">Haircut · 45 min · 55</option>'), 'an option says how long and how much after its name');
   assert.ok(!one.includes('type="checkbox"'));
 
   const many = renderBookingForm({ services, locale: 'en', combine: true, currency: 'CHF', now });
@@ -214,8 +214,8 @@ test('a name in the original\'s words is marked with its lang, and one in the pa
   ];
   const team = [{ slug: 'anna', title: 'Anna' }, { slug: 'beat', title: 'Beat Keller', lang: 'de-CH', does: ['cut'] }];
   const one = renderBookingForm({ services: said, resources: team, locale: 'en', now });
-  assert.ok(one.includes('<option value="cut">Haircut · 45 min · 55</option>'));
-  assert.ok(one.includes('<option value="faerben" lang="de-CH">Färben · 1 h 30 min · 120</option>'));
+  assert.ok(one.includes('<option value="cut" data-name="Haircut">Haircut · 45 min · 55</option>'));
+  assert.ok(one.includes('<option value="faerben" data-name="Färben" lang="de-CH">Färben · 1 h 30 min · 120</option>'));
   assert.ok(one.includes('<option value="anna">Anna</option>'));
   assert.ok(one.includes('<option value="beat" data-does="cut" lang="de-CH">Beat Keller</option>'));
   const listed = renderBookingForm({ services: said, locale: 'en', combine: true, now });
@@ -260,7 +260,7 @@ test('one service is a line with its slug in a hidden input, not a choice of one
 test('the choice of one of several is grouped by the checklist\'s own runs, each option saying how long and how much', () => {
   const html = renderBookingForm({ services, locale: 'en', currency: 'CHF', now });
   const select = html.slice(html.indexOf('<select'), html.indexOf('</select>')).replace(/\s/g, ' ');
-  assert.match(select, /<optgroup label="Hair"><option value="cut">Haircut · 45 min · CHF 55<\/option> *<option value="colour">Colour &lt;b&gt;&amp;amp;&lt;\/b&gt; tone · 1 h 30 min · CHF 120<\/option><\/optgroup>/);
+  assert.match(select, /<optgroup label="Hair"><option value="cut" data-name="Haircut">Haircut · 45 min · CHF 55<\/option> *<option value="colour" data-name="Colour &lt;b&gt;&amp;amp;&lt;\/b&gt; tone">Colour &lt;b&gt;&amp;amp;&lt;\/b&gt; tone · 1 h 30 min · CHF 120<\/option><\/optgroup>/);
   assert.ok(select.indexOf('value="nails"') > select.indexOf('</optgroup>'), 'the service with no heading after the groups');
   const { runs } = bookingForm({ services, locale: 'en' });
   assert.deepEqual(runs.map((run) => run.group), ['Hair', ''], 'the same runs as the checklist\'s');
