@@ -161,6 +161,14 @@
     "./live": {
       "types": "./types/live.d.ts",
       "default": "./lib/live.mjs"
+    },
+    "./fonts": {
+      "types": "./types/fonts.d.ts",
+      "default": "./lib/fonts.mjs"
+    },
+    "./floor": {
+      "types": "./types/floor.d.ts",
+      "default": "./lib/floor.mjs"
     }
   },
   "files": [

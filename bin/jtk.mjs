@@ -12,6 +12,7 @@
  *   jtk add|remove <unit>   a section or a module of the example site, part by part (lib/units/)
  *   jtk import products …   a spreadsheet's products, as contract 3's entries (lib/import.mjs)
  *   jtk units               what the site has of the example, what can be added
+ *   jtk fonts <file.woff2>  the measured stand-in of each face, so the swap moves nothing (the kit's lib/fonts.mjs)
  */
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -90,6 +91,11 @@ switch (command) {
     const { main } = await import(pathToFileURL(join(HERE, '..', 'lib', 'units', 'cli.mjs')).href);
     process.exit(await main(command, rest));
   }
+  case 'fonts': {
+    // The stand-in of each face, measured off the file (@jtakeit/kit/fonts).
+    const { main } = await import('@jtakeit/kit/fonts');
+    process.exit(await main(rest));
+  }
   case 'import': {
     // The command prints its own errors, and writes nothing until it has judged every row.
     const { main } = await import(pathToFileURL(join(HERE, '..', 'lib', 'import.mjs')).href);
@@ -117,6 +123,7 @@ switch (command) {
     const copies = await import(pathToFileURL(join(HERE, '..', 'lib', 'copies.mjs')).href);
     const units = await import(pathToFileURL(join(HERE, '..', 'lib', 'units', 'cli.mjs')).href);
     const imported = await import(pathToFileURL(join(HERE, '..', 'lib', 'import.mjs')).href);
+    const fonts = await import('@jtakeit/kit/fonts');
     console.error(`@jtakeit/astro — the scaffold and the catalogue tool for a site on jtakeit
 
   jtk create <slug> [options]     scaffold a site into ./<slug>, on contract 3: jtk/schema.json
@@ -138,6 +145,7 @@ ${imported.usage()}
                                   every hero field, ground, edge, entrance and gallery,
                                   live on the dev server — in this project's colours and
                                   photographs when run inside one
+  ${fonts.usage()}
   jtk a11y [--dist ./dist] [/path …]
                                   read the built pages against WCAG 2.1 AA in Chrome
                                   (npm i -D playwright-core axe-core first)

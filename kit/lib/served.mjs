@@ -171,7 +171,7 @@ export function unboundedHeights(root) {
   if (found.size === 0) return '';
   return (
     `${[...found].join(', ')}: 100vh with no ceiling. The panel draws the page in a frame as tall as the document, ` +
-    'where a viewport height is all of it — give it one: min(100svh, 56rem).'
+    "where a viewport height is all of it — give it one, on the screen's token: min(var(--screen), 56rem)."
   );
 }
 
