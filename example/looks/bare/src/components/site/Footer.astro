@@ -1,0 +1,197 @@
+---
+/**
+ * The foot of every page: a line of the business's own, then its address,
+ * its hours and how to reach it in three plain columns that stack on a phone
+ * — then the legal pages and «built on jtakeit». Every fact the business's,
+ * from the shared text (`contacts`, `hours`, `footer`).
+ *
+ * The year is the build's (`virtual:jtk/build`), never the clock's at render:
+ * the page drawn live from a draft must be the page the build made.
+ */
+import Hours from './Hours.astro';
+import Label from './Label.astro';
+import { frameLang, frameWords } from './words';
+import { site } from '../../lib/site';
+import { copyFor } from '../../copy';
+import { langOf, withLocale } from '../../lib/locale';
+import { under } from '../../lib/under';
+import { YEAR } from 'virtual:jtk/build';
+
+interface Props {
+  locale: string;
+}
+
+const { locale } = Astro.props;
+const lang = langOf(locale);
+const W = frameWords(lang);
+const wordsLang = frameLang(lang);
+const facts = site.facts(locale);
+const footer = site.shared(locale).block('footer');
+const contacts = site.shared(locale).block('contacts');
+const hours = site.shared(locale).block('hours');
+const name = facts.text('name');
+const street = facts.text('street');
+const postal = facts.text('postal_code');
+const city = facts.text('city');
+const country = facts.text('country');
+const countryName = (() => {
+  if (!/^[A-Z]{2}$/.test(country)) return country;
+  try {
+    return new Intl.DisplayNames([lang], { type: 'region' }).of(country) ?? country;
+  } catch {
+    return country;
+  }
+})();
+const phone = facts.text('phone');
+const email = facts.text('email');
+const maps = facts.text('maps');
+const social = facts.rows('social').filter((row) => row.text('url') !== '');
+const nameOfLink = (url: string): string => {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '').split('.')[0];
+    return host.charAt(0).toUpperCase() + host.slice(1);
+  } catch {
+    return url;
+  }
+};
+const imprint = site.page('/imprint', locale);
+const legal = [
+  { href: under(withLocale(locale, '/privacy')), label: copyFor(locale).PRIVACY.title },
+  ...(imprint.file !== undefined || imprint.blocks.length > 0 ? [{ href: under(withLocale(locale, '/imprint')), label: imprint.name || W.imprint }] : []),
+];
+const tagline = footer.text('tagline');
+---
+
+<footer class="site-footer">
+  <div class="site-footer__in">
+    {
+      tagline && (
+        <p class="site-footer__tagline" {...{ ...footer.at('tagline'), ...footer.lang('tagline') }}>
+          {tagline}
+        </p>
+      )
+    }
+
+    <div class="site-footer__facts" {...facts.from()}>
+      <div class="site-footer__col">
+        <Label of={contacts} field="address_label" standIn={W.address} standInLang={wordsLang} />
+        <address class="site-footer__addr">
+          <strong {...facts.at('name')}>{name}</strong>
+          {street && <span {...facts.at('street')}>{street}</span>}
+          {(postal || city) && (
+            <span>
+              {postal && <span {...facts.at('postal_code')}>{postal}</span>} {city && <span {...{ ...facts.at('city'), ...contacts.lang('city') }}>{city}</span>}
+            </span>
+          )}
+          {countryName && <span data-country={country} {...facts.at('country')}>{countryName}</span>}
+        </address>
+        {maps && (
+          <a href={maps} rel="noopener" target="_blank">
+            {contacts.text('maps_label') ? <span {...{ ...contacts.at('maps_label'), ...contacts.lang('maps_label') }}>{contacts.text('maps_label')}</span> : <span {...contacts.at('maps_label')} lang={wordsLang}>{W.directions}</span>} ↗
+          </a>
+        )}
+      </div>
+
+      <div class="site-footer__col">
+        <Label of={hours} field="label" standIn={W.hours} standInLang={wordsLang} />
+        <Hours locale={locale} />
+      </div>
+
+      <div class="site-footer__col">
+        <Label of={contacts} field="reach_label" standIn={W.write} standInLang={wordsLang} />
+        <p class="site-footer__lines">
+          {phone && <a href={`tel:${phone.replace(/[^+\d]/g, '')}`} {...facts.at('phone')}>{phone}</a>}
+          {email && <a href={`mailto:${email}`} {...facts.at('email')}>{email}</a>}
+        </p>
+        {
+          social.length > 0 && (
+            <p class="site-footer__lines">
+              {social.map((row) =>
+                row.text('label') ? (
+                  <a href={row.text('url')} rel="noopener me" target="_blank">
+                    <span {...{ ...row.at('label'), ...row.lang('label') }}>{row.text('label')}</span> ↗
+                  </a>
+                ) : (
+                  <a href={row.text('url')} rel="noopener me" target="_blank" data-jtk-fixed>
+                    {nameOfLink(row.text('url'))} ↗
+                  </a>
+                ),
+              )}
+            </p>
+          )
+        }
+      </div>
+    </div>
+
+    <div class="site-footer__base">
+      <span><span data-jtk-fixed>© {YEAR}</span> <span {...facts.at('name')}>{name}</span></span>
+      <nav class="site-footer__legal" aria-label={W.legal} lang={wordsLang} data-jtk-fixed>
+        {legal.map((one) => <a href={one.href}>{one.label}</a>)}
+      </nav>
+      <span lang={wordsLang} data-jtk-fixed>
+        {W.built} <a href="https://jtakeit.com" rel="noopener" target="_blank">jtakeit</a>
+      </span>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    padding: var(--section-y) var(--gutter) var(--space-5);
+    border-block-start: 1px solid var(--line);
+  }
+
+  .site-footer__in {
+    display: grid;
+    gap: var(--space-6);
+    inline-size: var(--shell);
+    margin-inline: auto;
+  }
+
+  .site-footer__tagline {
+    max-inline-size: var(--measure);
+    font-size: var(--step-1);
+  }
+
+  .site-footer__facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: var(--space-5);
+  }
+
+  .site-footer__col {
+    display: grid;
+    align-content: start;
+    gap: var(--space-2);
+  }
+
+  .site-footer__addr {
+    display: grid;
+    font-style: normal;
+  }
+
+  .site-footer__lines {
+    display: grid;
+    gap: var(--space-1);
+  }
+
+  .site-footer__lines a {
+    padding-block: var(--space-1);
+  }
+
+  .site-footer__base {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-5);
+    padding-block-start: var(--space-4);
+    border-block-start: 1px solid var(--line);
+    font-size: var(--step--1);
+    color: var(--ink-quiet);
+  }
+
+  .site-footer__legal {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+  }
+</style>

@@ -4,7 +4,8 @@
 // footer, /services and /imprint — with the example's words and photographs,
 // as a developer first sees it; then again with the modules a brief may add —
 // `--blog` and a salon's `--kit` (the kit's fixture), the journal and the
-// booking form in the look.
+// booking form in the look — and the same in the bare look (`--look bare`,
+// docs/looks.md), the base a custom design is made on.
 //
 //   node test/a11y-example.mjs                 lays out its own (the kit of this checkout)
 //   node test/a11y-example.mjs --site <dir>    reads one already laid out and installed
@@ -25,7 +26,8 @@ const sites = [];
 if (given) sites.push(['given', resolve(given)]);
 else {
   scratch = mkdtempSync(join(tmpdir(), 'jtk-a11y-example-'));
-  for (const [name, flags] of [['example', []], ['modules', ['--blog', '--kit', join(root, 'test/fixtures/kit-salon.json')]]]) {
+  const salon = join(root, 'test/fixtures/kit-salon.json');
+  for (const [name, flags] of [['example', []], ['modules', ['--blog', '--kit', salon]], ['bare', ['--look', 'bare', '--blog', '--kit', salon]]]) {
     const site = join(scratch, name);
     execFileSync('node', [join(root, 'bin/jtk.mjs'), 'create', 'example-a11y', '--name', 'Atelier Probe', '--locale', 'de-CH', '--locales', 'en', '--out', site, '--no-git', ...flags], { stdio: 'pipe' });
     // The kit of this checkout, as the CI's probe takes it: the template's lockfile may pin one npm has not got yet.

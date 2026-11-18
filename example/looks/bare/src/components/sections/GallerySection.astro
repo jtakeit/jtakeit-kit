@@ -1,0 +1,55 @@
+---
+/**
+ * The pictures: a heading and the block's pictures in a plain grid, each in
+ * its own proportions, in the owner's order.
+ *
+ * The block's `arrangement` is the studio's choice of one of the template's
+ * galleries (docs/gallery.md: columns, a row to drag, a stage…); the bare
+ * look draws none of them, so it is kept, and read again by the design that
+ * draws this section with `Gallery` (src/components/gallery/).
+ *
+ * Each picture carries its own annotation (`images[<key>].src`), so the
+ * owner replaces one, describes one, or adds one in the panel.
+ */
+import type { Block } from '@jtakeit/kit/content';
+import Shot from '../Shot.astro';
+
+interface Props {
+  block: Block;
+  first?: boolean;
+}
+
+const { block, first = false } = Astro.props;
+const pictures = block.gallery('images');
+---
+
+<section class="section pictures" id={first ? 'gallery' : undefined}>
+  <div class="section__in">
+    <div class="section__head">
+      {block.text('eyebrow') && <p class="label" {...{ ...block.at('eyebrow'), ...block.lang('eyebrow') }}>{block.text('eyebrow')}</p>}
+      {block.text('title') && <h2 {...{ ...block.at('title'), ...block.lang('title') }}>{block.text('title')}</h2>}
+    </div>
+    {
+      pictures.length > 0 && (
+        <ul class="pictures__grid">
+          {pictures.map((one) => (
+            <li>
+              <Shot name={one.src} alt={one.alt} lang={one.lang} path={one['data-jtk-path']} focus={one.focus} width={720} sizes="(min-width: 64rem) 21rem, (min-width: 36rem) 45vw, 92vw" />
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </div>
+</section>
+
+<style>
+  .pictures__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(14rem, 100%), 1fr));
+    gap: var(--space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+</style>

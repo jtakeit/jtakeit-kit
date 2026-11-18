@@ -1,0 +1,130 @@
+---
+/**
+ * The way in, at the end of the page: the enquiry form — the template's
+ * (LeadForm.astro, the kit's renderer, every word of it the block's) — and
+ * beside it, or under it on a phone, where the business is, when it is open
+ * and how to reach it, from the shared text.
+ *
+ * No embedded map: it would put a third party on the page, and the build may
+ * reach only GitHub, npm and the media host. A link to the map the contacts
+ * name (`maps`) does the job without one.
+ *
+ * `#contact`, where every button with no link of its own leads — the first
+ * band of the page that carries the form (Blocks.astro).
+ */
+import type { Block } from '@jtakeit/kit/content';
+import LeadForm from '../LeadForm.astro';
+import Hours from '../site/Hours.astro';
+import Label from '../site/Label.astro';
+import { frameLang, frameWords } from '../site/words';
+import { site } from '../../lib/site';
+import { langOf } from '../../lib/locale';
+
+interface Props {
+  block: Block;
+  locale: string;
+  contact?: boolean;
+}
+
+const { block, locale, contact = false } = Astro.props;
+const lang = langOf(locale);
+const W = frameWords(lang);
+const wordsLang = frameLang(lang);
+const facts = site.facts(locale);
+const contacts = site.shared(locale).block('contacts');
+const hours = site.shared(locale).block('hours');
+const street = facts.text('street');
+const postal = facts.text('postal_code');
+const city = facts.text('city');
+const maps = facts.text('maps');
+const phone = facts.text('phone');
+const email = facts.text('email');
+const form = block.value('form') === true;
+---
+
+<section class="section contact" id={contact ? 'contact' : undefined}>
+  <div class="section__in contact__in">
+    <div class="contact__form">
+      {
+        form ? (
+          <LeadForm />
+        ) : (
+          <div class="section__head">
+            {block.text('title') && <h2 {...{ ...block.at('title'), ...block.lang('title') }}>{block.text('title')}</h2>}
+            {block.text('lead') && <p class="section__lead" {...{ ...block.at('lead'), ...block.lang('lead') }}>{block.text('lead')}</p>}
+          </div>
+        )
+      }
+    </div>
+
+    <aside class="contact__facts" {...facts.from()}>
+      {
+        (street || postal || city) && (
+          <div class="contact__part">
+            <Label of={contacts} field="address_label" standIn={W.address} standInLang={wordsLang} />
+            <address class="contact__addr">
+              {street && <span {...facts.at('street')}>{street}</span>}
+              {(postal || city) && (
+                <span>
+                  {postal && <span {...facts.at('postal_code')}>{postal}</span>} {city && <span {...{ ...facts.at('city'), ...contacts.lang('city') }}>{city}</span>}
+                </span>
+              )}
+            </address>
+            {maps && (
+              <a href={maps} rel="noopener" target="_blank">
+                {contacts.text('maps_label') ? <span {...{ ...contacts.at('maps_label'), ...contacts.lang('maps_label') }}>{contacts.text('maps_label')}</span> : <span {...contacts.at('maps_label')} lang={wordsLang}>{W.directions}</span>} ↗
+              </a>
+            )}
+          </div>
+        )
+      }
+      <div class="contact__part">
+        <Label of={hours} field="label" standIn={W.hours} standInLang={wordsLang} />
+        <Hours locale={locale} />
+      </div>
+      {
+        (phone || email) && (
+          <div class="contact__part">
+            <Label of={contacts} field="reach_label" standIn={W.write} standInLang={wordsLang} />
+            <p class="contact__lines">
+              {phone && <a href={`tel:${phone.replace(/[^+\d]/g, '')}`} {...facts.at('phone')}>{phone}</a>}
+              {email && <a href={`mailto:${email}`} {...facts.at('email')}>{email}</a>}
+            </p>
+          </div>
+        )
+      }
+    </aside>
+  </div>
+</section>
+
+<style>
+  .contact__in {
+    grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
+    align-items: start;
+    gap: var(--space-6);
+  }
+
+  .contact__facts {
+    display: grid;
+    gap: var(--space-5);
+  }
+
+  .contact__part {
+    display: grid;
+    gap: var(--space-2);
+  }
+
+  .contact__addr {
+    display: grid;
+    font-style: normal;
+  }
+
+  .contact__lines {
+    display: grid;
+    gap: var(--space-1);
+  }
+
+  .contact__lines a {
+    padding-block: var(--space-1);
+  }
+</style>

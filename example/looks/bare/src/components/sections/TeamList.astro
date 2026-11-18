@@ -1,0 +1,78 @@
+---
+/**
+ * The people: a heading, a lead, and the `team` collection's entries — the
+ * picture, the name, what they do and a line about them — in a grid that
+ * stacks on a phone. Each person is their entry, annotated as drawn here, at
+ * their anchor (`#team-<slug>`).
+ *
+ * The example's portraits show nobody's face — from behind, in silhouette,
+ * hands — because a stranger's face on a business's site is a stranger
+ * presented as its staff. Replace each with the person, or the section with
+ * nothing (`jtk remove team`).
+ */
+import type { Block } from '@jtakeit/kit/content';
+import Shot from '../Shot.astro';
+import { site } from '../../lib/site';
+import { rowId } from '../../lib/entries';
+
+interface Props {
+  block: Block;
+  locale: string;
+  first?: boolean;
+  /** The collection the people are, where it is not `team` — the diary's masters, after `jtk add booking`. */
+  collection?: string;
+}
+
+const { block, locale, first = false } = Astro.props;
+const name = Astro.props.collection ?? (site.collection('team') ? 'team' : (site.rolesOf('bookings')?.resources ?? 'team'));
+const people = site.collection(name) ? site.entries(name, { locale }) : [];
+const portraitOf = (fields: (typeof people)[number]['fields']) => (fields.field('portrait') ? fields.picture('portrait') : fields.picture('cover'));
+const portraitKey = (fields: (typeof people)[number]['fields']) => (fields.field('portrait') ? 'portrait' : 'cover');
+---
+
+<section class="section team" id={first ? 'team' : undefined}>
+  <div class="section__in">
+    <div class="section__head">
+      {block.text('eyebrow') && <p class="label" {...{ ...block.at('eyebrow'), ...block.lang('eyebrow') }}>{block.text('eyebrow')}</p>}
+      {block.text('title') && <h2 {...{ ...block.at('title'), ...block.lang('title') }}>{block.text('title')}</h2>}
+      {block.text('lead') && <p class="section__lead" {...{ ...block.at('lead'), ...block.lang('lead') }}>{block.text('lead')}</p>}
+    </div>
+    {
+      people.length > 0 && (
+        <ul class="team__list">
+          {people.map((entry) => {
+            const { fields } = entry;
+            const portrait = portraitOf(fields);
+            return (
+              <li class="team__one" id={rowId(entry) || undefined}>
+                {portrait.src && (
+                  <Shot name={portrait.src} alt={portrait.alt} lang={portrait.lang} path={portrait['data-jtk-path']} focus={portrait.focus} ratio="4 / 5" width={640} sizes="(min-width: 64rem) 21rem, (min-width: 36rem) 45vw, 92vw" />
+                )}
+                {fields.text('title') && <h3 {...{ ...fields.at('title'), ...fields.lang('title') }}>{fields.text('title')}</h3>}
+                {fields.text('role') && <p class="label" {...{ ...fields.at('role'), ...fields.lang('role') }}>{fields.text('role')}</p>}
+                {fields.text('bio') && <p {...{ ...fields.at('bio'), ...fields.lang('bio') }}>{fields.text('bio')}</p>}
+              </li>
+            );
+          })}
+        </ul>
+      )
+    }
+  </div>
+</section>
+
+<style>
+  .team__list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr));
+    gap: var(--space-5);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .team__one {
+    display: grid;
+    align-content: start;
+    gap: var(--space-2);
+  }
+</style>

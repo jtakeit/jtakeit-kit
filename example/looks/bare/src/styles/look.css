@@ -1,0 +1,159 @@
+/*
+ * ── the bare look: what every section stands on ─────────────────────────────
+ *
+ * The least a page needs to be read: the body's type, the headings, a
+ * section's frame, a button, a label, the focus ring. No ground, no glass, no
+ * entrance, no motion — a section is a band in the document's order, and a
+ * component's own <style> says only how its parts sit.
+ *
+ * This is the base a design replaces, not a design: DESIGN.md first, then
+ * compose each section (docs/looks.md, docs/compositions.md of
+ * @jtakeit/astro). Class names are plain on purpose, so a design pass can
+ * keep the markup and rewrite this file.
+ *
+ * Prefixed with `html` where it says again what global.css says, so the
+ * order the bundler writes the two in does not decide the page.
+ */
+
+html body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-size: var(--step-0);
+  line-height: 1.55;
+}
+
+html h1,
+html h2,
+html h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+html h1 {
+  font-size: var(--step-5);
+}
+
+html h2 {
+  font-size: var(--step-3);
+}
+
+html h3 {
+  font-size: var(--step-1);
+}
+
+html p {
+  margin: 0;
+}
+
+html a {
+  color: inherit;
+}
+
+html :focus-visible {
+  outline: var(--focus);
+  outline-offset: var(--focus-offset);
+}
+
+/* ── a label: what labels rather than says ────────────────────────────────── */
+
+.label {
+  margin: 0;
+  font-size: var(--step--1);
+  font-weight: 600;
+  color: var(--ink-quiet);
+}
+
+/* ── a section: a band in the document's order ────────────────────────────── */
+
+.section {
+  padding: var(--section-y) var(--gutter);
+  border-block-start: 1px solid var(--line);
+}
+
+.section__in {
+  display: grid;
+  gap: var(--space-5);
+  inline-size: var(--shell);
+  margin-inline: auto;
+}
+
+.section__head {
+  display: grid;
+  gap: var(--space-2);
+  max-inline-size: var(--measure);
+}
+
+.section__lead {
+  max-inline-size: var(--measure);
+  font-size: var(--step-1);
+  color: var(--ink-quiet);
+}
+
+.section__more {
+  margin: 0;
+}
+
+/* ── the button: a link that is an action ─────────────────────────────────── */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 2.75rem;
+  padding: var(--space-2) var(--space-5);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.button--quiet {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+.button--small {
+  min-block-size: 2.75rem;
+  padding-inline: var(--space-4);
+  font-size: var(--step--1);
+}
+
+.actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+/* ── the template's own pages: the listing, an entry, the privacy page ────── */
+
+html .listing,
+html .entry,
+html main.prose {
+  padding-block-start: var(--page-top);
+}
+
+html main#content {
+  min-block-size: 50svh;
+}
+
+html .entry dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-1) var(--space-4);
+  margin: var(--space-5) 0;
+}
+
+html .entry dt {
+  color: var(--ink-quiet);
+}
+
+html .entry dd {
+  margin: 0;
+}

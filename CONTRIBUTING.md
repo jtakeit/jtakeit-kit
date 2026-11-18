@@ -27,3 +27,7 @@ server.
   words change in `lib/units/units.mjs`, and then `node
   scripts/example-prints.mjs` writes the fingerprints again (append-only;
   `npm test` checks them); its photographs are Brumy's (`example/README.md`).
+  Another look (`example/looks/<look>/`, docs/looks.md) holds only the files
+  it draws differently, at the same paths; a component's behaviour — its
+  annotations, anchors, forms, scripts — changes in both looks at once, and
+  the shop, the hours and the declaration are the example's in every look.

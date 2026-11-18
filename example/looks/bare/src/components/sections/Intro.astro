@@ -1,0 +1,29 @@
+---
+/**
+ * The head of a page of its own — a line above, the page's heading, a lead —
+ * for a page whose first screen is words (/services). The page's `<h1>`.
+ */
+import type { Block } from '@jtakeit/kit/content';
+
+interface Props {
+  block: Block;
+}
+
+const { block } = Astro.props;
+---
+
+<section class="section intro">
+  <div class="section__in">
+    <div class="section__head">
+      {block.text('eyebrow') && <p class="label" {...{ ...block.at('eyebrow'), ...block.lang('eyebrow') }}>{block.text('eyebrow')}</p>}
+      {block.text('title') && <h1 {...{ ...block.at('title'), ...block.lang('title') }}>{block.text('title')}</h1>}
+      {block.text('lead') && <p class="section__lead" {...{ ...block.at('lead'), ...block.lang('lead') }}>{block.text('lead')}</p>}
+    </div>
+  </div>
+</section>
+
+<style>
+  .intro {
+    border-block-start: 0;
+  }
+</style>

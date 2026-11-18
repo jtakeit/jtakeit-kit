@@ -1,0 +1,18 @@
+---
+/**
+ * The look, in the head: the tokens and what is made of them. Drawn by
+ * Layout.astro where this file is (src/lib/sections.ts).
+ *
+ * The bare look loads no typeface: the page is set in the system's own, so
+ * nothing is fetched and nothing is chosen. The design that replaces it adds
+ * its typefaces here — self-hosted, an `@fontsource` package (the scaffold
+ * already carries three, unused here; another is added to the lockfile) —
+ * never from Google's servers: a font fetched from there hands the visitor's
+ * address to a third party before anybody asked them (LG München I, 20
+ * January 2022, 3 O 17493/20).
+ */
+import '../../styles/tokens.css';
+import '../../styles/look.css';
+---
+
+<meta name="theme-color" content="#ffffff" />

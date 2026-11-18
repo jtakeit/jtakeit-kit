@@ -1,0 +1,119 @@
+---
+/**
+ * The header: the business's name (or its logo), the navigation, the language
+ * switch and the button, in one row that wraps — in the page's flow, not
+ * fixed, with no menu to open: on a phone the links wrap onto lines of their
+ * own. The design that replaces it decides whether the header stays, floats
+ * or folds into a menu.
+ *
+ * Every word in it is the shared text's (`header` in jtk/shared.json), tapped
+ * and translated in the panel: the navigation, the button, and a logo where
+ * one is given — the business's name from the contacts where it is not. The
+ * language switch is the template's, drawn from the languages the site has.
+ *
+ * A link the content gives (`/services`, `/#team`) is written in this page's
+ * language and under the build's base, so the preview's `/p/<slug>/` holds.
+ */
+import Button from './Button.astro';
+import Languages from '../Languages.astro';
+import Shot from '../Shot.astro';
+import { frameWords } from './words';
+import { site } from '../../lib/site';
+import { langOf, withLocale } from '../../lib/locale';
+import { under } from '../../lib/under';
+
+interface Props {
+  languages: { locale: string; address: string }[];
+  locale: string;
+}
+
+const { languages, locale } = Astro.props;
+const W = frameWords(langOf(locale));
+const header = site.shared(locale).block('header');
+const facts = site.facts(locale);
+const name = facts.text('name');
+const logo = header.picture('logo');
+
+/** A link of the content, in this page's language and under the base. */
+const go = (href: string): string => {
+  if (!href.startsWith('/') || href.startsWith('//')) return href;
+  const [path, hash] = href.split('#');
+  return `${under(withLocale(locale, path || '/'))}${hash ? `#${hash}` : ''}`;
+};
+const here = Astro.url.pathname.replace(/\/$/, '');
+const current = (href: string) => !href.includes('#') && go(href).replace(/\/$/, '') === here;
+const nav = header.rows('nav');
+const cta = header.text('cta_label');
+---
+
+<header class="site-header">
+  <div class="site-header__in">
+    <a class="site-header__name" href={go('/')} aria-label={name ? undefined : W.home}>
+      {
+        logo.src ? (
+          <Shot name={logo.src} alt={logo.alt || name} path={logo['data-jtk-path']} class="site-header__logo" width={320} fit="contain" />
+        ) : (
+          <span {...facts.at('name')}>{name}</span>
+        )
+      }
+    </a>
+
+    {
+      nav.length > 0 && (
+        <nav class="site-header__nav" aria-label={W.navigation}>
+          {nav.map((row) => (
+            <a href={go(row.text('link'))} aria-current={current(row.text('link')) ? 'page' : undefined} {...{ ...row.at('label'), ...row.lang('label') }}>
+              {row.text('label')}
+            </a>
+          ))}
+        </nav>
+      )
+    }
+
+    <Languages alternates={languages} current={locale} label={W.language} />
+
+    {cta && <Button href={go(header.text('cta_link') || '/#contact')} label={cta} at={header.at('cta_label')} lang={header.lang('cta_label')} small />}
+  </div>
+</header>
+
+<style>
+  .site-header {
+    padding: var(--space-4) var(--gutter);
+    border-block-end: 1px solid var(--line);
+  }
+
+  .site-header__in {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3) var(--space-5);
+    inline-size: var(--shell);
+    margin-inline: auto;
+  }
+
+  .site-header__name {
+    margin-inline-end: auto;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .site-header__name :global(img) {
+    display: block;
+    block-size: 2.5rem;
+    inline-size: auto;
+  }
+
+  .site-header__nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+  }
+
+  .site-header__nav a {
+    padding-block: var(--space-2);
+  }
+
+  .site-header__nav a[aria-current='page'] {
+    font-weight: 700;
+  }
+</style>

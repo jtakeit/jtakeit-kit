@@ -22,6 +22,8 @@
 //      and English, every page drawn live equal to its built twin; and a draft
 //      that changes a value's words, a service, a person, a gallery's picture
 //      and the shared footer is drawn at once
+//   8  the example in the bare look (`--look bare`), with a blog and a kit:
+//      every page drawn live equal to its built twin, and a draft at once
 //
 // The kit is this checkout's, packed, as the smoke test installs it.
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -244,6 +246,25 @@ try {
       execFileSync('node', [bin, 'schema', '--emit-only', '--root', example], { stdio: 'pipe' });
     }
     console.log('live: the example with each of its eight sections removed — judged, linted, and every page drawn live equal to its build');
+  }
+
+  // ── 8 · the bare look ─────────────────────────────────────────────────────
+  // The example in the bare look (`--look bare`, docs/looks.md), with a blog
+  // and a salon's kit: every page drawn live equal to its built twin, and a
+  // draft drawn at once.
+  {
+    const bare = join(dir, 'bare');
+    execFileSync('node', [bin, 'create', 'bare-live', '--name', 'Atelier Live', '--locale', 'de-CH', '--locales', 'en', '--look', 'bare', '--blog', '--kit', resolve('test/fixtures/kit-salon.json'), '--out', bare, '--no-git'], { stdio: 'pipe' });
+    execFileSync('npm', ['install', '--no-audit', '--no-fund', join(dir, packed)], { cwd: bare, stdio: 'pipe' });
+    const drawn = await liveCheck(bare, { url: SITE_URL, fail, said: '8 · the bare look' });
+    for (const must of ['/', '/en/', '/services/', '/en/services/', '/imprint/', '/blog/']) if (!drawn.pages.includes(must)) fail(`8 · the bare look has no ${must}`);
+    const { draft } = drawn.state;
+    draft['/jtk/pages/index.json'].blocks.find((one) => one.type === 'values').items[0].title = 'Zeit aus dem Entwurf';
+    draft['/jtk/shared.json'].blocks.find((one) => one.type === 'footer').tagline = 'Eine Zeile aus dem Entwurf';
+    const got = (await drawn.page('/')).text;
+    for (const words of ['Zeit aus dem Entwurf', 'Eine Zeile aus dem Entwurf']) if (!got.includes(words)) fail(`8 · «${words}», saved in a draft, is not on the bare look's home page drawn live`);
+    drawn.close();
+    console.log(`live: the bare look — ${drawn.pages.length} pages drawn live are the built ones; a value and the footer are drawn from the draft`);
   }
 
   // ── 7 · the test shop: a product drawn live ───────────────────────────────

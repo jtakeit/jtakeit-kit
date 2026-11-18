@@ -1,0 +1,72 @@
+/*
+ * ── the bare look, as tokens ────────────────────────────────────────────────
+ *
+ * This site was laid out by `jtk create --look bare`: the example's sections,
+ * content and behaviour with no art direction — a few neutral colours, the
+ * system's own typefaces, one radius, plain spacing and the focus ring. It is
+ * not a design and is not meant to be kept as one: it is the base a design is
+ * made on, from the business's own site or the references the person gave
+ * (docs/looks.md of @jtakeit/astro). Write DESIGN.md first; then replace this
+ * file with the palette, the type and the spacing it decides.
+ *
+ * The names are global.css's (`--paper`, `--ink`, `--accent`…) and the few
+ * the example's components read (`--step-*`, `--space-*`, `--r-*`), so the
+ * template's pieces — the form, the diary, the shop, the listings — follow
+ * whatever is set here. `jtk/design.json`'s `paper`, `ink` and `accent` still
+ * win at runtime: Layout.astro writes them on <html>.
+ *
+ * `html:root`, not `:root`: global.css says `:root` too, and which of two
+ * stylesheets a bundler puts first is not a decision this file should rest on.
+ */
+html:root {
+  /* ── colour: neutrals only ───────────────────────────────────────────── */
+  --paper: #ffffff;
+  --paper-deep: #f2f2f2;
+  --ink: #1a1a1a;
+  /* The quiet ink is the ink towards the paper — 4.5:1 and more on any paper (global.css). */
+  --ink-quiet: color-mix(in srgb, var(--ink) 66%, var(--paper));
+  --line: #d4d4d4;
+  /* The fill of a button. Words on it are `--on-accent`, which Layout.astro chooses by its lightness. */
+  --accent: #1a1a1a;
+  /* «Open now». */
+  --ok: #2e7d46;
+
+  /* ── type: the system's own, one family ──────────────────────────────── */
+  --font-text: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-display: var(--font-text);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.125rem;
+  --step-2: 1.375rem;
+  --step-3: 1.75rem;
+  --step-4: 2.25rem;
+  --step-5: 2.75rem;
+
+  /* ── space ───────────────────────────────────────────────────────────── */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2.5rem;
+  --space-7: 4rem;
+  --section-y: 3rem;
+  --gutter: 1.25rem;
+  --shell: min(64rem, 100%);
+  --measure: 40rem;
+  /* Where a page without a hero of its own starts: the header is in the flow, so only air. */
+  --page-top: var(--space-6);
+
+  /* ── one radius ──────────────────────────────────────────────────────── */
+  --radius: 4px;
+  --r-1: var(--radius);
+  --r-2: var(--radius);
+  --r-3: var(--radius);
+  --r-4: var(--radius);
+  --r-pill: var(--radius);
+
+  /* ── the focus ring ──────────────────────────────────────────────────── */
+  --focus: 2px solid var(--ink);
+  --focus-offset: 2px;
+}

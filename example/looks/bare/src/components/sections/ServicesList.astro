@@ -1,0 +1,143 @@
+---
+/**
+ * The services and what they cost: a list of the `services` collection's
+ * entries, in the owner's order — a photograph, a name, a line about it, how
+ * long it takes and the price.
+ *
+ * Each row is its entry, annotated as drawn on this page (`entry:<id>:title`),
+ * and carries the entry's anchor (`#services-<slug>`), which is where the
+ * collection says its entries are shown (`shown_on`). On the home page a
+ * `services_list` block's `limit` cuts the list short and its `more_label`
+ * leads to the whole list at /services; /services draws every service through
+ * `services_all`, which has neither — a field the page never draws would be
+ * one the owner fills for nothing, so a `more_label` that is filled is always
+ * drawn.
+ *
+ * The collection's fields are the salon kit's names, `takes` and `costs`, so
+ * `jtk add booking` keeps these entries as the diary's price list.
+ */
+import type { Block } from '@jtakeit/kit/content';
+import Shot from '../Shot.astro';
+import Button from '../site/Button.astro';
+import { site } from '../../lib/site';
+import { rowId } from '../../lib/entries';
+import { langOf, withLocale } from '../../lib/locale';
+import { linkTo } from '../../lib/under';
+
+interface Props {
+  block: Block;
+  locale: string;
+  first?: boolean;
+}
+
+const { block, locale, first = false } = Astro.props;
+const limit = Number(block.value('limit') ?? 0);
+const all = site.entries('services', { locale });
+const shown = limit > 0 ? all.slice(0, limit) : all;
+
+/** A length as the trade says it: whole hours, or minutes. */
+const length = (minutes: number): string => {
+  const [unit, n] = minutes % 60 === 0 ? ['hour', minutes / 60] : ['minute', minutes];
+  return new Intl.NumberFormat(langOf(locale), { style: 'unit', unit, unitDisplay: 'long' }).format(n);
+};
+const listedAt = site.shownOn('services', locale) ?? withLocale(locale, '/services');
+const headed = block.text('eyebrow') || block.text('title') || block.text('lead');
+// A row's name is a heading under the block's; under the page's own (the price
+// list's page, whose services have no heading of their own) the next level down.
+const RowTitle = block.text('title') ? 'h3' : 'h2';
+---
+
+<section class="section services" id={first ? 'services' : undefined}>
+  <div class="section__in">
+    {
+      headed && (
+        <div class="section__head">
+          {block.text('eyebrow') && <p class="label" {...{ ...block.at('eyebrow'), ...block.lang('eyebrow') }}>{block.text('eyebrow')}</p>}
+          {block.text('title') && <h2 {...{ ...block.at('title'), ...block.lang('title') }}>{block.text('title')}</h2>}
+          {block.text('lead') && <p class="section__lead" {...{ ...block.at('lead'), ...block.lang('lead') }}>{block.text('lead')}</p>}
+        </div>
+      )
+    }
+
+    <ul class="services__rows">
+      {
+        shown.map((entry) => {
+          const { fields } = entry;
+          const photo = fields.picture('photo');
+          const takes = fields.value('takes');
+          const costs = fields.value('costs');
+          return (
+            <li class="services__row" id={rowId(entry) || undefined}>
+              {photo.src && (
+                <Shot name={photo.src} alt={photo.alt} lang={photo.lang} path={photo['data-jtk-path']} focus={photo.focus} ratio="4 / 3" class="services__shot" width={480} sizes="8rem" />
+              )}
+              <div class="services__words">
+                {fields.text('title') && <RowTitle {...{ ...fields.at('title'), ...fields.lang('title') }}>{fields.text('title')}</RowTitle>}
+                {fields.text('about') && <p {...{ ...fields.at('about'), ...fields.lang('about') }}>{fields.text('about')}</p>}
+              </div>
+              <p class="services__terms">
+                {costs !== undefined && <strong {...fields.at('costs')}>{site.money(costs, locale)}</strong>}
+                {typeof takes === 'number' && <span class="label" {...fields.at('takes')}>{length(takes)}</span>}
+              </p>
+            </li>
+          );
+        })
+      }
+    </ul>
+
+    {
+      block.text('more_label') && (
+        <p class="section__more">
+          <Button href={linkTo(listedAt)} label={block.text('more_label')} at={block.at('more_label')} lang={block.lang('more_label')} quiet />
+        </p>
+      )
+    }
+  </div>
+</section>
+
+<style>
+  .services__rows {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .services__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-2) var(--space-4);
+    padding-block: var(--space-4);
+    border-block-end: 1px solid var(--line);
+  }
+
+  .services__row:has(.services__shot) {
+    grid-template-columns: 6rem minmax(0, 1fr) auto;
+  }
+
+  .services__words {
+    display: grid;
+    gap: var(--space-1);
+    min-inline-size: 0;
+  }
+
+  .services__terms {
+    display: grid;
+    justify-items: end;
+    align-content: start;
+    gap: var(--space-1);
+    text-align: end;
+  }
+
+  @media (max-width: 36rem) {
+    .services__row,
+    .services__row:has(.services__shot) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .services__terms {
+      justify-items: start;
+      text-align: start;
+    }
+  }
+</style>

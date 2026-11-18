@@ -41,6 +41,8 @@ questions, the form beside the address and the hours — a price list at `/servi
 privacy and imprint pages, every word the owner's in the panel, in the site's language
 and English, with the example's own photographs. Keep the look or — as is meant —
 adapt it: the tokens are `src/styles/tokens.css` ([docs/scaffold.md](docs/scaffold.md)).
+For a design of the site's own, lay it out with `--look bare` — the same site with no
+art direction — and design on it, DESIGN.md first ([docs/looks.md](docs/looks.md)).
 Take out what the brief does not name, add what it does:
 
 ```
