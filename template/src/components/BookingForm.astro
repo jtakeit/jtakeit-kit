@@ -102,7 +102,20 @@ const w = form.words;
 
     <div class="field" data-field>
       {
-        form.combine ? (
+        /* One service is a line and its slug, not a choice of one; several are
+           a checklist where they may be combined, one <select> where not —
+           grouped by the same runs, each option saying how long and how much
+           (18 November 2026). */
+        form.one ? (
+          <>
+            <p class="label" data-say="service">{w.service}</p>
+            <p class="one" data-service-one>
+              <span data-service-name lang={form.one.lang}>{form.one.title}</span>
+              {form.one.meta && <span class="service-meta"> · {form.one.meta}</span>}
+            </p>
+            <input type="hidden" name="service" value={form.one.slug} />
+          </>
+        ) : form.combine ? (
           <fieldset class="services" data-services>
             <legend class="label" data-say="services">{w.services}</legend>
             {form.runs.map((run, i) => (
@@ -123,7 +136,15 @@ const w = form.words;
           <>
             <label class="label" for="booking-service" data-say="service">{w.service}</label>
             <select class="input" id="booking-service" name="service" required>
-              {form.services.map((one) => <option value={one.slug} lang={one.lang}>{one.title}</option>)}
+              {form.runs.map((run) =>
+                run.group ? (
+                  <optgroup label={run.group}>
+                    {run.items.map((one) => <option value={one.slug} lang={one.lang}>{one.label}</option>)}
+                  </optgroup>
+                ) : (
+                  run.items.map((one) => <option value={one.slug} lang={one.lang}>{one.label}</option>)
+                ),
+              )}
             </select>
           </>
         )
@@ -178,13 +199,15 @@ const w = form.words;
       <label class="label" for="booking-name">{w.name} <span aria-hidden="true">*</span></label>
       <input class="input" id="booking-name" name="name" type="text" autocomplete="name" required maxlength="120" />
     </div>
+    <!-- A phone or an email: both marked, and the line above them says either will do (18 November 2026). -->
+    <p class="hint" id="booking-contact" data-field data-contact-note>{w.oneEnough}</p>
     <div class="field" data-field>
-      <label class="label" for="booking-phone">{w.phone}</label>
-      <input class="input" id="booking-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="40" />
+      <label class="label" for="booking-phone">{w.phone} <span aria-hidden="true">*</span></label>
+      <input class="input" id="booking-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="40" aria-describedby="booking-contact" />
     </div>
     <div class="field" data-field>
-      <label class="label" for="booking-email">{w.email}</label>
-      <input class="input" id="booking-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="120" />
+      <label class="label" for="booking-email">{w.email} <span aria-hidden="true">*</span></label>
+      <input class="input" id="booking-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="120" aria-describedby="booking-contact" />
     </div>
     <div class="field" data-field>
       <label class="label" for="booking-note">{w.note}</label>
@@ -362,7 +385,18 @@ const w = form.words;
     color: var(--ink-quiet);
   }
 
-  /* the times */
+  /* the line of the one service */
+  .one {
+    margin: 0;
+  }
+
+  /* the times: a fieldset is as wide as its widest line unless told
+     otherwise, and thirty pills pushed a phone's page sideways (18 November
+     2026) */
+  .times,
+  .services {
+    min-inline-size: 0;
+  }
   .slots {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
@@ -628,6 +662,18 @@ const w = form.words;
   .form :global(.booking__dd-option[aria-selected='true']) {
     font-weight: 600;
   }
+  /* a group of the choice, headed as the native <optgroup> is */
+  .form :global(.booking__dd-group) {
+    display: grid;
+  }
+  .form :global(.booking__dd-group-label) {
+    padding: 0.5rem 0.6rem 0.2rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
 
   /* Wide: the services on the left, the rest on the right; on the second
      step the summary where the services were. */
@@ -654,10 +700,12 @@ const w = form.words;
       border: 1px solid var(--line);
       padding: 1rem 1.1rem;
     }
-    .form > .field:has([name='name']) {
+    /* the name across; under the line that says either will do, the phone
+       and the email side by side */
+    .form > .field:has([name='phone']) {
       grid-column: 2;
     }
-    .form > .field:has([name='phone']) {
+    .form > .field:has([name='email']) {
       grid-column: 3;
     }
   }

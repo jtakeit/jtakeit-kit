@@ -12,8 +12,13 @@
    salon's word not shown at a car rental. */
 .booking--unsaid [data-say], .booking--unsaid [data-say-wait] { visibility: hidden; }
 
-.booking__times { border: 0; padding: 0; margin: 0; }
-.booking__services { border: 0; padding: 0; margin: 0; display: grid; gap: 0.75rem; }
+/* A fieldset is as wide as its widest line unless told otherwise: thirty
+   pills pushed a phone's page sideways (18 November 2026). */
+.booking__times { border: 0; padding: 0; margin: 0; min-inline-size: 0; }
+.booking [data-times], .booking [data-services] { min-inline-size: 0; }
+.booking__services { border: 0; padding: 0; margin: 0; display: grid; gap: 0.75rem; min-inline-size: 0; }
+/* the one service, said as a line rather than offered as a choice of one */
+.booking__one { margin: 0; }
 .booking__run { display: grid; gap: 0.35rem; }
 .booking__run-title { margin: 0.5rem 0 0.15rem; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--booking-quiet); }
 .booking__service { display: grid; grid-template-columns: auto 1fr auto; gap: 0.6rem; align-items: baseline; padding: 0.45rem 0; border-block-end: 1px solid var(--line, #e5e1d8); cursor: pointer; }
@@ -78,6 +83,9 @@
 .booking__dd-option:hover, .booking__dd-option:focus-visible { background: var(--line, #e5e1d8); }
 .booking__dd-option.is-chosen { font-weight: 600; }
 .booking__dd-option:disabled { opacity: 0.45; cursor: default; }
+/* a group of the choice, headed as the native <optgroup> is */
+.booking__dd-group { display: grid; }
+.booking__dd-group-label { padding: 0.5rem 0.6rem 0.2rem; font-size: 0.75em; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--booking-quiet); }
 /* the link, kept */
 .booking__keep { display: grid; gap: 0.4rem; }
 .booking__keep-row { display: flex; flex-wrap: wrap; gap: 0.4rem; }

@@ -1,7 +1,9 @@
 // The booking form, as the kit renders it and as its element reads it.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { renderBookingForm, SENDS, priceFrom } from '../lib/booking/render.mjs';
+import { readFileSync } from 'node:fs';
+import { renderBookingForm, bookingForm, SENDS, priceFrom } from '../lib/booking/render.mjs';
+import { LINK, linkIn } from '../lib/booking/hooks.mjs';
 import { wordsFor, LOCALES } from '../lib/booking/words.mjs';
 import { money } from '../lib/money.mjs';
 import { daysBetween, plusDays, lasting, wireBooking, wireAll, defineBooking, JtkBooking } from '../elements/booking.js';
@@ -28,7 +30,7 @@ test('the form says what it sends, and is what preflight reads', () => {
 test('one choice by default, a checklist with the running total when combined', () => {
   const one = renderBookingForm({ services, locale: 'en', now });
   assert.ok(one.includes('<select class="field__input" id="booking-service" name="service" required>'));
-  assert.ok(one.includes('<option value="cut">Haircut</option>'));
+  assert.ok(one.includes('<option value="cut">Haircut · 45 min · 55</option>'), 'an option says how long and how much after its name');
   assert.ok(!one.includes('type="checkbox"'));
 
   const many = renderBookingForm({ services, locale: 'en', combine: true, currency: 'CHF', now });
@@ -212,12 +214,94 @@ test('a name in the original\'s words is marked with its lang, and one in the pa
   ];
   const team = [{ slug: 'anna', title: 'Anna' }, { slug: 'beat', title: 'Beat Keller', lang: 'de-CH', does: ['cut'] }];
   const one = renderBookingForm({ services: said, resources: team, locale: 'en', now });
-  assert.ok(one.includes('<option value="cut">Haircut</option>'));
-  assert.ok(one.includes('<option value="faerben" lang="de-CH">Färben</option>'));
+  assert.ok(one.includes('<option value="cut">Haircut · 45 min · 55</option>'));
+  assert.ok(one.includes('<option value="faerben" lang="de-CH">Färben · 1 h 30 min · 120</option>'));
   assert.ok(one.includes('<option value="anna">Anna</option>'));
   assert.ok(one.includes('<option value="beat" data-does="cut" lang="de-CH">Beat Keller</option>'));
   const listed = renderBookingForm({ services: said, locale: 'en', combine: true, now });
   assert.ok(listed.includes('<span class="booking__service-name" data-service-name>Haircut</span>'));
   assert.ok(listed.includes('<span class="booking__service-name" data-service-name lang="de-CH">Färben</span>'));
   assert.ok(!renderBookingForm({ services, locale: 'en', now }).includes(' lang='), 'nothing marked where nothing says a lang');
+});
+
+// ── the studio's patches, made the kit's (18 November 2026) ──────────────────
+// A sessions site in German had to patch the form with scripts of its own; the
+// markup half of each fix is read here, the behaviour half in a real Chrome
+// (test/booking-element.test.mjs at the root).
+
+test('a length is said one way everywhere: whole hours in hours', async () => {
+  const { lasting: said } = await import('../lib/booking/words.mjs');
+  assert.equal(said, lasting, 'the element says lengths with the words file\'s function');
+  assert.equal(lasting(240, wordsFor('de')), '4 Std.');
+  assert.equal(lasting(90, wordsFor('de')), '1 Std. 30 Min.');
+  assert.equal(lasting(240, wordsFor('en')), '4 h');
+  assert.equal(lasting(45, wordsFor('en')), '45 min');
+  assert.equal(lasting(0, wordsFor('en')), '');
+  const { runs } = bookingForm({ services: [{ slug: 's', title: 'Session', takes: 240, costs: 24000 }, services[0]], locale: 'de', currency: 'CHF', combine: true });
+  assert.equal(runs.flatMap((run) => run.items).find((one) => one.slug === 's').meta.replace(/\s/g, ' '), '4 Std. · CHF 240', 'the list says «4 Std.», not «240 min»');
+  const element = readFileSync(new URL('../elements/booking.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(element, /\$\{[^}]*\} min\b/, 'no length said in minutes by hand');
+  assert.doesNotMatch(readFileSync(new URL('../lib/booking/render.mjs', import.meta.url), 'utf8'), /\$\{[^}]*\} min\b/);
+});
+
+test('one service is a line with its slug in a hidden input, not a choice of one', () => {
+  const session = { slug: 'session', title: 'Session', takes: 240, costs: 24000 };
+  for (const combine of [false, true]) {
+    const html = renderBookingForm({ services: [session], locale: 'de', currency: 'CHF', combine, now });
+    assert.ok(!html.includes('<select class="field__input" id="booking-service"'), 'no <select>');
+    assert.ok(!html.includes('type="checkbox"'), 'no checklist of one');
+    assert.ok(html.includes('<input type="hidden" name="service" value="session">'));
+    assert.match(html.replace(/\s/g, ' '), /data-service-one><span data-service-name>Session<\/span><span class="booking__service-meta"> · 4 Std\. · CHF 240<\/span>/);
+  }
+  assert.equal(bookingForm({ services: [session], locale: 'en' }).one?.label, 'Session · 4 h · 240');
+  assert.equal(bookingForm({ services, locale: 'en' }).one, null);
+});
+
+test('the choice of one of several is grouped by the checklist\'s own runs, each option saying how long and how much', () => {
+  const html = renderBookingForm({ services, locale: 'en', currency: 'CHF', now });
+  const select = html.slice(html.indexOf('<select'), html.indexOf('</select>')).replace(/\s/g, ' ');
+  assert.match(select, /<optgroup label="Hair"><option value="cut">Haircut · 45 min · CHF 55<\/option> *<option value="colour">Colour &lt;b&gt;&amp;amp;&lt;\/b&gt; tone · 1 h 30 min · CHF 120<\/option><\/optgroup>/);
+  assert.ok(select.indexOf('value="nails"') > select.indexOf('</optgroup>'), 'the service with no heading after the groups');
+  const { runs } = bookingForm({ services, locale: 'en' });
+  assert.deepEqual(runs.map((run) => run.group), ['Hair', ''], 'the same runs as the checklist\'s');
+  assert.ok(!renderBookingForm({ services: services.map(({ group, ...one }) => one), locale: 'en', now }).includes('<optgroup'), 'no group where none is said');
+});
+
+test('a phone or an email: both marked, a line above them says either will do, in every language', () => {
+  const html = renderBookingForm({ services, locale: 'de', now });
+  assert.match(html, /<label class="field__label" for="booking-phone">Telefon <span aria-hidden="true">\*<\/span><\/label>/);
+  assert.match(html, /<label class="field__label" for="booking-email">E-Mail <span aria-hidden="true">\*<\/span><\/label>/);
+  assert.match(html, /<p class="booking__hint" id="booking-contact" data-field data-contact-note>Eins genügt\.<\/p>\s*<div class="field" data-field>\s*<label class="field__label" for="booking-phone">/);
+  assert.equal(html.match(/aria-describedby="booking-contact"/g)?.length, 2);
+  for (const locale of LOCALES) assert.ok(wordsFor(locale).oneEnough, locale);
+  const element = readFileSync(new URL('../elements/booking.js', import.meta.url), 'utf8');
+  assert.ok(element.includes("if (phone === '' && email === '')"), 'the press still refuses neither');
+});
+
+test('the times\' fieldset may be narrower than its widest line, in booking.css and in the rules the element puts on the page', () => {
+  const css = readFileSync(new URL('../booking.css', import.meta.url), 'utf8');
+  assert.match(css, /\.booking \[data-times\][^{]*\{ min-inline-size: 0; \}/);
+  assert.match(css, /\.booking__times \{[^}]*min-inline-size: 0;/);
+  const element = readFileSync(new URL('../elements/booking.js', import.meta.url), 'utf8');
+  assert.ok(element.includes(':where([data-booking] :is([data-times], [data-services], fieldset)) { min-inline-size: 0; }'));
+});
+
+test('a link to the page: the names in one place, and only what parses', () => {
+  assert.deepEqual({ ...LINK }, { service: 'service', day: 'day', time: 'time' });
+  assert.deepEqual(linkIn('?service=cut&day=2026-11-24&time=14:00'), { services: ['cut'], day: '2026-11-24', time: '14:00' });
+  assert.deepEqual(linkIn('?service=cut&service=nails').services, ['cut', 'nails'], 'several for a checklist');
+  assert.deepEqual(linkIn('?day=2026-02-30&time=14:00'), { services: [], day: '', time: '' }, 'a day that is not one');
+  assert.deepEqual(linkIn('?day=24.11.2026'), { services: [], day: '', time: '' });
+  assert.equal(linkIn('?time=14:00').time, '', 'a time without a day');
+  assert.equal(linkIn('?day=2026-11-24&time=9:00').time, '', 'a time not on a 24-hour clock of two digits');
+  assert.equal(linkIn('?day=2026-11-24&time=24:00').time, '');
+  assert.equal(linkIn(new URLSearchParams({ day: '2026-11-24', time: '23:59' })).time, '23:59');
+});
+
+test('the element answers to choose and clear, and is quiet where there is no form', () => {
+  assert.equal(typeof JtkBooking.prototype.choose, 'function');
+  assert.equal(typeof JtkBooking.prototype.clear, 'function');
+  const bare = new JtkBooking();
+  assert.equal(bare.choose('2026-11-24T14:00:00Z'), false);
+  assert.doesNotThrow(() => bare.clear());
 });

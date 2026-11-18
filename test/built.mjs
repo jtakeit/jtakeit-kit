@@ -234,7 +234,10 @@ try {
     const form = page('en/services');
     check(/<option value="beat" data-does="cut" lang="de-CH"[^>]*>Beat Keller<\/option>/.test(form), `15 · the untranslated master is not in /en's booking form, marked de-CH: ${form.match(/<select[^>]*name="resource"[\s\S]*?<\/select>/)?.[0]}`);
     check(/<option value="anna" data-does="cut"(?![^>]*\blang=)[^>]*>Anna Meier<\/option>/.test(form), '15 · the translated master is not in /en\'s booking form in its own words');
-    check(/value="cut"[^>]*>[\s\S]{0,200}?lang="de-CH"[^>]*>Haarschnitt</.test(form) || /<option value="cut" lang="de-CH"[^>]*>Haarschnitt<\/option>/.test(form), '15 · the untranslated service is not in /en\'s booking form, marked de-CH');
+    // A checklist's row, an option saying how long and how much after the
+    // name, or the line of the one service and its slug (18 November 2026).
+    check(/value="cut"[^>]*>[\s\S]{0,200}?lang="de-CH"[^>]*>Haarschnitt</.test(form) || /<option value="cut" lang="de-CH"[^>]*>Haarschnitt( · [^<]*)?<\/option>/.test(form)
+      || /data-service-name lang="de-CH"[^>]*>Haarschnitt<[\s\S]{0,400}?name="service" value="cut"/.test(form), `15 · the untranslated service is not in /en's booking form, marked de-CH: ${form.match(/<div[^>]*data-field[^>]*>[\s\S]{0,600}?name="service"[^>]*>/)?.[0]}`);
     check(/<option value="beat" data-does="cut"(?![^>]*\blang=)[^>]*>Beat Keller<\/option>/.test(page('services')), '15 · the original\'s form marks its own words');
     check(de.includes('hreflang="en"') && en.includes('hreflang="de-CH"') && de.includes('hreflang="x-default"'), '13 · the home pages do not name each other');
     const sitemap = read('dist/sitemap.xml');

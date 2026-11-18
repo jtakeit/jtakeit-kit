@@ -77,3 +77,13 @@ test('the element finds nothing by a class alone', () => {
     }
   }
 });
+
+test("the scaffold's form: one service a line, several grouped, both contacts marked, the times narrowable (18 November 2026)", () => {
+  const astro = readFileSync(join(here, '../../template/src/components/BookingForm.astro'), 'utf8');
+  assert.ok(astro.includes('form.one ?') && astro.includes('<input type="hidden" name="service" value={form.one.slug} />'), 'one service is a line and a hidden input');
+  assert.ok(astro.includes('<optgroup label={run.group}>') && astro.includes('{one.label}</option>'), 'the <select> grouped by the runs, options with their length and price');
+  assert.ok(astro.includes('data-contact-note>{w.oneEnough}</p>'), 'the line above the phone and the email');
+  assert.match(astro, /for="booking-phone">\{w\.phone\} <span aria-hidden="true">\*<\/span>/);
+  assert.match(astro, /for="booking-email">\{w\.email\} <span aria-hidden="true">\*<\/span>/);
+  assert.match(astro, /\.times,\s*\.services \{\s*min-inline-size: 0;/);
+});
