@@ -1,0 +1,41 @@
+---
+/**
+ * The journal on the home page: a heading and the three latest posts of the
+ * `blog` collection, each a card the template draws (`EntryCard`), and a way
+ * to the whole journal. `jtk add blog` lays it out with two example posts;
+ * a blog is added on a sentence in the brief, never by default
+ * (docs/collections.md).
+ */
+import type { Block } from '@jtakeit/kit/content';
+import EntryCard from '../EntryCard.astro';
+import Button from '../site/Button.astro';
+import { site } from '../../lib/site';
+import { linkTo } from '../../lib/under';
+
+interface Props {
+  block: Block;
+  locale: string;
+  first?: boolean;
+}
+
+const { block, locale, first = false } = Astro.props;
+const posts = site.collection('blog') ? site.entries('blog', { locale }).slice(0, 3) : [];
+const listing = site.collection('blog') ? site.listingOf('blog', locale) : undefined;
+---
+
+<section class="section journal" id={first ? 'journal' : undefined}>
+  <div class="section__in">
+    <div class="section__head">
+      {block.text('eyebrow') && <p class="label" {...{ ...block.at('eyebrow'), ...block.lang('eyebrow') }}>{block.text('eyebrow')}</p>}
+      {block.text('title') && <h2 {...{ ...block.at('title'), ...block.lang('title') }}>{block.text('title')}</h2>}
+    </div>
+    {posts.length > 0 && <ul class="posts">{posts.map((post) => <EntryCard entry={post} locale={locale} level="h3" />)}</ul>}
+    {
+      listing && block.text('more_label') && (
+        <p class="section__more">
+          <Button href={linkTo(listing)} label={block.text('more_label')} at={block.at('more_label')} lang={block.lang('more_label')} quiet />
+        </p>
+      )
+    }
+  </div>
+</section>

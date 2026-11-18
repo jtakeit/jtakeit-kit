@@ -38,6 +38,11 @@
 //      field empty and with every one filled and long — judged and linted,
 //      every field the owner fills drawn and annotated; and their schemas
 //      earn none of the platform's advice (test/variants.mjs)
+//  12  the bare look (`--look bare`, docs/looks.md): the example's content
+//      and behaviour — its jtk/ the same as Brumy's, ids aside; the
+//      declaration, hours, imprint and shop the example's own — with none of
+//      Brumy's design; built, judged, linted, tidy and at the edges; `jtk
+//      remove`/`add` and `add shop` keep the look; `--look` with `--bare` refused
 //   5  every kit the platform has, laid out, built, judged and linted — when
 //      JTK_KITS_API names a platform (JTK_KITS_API=https://api.stg.jtakeit.com
 //      node test/create3.mjs); not in `npm test`, which asks no platform
@@ -72,7 +77,8 @@ function settled(site) {
     if (value !== null && typeof value === 'object') return Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'id' && key !== 'rank').map(([key, one]) => [key, plain(one)]));
     return typeof value === 'string' && ID.test(value) ? '<id>' : value;
   };
-  for (const file of walk(join(site, 'jtk'))) {
+  // The documents: a post's pictures beside it (jtk/entries/blog/media/) are files, not documents.
+  for (const file of walk(join(site, 'jtk')).filter((one) => one.endsWith('.json'))) {
     const doc = plain(JSON.parse(readFileSync(file, 'utf8')));
     if (file.endsWith('schema.json')) doc.blocks.sort((a, b) => (a.type < b.type ? -1 : 1));
     out[relative(site, file)] = doc;
@@ -495,6 +501,72 @@ try {
     tidy(join(dir, 'example-modules'), '10 · the example with a blog and a salon kit');
     atTheEdges(join(dir, 'example-modules'), '10 · the example with a blog and a salon kit');
     console.log('create3: the example, and with a blog and a salon kit — every optional field empty, then filled and long: built, judged, linted, every filled field drawn; no advice');
+
+    // ── 12 · the bare look ──────────────────────────────────────────────────
+    // The same site with no art direction (`--look bare`, docs/looks.md): the
+    // same schema, pages, entries, shared text and photographs as the example
+    // in Brumy's look with a blog and a salon kit, ids aside; its own tokens,
+    // look, header, footer, button and sections, none of Brumy's; the
+    // declaration, the hours, the imprint and the shop the example's own,
+    // byte for byte. `jtk remove` and `add` keep the look; `add shop` lays the
+    // shop's components as they are. Built, judged, linted, tidy, and at the
+    // edges of what an owner can write.
+    const bareRun = create('example-bare', '--locale', 'de-CH', '--locales', 'en', '--name', 'Salon Probe', '--blog', '--kit', kitFile, '--look', 'bare');
+    if (bareRun.status !== 0) fail(`12 · --look bare was not laid out:\n${bareRun.stderr}`);
+    const bare = join(dir, 'example-bare');
+    const brumy = join(dir, 'example-modules');
+    if (bareRun.stdout.includes('design system of Brumy') || !bareRun.stdout.includes('bare look') || !bareRun.stdout.includes('DESIGN.md')) fail(`12 · create does not say the bare look is the base of a design of its own:\n${bareRun.stdout}`);
+    if (json(bare, 'jtk/design.json').look !== 'bare') fail('12 · jtk/design.json does not say the bare look');
+    {
+      const theirs = settled(brumy);
+      const ours = settled(bare);
+      delete theirs['jtk/design.json'];
+      delete ours['jtk/design.json'];
+      if (JSON.stringify(ours) !== JSON.stringify(theirs)) fail('12 · the bare look lays out other content than the example: its jtk/ differs from Brumy\'s, ids aside');
+    }
+    const LOOKED = ['src/styles/tokens.css', 'src/styles/look.css', 'src/components/site/Look.astro', 'src/components/site/Header.astro', 'src/components/site/Footer.astro', 'src/components/site/Button.astro', 'src/components/sections/Hero.astro', 'src/components/sections/Values.astro', 'src/components/sections/ServicesList.astro', 'src/components/sections/Intro.astro', 'src/components/sections/GallerySection.astro', 'src/components/sections/TeamList.astro', 'src/components/sections/Testimonials.astro', 'src/components/sections/Questions.astro', 'src/components/sections/PostsLatest.astro', 'src/components/sections/Contact.astro'];
+    for (const file of LOOKED) {
+      if (!existsSync(join(bare, file))) fail(`12 · the bare look has no ${file}`);
+      if (text(bare, file) === text(brumy, file)) fail(`12 · the bare look's ${file} is Brumy's`);
+    }
+    for (const file of ['src/content/blocks.ts', 'src/components/sections/index.ts', 'src/components/site/Hours.astro', 'src/components/site/Label.astro', 'src/components/site/Page.astro', 'src/components/site/words.ts', 'src/pages/[...lang]/imprint.astro']) {
+      if (text(bare, file) !== text(brumy, file)) fail(`12 · the bare look's ${file} is not the example's own — behaviour and the declaration are the same in every look`);
+    }
+    {
+      // The look's own files: the template's catalogue (galleries, fields, grounds) stays in the tree, drawn by nothing.
+      const source = LOOKED.map((file) => text(bare, file)).join('\n');
+      for (const [said, what] of [[/@fontsource\//, 'a font package'], [/class="[^"]*\bglass\b|'glass'|--glass/, 'the glass'], [/backdrop-filter/, 'a blur'], [/data-reveal|data-edge|HeroField|<Pattern|<Gallery/, 'a composition of the template\'s'], [/@keyframes/, 'an animation'], [/radial-gradient|linear-gradient/, 'a gradient']]) {
+        if (said.test(source)) fail(`12 · the bare look carries ${what}`);
+      }
+    }
+    if (!text(bare, 'BRIEF.md').includes('DESIGN.md')) fail('12 · BRIEF.md does not ask for DESIGN.md');
+    judged(bare, packed, '12 · the bare look');
+    tidy(bare, '12 · the bare look');
+    {
+      const de = text(bare, 'dist/index.html');
+      if (!de.includes('Gute Arbeit, mit Sorgfalt gemacht.') || !text(bare, 'dist/en/index.html').includes('Good work, done with care.')) fail('12 · the bare look\'s home pages are not in their languages');
+      if (!de.includes('<header class="site-header"') || !de.includes('<footer class="site-footer"') || de.includes('class="bar"') || de.includes('class="foot"')) fail('12 · the bare look has not its own header and footer');
+      if (!/<div class="hours[^"]*"[^>]* data-zone="Europe\/Zurich"/.test(de)) fail('12 · the bare look\'s hours do not name the zone for «open now»');
+      if (!de.includes('<form class="lead"')) fail('12 · the bare look has no enquiry form');
+      if (!existsSync(join(bare, 'dist/services/index.html')) || !text(bare, 'dist/services/index.html').includes('<jtk-booking')) fail('12 · the bare look\'s /services has not the booking form');
+      const linted = spawnSync('node', [join(bare, 'node_modules/@jtakeit/kit/bin/jtkit.mjs'), 'lint', '--dist', 'dist', '--root', '.'], { cwd: bare, encoding: 'utf8' });
+      if (/advice|warning/.test(linted.stdout)) fail(`12 · the bare look earns the lint's advice:\n${linted.stdout}`);
+    }
+    atTheEdges(bare, '12 · the bare look');
+    // A section taken out and put back, and the shop: in the look the site was laid out in.
+    for (const [verb, unit] of [['remove', 'gallery'], ['add', 'gallery']]) {
+      const ran = spawnSync('node', [bin, verb, unit, '--root', bare], { encoding: 'utf8' });
+      if (ran.status !== 0) fail(`12 · ${verb} ${unit} on the bare look:\n${ran.stdout}\n${ran.stderr}`);
+    }
+    if (text(bare, 'src/components/sections/GallerySection.astro') !== readFileSync(resolve('example/looks/bare/src/components/sections/GallerySection.astro'), 'utf8')) fail('12 · jtk add gallery on the bare look lays Brumy\'s section');
+    {
+      const ran = spawnSync('node', [bin, 'add', 'shop', '--kit', resolve('kit/test/fixtures/kits/shop.json'), '--root', bare], { encoding: 'utf8' });
+      if (ran.status !== 0) fail(`12 · add shop on the bare look:\n${ran.stdout}\n${ran.stderr}`);
+      if (text(bare, 'src/components/shop/Product.astro') !== readFileSync(resolve('example/files/src/components/shop/Product.astro'), 'utf8')) fail('12 · the bare look\'s shop is not the example\'s own');
+    }
+    run = create('example-bare-template', '--bare', '--look', 'bare');
+    if (run.status === 0 || !run.stderr.includes('--look takes the example\'s looks')) fail(`12 · --look with --bare was not refused: ${run.stderr}`);
+    console.log('create3: the bare look — the example\'s content and behaviour, none of Brumy\'s design; built, judged, linted, tidy, at the edges; remove/add and the shop keep the look');
   }
 
   // ── 5 · every kit the platform has ────────────────────────────────────────

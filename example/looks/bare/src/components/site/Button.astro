@@ -1,0 +1,28 @@
+---
+/**
+ * The page's button, in its two weights: filled with the accent, or quiet —
+ * an outline. A link that is an action; the look is look.css's `.button`.
+ *
+ * `at` is the label's annotation — `{...block.at('cta_label')}` — where the
+ * words are content, and `lang` its language where it is the original's on a
+ * page in another. `href` is written under the build's base by the caller
+ * (`linkTo`), so the preview's `/p/<slug>/` holds.
+ */
+interface Props {
+  href: string;
+  label: string;
+  at?: Record<string, string | undefined>;
+  lang?: { lang?: string };
+  /** `data-jtk-href`: where the panel edits the link beside the words, when the owner may. */
+  hrefAt?: string;
+  quiet?: boolean;
+  small?: boolean;
+  class?: string;
+}
+
+const { href, label, at = {}, lang = {}, hrefAt, quiet = false, small = false, class: extra } = Astro.props;
+---
+
+<a class:list={['button', { 'button--quiet': quiet, 'button--small': small }, extra]} href={href} data-jtk-href={hrefAt}>
+  <span {...{ ...at, ...lang }}>{label}</span>
+</a>

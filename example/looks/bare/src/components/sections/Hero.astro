@@ -1,0 +1,82 @@
+---
+/**
+ * The first screen: what this is, for whom, and one action — a line above,
+ * the page's heading, a lead and the two buttons, in that order, and the
+ * photograph under them. No plate, no light, no entrance: the design that
+ * replaces this decides the hero (docs/shapes.md).
+ *
+ * Every value is the block's, annotated through the door (`block.at`); the
+ * photograph is the page's largest picture and the one loaded eagerly.
+ * Without one (`hero--no-picture`) the words are the whole first screen.
+ */
+import type { Block } from '@jtakeit/kit/content';
+import Shot from '../Shot.astro';
+import Button from '../site/Button.astro';
+import { linkTo } from '../../lib/under';
+import { withLocale } from '../../lib/locale';
+
+interface Props {
+  block: Block;
+  locale: string;
+}
+
+const { block, locale } = Astro.props;
+const shot = block.picture('image');
+/** A link of the content, in this page's language. */
+const go = (href: string): string => {
+  if (!href.startsWith('/') || href.startsWith('//')) return linkTo(href);
+  const [path, hash] = href.split('#');
+  return `${linkTo(withLocale(locale, path || '/'))}${hash ? `#${hash}` : ''}`;
+};
+const title = block.text('title');
+---
+
+<section class:list={['section', 'hero', !shot.src && 'hero--no-picture']}>
+  <div class="section__in">
+    <div class="hero__words">
+      {block.text('eyebrow') && <p class="label" {...{ ...block.at('eyebrow'), ...block.lang('eyebrow') }}>{block.text('eyebrow')}</p>}
+      {title && <h1 {...{ ...block.at('title'), ...block.lang('title') }}>{title}</h1>}
+      {block.text('lead') && <p class="section__lead" {...{ ...block.at('lead'), ...block.lang('lead') }}>{block.text('lead')}</p>}
+      {
+        (block.text('cta_label') || block.text('more_label')) && (
+          <p class="actions-row">
+            {block.text('cta_label') && (
+              <Button href={go(block.text('cta_href') || '#contact')} label={block.text('cta_label')} at={block.at('cta_label')} lang={block.lang('cta_label')} />
+            )}
+            {block.text('more_label') && (
+              <Button href={go(block.text('more_href') || '/services')} label={block.text('more_label')} at={block.at('more_label')} lang={block.lang('more_label')} quiet />
+            )}
+          </p>
+        )
+      }
+    </div>
+    {
+      shot.src && (
+        <Shot
+          name={shot.src}
+          alt={shot.alt}
+          lang={shot.lang}
+          path={shot['data-jtk-path']}
+          focus={shot.focus}
+          ratio="16 / 9"
+          class="hero__shot"
+          eager
+          width={1600}
+          sizes="(min-width: 64rem) 64rem, 100vw"
+        />
+      )
+    }
+  </div>
+</section>
+
+<style>
+  .hero {
+    border-block-start: 0;
+  }
+
+  .hero__words {
+    display: grid;
+    gap: var(--space-4);
+    max-inline-size: var(--measure);
+  }
+</style>

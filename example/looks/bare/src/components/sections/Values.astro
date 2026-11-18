@@ -1,0 +1,54 @@
+---
+/**
+ * What the business holds to: a statement and a numbered list — each row a
+ * title and a line. The numbers are the list's own (`<ol>`), never written
+ * into the markup, so a row the owner moves, adds or takes away in the
+ * panel's preview is counted where it is now.
+ */
+import type { Block } from '@jtakeit/kit/content';
+
+interface Props {
+  block: Block;
+  first?: boolean;
+}
+
+const { block, first = false } = Astro.props;
+const items = block.rows('items');
+---
+
+<section class="section values" id={first ? 'values' : undefined}>
+  <div class="section__in">
+    <div class="section__head">
+      {block.text('eyebrow') && <p class="label" {...{ ...block.at('eyebrow'), ...block.lang('eyebrow') }}>{block.text('eyebrow')}</p>}
+      {block.text('title') && <h2 {...{ ...block.at('title'), ...block.lang('title') }}>{block.text('title')}</h2>}
+    </div>
+    {
+      items.length > 0 && (
+        <ol class="values__list">
+          {items.map((row) => (
+            <li class="values__row">
+              {row.text('title') && <h3 {...{ ...row.at('title'), ...row.lang('title') }}>{row.text('title')}</h3>}
+              {row.text('text') && <p {...{ ...row.at('text'), ...row.lang('text') }}>{row.text('text')}</p>}
+            </li>
+          ))}
+        </ol>
+      )
+    }
+  </div>
+</section>
+
+<style>
+  .values__list {
+    display: grid;
+    gap: var(--space-4);
+    max-inline-size: var(--measure);
+    margin: 0;
+    padding-inline-start: var(--space-5);
+    list-style: decimal;
+  }
+
+  /* A list item, so that it keeps its number. */
+  .values__row h3 + p {
+    margin-block-start: var(--space-1);
+  }
+</style>

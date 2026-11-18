@@ -34,7 +34,17 @@ Say so to the developer: the look may be kept, and is meant to be adapted — a
 palette and a type pairing from the brief replace `src/styles/tokens.css` and
 the three `@fontsource` packages, and every component keeps working; a deeper
 direction replaces sections in `src/components/sections/`. `jtk/design.json`
-says `"look": "brumy"` (`--look` takes no other yet).
+says `"look": "brumy"`.
+
+**A custom design is laid out with `--look bare`**, not made by recolouring
+Brumy's: the same site — sections, words, photographs, forms, booking, shop,
+accessibility, the live render — with no art direction (system type, neutral
+colours, one radius, plain sections in document order), and `jtk/design.json`
+says `"look": "bare"`. The design is then yours: `DESIGN.md` first, from the
+business's site or the person's references, then each section composed with
+[compositions.md](compositions.md). [looks.md](looks.md) says when, what it
+gives and the steps. (`--bare`, which lays the template with no example at
+all, is the kit's own tests' and not this.)
 
 | | where |
 | --- | --- |

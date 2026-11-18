@@ -22,6 +22,8 @@
  * by the path a site has them at): `jtk remove` deletes a section's
  * component only where its hash is one of a version's — or this package's
  * own — and leaves one the agent changed (lib/units/index.mjs, `scaffolds`).
+ * Another look's own files (example/looks/<look>/) are recorded under the
+ * same paths, beside Brumy's: a path then has a hash per look a version had.
  */
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -71,30 +73,34 @@ function filesAt(commit) {
   return out;
 }
 
-/** The example's own files of a commit (example/files/): path in a site → text. */
+/** Where a file of example/ is in a site: example/files/<path>, example/looks/<look>/<path>. */
+const pathInSite = (name) => (name.startsWith('example/files/') ? name.slice('example/files/'.length) : name.replace(/^example\/looks\/[^/]+\//, ''));
+
+/** The example's own files of a commit (example/files/, and each look's, example/looks/): [path in a site, text]. */
 function exampleAt(commit) {
   let listed = [];
   try {
-    listed = git('ls-tree', '-r', '--name-only', commit, '--', 'example/files').trim().split('\n').filter(Boolean);
+    listed = git('ls-tree', '-r', '--name-only', commit, '--', 'example/files', 'example/looks').trim().split('\n').filter(Boolean);
   } catch {
-    return new Map();
+    return [];
   }
-  return new Map(listed.filter((name) => !BINARY.test(name)).map((name) => [name.slice('example/files/'.length), git('show', `${commit}:${name}`)]));
+  return listed.filter((name) => !BINARY.test(name)).map((name) => [pathInSite(name), git('show', `${commit}:${name}`)]);
 }
 
-/** The working tree's example files. */
+/** The working tree's example files, and each look's: [path in a site, text]. */
 function exampleHere() {
-  const out = new Map();
-  const root = join(ROOT, 'example', 'files');
-  const walk = (at) => {
+  const out = [];
+  const walk = (root, at = root) => {
     if (!existsSync(at)) return;
     for (const entry of readdirSync(at)) {
       const file = join(at, entry);
-      if (statSync(file).isDirectory()) walk(file);
-      else if (!BINARY.test(entry)) out.set(relative(root, file).split(sep).join('/'), readFileSync(file, 'utf8'));
+      if (statSync(file).isDirectory()) walk(root, file);
+      else if (!BINARY.test(entry)) out.push([relative(root, file).split(sep).join('/'), readFileSync(file, 'utf8')]);
     }
   };
-  walk(root);
+  walk(join(ROOT, 'example', 'files'));
+  const looks = join(ROOT, 'example', 'looks');
+  if (existsSync(looks)) for (const look of readdirSync(looks)) walk(join(looks, look));
   return out;
 }
 
@@ -132,7 +138,8 @@ for (const [version, read, readExample] of sources) {
   }
   for (const [path, text] of readExample()) {
     table.example[path] ??= {};
-    (table.example[path][hash(text)] ??= []).push(version);
+    const versionsOf = (table.example[path][hash(text)] ??= []);
+    if (!versionsOf.includes(version)) versionsOf.push(version);
   }
 }
 const sorted = (one) => Object.fromEntries(Object.entries(one).sort(([a], [b]) => (a < b ? -1 : 1)));

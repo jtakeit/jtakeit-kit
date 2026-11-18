@@ -136,6 +136,7 @@ public/            favicons, the og image, clips
 - **The shapes a page can take** — [shapes.md](shapes.md)
 - **Design tokens and CSS discipline** — [css.md](css.md)
 - **The scaffold, and what the platform holds it to** — [scaffold.md](scaffold.md)
+- **Which look: Brumy's, or bare for a custom design** — [looks.md](looks.md)
 
 ## Motion
 

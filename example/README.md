@@ -12,6 +12,10 @@ and out (docs/units.md).
   declaration (`src/content/blocks.ts`), its look (`src/styles/tokens.css`,
   `look.css`, `src/components/site/`), its sections
   (`src/components/sections/`) and the imprint's route.
+- `looks/<look>/` — another look's own files, laid over `files/` at the same
+  paths by `jtk create --look <look>`: only those it draws differently.
+  `looks/bare/` is the example with no art direction, the base for a custom
+  design (docs/looks.md).
 - `media/` — its photographs.
 - `prints.json` — the fingerprints of its words and photographs
   (`scripts/example-prints.mjs`), for the platform's advice that a site still

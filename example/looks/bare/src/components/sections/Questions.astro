@@ -1,0 +1,61 @@
+---
+/**
+ * The questions: a heading, then each answer folded under its question
+ * (`<details>`), open to a search engine and a screen reader as it is to a
+ * hand. Each answer has to read on its own, away from the page — an
+ * assistant quotes one paragraph with nothing around it (docs/pages.md).
+ */
+import type { Block } from '@jtakeit/kit/content';
+
+interface Props {
+  block: Block;
+  first?: boolean;
+}
+
+const { block, first = false } = Astro.props;
+const items = block.rows('items');
+---
+
+<section class="section faq" id={first ? 'questions' : undefined}>
+  <div class="section__in">
+    <div class="section__head">
+      {block.text('title') && <h2 {...{ ...block.at('title'), ...block.lang('title') }}>{block.text('title')}</h2>}
+    </div>
+    {
+      items.length > 0 && (
+        <div class="faq__list">
+          {items.map((row, at) => (
+            <details class="faq__one" open={at === 0 ? true : undefined}>
+              <summary>
+                <span {...{ ...row.at('question'), ...row.lang('question') }}>{row.text('question')}</span>
+              </summary>
+              <p {...{ ...row.at('answer'), ...row.lang('answer') }}>{row.text('answer')}</p>
+            </details>
+          ))}
+        </div>
+      )
+    }
+  </div>
+</section>
+
+<style>
+  .faq__list {
+    display: grid;
+    max-inline-size: var(--measure);
+  }
+
+  .faq__one {
+    padding-block: var(--space-3);
+    border-block-end: 1px solid var(--line);
+  }
+
+  .faq__one summary {
+    padding-block: var(--space-2);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .faq__one p {
+    padding-block-end: var(--space-2);
+  }
+</style>
