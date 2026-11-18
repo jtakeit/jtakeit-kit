@@ -52,6 +52,29 @@ const listing = site.collection('blog') ? site.listingOf('blog', locale) : undef
     line-height: 1.15;
   }
   .journal__more {
-    margin: clamp(1.5rem, 4vh, 2.5rem) 0 0;
+    margin: clamp(1.5rem, calc(var(--screen) * 0.04), 2.5rem) 0 0;
+  }
+  /*
+   * On a phone the latest posts — a row of up to seven things — is a swipe with a peek,
+   * not a tower (docs/compositions.md, «Phones»): one row, each a little
+   * narrower than the screen so the next shows at its edge, from the screen's
+   * edge to the screen's edge. Its links take the keyboard along it.
+   */
+  @media (max-width: 40rem) {
+    .journal__posts {
+      grid-template-columns: none;
+      grid-auto-flow: column;
+      grid-auto-columns: min(17rem, 78%);
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      scroll-snap-type: x mandatory;
+      scroll-padding-inline: var(--gutter);
+      margin-inline: calc(-1 * var(--gutter));
+      padding-inline: var(--gutter);
+      padding-block-end: var(--space-2);
+    }
+    .journal__posts > :global(*) {
+      scroll-snap-align: start;
+    }
   }
 </style>

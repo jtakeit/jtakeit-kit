@@ -29,7 +29,7 @@ const listing = site.collection('blog') ? site.listingOf('blog', locale) : undef
       {block.text('eyebrow') && <p class="label" {...{ ...block.at('eyebrow'), ...block.lang('eyebrow') }}>{block.text('eyebrow')}</p>}
       {block.text('title') && <h2 {...{ ...block.at('title'), ...block.lang('title') }}>{block.text('title')}</h2>}
     </div>
-    {posts.length > 0 && <ul class="posts">{posts.map((post) => <EntryCard entry={post} locale={locale} level="h3" />)}</ul>}
+    {posts.length > 0 && <ul class="posts journal__posts">{posts.map((post) => <EntryCard entry={post} locale={locale} level="h3" />)}</ul>}
     {
       listing && block.text('more_label') && (
         <p class="section__more">
@@ -39,3 +39,29 @@ const listing = site.collection('blog') ? site.listingOf('blog', locale) : undef
     }
   </div>
 </section>
+
+<style>
+  /*
+   * On a phone the latest posts — a row of up to seven things — is a swipe with a peek,
+   * not a tower (docs/compositions.md, «Phones»): one row, each a little
+   * narrower than the screen so the next shows at its edge, from the screen's
+   * edge to the screen's edge. Its links take the keyboard along it.
+   */
+  @media (max-width: 40rem) {
+    .journal__posts {
+      grid-template-columns: none;
+      grid-auto-flow: column;
+      grid-auto-columns: min(17rem, 78%);
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      scroll-snap-type: x mandatory;
+      scroll-padding-inline: var(--gutter);
+      margin-inline: calc(-1 * var(--gutter));
+      padding-inline: var(--gutter);
+      padding-block-end: var(--space-2);
+    }
+    .journal__posts > :global(*) {
+      scroll-snap-align: start;
+    }
+  }
+</style>
