@@ -294,13 +294,18 @@ list, the opening line, the master's photograph — or let it use the width.
 ## On localhost
 
 `astro dev` answers the form itself: `jtakeit-meta.mjs` mounts
-`@jtakeit/kit/devdiary` at `/api`, which reads the hours, the zone and the slot
-length from the settings (`jtk/modules/bookings.json`) and the services and
-people from their entries under `jtk/entries/`, and offers times from them — so the form can be walked end to end while the
-page is being written. A booking is kept in memory until the server stops and
-reaches nothing; the terminal says so. It is not the platform's diary (no
-buffers, no rates by the hour, no people's own hours): `preflight` with
-`try_booking` is still the test of the real one.
+`@jtakeit/kit/devdiary` at `/api`, which reads the hours, the zone, the slot
+length, the lead, the horizon, the largest party and the days off from the
+settings (`jtk/modules/bookings.json`) and the services and people from their
+entries under `jtk/entries/`, and offers times from them by the platform's
+rules — so the form can be walked end to end while the page is being written.
+A person's own `hours` narrow the business's; a class (`spots`, the sessions
+kit) starts when its row opens and takes bookings until its places are gone,
+a party taking one place each; a day off shuts the business, or the one it
+names. A booking is kept in memory until the server stops and reaches nothing;
+the terminal says so. It is not the platform's diary (no buffers, no rates by
+the hour, no letting by the day): `preflight` with `try_booking` is still the
+test of the real one.
 
 ## In the preview
 
