@@ -47,9 +47,11 @@ export interface BookingForm {
   lang: string;
   /** A checklist, or one `<select>`. */
   combine: boolean;
-  /** The checklist's runs: headings in order, the ones with none after them, add-ons last. `meta` is «45 min · CHF 95». */
-  runs: { group: string; items: (Named & { meta: string })[] }[];
-  /** For one `<select>`, as they came. */
+  /** The services in their runs — the checklist's, and the `<select>`'s `<optgroup>`s: headings in order, the ones with none after them, add-ons last. `meta` is «45 min · CHF 95»; `label` the title with it, an option's words. */
+  runs: { group: string; items: (Named & { meta: string; label: string })[] }[];
+  /** The service, where the form offers exactly one: said as a line with its slug in a hidden input, not a choice of one. */
+  one: (Named & { meta: string; label: string }) | null;
+  /** As they came. */
   services: Named[];
   /** The choice of whom — empty for none; `does` is the slugs joined for `data-does`. */
   resources: (Omit<Named, 'does'> & { does: string })[];

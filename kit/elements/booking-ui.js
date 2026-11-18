@@ -25,8 +25,9 @@ import { PARTS, partsOf, parseDay, ymd, DAY_NAMES, to24 } from '../lib/booking/p
 /**
  * @param {HTMLFormElement} form
  * @param {Record<string, string>} words
+ * @param {{ unchoose?: () => void }} [element]  what the element is told: a time the parts of the day hide is no longer chosen
  */
-export function dressBooking(form, words) {
+export function dressBooking(form, words, element = {}) {
   if (form.dataset.dressed === '1') return;
   form.dataset.dressed = '1';
   const wants = new Set((form.dataset.ui ?? '').split(/\s+/).filter(Boolean));
@@ -38,7 +39,7 @@ export function dressBooking(form, words) {
     const day = /** @type {HTMLInputElement | null} */ (form.querySelector('input[name=day]'));
     if (day) weekStrip(day, { open: (form.dataset.open ?? '').split(',').filter(Boolean), lang, words });
   }
-  if (wants.has('parts')) partsOfDay(form, words);
+  if (wants.has('parts')) partsOfDay(form, words, element.unchoose);
   if (wants.has('steps')) twoSteps(form, words, lang);
 }
 
@@ -150,10 +151,17 @@ export function weekStrip(input, options) {
  * writes the pills; this sorts them as they arrive. A pill the element has
  * chosen decides which part shows.
  *
+ * A time the person hides by switching to another part is no longer chosen:
+ * it went on to the second step unseen and was booked (18 November 2026).
+ * The element is told (`unchoose`); without one, the pill is unpressed here.
+ * A time chosen in a part not showing — by the page's own script, by a link
+ * to the page — brings its part into view.
+ *
  * @param {HTMLFormElement} form
  * @param {Record<string, string>} words
+ * @param {() => void} [unchoose]
  */
-export function partsOfDay(form, words) {
+export function partsOfDay(form, words, unchoose) {
   const slots = /** @type {HTMLElement | null} */ (form.querySelector('[data-slots]'));
   if (!slots || slots.dataset.parts === '1') return;
   slots.dataset.parts = '1';
@@ -203,8 +211,23 @@ export function partsOfDay(form, words) {
     if (!(tab instanceof HTMLElement)) return;
     current = tab.dataset.part ?? '';
     show();
+    const unseen = /** @type {HTMLElement | null} */ (slots.querySelector('[data-slot][aria-pressed="true"]'));
+    if (unseen && unseen.hidden) {
+      if (unchoose) unchoose();
+      else {
+        unseen.setAttribute('aria-pressed', 'false');
+        unseen.classList.remove('is-chosen');
+      }
+    }
   });
-  new MutationObserver(sort).observe(slots, { childList: true });
+  new MutationObserver((changes) => {
+    if (changes.some((one) => one.type === 'childList')) { sort(); return; }
+    const pressed = /** @type {HTMLElement | null} */ (slots.querySelector('[data-slot][aria-pressed="true"]'));
+    if (pressed && pressed.hidden && parts.has(pressed)) {
+      current = parts.get(pressed) ?? current;
+      show();
+    }
+  }).observe(slots, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-pressed'] });
   sort();
 }
 
@@ -253,6 +276,8 @@ export function twoSteps(form, words, lang) {
   next.className = 'booking__next';
   next.dataset.step = '1';
   next.dataset.stepUi = '';
+  // Found by the element, which presses it for a link that named a time.
+  next.dataset.stepNext = '';
   next.textContent = words.next ?? 'Continue';
   const need = document.createElement('p');
   need.className = 'booking__need';
@@ -279,7 +304,13 @@ export function twoSteps(form, words, lang) {
     const names = /** @type {HTMLInputElement[]} */ ([...form.querySelectorAll('input[name=service]:checked')])
       .map((box) => box.closest('[data-service-row], .booking__service, label')?.querySelector('[data-service-name], .booking__service-name')?.textContent?.trim() ?? box.value);
     const single = /** @type {HTMLSelectElement | null} */ (form.querySelector('select[name=service]'));
-    if (single) names.push(single.options[single.selectedIndex]?.textContent?.trim() ?? '');
+    // The option says the length and the price beside the name; the summary
+    // says them in rows of their own, so it takes the name the option carries.
+    const option = single?.options[single.selectedIndex];
+    if (single) names.push(option?.dataset.name?.trim() || option?.textContent?.trim() || '');
+    // The one service a form offers, said as a line: its name, from the line.
+    const lone = /** @type {HTMLInputElement | null} */ (form.querySelector('input[type=hidden][name=service]'));
+    if (lone && lone.value) names.push(lone.closest('[data-field]')?.querySelector('[data-service-name]')?.textContent?.trim() || lone.value);
     const who = /** @type {HTMLSelectElement | null} */ (form.querySelector('select[name=resource]'));
     const dayValue = /** @type {HTMLInputElement | null} */ (form.querySelector('input[name=day]'))?.value ?? '';
     const dayDate = parseDay(dayValue);
@@ -393,15 +424,31 @@ export function drawnSelect(select) {
   label?.addEventListener('click', (event) => { event.preventDefault(); trigger.focus(); });
   if (label) list.setAttribute('aria-label', label.textContent?.trim() ?? '');
 
+  // One option is not a choice: said as a line, not a list that opens on the
+  // only thing in it (18 November 2026).
+  const line = document.createElement('p');
+  line.className = 'booking__one';
+  line.hidden = true;
+  root.append(line);
+  /** @param {HTMLOptionElement} o */
+  const optionOf = (o) => `<button type="button" class="booking__dd-option${o.selected ? ' is-chosen' : ''}" role="option" aria-selected="${o.selected}" data-value="${o.value.replace(/"/g, '&quot;')}"${o.disabled ? ' disabled' : ''}>${o.textContent}</button>`;
   const draw = () => {
     const current = select.options[select.selectedIndex];
+    const lone = select.options.length === 1;
+    trigger.hidden = lone;
+    line.hidden = !lone;
+    line.textContent = lone ? current?.textContent ?? '' : '';
+    if (lone) list.hidden = true;
     trigger.innerHTML = `<span class="booking__dd-value">${current?.textContent ?? ''}</span><span class="booking__dd-mark" aria-hidden="true">▾</span>`;
     // Named by the label and the value both: the label alone hid what is
     // chosen, and broke the rule that a control's name holds the words drawn
     // on it (WCAG 2.5.3) — a voice user says what they see.
     if (label) trigger.setAttribute('aria-label', `${label.textContent?.trim() ?? ''}: ${current?.textContent?.trim() ?? ''}`);
-    list.innerHTML = [...select.options]
-      .map((o) => `<button type="button" class="booking__dd-option${o.selected ? ' is-chosen' : ''}" role="option" aria-selected="${o.selected}" data-value="${o.value.replace(/"/g, '&quot;')}"${o.disabled ? ' disabled' : ''}>${o.textContent}</button>`)
+    // The groups of the native one, headed as they are there.
+    list.innerHTML = [...select.children]
+      .map((child) => (child instanceof HTMLOptGroupElement
+        ? `<div class="booking__dd-group" role="group" aria-label="${child.label.replace(/"/g, '&quot;')}"><span class="booking__dd-group-label" aria-hidden="true">${child.label.replace(/</g, '&lt;')}</span>${[...child.children].filter((o) => o instanceof HTMLOptionElement).map(optionOf).join('')}</div>`
+        : child instanceof HTMLOptionElement ? optionOf(child) : ''))
       .join('');
   };
   const open = (yes) => {

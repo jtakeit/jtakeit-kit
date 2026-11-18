@@ -20,6 +20,10 @@
  *           the visit ends, what was taken, the link to keep. Left out, that
  *           line is not said and nothing else changes.
  *
+ * And one thing read off the page rather than the form: its address. A link
+ * to the booking page with `?service=…&day=…&time=…` (`LINK`) opens the form
+ * on that service and that day, and on that time where it is free.
+ *
  * The test (kit/test/hooks.test.mjs) holds `renderBookingForm` and the
  * scaffold's `BookingForm.astro` to ALWAYS, ASKED and SAID; the platform's
  * preflight keeps its own copy of ALWAYS and ASKED, written from this one.
@@ -30,7 +34,7 @@
 /** @type {readonly Hook[]} */
 export const ALWAYS = Object.freeze([
   { hook: 'form[data-booking]', says: 'the form; `data-api`, `data-sends` and `data-locale` on it' },
-  { hook: '[name=service]', says: 'a `<select>` for one service, or checkboxes for several (`combine`)' },
+  { hook: '[name=service]', says: 'a `<select>` for one of several, checkboxes for several at once (`combine`), or a hidden input where the form offers exactly one' },
   { hook: '[name=day]', says: 'an `<input type="date">`; the week of days is drawn over it' },
   { hook: '[data-times]', says: 'around the times: the hint, the times and when the visit ends' },
   { hook: '[data-slots]', says: 'empty; the element writes a button per free time into it' },
@@ -41,7 +45,7 @@ export const ALWAYS = Object.freeze([
   { hook: '[data-challenge]', says: 'empty and hidden; the anti-bot widget goes here where the host has one' },
   { hook: '[data-booking-error]', says: 'the refusal, said; tied to the fields it is about' },
   { hook: '[data-submit]', says: 'the submit button' },
-  { hook: '[data-done]', says: 'hidden; shown once booked, with the lines below inside it' },
+  { hook: '[data-done]', says: 'hidden; shown once booked, with the lines below inside it — and the site\'s own mark beside them, which the element leaves alone' },
   { hook: '[data-done-line]', says: '«you are booked» or «waiting for the business»' },
   { hook: '[data-done-when]', says: 'the day and the time booked' },
   { hook: '[data-manage]', says: 'a link to the visitor\'s own page: cancel, move' },
@@ -68,7 +72,7 @@ export const SAID = Object.freeze([
   { hook: '[data-field]', says: 'on each field\'s wrapper: what the two steps sort and what is hidden once booked' },
   { hook: '[data-services]', says: 'the checklist\'s fieldset' },
   { hook: '[data-service-row]', says: 'the `<label>` around each checkbox: greyed with `data-off` when the one chosen does not do it' },
-  { hook: '[data-service-name]', says: 'the service\'s name inside the row' },
+  { hook: '[data-service-name]', says: 'the service\'s name inside the row, or in the line of the one service' },
   { hook: '[data-total]', says: 'the running total of a checklist' },
   { hook: '[data-ends]', says: '«until about 10:45 · 1 h 15 min»' },
   { hook: '[data-stay-total]', says: 'the price of a stay' },
@@ -77,6 +81,43 @@ export const SAID = Object.freeze([
   { hook: '[data-telegram]', says: 'a link to the business\'s Telegram bot, where it has one' },
   { hook: '[name=note]', says: 'a note to the business' },
 ]);
+
+/**
+ * The names in the page's address the element reads when it is connected
+ * (18 November 2026): a page that links to the booking page — a service's
+ * own, a timetable — says what to open the form on.
+ *
+ *   service  a service's slug; several for a checklist. One the form does not
+ *            offer, or that nobody performs, is ignored.
+ *   day      YYYY-MM-DD; the form opens on that day, if it may be booked.
+ *   time     HH:MM on the business's clock (its zone), with `day`: chosen if
+ *            it is free that day, and the form goes on to its second step.
+ *
+ * Anything else, or anything that does not parse, is ignored and said nowhere:
+ * a stale link opens the form as it would open without one.
+ */
+export const LINK = Object.freeze({ service: 'service', day: 'day', time: 'time' });
+
+/**
+ * What a page's address asks the form to open on, by `LINK`'s names: only
+ * what parses — a day that is a day, a time on a 24-hour clock, and a time
+ * only with a day.
+ * @param {string | URLSearchParams} search  `location.search`, or its params
+ * @returns {{ services: string[]; day: string; time: string }}
+ */
+export function linkIn(search) {
+  const params = typeof search === 'string' ? new URLSearchParams(search) : search;
+  const services = params.getAll(LINK.service).map((one) => one.trim()).filter(Boolean);
+  let day = (params.get(LINK.day) ?? '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) day = '';
+  else {
+    const [y, m, d] = day.split('-').map(Number);
+    const back = new Date(Date.UTC(y, m - 1, d));
+    if (back.getUTCFullYear() !== y || back.getUTCMonth() !== m - 1 || back.getUTCDate() !== d) day = '';
+  }
+  const time = day && /^([01]\d|2[0-3]):[0-5]\d$/.test((params.get(LINK.time) ?? '').trim()) ? (params.get(LINK.time) ?? '').trim() : '';
+  return { services, day, time };
+}
 
 /** Every hook, for a check that reads them all. */
 export const HOOKS = Object.freeze([...ALWAYS, ...ASKED, ...SAID].map((one) => one.hook));

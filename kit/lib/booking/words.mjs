@@ -50,6 +50,8 @@ const BASE = {
     party: 'Скільки вас', perPerson: 'за особу', addOns: 'Додатково', quantity: 'Скільки — доріжок, столів, кімнат', together: '{n} разом', hours: 'Скільки часу', hourShort: 'год', minuteShort: 'хв', challenge: 'Підтвердіть, що ви не робот, і спробуйте ще раз.', tooMany: 'У вас уже є кілька відкритих записів. Скасуйте один із них або зателефонуйте нам.',
     from: 'від',
     needName: "Вкажіть імʼя, щоб ми знали, кого чекати.",
+    // Above the phone and the email: either will do (18 November 2026).
+    oneEnough: "Достатньо одного з двох.",
     needContact: 'Вкажіть телефон або пошту, щоб ми могли з вами звʼязатися.', noScript: 'Онлайн-форма працює з увімкненим JavaScript — увімкніть його або зателефонуйте нам.',
   },
   de: {
@@ -89,6 +91,8 @@ const BASE = {
     party: 'Wie viele Personen', perPerson: 'pro Person', addOns: 'Zusätzlich', quantity: 'Wie viele — Bahnen, Tische, Zimmer', together: '{n} zusammen', hours: 'Wie lange', hourShort: 'Std.', minuteShort: 'Min.', challenge: 'Bitte bestätigen Sie, dass Sie kein Roboter sind, und versuchen Sie es erneut.', tooMany: 'Sie haben bereits mehrere offene Termine. Sagen Sie einen ab oder rufen Sie uns an.',
     from: 'ab',
     needName: "Bitte geben Sie Ihren Namen an.",
+    // Above the phone and the email: either will do (18 November 2026).
+    oneEnough: "Eins genügt.",
     needContact: 'Bitte Telefon oder E-Mail angeben, damit wir Sie erreichen können.', noScript: 'Für die Online-Buchung ist JavaScript nötig — oder rufen Sie uns an.',
   },
   en: {
@@ -128,6 +132,8 @@ const BASE = {
     party: 'How many of you', perPerson: 'per person', addOns: 'Add-ons', quantity: 'How many — lanes, tables, rooms', together: '{n} together', hours: 'How long', hourShort: 'h', minuteShort: 'min', challenge: 'Please confirm you are not a robot and try again.', tooMany: 'You already have several open bookings. Cancel one, or ring us.',
     from: 'from',
     needName: "Please give your name.",
+    // Above the phone and the email: either will do (18 November 2026).
+    oneEnough: "One of the two is enough.",
     needContact: 'Leave a phone number or an email so we can reach you.', noScript: 'Booking online needs JavaScript — or ring us.',
   },
   ru: {
@@ -196,6 +202,8 @@ const BASE = {
     tooMany: "У вас уже есть несколько открытых записей. Отмените одну из них или позвоните нам.",
     from: 'от',
     needName: "Укажите имя, чтобы мы знали, кого ждать.",
+    // Above the phone and the email: either will do (18 November 2026).
+    oneEnough: "Достаточно одного из двух.",
     needContact: "Укажите телефон или почту, чтобы мы могли с вами связаться.",
     noScript: "Онлайн-форма работает с включенным JavaScript — включите его или позвоните нам.",
   },
@@ -265,6 +273,8 @@ const BASE = {
     tooMany: "Ya tiene varias reservas abiertas. Cancele una o llámenos.",
     from: 'desde',
     needName: "Indique su nombre, por favor.",
+    // Above the phone and the email: either will do (18 November 2026).
+    oneEnough: "Basta con uno de los dos.",
     needContact: "Deje un teléfono o un correo electrónico para que podamos contactar con usted.",
     noScript: "Para reservar en línea hace falta JavaScript — o llámenos.",
   },
@@ -334,6 +344,8 @@ const BASE = {
     tooMany: "Ha già diverse prenotazioni aperte. Ne annulli una, o ci chiami.",
     from: 'da',
     needName: "Indichi il Suo nome, per favore.",
+    // Above the phone and the email: either will do (18 November 2026).
+    oneEnough: "Basta uno dei due.",
     needContact: "Lasci un numero di telefono o un'email per poterLa contattare.",
     noScript: "Per prenotare online serve JavaScript: oppure ci chiami.",
   },
@@ -403,6 +415,8 @@ const BASE = {
     tooMany: "Já tem várias reservas em aberto. Cancele uma ou ligue-nos.",
     from: 'desde',
     needName: "Indique o seu nome, por favor.",
+    // Above the phone and the email: either will do (18 November 2026).
+    oneEnough: "Basta um dos dois.",
     needContact: "Deixe um telefone ou um e-mail para podermos contactá-lo.",
     noScript: "Reservar online precisa de JavaScript — ou ligue-nos.",
   },
@@ -472,6 +486,8 @@ const BASE = {
     tooMany: "Vous avez déjà plusieurs réservations en cours. Annulez-en une, ou appelez-nous.",
     from: 'à partir de',
     needName: "Indiquez votre nom, s'il vous plaît.",
+    // Above the phone and the email: either will do (18 November 2026).
+    oneEnough: "L’un des deux suffit.",
     needContact: "Laissez un numéro de téléphone ou un e-mail pour que nous puissions vous joindre.",
     noScript: "Réserver en ligne nécessite JavaScript — ou appelez-nous.",
   },
@@ -551,4 +567,21 @@ const DAYS = {
 export function wordsFor(locale, scale = '') {
   const lang = LOCALES.includes(locale) ? locale : 'en';
   return scale === 'daily' ? { ...BASE[lang], ...DAYS[lang] } : { ...BASE[lang] };
+}
+
+/**
+ * A length of time as the form says it, wherever it says one — beside a
+ * service, in the running total, in «how long», under the times: «4 Std.»,
+ * «1 Std. 30 Min.», «45 min». Whole hours in hours: a session of 240 minutes
+ * read «240 min» in the list and «4 Std.» under the times, and a studio
+ * patched its form to say one thing (18 November 2026). Nothing for nothing.
+ *
+ * @param {number} minutes
+ * @param {Record<string, string>} words  the form's, for `hourShort` and `minuteShort`
+ */
+export function lasting(minutes, words) {
+  const whole = Math.max(0, Math.round(Number(minutes) || 0));
+  const h = Math.floor(whole / 60);
+  const m = whole % 60;
+  return [h > 0 ? `${h} ${words.hourShort}` : '', m > 0 ? `${m} ${words.minuteShort}` : ''].filter(Boolean).join(' ');
 }

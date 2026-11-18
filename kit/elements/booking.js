@@ -52,9 +52,9 @@
  * says which was taken.
  */
 import { money } from '../lib/money.mjs';
-import { wordsFor } from '../lib/booking/words.mjs';
+import { wordsFor, lasting } from '../lib/booking/words.mjs';
 import { dressBooking } from './booking-ui.js';
-import { lacking } from '../lib/booking/hooks.mjs';
+import { lacking, linkIn } from '../lib/booking/hooks.mjs';
 
 /**
  * The rules the behaviour cannot work without, whatever the site's own CSS
@@ -64,7 +64,11 @@ import { lacking } from '../lib/booking/hooks.mjs';
  * control over a native one by `data-replaced`; a form an agent dressed from
  * nothing lost all three with `booking.css` (12 October 2026). The first two
  * are `!important`, as `hidden` is: a site's `display: grid` on a piece of
- * the second step drew it on the first.
+ * the second step drew it on the first. A fieldset is as wide as its widest
+ * line unless told otherwise — the browser's `min-inline-size: min-content` —
+ * and the times pushed a phone's page sideways in a form dressed without
+ * `booking.css` (18 November 2026): told otherwise here, at no weight, so a
+ * site's own rule still wins.
  */
 const BASE = `
 [data-booking] [hidden] { display: none !important; }
@@ -77,6 +81,7 @@ const BASE = `
 [data-booking][data-stage='1'] [data-step='2'], [data-booking][data-stage='2'] [data-step='1'],
 [data-booking][data-stage='done'] [data-step-ui] { display: none !important; }
 :where([data-booking] :focus-visible) { outline: 2px solid currentColor; outline-offset: 2px; }
+:where([data-booking] :is([data-times], [data-services], fieldset)) { min-inline-size: 0; }
 `;
 
 function putBase() {
@@ -88,6 +93,14 @@ function putBase() {
   document.head.prepend(style);
 }
 let wiredCount = 0;
+
+/**
+ * What each wired form answers to from outside — `choose` and `clear`, which
+ * `<jtk-booking>` hands on — kept by the form, so nothing of it is on the
+ * page for a site's script to trip over.
+ * @type {WeakMap<HTMLFormElement, { choose: (start: string) => boolean; clear: () => void }>}
+ */
+const controls = new WeakMap();
 
 // The words that depend on the kind of business, as the platform says them:
 // its availability answer carries the form's, in every language, the site's
@@ -116,16 +129,9 @@ export function plusDays(iso, n) {
   return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
 }
 
-/**
- * «2 год», «1 год 30 хв»: n of a rate, said as the time it is.
- * @param {number} minutes
- * @param {Record<string, string>} words
- */
-export function lasting(minutes, words) {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return [h > 0 ? `${h} ${words.hourShort}` : '', m > 0 ? `${m} ${words.minuteShort}` : ''].filter(Boolean).join(' ');
-}
+// «2 год», «1 год 30 хв»: one function says every length the form says, the
+// list's and the element's alike (words.mjs, 18 November 2026).
+export { lasting };
 
 /**
  * Wires one form. Idempotent: a form already wired is left alone.
@@ -168,6 +174,9 @@ export function wireBooking(form) {
   // One select, or a checklist: what is chosen is a list either way.
   const select = /** @type {HTMLSelectElement | null} */ (form.querySelector('select[name=service]'));
   const boxes = /** @type {HTMLInputElement[]} */ ([...form.querySelectorAll('input[type=checkbox][name=service]')]);
+  // The one service a form offers, said as a line rather than offered as a
+  // choice of one: a hidden input carries its slug (18 November 2026).
+  const fixed = /** @type {HTMLInputElement | null} */ (select || boxes.length > 0 ? null : form.querySelector('input[name=service]'));
   const total = /** @type {HTMLElement | null} */ (form.querySelector('[data-total]'));
   // A checkbox's row and the service's name in it, by their hooks; the
   // classes of an older kit's markup where a form has no hooks.
@@ -175,7 +184,7 @@ export function wireBooking(form) {
   const rowOf = (box) => /** @type {HTMLElement | null} */ (box.closest('[data-service-row], .booking__service, label'));
   /** @param {Element} row */
   const nameIn = (row) => /** @type {HTMLElement | null} */ (row.querySelector('[data-service-name], .booking__service-name'));
-  const picked = () => (select ? (select.value ? [select.value] : []) : boxes.filter((b) => b.checked).map((b) => b.value));
+  const picked = () => (select ? (select.value ? [select.value] : []) : fixed ? (fixed.value ? [fixed.value] : []) : boxes.filter((b) => b.checked).map((b) => b.value));
   function showTotal() {
     if (!total) return;
     const chosenBoxes = boxes.filter((b) => b.checked);
@@ -186,7 +195,7 @@ export function wireBooking(form) {
     const people = partyField.hidden ? 1 : Number(party.value) || 1;
     const minor = chosenBoxes.reduce((sum, b) => sum + Number(b.dataset.costs ?? 0) * (b.dataset.per === 'person' ? people : 1), 0);
     const price = minor > 0 ? ' · ' + money(minor, form.dataset.currency, pageLang()) : '';
-    total.textContent = `${words.total}: ${minutes} min${price}`;
+    total.textContent = `${words.total}: ${lasting(minutes, words)}${price}`;
     total.hidden = false;
   }
   const resource = /** @type {HTMLSelectElement | null} */ (form.querySelector('[name=resource]'));
@@ -260,7 +269,7 @@ export function wireBooking(form) {
   // a reason for a form without a button.
   setTimeout(unsay, 3000);
   {
-    const first = select?.options[0]?.value ?? boxes[0]?.value ?? '';
+    const first = select?.options[0]?.value ?? fixed?.value ?? boxes[0]?.value ?? '';
     const from = new Date();
     from.setHours(0, 0, 0, 0);
     const to = new Date(from);
@@ -308,6 +317,8 @@ export function wireBooking(form) {
   }
 
   /** @type {string | null} */ let chosen = null;
+  // The slot `chosen` is the start of, for what `slotchange` says.
+  /** @type {{ start: string; ends?: string } | null} */ let chosenSlot = null;
   let zone = '';
   let turnstileToken = '';
 
@@ -664,6 +675,10 @@ export function wireBooking(form) {
           if (next) { select.value = next.value; moved = true; }
         }
       }
+      if (fixed && fixed.value === one.slug) {
+        const name = fixed.closest('[data-field]')?.querySelector('[data-service-name]');
+        if (name) name.textContent = said;
+      }
       const box = boxes.find((b) => b.value === one.slug);
       if (box && !box.disabled) {
         box.disabled = true;
@@ -683,12 +698,64 @@ export function wireBooking(form) {
   let lastClasses = [];
   let lastResources = [];
 
+  // What `slotchange` last said, so that it is said once per change: a reload
+  // that picks the same time again changes nothing for whoever listens.
+  let told = '';
+  function tell() {
+    const now = chosen && chosenSlot ? `${chosen}|${resourceChosen()}` : '';
+    if (now === told) return;
+    told = now;
+    const detail = chosen && chosenSlot ? { start: chosenSlot.start, ends: chosenSlot.ends ?? null, resource: resourceChosen() || null } : null;
+    form.dispatchEvent(new CustomEvent('slotchange', { bubbles: true, detail }));
+  }
+
+  // No time chosen, said as well as drawn: the pills unpressed, the end of
+  // the visit gone. What the person can no longer see is not chosen —
+  // a time hidden by another part of the day went on to the second step
+  // and was booked (18 November 2026).
+  function unchoose() {
+    chosen = null;
+    chosenSlot = null;
+    for (const other of slots.querySelectorAll('[data-slot]')) {
+      other.classList.remove('is-chosen');
+      other.setAttribute('aria-pressed', 'false');
+    }
+    if (ends) ends.hidden = true;
+  }
+
+  // The time a link to the page asked for (`?time=`, LINK in hooks.mjs):
+  // chosen from the first answer that has times, if it is among them, and
+  // forgotten once a day's answer has been drawn or the person moves.
+  let linkTime = '';
+
+  // On the business's clock, the way a link writes it: «09:30».
+  /** @param {string} iso */
+  function hhmm(iso) {
+    try {
+      return new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: zone || undefined }).format(new Date(iso));
+    } catch {
+      return iso.slice(11, 16);
+    }
+  }
+
+  // Every question, and once the last one asked is answered, a word to
+  // whoever listens if the time chosen changed with it.
   async function load() {
     const mine = ++asking;
+    try {
+      await ask(mine);
+    } finally {
+      if (mine === asking) tell();
+    }
+  }
+
+  /** @param {number} mine */
+  async function ask(mine) {
     // The start picked before this reload: picked again if it is still
     // offered — a service added, the same time — and said gone if not.
     const wanted = chosen;
     chosen = null;
+    chosenSlot = null;
     slots.textContent = '';
     if (ends) ends.hidden = true;
     if (!day.value || picked().length === 0) {
@@ -753,6 +820,7 @@ export function wireBooking(form) {
         const notFor = chosenNotFor(data.resources ?? []);
         hint.textContent = notFor ? words.notForChosen.replace('{who}', notFor).replace('{any}', words.any)
           : seats > 0 && asked > seats ? words.noParty : words.none;
+        linkTime = '';
         return;
       }
       hint.textContent = '';
@@ -777,22 +845,32 @@ export function wireBooking(form) {
         if (pricedByTime && slot.costs_minor > 0) button.textContent += ` · ${money(slot.costs_minor, currency, pageLang())}`;
         button.dataset.start = slot.start;
         button.addEventListener('click', () => {
+          unchoose();
           chosen = slot.start;
+          chosenSlot = slot;
           if (hint.textContent === words.retime) hint.textContent = '';
           sayEnds(slot);
           offerQuantity(data.quantity_max ?? 1, (slot.free ?? []).length);
-          for (const other of slots.querySelectorAll('[data-slot]')) {
-            other.classList.remove('is-chosen');
-            other.setAttribute('aria-pressed', 'false');
-          }
           button.classList.add('is-chosen');
           button.setAttribute('aria-pressed', 'true');
           say('');
+          tell();
         });
         slots.appendChild(button);
       }
+      const linked = linkTime;
+      linkTime = '';
       if (stay() && data.slots.length === 1) /** @type {HTMLButtonElement | null} */ (slots.firstElementChild)?.click();
-      else if (wanted) {
+      else if (linked) {
+        // The time a link asked for, if it is free: chosen, and on to who is
+        // coming — the link said what and when already. Not free, the day's
+        // times are there to pick from, and nothing is said.
+        const same = /** @type {HTMLButtonElement[]} */ ([...slots.querySelectorAll('[data-slot]')]).find((one) => hhmm(one.dataset.start ?? '') === linked);
+        if (same) {
+          same.click();
+          /** @type {HTMLButtonElement | null} */ (form.querySelector('[data-step-next]'))?.click();
+        }
+      } else if (wanted) {
         const same = /** @type {HTMLButtonElement | null} */ (slots.querySelector(`[data-start="${CSS.escape(wanted)}"]`));
         if (same) same.click();
         else hint.textContent = words.retime;
@@ -802,6 +880,7 @@ export function wireBooking(form) {
       // (the preview's slug missing from the address, 10 October 2026).
       const said = err instanceof Error ? err.message : '';
       hint.textContent = said && said.length <= 200 && !/<[a-z!]/i.test(said) ? said : words.failed;
+      linkTime = '';
     }
   }
 
@@ -823,9 +902,30 @@ export function wireBooking(form) {
 
   select?.addEventListener('change', () => { fitHours(); void load(); });
   hours.addEventListener('change', () => void load());
+
+  // A link to the page says what to open the form on (`?service=…&day=…&time=…`,
+  // LINK in hooks.mjs; 18 November 2026): the service chosen and the day
+  // set before the look is drawn over them, so the week opens on that day;
+  // the time waits for the day's answer. What the form does not offer, a day
+  // it cannot book, a time without a day: ignored, and nothing said.
+  const link = typeof location === 'undefined' ? null : linkIn(location.search);
+  if (link && link.services.length > 0) {
+    /** @param {HTMLInputElement | HTMLOptionElement} one */
+    const free = (one) => !one.disabled && link.services.includes(one.value);
+    const option = select ? [...select.options].find(free) : undefined;
+    if (select && option) select.value = option.value;
+    for (const box of boxes) if (free(box)) box.checked = true;
+    showTotal();
+  }
+  if (link && link.day && (!day.min || link.day >= day.min) && (!day.max || link.day <= day.max)) {
+    day.value = link.day;
+    linkTime = link.time;
+  }
+
   // The look — the steps, the week, the parts of the day, the drawn choice
-  // — over the form, where the form asks for it.
-  if (form.dataset.ui) dressBooking(form, words);
+  // — over the form, where the form asks for it. A time the parts of the
+  // day hide is no longer chosen: the element is told, and says so.
+  if (form.dataset.ui) dressBooking(form, words, { unchoose: () => { unchoose(); tell(); } });
   for (const box of boxes) {
     box.addEventListener('change', () => {
       if (single && box.checked) for (const other of boxes) if (other !== box) other.checked = false;
@@ -840,12 +940,34 @@ export function wireBooking(form) {
   let lastDay = day.value;
   day.addEventListener('change', () => {
     chosen = null; // a new day starts clean
+    linkTime = ''; // and the person's own
     if (lastDay && back.value && day.value) back.value = plusDays(day.value, daysBetween(lastDay, back.value));
     lastDay = day.value;
     fitBack();
     void load();
   });
   back.addEventListener('change', () => void load());
+  // The link's day, asked for once everything listens.
+  if (link && day.value === link.day && link.day) void load();
+
+  // What the page's own script may do with the form (docs/booking.md):
+  // choose a time that is drawn — a press, by another hand — and take the
+  // choice back. Both say `slotchange`, as a person's press does.
+  controls.set(form, {
+    choose(start) {
+      const at = new Date(start).getTime();
+      if (Number.isNaN(at)) return false;
+      const button = /** @type {HTMLButtonElement[]} */ ([...slots.querySelectorAll('[data-slot]')])
+        .find((one) => new Date(one.dataset.start ?? '').getTime() === at);
+      if (!button || button.disabled) return false;
+      button.click();
+      return chosen === button.dataset.start;
+    },
+    clear() {
+      unchoose();
+      tell();
+    },
+  });
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -1025,6 +1147,27 @@ const BaseElement = typeof HTMLElement === 'undefined' ? class {} : HTMLElement;
 export class JtkBooking extends BaseElement {
   connectedCallback() {
     wireAll(/** @type {any} */ (this));
+  }
+
+  /** The form inside, wired, and what it answers to. */
+  #controls() {
+    const form = /** @type {any} */ (this).querySelector?.('form[data-booking]');
+    return form ? controls.get(form) : undefined;
+  }
+
+  /**
+   * Chooses the time starting at `start` — any ISO 8601 instant — where the
+   * form shows it free now, as a press on it would, and says so
+   * (`slotchange`). True if it was chosen; false where no such time is drawn.
+   * @param {string} start
+   */
+  choose(start) {
+    return this.#controls()?.choose(start) ?? false;
+  }
+
+  /** Unchooses the time chosen, if any, and says so (`slotchange`). */
+  clear() {
+    this.#controls()?.clear();
   }
 }
 

@@ -29,13 +29,24 @@ books. The list, with what each is for, is `@jtakeit/kit/booking/hooks`:
 
 - **Always** — the form cannot book without them: `form[data-booking]` with the
   attributes `bookingForm` gives (`{...form.attrs}`: `data-api`, `data-sends`,
-  `data-locale`, `novalidate`…); `[name=service]` (a `<select>`, or checkboxes
-  inside `[data-service-row]` labels for several); `[name=day]`;
+  `data-locale`, `novalidate`…); `[name=service]` (a `<select>`, checkboxes
+  inside `[data-service-row]` labels for several, or a hidden input where the
+  form offers exactly one — said as a line, `[data-service-name]` in it);
+  `[name=day]`;
   `[data-times]` around `[data-times-hint]` and an empty `[data-slots]`;
   `[name=name]`, `[name=phone]`, `[name=email]`; an empty, hidden
   `[data-challenge]`; `[data-booking-error]`; `[data-submit]`; a hidden
   `[data-done]` holding `[data-done-line]`, `[data-done-when]`,
   `[data-manage]`, `[data-pay-note]` and `[data-pay]`.
+
+  **The done block** is the site's to dress like any other piece. Put the
+  site's own mark — a tick, the logo, a line in its voice — inside
+  `[data-done]` as markup of its own, beside the hooked lines: the element
+  writes only into `[data-done-line]`, `[data-done-when]` and the rest, and
+  shows or hides the block with `hidden`, so anything else in it stays as the
+  site wrote it. Style it by the site's class on the block or by
+  `[data-done]` itself; leave `display` to the `hidden` attribute (style the
+  block's children, or `[data-done]:not([hidden])`).
 - **Asked** — hidden; shown by the element only when the platform's answer
   asks: `[data-party-field]` around `[name=party]`, `[data-quantity-field]`,
   `[data-hours-field]`, `[data-back-field]` with `[name=back]` and
@@ -255,6 +266,59 @@ form keeps the rules even where it changes the drawing:
    showed a dark box saying «Успешно».
 10. **The hint says what is missing**: *pick a service* when a day is chosen
     and no service, *choose a day* the other way round, and never a 404 page.
+11. **What the person cannot see is not chosen** (18 November 2026): a time
+    hidden by switching the part of the day is unchosen, so the second step
+    never carries a time the person no longer sees.
+12. **One service is a line, not a choice**: «Session · 4 h · CHF 240» with
+    its slug in a hidden input. Several, where they are not combined, are one
+    `<select>` grouped by `group` (`<optgroup>`, the same runs as the
+    checklist's) and each option says how long and how much.
+13. **A length is said one way everywhere** — beside a service, in the total,
+    under the times: whole hours in hours, «4 Std.», «1 Std. 30 Min.»
+    (`lasting` in `@jtakeit/kit/booking/words`).
+14. **A phone or an email**: both marked `*`, with one line above them saying
+    either will do; the press still refuses neither.
+15. **The times never push a phone's page sideways**: the element puts
+    `min-inline-size: 0` on the times' fieldset at no weight.
+
+## A link that opens the form on a time
+
+A page that links to the booking page — a service's own page, a timetable —
+says what to open the form on in the address (`LINK` in
+`@jtakeit/kit/booking/hooks`):
+
+```
+/termine/?service=session&day=2026-11-24&time=14:00
+```
+
+- `service` — a service's slug, chosen; several for a checklist.
+- `day` — `YYYY-MM-DD`; the form opens on that day, if it may be booked.
+- `time` — `HH:MM` on the business's clock (its zone), with `day`: if it is
+  free that day it is chosen, and the form goes on to its second step.
+
+What the form does not offer, a day out of reach, a time that is not free:
+ignored, and nothing said — the form opens as it would without the link.
+
+## From the page's own script
+
+`<jtk-booking>` answers to two calls and says one thing:
+
+- `choose(start)` — chooses the time starting at `start` (an ISO 8601
+  instant) where the form shows it free now, as a press would; returns `true`
+  if it was chosen, `false` where no such time is drawn. Free times are the
+  platform's, one day per request: choose among what is loaded.
+- `clear()` — unchooses the time chosen, if any.
+- `slotchange` — a `CustomEvent` on the form, bubbling to the element,
+  whenever the chosen time changes, by the person or by a call: `detail` is
+  `{ start, ends, resource }` (`resource` the one chosen by name, or `null`
+  for anyone), or `null` once nothing is chosen.
+
+```js
+const booking = document.querySelector('jtk-booking');
+booking.addEventListener('slotchange', (event) => {
+  summary.textContent = event.detail ? event.detail.start : '';
+});
+```
 
 ## Its look is the site's to give
 

@@ -31,7 +31,7 @@
  * pretends otherwise.
  */
 import { money } from '../money.mjs';
-import { wordsFor } from './words.mjs';
+import { wordsFor, lasting } from './words.mjs';
 
 /**
  * What this form sends to /api/book, said on the page. Preflight reads it off
@@ -110,8 +110,9 @@ function priceText(one, currency, lang, words) {
  * @property {Record<string, string>} words  the form's words, in the page's language; the platform's answer replaces the kind's
  * @property {string} lang                 the language tag prices and days are written in
  * @property {boolean} combine             a checklist, or one `<select>`
- * @property {{ group: string; items: (Named & { meta: string })[] }[]} runs  the checklist's runs, headings in order, the ones with none after them, the add-ons last under their own; `meta` is «45 min · CHF 95»
- * @property {Named[]} services            for one `<select>`, as they came
+ * @property {{ group: string; items: (Named & { meta: string; label: string })[] }[]} runs  the services in their runs, headings in order, the ones with none after them, the add-ons last under their own — the checklist's, and the `<select>`'s `<optgroup>`s; `meta` is «45 min · CHF 95», `label` the title with it, «Cut · 45 min · CHF 95», an option's words
+ * @property {(Named & { meta: string; label: string }) | null} one  the service, where the form offers exactly one: said as a line, «Cut · 1 h · CHF 95», with its slug in a hidden input, rather than a choice of one
+ * @property {Named[]} services            as they came
  * @property {(Named & { does: string })[]} resources  the choice of whom — empty for none; `does` is the slugs, joined, for `data-does`
  * @property {string} today                the day input's `min`
  * @property {string} last                 its `max`
@@ -159,8 +160,12 @@ export function bookingForm(props) {
   // its own heading, after the services, and rides on the visit.
   const addOns = runs.flatMap((run) => run.items.filter((one) => !one.takes && (one.costs || priceFrom(one))));
   const timedRuns = runs.map((run) => ({ ...run, items: run.items.filter((one) => !addOns.includes(one)) })).filter((run) => run.items.length > 0);
+  // How long in the form's one way of saying it — «4 Std.», not «240 min»
+  // (18 November 2026) — and the price, and whether it is per person.
   /** @param {Named} one */
-  const meta = (one) => [one.takes ? `${one.takes} min` : '', priceText(one, currency, lang, words), one.per === 'person' ? words.perPerson : ''].filter(Boolean).join(' · ');
+  const meta = (one) => [one.takes ? lasting(one.takes, words) : '', priceText(one, currency, lang, words), one.per === 'person' ? words.perPerson : ''].filter(Boolean).join(' · ');
+  /** @param {Named} one */
+  const dressed = (one) => { const m = meta(one); return { ...one, meta: m, label: m ? `${one.title} · ${m}` : one.title }; };
 
   // Fixed, the whole form, as the lead form's labels are: every word in it is
   // the platform's — spoken in the business's kind from the availability
@@ -192,7 +197,10 @@ export function bookingForm(props) {
 
   return {
     words, lang, combine, today, last, attrs, services,
-    runs: [...timedRuns, ...(addOns.length ? [{ group: words.addOns, items: addOns }] : [])].map((run) => ({ ...run, items: run.items.map((one) => ({ ...one, meta: meta(one) })) })),
+    runs: [...timedRuns, ...(addOns.length ? [{ group: words.addOns, items: addOns }] : [])].map((run) => ({ ...run, items: run.items.map(dressed) })),
+    // A choice of one is no choice: a dropdown that opens on the only thing
+    // there is, at a studio of one session (18 November 2026).
+    one: services.length === 1 ? dressed(services[0]) : null,
     resources: resources.length > 1 ? resources.map((one) => ({ ...one, does: Array.isArray(one.does) ? one.does.join(',') : '' })) : [],
   };
 }
@@ -206,10 +214,17 @@ export function bookingForm(props) {
 export function renderBookingForm(props) {
   const { tag = 'jtk-booking', kind = '' } = props;
   if (!Array.isArray(props.services)) throw new TypeError('renderBookingForm: services is a list of { slug, title }');
-  const { words: WORDS, combine, runs, services, resources, today, last, attrs } = bookingForm(props);
+  const { words: WORDS, combine, runs, one: lone, resources, today, last, attrs } = bookingForm(props);
   const unsaid = kind !== '' && kind !== 'salon';
 
-  const servicesField = combine
+  // One service: a line and its slug. Several: a checklist where they may be
+  // combined, one <select> where not — grouped by the same runs, each option
+  // saying how long and how much, as the checklist's rows do (18 November 2026).
+  const servicesField = lone
+    ? `<p class="field__label" data-say="service">${esc(WORDS.service)}</p>
+        <p class="booking__one" data-service-one><span data-service-name${langOf(lone)}>${esc(lone.title)}</span>${lone.meta ? `<span class="booking__service-meta"> · ${esc(lone.meta)}</span>` : ''}</p>
+        <input type="hidden" name="service" value="${esc(lone.slug)}">`
+    : combine
     ? `<fieldset class="booking__services" data-services>
         <legend class="field__label" data-say="services">${esc(WORDS.services)}</legend>
         ${runs.map((run, i) => `<div class="booking__run"${run.group !== '' ? ` role="group" aria-labelledby="booking-run-${i}"` : ''}>
@@ -224,7 +239,10 @@ export function renderBookingForm(props) {
       </fieldset>`
     : `<label class="field__label" for="booking-service" data-say="service">${esc(WORDS.service)}</label>
         <select class="field__input" id="booking-service" name="service" required>
-          ${services.map((one) => `<option value="${esc(one.slug)}"${langOf(one)}>${esc(one.title)}</option>`).join('\n')}
+          ${runs.map((run) => {
+            const options = run.items.map((one) => `<option value="${esc(one.slug)}" data-name="${esc(one.title)}"${langOf(one)}>${esc(one.label)}</option>`).join('\n');
+            return run.group !== '' ? `<optgroup label="${esc(run.group)}">${options}</optgroup>` : options;
+          }).join('\n')}
         </select>`;
 
   const resourcesField = resources.length > 0
@@ -285,13 +303,17 @@ export function renderBookingForm(props) {
     <label class="field__label" for="booking-name">${esc(WORDS.name)} <span aria-hidden="true">*</span></label>
     <input class="field__input" id="booking-name" name="name" type="text" autocomplete="name" required maxlength="120">
   </div>
+  <!-- A phone or an email: both marked, and the line above them says either
+       will do — unmarked, they read as optional and a booking came with
+       neither until the button refused it (18 November 2026). -->
+  <p class="booking__hint" id="booking-contact" data-field data-contact-note>${esc(WORDS.oneEnough)}</p>
   <div class="field" data-field>
-    <label class="field__label" for="booking-phone">${esc(WORDS.phone)}</label>
-    <input class="field__input" id="booking-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="40">
+    <label class="field__label" for="booking-phone">${esc(WORDS.phone)} <span aria-hidden="true">*</span></label>
+    <input class="field__input" id="booking-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="40" aria-describedby="booking-contact">
   </div>
   <div class="field" data-field>
-    <label class="field__label" for="booking-email">${esc(WORDS.email)}</label>
-    <input class="field__input" id="booking-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="120">
+    <label class="field__label" for="booking-email">${esc(WORDS.email)} <span aria-hidden="true">*</span></label>
+    <input class="field__input" id="booking-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="120" aria-describedby="booking-contact">
   </div>
   <div class="field" data-field>
     <label class="field__label" for="booking-note">${esc(WORDS.note)}</label>
