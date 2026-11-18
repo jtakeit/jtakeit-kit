@@ -21,19 +21,29 @@
   --ink-quiet: #6f6a63;
   --line: #e2ded7;
   --accent: #2f5bff;
+  /* One radius family from one base, as the site's global.css has it. */
+  --radius: 8px;
+  --r-2: var(--radius);
+  --r-3: calc(var(--radius) * 1.75);
+  --r-4: calc(var(--radius) * 2.75);
+  --r-pill: 999px;
 }
 html {
   background: var(--paper-deep);
 }
 body {
   margin: 0;
-  min-height: 100dvh;
+  /* The screen's height without the bar of an in-app browser moving it
+     (docs/kit.md, «The floor»): no script here sets --screen, so 100svh. */
+  min-height: var(--screen, 100svh);
   display: grid;
   place-items: start center;
   padding: clamp(1.5rem, 5vw, 4rem) 1rem;
   background: var(--paper-deep);
   color: var(--ink);
   font: 16px/1.55 system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* The booking's day, its times and its price: figures that line up. */
+  font-variant-numeric: lining-nums tabular-nums;
   -webkit-font-smoothing: antialiased;
 }
 main {
@@ -42,7 +52,7 @@ main {
   padding: clamp(1.5rem, 4vw, 2.5rem);
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 1.25rem;
+  border-radius: var(--r-4);
 }
 h1 {
   margin: 0 0 0.25rem;
@@ -58,7 +68,7 @@ h1 {
   display: inline-block;
   margin: 0 0 1.25rem;
   padding: 0.2rem 0.7rem;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   font-size: 0.8125rem;
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   color: var(--ink);
@@ -96,7 +106,7 @@ a.btn {
   font: inherit;
   font-size: 0.9375rem;
   padding: 0.6rem 1.1rem;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   border: 1px solid var(--line);
   background: transparent;
   color: var(--ink);
@@ -120,7 +130,7 @@ button:disabled {
 #mover {
   margin-top: 1.25rem;
   padding: 1rem 1.1rem;
-  border-radius: 1rem;
+  border-radius: var(--r-3);
   background: var(--paper-deep);
 }
 #l-pick {
@@ -136,7 +146,7 @@ button:disabled {
 .days-row button {
   border-color: var(--line);
   background: var(--panel);
-  border-radius: 0.7rem;
+  border-radius: var(--r-2);
 }
 .days-row button.is-chosen,
 .days-row button.is-chosen:hover {
@@ -148,7 +158,7 @@ button:disabled {
   opacity: 0.35;
 }
 .days-arrow {
-  border-radius: 0.7rem;
+  border-radius: var(--r-2);
 }
 .slots {
   display: grid;
@@ -158,7 +168,7 @@ button:disabled {
 }
 .slots button {
   padding: 0.5rem 0.4rem;
-  border-radius: 0.6rem;
+  border-radius: var(--r-2);
   background: var(--panel);
 }
 .err {

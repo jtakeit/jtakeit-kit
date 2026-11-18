@@ -140,7 +140,7 @@ html main.prose {
 }
 
 html main#content {
-  min-block-size: 50svh;
+  min-block-size: calc(var(--screen) * 0.5);
 }
 
 html .entry dl {

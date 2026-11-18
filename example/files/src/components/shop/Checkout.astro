@@ -143,7 +143,9 @@ const words = Object.fromEntries(SAID.map((key) => [key, W[key]]));
    * (`[hidden]`, a focus ring) the element puts on the page; the step's own
    * `hidden` is kept here too, so that it stays hidden where no script runs.
    */
+  /* Quantities, prices and the sum: figures that line up. */
   .checkout {
+    font-variant-numeric: lining-nums tabular-nums;
     display: block;
   }
   .checkout__in {
@@ -265,7 +267,7 @@ const words = Object.fromEntries(SAID.map((key) => [key, W[key]]));
     min-height: 2.75rem;
     padding: 0.7rem 1.6rem;
     border: 0;
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     background: var(--ink);
     color: var(--paper);
     font: inherit;

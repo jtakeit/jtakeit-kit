@@ -141,13 +141,13 @@ const tagline = footer.text('tagline');
 
 <style>
   .foot {
-    padding: clamp(3rem, 8vh, 5rem) var(--gutter) clamp(1.5rem, 4vh, 2.5rem);
+    padding: clamp(3rem, calc(var(--screen) * 0.08), 5rem) var(--gutter) clamp(1.5rem, calc(var(--screen) * 0.04), 2.5rem);
     color: var(--ink);
   }
 
   .foot__in {
     display: grid;
-    gap: clamp(1.4rem, 3.5vh, 2.2rem);
+    gap: clamp(1.4rem, calc(var(--screen) * 0.035), 2.2rem);
     inline-size: var(--shell);
     margin-inline: auto;
   }
@@ -186,7 +186,7 @@ const tagline = footer.text('tagline');
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 2rem clamp(1.5rem, 4vw, 4rem);
     padding: clamp(1.4rem, 3vw, 2.2rem);
-    border-radius: 18px;
+    border-radius: calc(var(--radius) * 2.25);
   }
 
   .foot__col {

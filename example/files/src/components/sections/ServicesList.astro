@@ -24,14 +24,17 @@ import { site } from '../../lib/site';
 import { rowId } from '../../lib/entries';
 import { langOf, withLocale } from '../../lib/locale';
 import { linkTo } from '../../lib/under';
+import { measureOf, type Surface } from '../../lib/measure';
 
 interface Props {
   block: Block;
   locale: string;
   first?: boolean;
+  /** What the price list is drawn on (src/lib/measure.ts): a filled surface, the object measure, by default. */
+  surface?: Surface;
 }
 
-const { block, locale, first = false } = Astro.props;
+const { block, locale, first = false, surface = 'filled' } = Astro.props;
 const limit = Number(block.value('limit') ?? 0);
 const all = site.entries('services', { locale });
 const shown = limit > 0 ? all.slice(0, limit) : all;
@@ -60,7 +63,7 @@ const RowTitle = block.text('title') ? 'h3' : 'h2';
       )
     }
 
-    <ul class="ledger__rows">
+    <ul class="ledger__rows" data-measure={measureOf(surface)}>
       {
         shown.map((entry) => {
           const { fields } = entry;
@@ -109,7 +112,7 @@ const RowTitle = block.text('title') ? 'h3' : 'h2';
     grid-template-columns: 11rem minmax(0, 1fr) auto;
     gap: clamp(1rem, 3vw, 2.5rem);
     align-items: center;
-    padding-block: clamp(1rem, 2.5vh, 1.5rem);
+    padding-block: clamp(1rem, calc(var(--screen) * 0.025), 1.5rem);
     border-block-end: 1px solid var(--line);
     scroll-margin-block-start: 6rem;
   }
@@ -138,7 +141,9 @@ const RowTitle = block.text('title') ? 'h3' : 'h2';
     color: var(--ink-quiet);
   }
 
+  /* A price and a length: figures that line up, row under row. */
   .ledger__terms {
+    font-variant-numeric: lining-nums tabular-nums;
     display: grid;
     justify-items: end;
     gap: 0.4rem;
@@ -150,12 +155,12 @@ const RowTitle = block.text('title') ? 'h3' : 'h2';
     font-size: var(--step-2);
     font-weight: 600;
     letter-spacing: var(--tracking-display);
-    font-variant-numeric: tabular-nums;
+    font-variant-numeric: lining-nums tabular-nums;
     white-space: nowrap;
   }
 
   .ledger__more {
-    margin: clamp(1.5rem, 4vh, 2.5rem) 0 0;
+    margin: clamp(1.5rem, calc(var(--screen) * 0.04), 2.5rem) 0 0;
   }
 
   @media (max-width: 760px) {

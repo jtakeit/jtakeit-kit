@@ -84,6 +84,30 @@ naming nothing the site has is refused, `JTK_E_ANNOTATION_UNKNOWN`.
 **`npm run check` stays at 0 / 0 / 0.** Not "only warnings". The first
 tolerated warning is the last useful run of that command.
 
+## The floor
+
+How a site is built, never what it looks like (jtakeit-core wiki/115 §2). It
+is the same on every site and in both looks the scaffold lays out — Brumy's
+and the bare one — and it never makes two sites alike: each item is something
+a visitor feels whatever the design. A design changes the values in its own
+tokens; the names stay, because the template's pieces and the kit's checks
+read them. Nothing here refuses a build: `jtk schema` (and `jtk catalogue`)
+say what they find after the build as advice, `~ JTK_LOCAL`, and count it
+nowhere.
+
+| token / rule | what it is for, and why |
+| --- | --- |
+| `--screen` | **The screen's height.** Set from `innerHeight` before the first paint by an inline script in `Layout.astro`, changed only when the width does (a turned phone); `100svh` in `global.css` for a page without scripts. The browsers inside Telegram, Instagram and WhatsApp — where most of a small business's visitors arrive from — slide their bar away under a scrolling thumb and back, and `vh`, `svh` and `dvh` all follow it there: every hero and band sized by the screen squeezes and stretches while the page only scrolls. Write `min(var(--screen), 56rem)`, `calc(var(--screen) * 0.7)`; never a viewport unit in a height. *Advised:* a `height`, `min-height`, `max-height` or `block-size` in `vh`, `svh` or `dvh` under `src/`, with the line and the expression to write instead. |
+| own faces, preloaded, with measured stand-ins | **The type does not jump.** The faces are the site's own files (an `@fontsource` package or a woff2 under `src/`), never Google's servers — a font fetched from there hands the visitor's address to a third party before anybody asked (LG München I, 20 January 2022) and makes the first screen wait on another host. The one or two faces the first screen shows are preloaded (`Look.astro`). And each face has a **stand-in**: a system face set to its proportions with `size-adjust`, `ascent-override`, `descent-override` and `line-gap-override`, named after it in the stack (`'Inter', 'Inter Fallback', sans-serif`), so the text is laid out at the webfont's size from the first frame and the swap moves nothing. `npx @jtakeit/astro fonts <file.woff2>…` measures them — variable woff2 too, at `--weight` (400 where the face has it), against Arial, Helvetica, Georgia, Times New Roman or Courier New by the face's kind or `--fallback` — and prints the `@font-face` to paste. *Advised:* a family named first in a stack that no `@font-face` provides (the page is drawn in the next face for every visitor — Brumy's own site named Instrument Sans and never loaded it), a face from a third party's host, own faces with no preload, or with no stand-in. |
+| `.num`, and the kit's own | **Numbers line up.** `font-variant-numeric: lining-nums tabular-nums` wherever money, times and durations are drawn: a column of prices aligns on its last digit, a list of times stands in columns, a total that changes does not shake the line. The booking form (the kit's `booking.css` and the scaffold's `BookingForm.astro`), the opening hours, the price list's terms, a listing's lengths and prices, an entry's facts and the shop's prices and sums carry it already; `.num` is for what a design adds. |
+| `--measure-read`, `--measure-object`, full bleed | **Three measures.** The reading measure is how long a line of text may get — text and photographs on paper — and does not grow with the screen. The object measure is a filled surface — a calendar, a form, a card, a price list — wider, one width with the header's capsule. Full bleed is screen edge to screen edge, for the beginning and the end of a page. `--measure` stays, as the reading measure's old name. The template's pieces that draw a surface take a `surface` — `paper`, `filled` or `bleed` (`src/lib/measure.ts`) — and write `data-measure="read|object|full"`, which `global.css` caps: `BookingForm`, `LeadForm` and the example's price list are `filled` by default, `OpeningHours` is `paper`. A composition of a site's own does the same with the attribute. |
+| `--radius`, `--r-1` … `--r-4`, `--r-pill`, `.r-nested` | **One radius family.** One base, the steps derived from it with `calc` — `--r-1` half of it, `--r-2` the base, `--r-3` 1.75×, `--r-4` 2.75× — and the pill; a circle is `50%`, a shape and not a step. A design that wants squarer or softer corners changes `--radius` and every corner follows in proportion (the bare look holds every step at its one 4px). A corner inside a corner is the outer one less the padding between them, or the inner one looks fatter: put `--r-outer` and `--pad` on the outer element and `.r-nested` on the inner. No literal radius in a component. |
+| rows on a phone | **Phones by rule** — in [compositions.md](compositions.md), «Phones». |
+
+The same floor is under a site that is not laid out by `jtk create`: the
+tokens are `global.css`'s, the script is `Layout.astro`'s, and the advice
+reads any site's `src/` and build.
+
 ## Layout
 
 ```
@@ -239,6 +263,38 @@ form of six, one type pairing of six — and record the choice in the state file
 A shape chosen because it was the example printed in this document is how a
 studio acquires a house style nobody designed.
 
+**The axes: what this site chose, written down.** Every site makes the same
+dozen choices — what the first screen is, its ground and pacing, how wide its
+text and its objects are, its corners, its header — and the floor above is the
+same everywhere precisely so that these are where sites differ (jtakeit-core
+wiki/115 §3). `jtk/design.json` records them as `axes`, one string a key,
+empty until the design is decided, beside the palette and the surface; the
+site critic and, later, the platform read them, and every kit tool that
+rewrites the file keeps them. The keys:
+
+| key | the choice |
+| --- | --- |
+| `hero` | the first screen's anatomy — a portrait dissolving into the words, a split, type over their own film, a live object… |
+| `ground` | the ground and the pacing — all light, light with one dark band, a dark room |
+| `measures` | the reading and object measures, and why (how many objects the business has) |
+| `shape` | the corners — square, small, a scale, soft; pills or not — from the material |
+| `header` | strip → capsule, a floating capsule, a strip that hides, the wordmark only |
+| `phone_menu` | the menu on a phone — a full-screen wipe, a circle from the button, a card, a popover |
+| `overlap` | what crosses an edge — a sheet over the hero's foot, a card over the photograph, none |
+| `surfaces` | the materials, from their photographs or their place |
+| `mark` | the client's own sign, drawn — always theirs, never compared |
+| `motion` | how things move, and how many regions always do |
+| `fonts` | the pair — serif + serif, serif + sans, grotesk + grotesk… |
+| `hook` | the one question a visitor arrives with, answered on the page |
+| `proof` | what the business must prove, and how it does |
+| `contact` | who answers, and the one action |
+
+A value is free text — the variant's name and the site it came from, or a new
+one's description. The catalogue of variants per axis, each with the site it
+came from and when to choose it, is not here: it is the jtakeit-sites skills'
+reference (read by `spec` and `variants`) and the platform's design guide
+over MCP, for an agent with no skills.
+
 ## Composition floor
 
 A page is not finished because it looks finished in the window it was built in.
@@ -261,11 +317,11 @@ let the picture crop into it, rather than padding by feel and hoping it lands.
    exact markup with different colours on it; the other five anatomies are in
    references/shapes.md and one of them is probably the right answer. */
 .hero {
-  min-block-size: calc(100svh - 4rem);
+  min-block-size: calc(var(--screen) - 4rem);
   align-items: center;
 }
 /* The frame is measured; the picture crops into it and still fills its column. */
-.hero__media :global(.shot) { block-size: 30svh; }
+.hero__media :global(.shot) { block-size: calc(var(--screen) * 0.3); }
 .hero__media :global(.shot img) { block-size: 100%; object-fit: cover; }
 ```
 
@@ -277,7 +333,7 @@ The same measuring, in an anatomy that is not the split — a full-bleed
 photograph with the words on it:
 
 ```css
-.hero { display: grid; min-block-size: 100svh; }
+.hero { display: grid; min-block-size: min(var(--screen), 56rem); }
 /* Both in the same cell: the picture fills the screen, the words sit over it. */
 .hero > * { grid-area: 1 / 1; }
 .hero :global(.shot img) { block-size: 100%; object-fit: cover; }
@@ -289,7 +345,7 @@ and one that has no photograph in the first screen at all, where the type is the
 picture and the measuring is all in the type scale:
 
 ```css
-.hero { display: grid; align-content: center; min-block-size: 88svh; }
+.hero { display: grid; align-content: center; min-block-size: min(calc(var(--screen) * 0.88), 52rem); }
 .hero h1 { font-size: clamp(2.5rem, 1rem + 7vw, 8rem); text-wrap: balance; }
 ```
 
@@ -314,7 +370,7 @@ more centred.** Space is not a layout. Four patterns do nearly all of it:
 /* 1. The shell grows with the screen; the measure does not. A 1200px cap is
       47% of a 2560px monitor, and everything inside it looks stranded. */
 .shell  { inline-size: min(92rem, 92vw); margin-inline: auto; }
-.text > * { max-inline-size: 34rem; }        /* ~65ch, so lines stay readable */
+.text > * { max-inline-size: var(--measure-read); }   /* ~65ch, so lines stay readable */
 
 /* 2. Type scales, with a ceiling. A vw term alone is unbounded; clamp() gives
       it a floor and a cap and is the whole answer for headings. */
@@ -322,10 +378,10 @@ h1   { font-size: clamp(2.25rem, 1.2rem + 3.4vw, 5rem); }
 .lead { font-size: clamp(1rem, 0.9rem + 0.5vw, 1.5rem); }
 
 /* 2a. A screen-tall section has a ceiling too. The panel draws the page in a
-       frame as tall as the document, where 100svh is all of it — a first
+       frame as tall as the document, where the screen is all of it — a first
        screen of min-height: 100svh filled the whole thumbnail. `jtk schema`
        refuses one with no ceiling. */
-.hero { min-block-size: min(100svh, 56rem); }
+.hero { min-block-size: min(var(--screen), 56rem); }
 
 /* 3. Media is a fraction of its column, never a fixed card. A 240px photograph
       on a 2560px screen is a stamp. */
@@ -333,7 +389,7 @@ h1   { font-size: clamp(2.25rem, 1.2rem + 3.4vw, 5rem); }
 
 /* 4. Where there is genuinely nothing more to show, stop claiming the screen:
       a band that is 80% empty is worse than a band that ends. */
-.hero { min-block-size: min(100svh, 56rem); }
+.hero { min-block-size: min(var(--screen), 56rem); }
 ```
 
 Gaps and padding scale the same way — `gap: clamp(2rem, 4vw, 6rem)` — so the
@@ -371,10 +427,12 @@ composition breathes with the window instead of holding a 1440px pose inside a
 how much of a full-height hero is empty, whether the headline grew at all — and
 every band at 1920 for the two faults above.
 
-**Measure in `svh`, never `vh`.** On a phone `100vh` is taller than the screen —
-it counts the space the browser chrome is currently occupying. The difference is
-about the height of a button, which is why the button is the thing that falls
-off.
+**Measure the screen with `var(--screen)`, never a viewport unit.** On a phone
+`100vh` is taller than the screen — it counts the space the browser chrome is
+currently occupying, about the height of a button, which is why the button is the
+thing that falls off. `svh` fixes that in Safari and Chrome and not in the
+browsers inside Telegram, Instagram and WhatsApp, which move it as their bar
+slides; `--screen` holds still in all of them («The floor», above).
 
 **No orphans, and do not fix them by counting.** A row that leaves one chip
 alone on its last line reads as a mistake rather than a rhythm, and a heading

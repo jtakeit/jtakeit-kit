@@ -90,7 +90,7 @@ const tilt = (i: number) => {
   .deck__pile {
     position: relative;
     inline-size: min(22rem, 72vw);
-    max-inline-size: calc((100svh - 9rem) * var(--deck-aspect, 0.8));
+    max-inline-size: calc((var(--screen) - 9rem) * var(--deck-aspect, 0.8));
     aspect-ratio: var(--deck-ratio);
     touch-action: pan-y;
   }
@@ -154,7 +154,7 @@ const tilt = (i: number) => {
     align-items: center;
     gap: clamp(0.75rem, 2.5vw, 1.5rem);
     inline-size: min(22rem, 100%);
-    max-inline-size: calc((100svh - 9rem) * var(--deck-aspect, 0.8));
+    max-inline-size: calc((var(--screen) - 9rem) * var(--deck-aspect, 0.8));
   }
 
   .deck__caption {

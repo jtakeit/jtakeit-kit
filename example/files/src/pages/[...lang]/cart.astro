@@ -47,7 +47,7 @@ const languages = EVERY_LOCALE.length > 1 ? EVERY_LOCALE.map((one) => ({ locale:
     width: min(var(--shell, 72rem), 100%);
     margin: 0 auto;
     /* Clear of the header that floats over the page, as the example's entries are (look.css, `.entry`) — or as far as the look says (`--page-top`: the bare look's header is in the flow). */
-    padding: var(--page-top, clamp(7rem, 16vh, 10rem)) var(--gutter, 1.25rem) clamp(2.5rem, 6vw, 4.5rem);
+    padding: var(--page-top, clamp(7rem, calc(var(--screen) * 0.16), 10rem)) var(--gutter, 1.25rem) clamp(2.5rem, 6vw, 4.5rem);
   }
   .cart-page > * {
     min-width: 0;

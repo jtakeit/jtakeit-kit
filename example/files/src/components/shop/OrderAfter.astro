@@ -101,7 +101,9 @@ const words = Object.fromEntries(SAID.map((key) => [key, W[key]]));
    * the order. The rule the behaviour needs (`[hidden]`, a focus ring) the
    * element puts on the page.
    */
+  /* Quantities, prices and the sum: figures that line up. */
   .order {
+    font-variant-numeric: lining-nums tabular-nums;
     display: block;
   }
   .order__in {
@@ -206,7 +208,7 @@ const words = Object.fromEntries(SAID.map((key) => [key, W[key]]));
     min-height: 2.75rem;
     padding: 0.5rem 1.2rem;
     border: 1px solid var(--ink);
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     color: var(--ink);
     font-weight: 600;
     text-decoration: none;

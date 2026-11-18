@@ -276,6 +276,10 @@ const sectioned = Sections !== undefined && ownPage !== undefined && ownPage.blo
    * between them — a text node between two annotated values belongs to
    * neither (docs/catalogue.md, «A separator between two values is CSS»).
    */
+  /* A length and a price: figures that line up, row under row. */
+  .listing-row__term {
+    font-variant-numeric: lining-nums tabular-nums;
+  }
   .listing-row__term + .listing-row__term::before {
     content: ' · ';
   }

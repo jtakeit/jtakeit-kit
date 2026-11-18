@@ -55,25 +55,69 @@
   --danger: #b3261e;
 
   /*
-   * How wide things are allowed to be — two different questions with two
-   * different answers, and collapsing them is why a page built at 1440 looks
-   * stranded on a 27-inch monitor.
+   * ── the floor (docs/kit.md, «The floor») ──────────────────────────────────
    *
-   *   --shell     the layout's outer width. It GROWS with the screen.
-   *   --measure   how long a line of text may get. It does NOT: past about 65
-   *               characters the eye loses the start of the next line.
+   * How the site is built, never what it looks like: the same on every site,
+   * in every look. A design changes the values; the names stay, because the
+   * template's pieces and the kit's checks read them.
+   *
+   * The screen's height. Every height measured against the screen reads
+   * `var(--screen)` and never vh, svh or dvh: the browsers inside Telegram,
+   * Instagram and WhatsApp slide their bar away under a scrolling thumb and
+   * back, every viewport unit follows it, and the hero and every band sized
+   * by the screen squeeze and stretch while the page only scrolls.
+   * Layout.astro measures innerHeight before the first paint and changes it
+   * only when the width does — a turned phone; this is the value without
+   * scripts. Put a ceiling on a first screen — min(var(--screen), 56rem) —
+   * because the panel draws the page in a frame as tall as the document.
+   */
+  --screen: 100svh;
+
+  /*
+   * How wide things are allowed to be — different questions with different
+   * answers, and collapsing them is why a page built at 1440 looks stranded
+   * on a 27-inch monitor.
+   *
+   *   --shell           the layout's outer width. It GROWS with the screen.
+   *   --measure-read    how long a line of text may get — text and photographs
+   *                     on paper. It does NOT grow: past about 65 characters
+   *                     the eye loses the start of the next line.
+   *   --measure-object  a filled surface — a calendar, a form, a card, a price
+   *                     list: wider than a line of text, one width with the
+   *                     header's capsule where the design has one.
+   *   full bleed        the shell's edge to the screen's: the beginning and
+   *                     the end of a page. No token — `inline-size: 100%` of
+   *                     a band with no gutter.
+   *   --measure         the reading measure, by its old name: every site
+   *                     before the floor reads it.
    *
    * A shell capped at 1200px is 47% of a 2560px screen, and everything inside
-   * it reads as an island. Cap the measure instead and let the composition use
-   * the space. See the Composition floor in the astro-kit skill.
+   * it reads as an island. Cap the measures instead and let the composition
+   * use the space. A piece that draws a surface says which it is —
+   * `data-measure="read|object|full"`, below — and the template's take a
+   * `surface` (docs/kit.md).
    */
   --shell: min(92rem, 92vw);
-  --measure: 34rem;
+  --measure-read: 34rem;
+  --measure-object: min(72rem, 100%);
+  --measure: var(--measure-read);
 
-  --r-1: 4px;
-  --r-2: 8px;
-  --r-3: 14px;
-  --r-4: 22px;
+  /*
+   * One radius family, from one base. The steps are the base, scaled — a
+   * design that wants squarer or softer corners changes `--radius` and every
+   * corner follows, in proportion — and the pill is a pill. A circle is
+   * `50%`, a shape and not a step.
+   *
+   * A corner inside a corner is the outer one less the padding between them,
+   * or the inner corner looks fatter than the outer: say `--r-outer` and
+   * `--pad` on the outer element and give the inner one `.r-nested`, below.
+   */
+  --radius: 8px;
+  --r-1: calc(var(--radius) * 0.5);
+  --r-2: var(--radius);
+  --r-3: calc(var(--radius) * 1.75);
+  --r-4: calc(var(--radius) * 2.75);
+  --r-pill: 999px;
 
   --dur: 180ms;
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
@@ -261,6 +305,40 @@ h1 {
   text-wrap: balance;
 }
 
+/*
+ * ── the floor's utilities ─────────────────────────────────────────────────
+ *
+ * Numbers that line up. A price, a time, a length, a total: lining figures
+ * the height of capitals, each as wide as the next, so a column of prices
+ * aligns on its last digit and a clock that ticks does not shake the line.
+ * The kit's booking form and the template's prices, hours and totals carry
+ * it already; `.num` is for the ones a design adds.
+ */
+.num {
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* An entry's own values — a price, a length, a date, a time — line up too. */
+.entry-facts dd {
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* A surface's measure (`surface` on the template's pieces, docs/kit.md). */
+[data-measure='read'] {
+  max-inline-size: var(--measure-read);
+}
+[data-measure='object'] {
+  max-inline-size: var(--measure-object);
+}
+[data-measure='full'] {
+  max-inline-size: none;
+}
+
+/* A corner inside a corner: the outer one's less the padding between them. */
+.r-nested {
+  border-radius: max(0px, calc(var(--r-outer, var(--r-3)) - var(--pad, 0px)));
+}
+
 /* An <a class="btn"> is a button, not a link in a sentence: no underline. */
 .btn {
   display: inline-block;
@@ -332,7 +410,7 @@ h1 {
 }
 
 .lead {
-  max-width: var(--measure);
+  max-width: var(--measure-read);
   margin: 1rem 0 0;
   font-size: clamp(1.0625rem, 2.4vw, 1.25rem);
   line-height: 1.6;
@@ -345,7 +423,7 @@ h1 {
 }
 
 .prose {
-  max-width: var(--measure);
+  max-width: var(--measure-read);
   margin-top: 1rem;
   line-height: 1.7;
 }
@@ -366,6 +444,16 @@ main.prose {
   padding-block: clamp(3rem, 8vw, 6rem);
 }
 
+/* The booking form under a listing: in the same frame, a filled surface at
+   the object measure — it ran from the screen's edge to the screen's edge,
+   wider than the price list above it (the floor, 18 November 2026). */
+.listing-book {
+  inline-size: var(--shell);
+  max-inline-size: calc(100% - 2.5rem);
+  margin-inline: auto;
+  padding-block-end: clamp(3rem, 8vw, 6rem);
+}
+
 .entry {
   inline-size: min(46rem, 100% - 2.5rem);
   margin-inline: auto;
@@ -377,10 +465,10 @@ main.prose {
 .entry > picture img {
   display: block;
   inline-size: 100%;
-  max-block-size: 70svh;
+  max-block-size: calc(var(--screen) * 0.7);
   margin-block: 1.5rem;
   object-fit: cover;
-  border-radius: var(--r-2, 0.5rem);
+  border-radius: var(--r-2);
 }
 
 .prose > * + * {
@@ -407,7 +495,9 @@ main.prose {
   display: block;
   inline-size: 100%;
   block-size: auto;
-  border-radius: var(--radius, 0);
+  /* The family's step, or a look's own corner for a photograph in a body —
+     Brumy's prints them square (`--r-figure: 0`). */
+  border-radius: var(--r-figure, var(--r-2));
 }
 
 .jtk-figure figcaption {
@@ -490,14 +580,14 @@ main.prose {
   gap: 0.15rem;
   padding: 0.15rem;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--paper);
   font-size: 0.75rem;
   letter-spacing: 0.06em;
 }
 .languages a {
   padding: 0.25rem 0.55rem;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   color: var(--ink-quiet);
   text-decoration: none;
 }
@@ -536,7 +626,7 @@ main.prose {
   inline-size: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
-  border-radius: var(--r-2, 0.5rem);
+  border-radius: var(--r-2);
 }
 .post-card time {
   font-size: 0.8125rem;
