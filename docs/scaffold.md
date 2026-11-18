@@ -163,6 +163,7 @@ jtk/entries/<collection>/<slug>.json  an entry: its id, slug, its own values und
 jtk/shared.json                       the text on every page: the business's contacts, by role
 jtk/modules/bookings.json             the diary's settings, when the schema turns bookings on
 jtk/design.json                       the design document the panel reads for the editor's chrome
+                                      — and the site's design axes, `axes` (docs/kit.md)
 jtk/site.json                         the platform's, written by its saves: never by the scaffold
 ```
 
