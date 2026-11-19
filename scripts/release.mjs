@@ -77,13 +77,16 @@ function newestOnNpm(name) {
  * npm says a published version "may take a few minutes to become
  * available", and it means it: the first release stopped here with the kit
  * published and the scaffold not, because the registry answered the old
- * version for a minute. So: ask again, every ten seconds, for three minutes.
+ * version for a minute. Since November 2026 npm processes a package for
+ * longer than three minutes (kit 0.16.0, 19 November): so ask again, every
+ * fifteen seconds, for fifteen minutes, and say a minute as it passes.
  */
 async function untilNpmHas(name, version) {
-  for (let tried = 0; tried < 18; tried++) {
-    if (onNpm(name, version)) return true;
-    await new Promise((done) => setTimeout(done, 10_000));
-    process.stdout.write('.');
+  process.stdout.write(`waiting for npm to hold ${name}@${version} (up to 15 minutes) `);
+  for (let tried = 0; tried < 60; tried++) {
+    if (onNpm(name, version)) { process.stdout.write('\n'); return true; }
+    await new Promise((done) => setTimeout(done, 15_000));
+    process.stdout.write(tried % 4 === 3 ? `${(tried + 1) / 4}m ` : '.');
   }
   return false;
 }
