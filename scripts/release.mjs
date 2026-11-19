@@ -5,7 +5,7 @@
  *   node scripts/release.mjs bump --kit minor --astro minor   [--dry-run]
  *   node scripts/release.mjs bump --kit 0.3.0 --astro 0.5.0   [--dry-run]
  *   node scripts/release.mjs bump --again                     [--dry-run]
- *   node scripts/release.mjs publish [--tag next]             [--dry-run]
+ *   node scripts/release.mjs publish [--tag next] [--test] [--dry-run]
  *
  * `bump` sets the kit's version, the scaffold's version, and the kit as a
  * dependency in the two places that name it — the root package and the
@@ -53,6 +53,19 @@ const run = (cmd, args) => {
   const out = spawnSync(cmd, args, { cwd: ROOT, stdio: 'inherit' });
   if (out.status !== 0) { console.error(`${cmd} failed`); process.exit(out.status ?? 1); }
 };
+
+/**
+ * Whether CI's «Tests» finished green on this commit, asked of GitHub through
+ * gh; anything else — gh missing, signed out, the run still going, red — is
+ * no, and publish runs the tests itself.
+ */
+function ciGreen(sha) {
+  try {
+    const repo = sh('gh repo view --json nameWithOwner --jq .nameWithOwner');
+    const runs = JSON.parse(sh(`gh api repos/${repo}/commits/${sha}/check-runs --jq "[.check_runs[] | select(.name == \\"Tests\\") | {status, conclusion}]"`));
+    return runs.length > 0 && runs.every((one) => one.status === 'completed' && one.conclusion === 'success');
+  } catch { return false; }
+}
 
 /** What npm has, or 0.0.0 for a package not yet there. */
 /**
@@ -230,7 +243,14 @@ if (command === 'publish') {
   if (onNpm(kit.name, kit.version) && onNpm(root.name, root.version)) {
     console.error(`${kit.name}@${kit.version} and ${root.name}@${root.version} are both on npm already: nothing to publish`); process.exit(1);
   }
-  run('npm', ['test']);
+  // The tests: CI ran them on this very commit when it reached main, in a
+  // clean npm ci, so a green «Tests» there is the same answer minutes sooner
+  // (the suite builds every look and opens Chrome — minutes on a laptop since
+  // 0.19.0). Run here when CI has not said green, or with --test.
+  const head = sh('git rev-parse HEAD');
+  const green = !argv.includes('--test') && ciGreen(head);
+  if (green) console.log(`CI's Tests passed on ${head.slice(0, 7)} — not running them again here (--test runs them)`);
+  else run('npm', ['test']);
   // One at a time, the kit first; a package npm already has at this version
   // is skipped, so a run that stopped halfway is picked up where it stopped.
   if (onNpm(kit.name, kit.version)) {
@@ -268,5 +288,5 @@ Next, in jtakeit-core: backend/api/sitebuild/scaffold.version → ${root.version
 
 console.error(`node scripts/release.mjs bump --kit <minor|patch|x.y.z> --astro <minor|patch|x.y.z> [--dry-run]
 node scripts/release.mjs bump --again [--dry-run]       the same versions, the lockfile and the scaffold's hashes written again
-node scripts/release.mjs publish [--tag next] [--dry-run]   --tag: the npm dist-tag (default latest); latest moves only with the platform's release`);
+node scripts/release.mjs publish [--tag next] [--test] [--dry-run]   --tag: the npm dist-tag (default latest); latest moves only with the platform's release`);
 process.exit(1);
