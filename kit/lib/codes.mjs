@@ -110,6 +110,11 @@ export const E = Object.freeze({
  * schema (dateHides.mjs): a template that compares an entry's date with the
  * clock to choose what is shown, where the collection's `ends_by` says it
  * once for the site, the panel and the build.
+ *
+ * `SESSION_OUTSIDE_HOURS` is `jtk schema`'s too, of the files (sessionHours.mjs),
+ * and the platform's judge says it as well: a resource's own hours — a class
+ * on Tuesdays 18:00–19:15 — outside the business's hours that day, which the
+ * diary clips them to (`slots.HoursOf`), so the class is never offered.
  */
 export const W = Object.freeze({
   MODULE_TWIN: 'JTK_W_MODULE_TWIN',
@@ -117,6 +122,7 @@ export const W = Object.freeze({
   DATE_HIDES: 'JTK_W_DATE_HIDES',
   PANEL_FORM_GUESSED: 'JTK_W_PANEL_FORM_GUESSED',
   NOT_LIVE: 'JTK_W_NOT_LIVE',
+  SESSION_OUTSIDE_HOURS: 'JTK_W_SESSION_OUTSIDE_HOURS',
 });
 
 export const ADVICE = Object.freeze({
@@ -128,6 +134,8 @@ export const ADVICE = Object.freeze({
     "A template compares an entry's date with today to choose what it shows: a build freezes the comparison until the next build, and the panel cannot know the entry is gone. Declare `ends_by` on the collection and read the entries the door gives.",
   [W.PANEL_FORM_GUESSED]:
     'The panel placed fields of an entry type by itself: a `form` places no row for some — they are drawn after its sections, under More — or a type of seven fields or more says no `form`, and the panel lays them out in their order, short ones two to a row and pictures aside.',
+  [W.SESSION_OUTSIDE_HOURS]:
+    "A resource's own hours — a class, a master, a table — lie outside the business's hours that day (jtk/modules/bookings.json), and the diary offers a resource only inside the business's: the part outside is never offered, and a class wholly outside has no time at all. Widen the business's hours, or move the class.",
   [W.NOT_LIVE]:
     "The schema does not say `render: \"live\"`: the panel shows the owner a change only after a build, and an entry's card cannot be previewed before it is saved. Keep `RENDER = 'live'` and the scaffold's src/live; take it out only where a page does at build what a server cannot, and say why in BRIEF.md.",
 });
