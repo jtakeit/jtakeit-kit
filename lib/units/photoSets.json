@@ -1,0 +1,1210 @@
+{
+ "about": "The example's photographs, a set per trade (jtakeit-core wiki/117 §2.3): the same names as PHOTOS in lib/units/photos.mjs, generated with Higgsfield for jtakeit and released with the kit under its licence. The files are not in the package: they are at <media base>media/<site>/<hash16>.jpg (the reserved pseudo-site below), fetched and checked by lib/units/photos.mjs. Placeholders, to be replaced by the business's own.",
+ "site": "00000000-0000-0000-0000-000000000e01",
+ "sets": {
+  "sessions": {
+   "hero": {
+    "hash16": "76ab32671e233cba",
+    "sha256": "76ab32671e233cba9e91599aabd1d9fad327f5fdfdf8aa38c9f0a3e011f1f2e1",
+    "width": 2400,
+    "height": 1565,
+    "alt": {
+     "en": "A bright studio with pale floorboards and mats in rows, a person in a seated forward stretch",
+     "de": "Ein heller Raum mit hellem Dielenboden und Matten in Reihen, eine Person in einer sitzenden Vorbeuge"
+    }
+   },
+   "gallery-linen": {
+    "hash16": "08770a08327c0072",
+    "sha256": "08770a08327c00728ffa221183f44bdd280abdbfcfe51f1c35ce68652b514be6",
+    "width": 1024,
+    "height": 1024,
+    "alt": {
+     "en": "Two glasses of herbal tea on a low wooden table beside a folded blanket",
+     "de": "Zwei Gläser Kräutertee auf einem niedrigen Holztisch neben einer gefalteten Decke"
+    }
+   },
+   "gallery-light": {
+    "hash16": "82c7d8bb65b5f348",
+    "sha256": "82c7d8bb65b5f348ffd86baa12369579fe2615e915f9a8d564866810c404a38c",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "The studio at dusk, mats rolled and stacked along the wall, a lamp on",
+     "de": "Der Raum am Abend, Matten gerollt an der Wand gestapelt, eine Lampe brennt"
+    }
+   },
+   "gallery-tools": {
+    "hash16": "dc6d500eb249dd6c",
+    "sha256": "dc6d500eb249dd6c4be33fcf5fbfb89a582852cf3c343a18a68463e26d85d49e",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "Cork blocks, cotton straps and round bolsters on a low wooden shelf",
+     "de": "Korkblöcke, Baumwollgurte und runde Bolster auf einem niedrigen Holzregal"
+    }
+   },
+   "gallery-ceramics": {
+    "hash16": "bb780899d586d3c2",
+    "sha256": "bb780899d586d3c22aa1af54132ec70477a9adec4230aab590bcf309706f68f5",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "An empty pilates reformer in soft side light, its wooden frame and springs",
+     "de": "Ein leerer Pilates-Reformer im weichen Seitenlicht, Holzrahmen und Federn"
+    }
+   },
+   "gallery-doorway": {
+    "hash16": "d85cc55dbe30ab65",
+    "sha256": "d85cc55dbe30ab656d3ca4f015b7afc1f55ea6dd3fb181ed612c56fab4cc1a12",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "Window light in long stripes across empty floorboards",
+     "de": "Fensterlicht in langen Streifen auf leeren Dielen"
+    }
+   },
+   "gallery-chair": {
+    "hash16": "5097719a5d6030f2",
+    "sha256": "5097719a5d6030f2ff7d589a0cc611abbd841cee77e46ce0a07c7f13143f8f2a",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "Rolled yoga mats standing in a woven basket by a white wall",
+     "de": "Gerollte Yogamatten in einem geflochtenen Korb an einer weissen Wand"
+    }
+   },
+   "gallery-grain": {
+    "hash16": "8ded8340b3f6550e",
+    "sha256": "8ded8340b3f6550e035e69ced51dbad07bdf92ea8e16a38c217d736fe5e6ba6e",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A folded wool blanket and a round bolster on a mat",
+     "de": "Eine gefaltete Wolldecke und ein runder Bolster auf einer Matte"
+    }
+   },
+   "gallery-sideboard": {
+    "hash16": "19260ea781b32ad6",
+    "sha256": "19260ea781b32ad64984994bc1a3161d79d43acbd4c5df6f6b86fe5e067e39d8",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A bench with folded towels and a pair of grip socks",
+     "de": "Eine Bank mit gefalteten Handtüchern und einem Paar Stoppersocken"
+    }
+   },
+   "service-conversation": {
+    "hash16": "03350745f0163428",
+    "sha256": "03350745f01634285b962920a2b00f352e3be4d00ed5ac8b277250d6535a8c80",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A person resting back over a bolster in a yin pose, a blanket over the legs",
+     "de": "Eine Person liegt in einer Yin-Haltung über einem Bolster, eine Decke über den Beinen"
+    }
+   },
+   "service-work": {
+    "hash16": "b52061018e752ceb",
+    "sha256": "b52061018e752ceb656d2bdb867f3de71eb77daa30d95402812f9d58543b2cc3",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A pilates ring, a small soft ball and a folded towel on a mat",
+     "de": "Ein Pilates-Ring, ein kleiner weicher Ball und ein gefaltetes Handtuch auf einer Matte"
+    }
+   },
+   "service-finish": {
+    "hash16": "041e5418b7eca816",
+    "sha256": "041e5418b7eca816e8d900b6170ac027f266015198166b4e8d431a0e5a619900",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "Feet on the foot bar of a reformer, its springs and straps close up",
+     "de": "Füsse an der Fussstange eines Reformers, Federn und Gurte aus der Nähe"
+    }
+   },
+   "service-objects": {
+    "hash16": "eed1b018b0314e88",
+    "sha256": "eed1b018b0314e883b7515dba658405b047ead534e868fa0c0e75c0f0970929c",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A person sitting cross-legged facing a window, seen from behind",
+     "de": "Eine Person im Schneidersitz vor einem Fenster, von hinten"
+    }
+   },
+   "service-counter": {
+    "hash16": "6cf94f409126ea7f",
+    "sha256": "6cf94f409126ea7f4a8ffcd01033103199bd5e9994dbd9f5fdd487610265335d",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A teacher's hand on a student's shoulder in a private session",
+     "de": "Die Hand einer Lehrerin an der Schulter einer Schülerin in einer Einzelstunde"
+    }
+   },
+   "team-window": {
+    "hash16": "08f1e26899e5a5da",
+    "sha256": "08f1e26899e5a5da27d1e964d5aeb4e6974c0bb586da3f2cc2e1aa78560a6f94",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A teacher rolling up a mat at the end of the day, seen from behind",
+     "de": "Eine Lehrerin rollt am Ende des Tages eine Matte zusammen, von hinten"
+    }
+   },
+   "team-apron": {
+    "hash16": "9bb07ae6d61e5b9e",
+    "sha256": "9bb07ae6d61e5b9e2e8241a6aa59b3d4a19dd595eddfd0646b21d0cf2968e943",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "Hands holding a brass singing bowl and its wooden striker",
+     "de": "Hände halten eine Klangschale aus Messing und ihren Holzklöppel"
+    }
+   },
+   "team-silhouette": {
+    "hash16": "79127f2edab61ddd",
+    "sha256": "79127f2edab61ddd23abed5d8c13b22d0198141f4c860f4e7d67b471de5f283a",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A teacher in profile turned towards the window, hair tied back",
+     "de": "Eine Lehrerin im Profil zum Fenster gewandt, das Haar zurückgebunden"
+    }
+   }
+  },
+  "nails": {
+   "hero": {
+    "hash16": "697c961b925a4ff5",
+    "sha256": "697c961b925a4ff556dd3cc1467de8bd85024fbe56230d0d5fa505526d549f37",
+    "width": 2400,
+    "height": 1565,
+    "alt": {
+     "en": "A manicure table by a large window, a nail being filed over a folded towel",
+     "de": "Ein Manikürtisch an einem grossen Fenster, ein Nagel wird über einem gefalteten Handtuch gefeilt"
+    }
+   },
+   "gallery-linen": {
+    "hash16": "ea10e0eec40db627",
+    "sha256": "ea10e0eec40db627800e798e2143aec92e6ba78f889bcf84476541b736b7028a",
+    "width": 1024,
+    "height": 1024,
+    "alt": {
+     "en": "Hands under a compact nail lamp on a white table",
+     "de": "Hände unter einer kompakten Nagellampe auf einem weissen Tisch"
+    }
+   },
+   "gallery-light": {
+    "hash16": "e2a2f1e0ab145ae5",
+    "sha256": "e2a2f1e0ab145ae598854888c391ca3f2c4b7adf9acc621856a3fcd10fbce35e",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A wall rack of polish bottles in nude, rose and red",
+     "de": "Ein Wandregal mit Nagellackflaschen in Nude, Rosé und Rot"
+    }
+   },
+   "gallery-tools": {
+    "hash16": "dbe27e479e9cf82e",
+    "sha256": "dbe27e479e9cf82eba62b9f91cf7890ed2436d9f66455d6ccb9eb91f35b7aada",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "Manicure tools laid out on a linen towel: files, a cuticle pusher, small scissors",
+     "de": "Maniküre-Werkzeug auf einem Leinentuch: Feilen, ein Nagelhautschieber, eine kleine Schere"
+    }
+   },
+   "gallery-ceramics": {
+    "hash16": "c4c88a6cb90f3489",
+    "sha256": "c4c88a6cb90f348946fc025f68f17bc37ade767478b467a73c45b9dd17b9993a",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A hand with fresh almond-shaped nails holding a cup",
+     "de": "Eine Hand mit frischen mandelförmigen Nägeln hält eine Tasse"
+    }
+   },
+   "gallery-doorway": {
+    "hash16": "d693d1afa85d3552",
+    "sha256": "d693d1afa85d35520ee1df0e67b6e6216b32ed0d99bc1cfccbd57c377449744e",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A fan of colour sample tips on a marble table",
+     "de": "Ein Fächer aus Farbmustern auf einem Marmortisch"
+    }
+   },
+   "gallery-chair": {
+    "hash16": "79ba9dad1906b8e7",
+    "sha256": "79ba9dad1906b8e717eb51c15df5f95e0e7ca0c2aec14f117bf412aa2aa762ff",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A pedicure chair with a copper foot bowl and a folded towel",
+     "de": "Ein Pediküresessel mit einer Fussschale aus Kupfer und einem gefalteten Handtuch"
+    }
+   },
+   "gallery-grain": {
+    "hash16": "7ae828bfa92af79e",
+    "sha256": "7ae828bfa92af79eb6826e3a165e1afadd903ca4b2a440997eecf93f29b77321",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A trailing plant on the window sill, the street out of focus",
+     "de": "Eine Hängepflanze auf der Fensterbank, die Strasse unscharf"
+    }
+   },
+   "gallery-sideboard": {
+    "hash16": "8b6d07c25792c4c2",
+    "sha256": "8b6d07c25792c4c2567ec8751c126854640a96957f561f822590d978a421ef32",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A tidy workstation at the end of the day, the chair pushed in",
+     "de": "Ein aufgeräumter Arbeitsplatz am Ende des Tages, der Stuhl eingeschoben"
+    }
+   },
+   "service-conversation": {
+    "hash16": "caf847f753aa2b7b",
+    "sha256": "caf847f753aa2b7bcbeffd74a4873fcdaaa9cab5cbc3d452cd3fadd09e253d7b",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A manicure: a nail shaped with a file, the hand resting on a cushion",
+     "de": "Eine Maniküre: ein Nagel wird mit der Feile geformt, die Hand auf einem Kissen"
+    }
+   },
+   "service-work": {
+    "hash16": "03b3f358f1146d35",
+    "sha256": "03b3f358f1146d358e9dbc2f3705ddf6a94642b262c59bdad1060458af4010ea",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A hand under a lamp curing a glossy gel colour",
+     "de": "Eine Hand unter der Lampe, ein glänzender Gellack härtet aus"
+    }
+   },
+   "service-finish": {
+    "hash16": "e917fc55f1b4b295",
+    "sha256": "e917fc55f1b4b295cfe08507e2ca39fe34c62cea41bc53f5b32e4597ec9eb9b3",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A pedicure: feet in a copper bowl of warm water",
+     "de": "Eine Pediküre: Füsse in einer Kupferschale mit warmem Wasser"
+    }
+   },
+   "service-objects": {
+    "hash16": "63710bf637696d4a",
+    "sha256": "63710bf637696d4a926840947780a047725c91450bb417b8c8fece02d711b75b",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "Nail art: a fine brush drawing a thin line on one nail",
+     "de": "Nageldesign: ein feiner Pinsel zieht eine dünne Linie auf einem Nagel"
+    }
+   },
+   "service-counter": {
+    "hash16": "b43eac46c6793ac8",
+    "sha256": "b43eac46c6793ac8084047ce349175c23fab1d64fd0cdd7046dc9ff6a6918a2c",
+    "width": 1024,
+    "height": 1024,
+    "alt": {
+     "en": "A drop of cuticle oil from a glass pipette onto a nail",
+     "de": "Ein Tropfen Nagelöl aus einer Glaspipette auf einen Nagel"
+    }
+   },
+   "team-window": {
+    "hash16": "321029fd42e2a22c",
+    "sha256": "321029fd42e2a22cee2f42daace47c983be3ceb83da53d5c2b4e1b7c99b254c0",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A nail technician arranging polish bottles on a shelf, seen from behind",
+     "de": "Eine Nageldesignerin ordnet Lackflaschen im Regal, von hinten"
+    }
+   },
+   "team-apron": {
+    "hash16": "215daec6c8e9cbc1",
+    "sha256": "215daec6c8e9cbc1e517130905c347de16f68e10fc3498cc0e5601188cfbb6f3",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "Gloved hands holding a nail drill and a file",
+     "de": "Hände in Handschuhen halten eine Nagelfräse und eine Feile"
+    }
+   },
+   "team-silhouette": {
+    "hash16": "50f7a48428f58693",
+    "sha256": "50f7a48428f58693f3ae724425db294c6f00b3fe8971b8522cbe3ee75c4a2d36",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A technician in profile by the window, hair in a low bun",
+     "de": "Eine Nageldesignerin im Profil am Fenster, das Haar in einem tiefen Knoten"
+    }
+   }
+  },
+  "hair": {
+   "hero": {
+    "hash16": "c193afd794cef31e",
+    "sha256": "c193afd794cef31ef29ea4068b79e17c9b8a42cf1cfa7c32d16fde4b1015b8fc",
+    "width": 2400,
+    "height": 1565,
+    "alt": {
+     "en": "A salon with two chairs and round mirrors, long hair being blow-dried, seen from behind",
+     "de": "Ein Salon mit zwei Stühlen und runden Spiegeln, langes Haar wird geföhnt, von hinten"
+    }
+   },
+   "gallery-linen": {
+    "hash16": "689f30f06a592248",
+    "sha256": "689f30f06a59224851caddbcd7cbe6ea8a08dfe42f851e57ae1439d2ef238c82",
+    "width": 1024,
+    "height": 1024,
+    "alt": {
+     "en": "Hair colour swatches fanned out on a table",
+     "de": "Haarfarbmuster auf einem Tisch aufgefächert"
+    }
+   },
+   "gallery-light": {
+    "hash16": "e42bfa74d7a3affc",
+    "sha256": "e42bfa74d7a3affc8e290e5dbd6ffe3055f9ac5cc0acd5eb8bbb86ff404d906b",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "Hair-cutting scissors and wide-tooth combs on a leather roll",
+     "de": "Haarscheren und grobe Kämme auf einer Lederrolle"
+    }
+   },
+   "gallery-tools": {
+    "hash16": "17e935bd21d0b487",
+    "sha256": "17e935bd21d0b487b327d78be05082da0e6d63369cd8607c90d506aa0cf979b0",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "Colour mixing bowls and tint brushes on a trolley",
+     "de": "Farbschalen und Färbepinsel auf einem Rollwagen"
+    }
+   },
+   "gallery-ceramics": {
+    "hash16": "e39af304ecd22184",
+    "sha256": "e39af304ecd22184561165ff3c637ab383e51e68f8c209abacefe907d5db9391",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "Soft waves on long hair, seen from behind",
+     "de": "Weiche Wellen in langem Haar, von hinten"
+    }
+   },
+   "gallery-doorway": {
+    "hash16": "ecc894e9b5401ec5",
+    "sha256": "ecc894e9b5401ec57262228aa755aa78e83ef601c79a35c658a536137132dbc1",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A wash basin with a reclined chair and a folded towel",
+     "de": "Ein Waschbecken mit zurückgeneigtem Stuhl und einem gefalteten Handtuch"
+    }
+   },
+   "gallery-chair": {
+    "hash16": "74cf9148efb1b3e2",
+    "sha256": "74cf9148efb1b3e233551c6227e9b1facd089bf46a17e6d085349085079bf259",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A styling trolley with clips, brushes and a hairdryer",
+     "de": "Ein Friseurwagen mit Klammern, Bürsten und einem Föhn"
+    }
+   },
+   "gallery-grain": {
+    "hash16": "1fff73cd0eba983d",
+    "sha256": "1fff73cd0eba983d8ca59d99e396be04036b55a67a33077266ed41a7024027cc",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A shelf of amber bottles beside a plant",
+     "de": "Ein Regal mit Braunglasflaschen neben einer Pflanze"
+    }
+   },
+   "gallery-sideboard": {
+    "hash16": "c4b8e2c0f0de0548",
+    "sha256": "c4b8e2c0f0de05485ebeabb5521b3906f54773e19434b6d591a3c947007dc2b5",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A row of mirrors and empty chairs before opening",
+     "de": "Eine Reihe Spiegel und leere Stühle vor der Öffnung"
+    }
+   },
+   "service-conversation": {
+    "hash16": "b8559e128ccdceb0",
+    "sha256": "b8559e128ccdceb08cf1ceecbb141c2a6ae3464397c3793d29ce876c60abb984",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A haircut: scissors cutting a section held between two fingers",
+     "de": "Ein Haarschnitt: die Schere schneidet eine Strähne zwischen zwei Fingern"
+    }
+   },
+   "service-work": {
+    "hash16": "c4578307d86415ab",
+    "sha256": "c4578307d86415abe4b4b124d6163d8cb5d6176763afb7ba4175d16aafafd642",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "Colour: foil sections and a tint brush, from behind",
+     "de": "Färben: Folienpartien und ein Färbepinsel, von hinten"
+    }
+   },
+   "service-finish": {
+    "hash16": "17781ef2a8a6e185",
+    "sha256": "17781ef2a8a6e185f5d71fb60edc6fda48e150986a56d341b5bf05b9de5f16bd",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A blow-dry with a round brush, the hair in motion",
+     "de": "Föhnen mit einer Rundbürste, das Haar in Bewegung"
+    }
+   },
+   "service-objects": {
+    "hash16": "216e059bbbbc727f",
+    "sha256": "216e059bbbbc727fd11fd816d24ca52108f88abbe130d3874691ca93c2915b15",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A treatment at the wash basin, hands massaging the scalp",
+     "de": "Eine Pflege am Waschbecken, Hände massieren die Kopfhaut"
+    }
+   },
+   "service-counter": {
+    "hash16": "d370fa361651145b",
+    "sha256": "d370fa361651145bec0a6191adc9ad3e4813d1b9d80405807499a814852202a4",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A consultation at the mirror, a stylist lifting a strand",
+     "de": "Eine Beratung am Spiegel, die Friseurin hebt eine Strähne"
+    }
+   },
+   "team-window": {
+    "hash16": "368873b6cd7ce496",
+    "sha256": "368873b6cd7ce4965cc8b9cff929d3bf529868d049d646dc4af8bb7bd388d949",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A stylist sweeping cut hair from the floor, seen from behind",
+     "de": "Eine Friseurin fegt geschnittenes Haar vom Boden, von hinten"
+    }
+   },
+   "team-apron": {
+    "hash16": "a426232749cd693d",
+    "sha256": "a426232749cd693d96e10a4c542061f8f0edb8466066774504397b48dffb7690",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "Hands holding scissors and a comb",
+     "de": "Hände halten eine Schere und einen Kamm"
+    }
+   },
+   "team-silhouette": {
+    "hash16": "9f9d9b07c02fa195",
+    "sha256": "9f9d9b07c02fa19574b6fa24bea5332ba2f504b5f6da85df59776b159ebcb7a9",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A stylist in profile leaning on the counter",
+     "de": "Eine Friseurin im Profil, an die Theke gelehnt"
+    }
+   }
+  },
+  "barber": {
+   "hero": {
+    "hash16": "0d815a8241171760",
+    "sha256": "0d815a824117176034f31dee22856c3eed1489116ea260ba4dfb348a063d12ac",
+    "width": 2400,
+    "height": 1565,
+    "alt": {
+     "en": "A barber at work by a street window, a leather chair, a towel and a straight razor",
+     "de": "Ein Barbier bei der Arbeit an einem Fenster zur Strasse, ein Ledersessel, ein Handtuch und ein Rasiermesser"
+    }
+   },
+   "gallery-linen": {
+    "hash16": "9b67235048abccba",
+    "sha256": "9b67235048abccba0e301a1edc694ed0a1c1340336c78c5adcd278878b8032a6",
+    "width": 1024,
+    "height": 1024,
+    "alt": {
+     "en": "Steam rising from a rolled hot towel",
+     "de": "Dampf steigt von einem gerollten heissen Handtuch auf"
+    }
+   },
+   "gallery-light": {
+    "hash16": "83dee7273c411ff8",
+    "sha256": "83dee7273c411ff805e6b303c8f5bcadfcbe6df976f863c85ee8f872d22f7e10",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A shaving brush and a bowl of lather, a straight razor beside it",
+     "de": "Ein Rasierpinsel und eine Schale Schaum, daneben ein Rasiermesser"
+    }
+   },
+   "gallery-tools": {
+    "hash16": "aea8636f164b61e9",
+    "sha256": "aea8636f164b61e9ee807a59d6aa6d963a54417c56251eb935a6024bd1c8b29d",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "Electric clippers and guards lined up on a worn wooden counter",
+     "de": "Haarschneidemaschinen und Aufsätze aufgereiht auf einer abgenutzten Holztheke"
+    }
+   },
+   "gallery-ceramics": {
+    "hash16": "a1549aeacba0ef90",
+    "sha256": "a1549aeacba0ef90581b0aaf10a93105c52cd5e32f7f32be8fa05ca0d0a05912",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "Black combs in a glass jar of blue disinfectant",
+     "de": "Schwarze Kämme in einem Glas mit blauem Desinfektionsmittel"
+    }
+   },
+   "gallery-doorway": {
+    "hash16": "fa87fb63c53dd26e",
+    "sha256": "fa87fb63c53dd26e68e508c2bbe71c3a04c0c330a7defb1bab37110bd7bed658",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A row of old leather barber chairs before opening",
+     "de": "Eine Reihe alter Barbierstühle aus Leder vor der Öffnung"
+    }
+   },
+   "gallery-chair": {
+    "hash16": "533bdc486ddf304c",
+    "sha256": "533bdc486ddf304cb4c492fd8fa085f4a89b85cb7fdb204e0423586912e2ca83",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "Amber bottles of beard oil on a shelf",
+     "de": "Braunglasflaschen mit Bartöl auf einem Regal"
+    }
+   },
+   "gallery-grain": {
+    "hash16": "62b32f667514a7e5",
+    "sha256": "62b32f667514a7e517b4ba7da4b92834eccb3d7834326576665ee9282acc6243",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "The back of a head with a fresh skin fade",
+     "de": "Ein Hinterkopf mit frischem Skin Fade"
+    }
+   },
+   "gallery-sideboard": {
+    "hash16": "64d96a6c93a87328",
+    "sha256": "64d96a6c93a873281c8ea11b306974edc3cb2d4522e61911ba04684c527e906f",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A waiting bench with a coat above it and a cup of coffee",
+     "de": "Eine Wartebank mit einem Mantel darüber und einem Becher Kaffee"
+    }
+   },
+   "service-conversation": {
+    "hash16": "0e26bcfd0f22adfc",
+    "sha256": "0e26bcfd0f22adfc9b23765cf0413d5bef15c71d9799df8e1ef9efc4c516809b",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A haircut, scissors over comb at the side of the head, from behind",
+     "de": "Ein Haarschnitt, Schere über Kamm an der Seite des Kopfes, von hinten"
+    }
+   },
+   "service-work": {
+    "hash16": "d9cc32c63cea5dd4",
+    "sha256": "d9cc32c63cea5dd440ccb3986d9b15a3b74a7476984d6a5330fd70673b92a42a",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A beard trim with a small trimmer, the jaw in profile",
+     "de": "Ein Bartschnitt mit einem kleinen Trimmer, der Kiefer im Profil"
+    }
+   },
+   "service-finish": {
+    "hash16": "e8fd3af4c018931e",
+    "sha256": "e8fd3af4c018931e02749fb0ea4114c00585ccc5695d4c62b5558fa709eab881",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A hot towel shave, a client reclined, a hand with a straight razor",
+     "de": "Eine Heisstuch-Rasur, ein Kunde zurückgelehnt, eine Hand mit dem Rasiermesser"
+    }
+   },
+   "service-objects": {
+    "hash16": "98872894f45e6e5a",
+    "sha256": "98872894f45e6e5aba35d7c6c636ab410a5b4e536b7328a3ab589624fbdf79f3",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A fade with clippers at the nape, from behind",
+     "de": "Ein Fade mit der Maschine im Nacken, von hinten"
+    }
+   },
+   "service-counter": {
+    "hash16": "7412e02180de2003",
+    "sha256": "7412e02180de200346574e3df19d168df7243226426c52290a51758df0909659",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A small boy in a barber chair under a cape, seen from behind",
+     "de": "Ein kleiner Junge im Barbierstuhl unter einem Umhang, von hinten"
+    }
+   },
+   "team-window": {
+    "hash16": "ff03c05c5b2c6a35",
+    "sha256": "ff03c05c5b2c6a3587bffe9c989d5701422d5c3058f55c74832e96fc93524340",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A barber stropping a straight razor on a leather strop, seen from behind",
+     "de": "Ein Barbier zieht ein Rasiermesser auf einem Lederriemen ab, von hinten"
+    }
+   },
+   "team-apron": {
+    "hash16": "4fb73e7deb0c53dc",
+    "sha256": "4fb73e7deb0c53dc5747041eaf7a12e5e0a1e8aa2da2ad0591e042dd1b66508f",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "Tattooed hands holding clippers",
+     "de": "Tätowierte Hände halten eine Haarschneidemaschine"
+    }
+   },
+   "team-silhouette": {
+    "hash16": "f42692dc35ef165b",
+    "sha256": "f42692dc35ef165bd74d8148f3184d971e1e4742399d9632d1cbcdaf990093cd",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A barber in profile at the shop window",
+     "de": "Ein Barbier im Profil am Schaufenster"
+    }
+   }
+  },
+  "clinic": {
+   "hero": {
+    "hash16": "d91681c411896719",
+    "sha256": "d91681c4118967196b960c99a210aaf54292845bdcb5f546f78f248250091898",
+    "width": 2400,
+    "height": 1565,
+    "alt": {
+     "en": "A bright treatment room with a dental chair, pale wood and a plant by the window",
+     "de": "Ein heller Behandlungsraum mit Zahnarztstuhl, hellem Holz und einer Pflanze am Fenster"
+    }
+   },
+   "gallery-linen": {
+    "hash16": "4df7f030bca5e292",
+    "sha256": "4df7f030bca5e29279d93da19df30eb6d4159f50777fbb438621c1112b6be2b5",
+    "width": 1024,
+    "height": 1024,
+    "alt": {
+     "en": "A tray of sterile dental instruments in a neat row",
+     "de": "Ein Tablett mit sterilen zahnärztlichen Instrumenten in einer Reihe"
+    }
+   },
+   "gallery-light": {
+    "hash16": "cfe60537c5c59be2",
+    "sha256": "cfe60537c5c59be2e0da0a0b84602fedb9395b71c9e7173c57acc1ff0b489f4d",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "Sealed sterilisation pouches stacked in a drawer",
+     "de": "Versiegelte Sterilisationsbeutel gestapelt in einer Schublade"
+    }
+   },
+   "gallery-tools": {
+    "hash16": "fa2fd38db0ccc96b",
+    "sha256": "fa2fd38db0ccc96b01a66a7a018e358971c6329c6d30d86ef8815f315355cf99",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A pale wooden reception desk with a small vase",
+     "de": "Ein Empfang aus hellem Holz mit einer kleinen Vase"
+    }
+   },
+   "gallery-ceramics": {
+    "hash16": "ad4c6a6aa8ed42c6",
+    "sha256": "ad4c6a6aa8ed42c6aa9101d6f06da822ed35dc154237b1c4d8a0994c35b71a86",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A bright corridor with doors to the treatment rooms",
+     "de": "Ein heller Flur mit Türen zu den Behandlungsräumen"
+    }
+   },
+   "gallery-doorway": {
+    "hash16": "6dac4339e5ba0488",
+    "sha256": "6dac4339e5ba0488441d143e4565eb0e56e004c60199fb731c31b726f01d74d6",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A waiting room with upholstered chairs and a low table",
+     "de": "Ein Wartezimmer mit Polsterstühlen und einem niedrigen Tisch"
+    }
+   },
+   "gallery-chair": {
+    "hash16": "1fddde8fd7c4f1ea",
+    "sha256": "1fddde8fd7c4f1ea7612b417eeb8d0158b4712db5598f22645417ab654215a2a",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "Hands washed at a steel sink",
+     "de": "Hände werden an einem Stahlbecken gewaschen"
+    }
+   },
+   "gallery-grain": {
+    "hash16": "53ba57c3cdab609b",
+    "sha256": "53ba57c3cdab609b9efb8239b7e92fc47fc1fea6edb5baca9d97e039aaf1c002",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A plant on a window sill in soft light",
+     "de": "Eine Pflanze auf einer Fensterbank im weichen Licht"
+    }
+   },
+   "gallery-sideboard": {
+    "hash16": "7c40783c32c874b3",
+    "sha256": "7c40783c32c874b36653737d2e1ca677295c09093877199becb5d12b188df4da",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A monitor with a blurred dental x-ray beside a keyboard",
+     "de": "Ein Bildschirm mit einem unscharfen Zahnröntgenbild neben einer Tastatur"
+    }
+   },
+   "service-conversation": {
+    "hash16": "26d7d3af3ab4c56c",
+    "sha256": "26d7d3af3ab4c56c58e39a00d3c4126a06f0e4ab8bebc2ef1051594cefbebf4e",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A check-up: a gloved hand with a mouth mirror above the chair, the lamp on",
+     "de": "Eine Kontrolle: eine Hand im Handschuh mit Mundspiegel über dem Stuhl, die Lampe an"
+    }
+   },
+   "service-work": {
+    "hash16": "9e9b1125a75f2d32",
+    "sha256": "9e9b1125a75f2d3206a8b7ccdaeed447f165f4bd620b6fc3c67faf3d23795d8d",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "Dental hygiene: a scaler and a polishing cup, gloved hands",
+     "de": "Dentalhygiene: ein Scaler und ein Polierkelch, Hände in Handschuhen"
+    }
+   },
+   "service-finish": {
+    "hash16": "1cc6759011e0ebce",
+    "sha256": "1cc6759011e0ebce6c8e66e6e27c3ce3015f4f70bd6acba9519fc1144403a8a5",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A consultation at a desk, a model of teeth between two pairs of hands",
+     "de": "Eine Beratung am Tisch, ein Zahnmodell zwischen zwei Händepaaren"
+    }
+   },
+   "service-objects": {
+    "hash16": "9ee1f1248ba54125",
+    "sha256": "9ee1f1248ba54125566e6e17958d804d05112594ba260f649c0550951c500dd7",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "An intraoral scanner in its holder beside the chair",
+     "de": "Ein Intraoralscanner in seiner Halterung neben dem Stuhl"
+    }
+   },
+   "service-counter": {
+    "hash16": "302aa08a82f059aa",
+    "sha256": "302aa08a82f059aaf48969fdd6061844b5d422dfa9f3817cfde5b93c9fa4bb4a",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "Gloved hands preparing a treatment under the dental lamp",
+     "de": "Hände in Handschuhen bereiten eine Behandlung unter der Lampe vor"
+    }
+   },
+   "team-window": {
+    "hash16": "8bdf77f4e71a3afb",
+    "sha256": "8bdf77f4e71a3afbfedabbfcfc886dc8fe6486f35f388ee871f9ae275c2c5f47",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A dentist adjusting the overhead lamp, seen from behind",
+     "de": "Eine Zahnärztin richtet die Lampe über dem Stuhl, von hinten"
+    }
+   },
+   "team-apron": {
+    "hash16": "e651d9eb68bcf97f",
+    "sha256": "e651d9eb68bcf97f5a73fe2282e6ffc32220acdd5bb666429af8f0add41c92be",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "Hands pulling on blue nitrile gloves",
+     "de": "Hände ziehen blaue Nitrilhandschuhe an"
+    }
+   },
+   "team-silhouette": {
+    "hash16": "705d4ee4ffbbc9b1",
+    "sha256": "705d4ee4ffbbc9b1e434dcf3e3083962db0154f9cfb27ff9aec5854fb493497c",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A practice nurse in scrubs walking down the corridor",
+     "de": "Eine Praxisassistentin in Arbeitskleidung geht den Flur entlang"
+    }
+   }
+  },
+  "lawyers": {
+   "hero": {
+    "hash16": "935cee2926513094",
+    "sha256": "935cee2926513094440e5a7e7cd712a514d5e18333a1b000a004da6bb35875ef",
+    "width": 2400,
+    "height": 1565,
+    "alt": {
+     "en": "An oak meeting table with papers and a pen, ribboned files and a bookshelf",
+     "de": "Ein Besprechungstisch aus Eiche mit Papieren und Füller, gebundenen Akten und einem Bücherregal"
+    }
+   },
+   "gallery-linen": {
+    "hash16": "cc0cfae51a27d8bb",
+    "sha256": "cc0cfae51a27d8bb74ae8cbd9a7f8a0c54b680e416e242c3dde9a9519e0f236e",
+    "width": 1024,
+    "height": 1024,
+    "alt": {
+     "en": "A brass desk lamp over a stack of files",
+     "de": "Eine Schreibtischlampe aus Messing über einem Stapel Akten"
+    }
+   },
+   "gallery-light": {
+    "hash16": "ff4dfaecd1ab1f4b",
+    "sha256": "ff4dfaecd1ab1f4b0e82564c4c0ae90ce6a31ec191f3b295bdf2d112dd26ef1e",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "Case files tied with red ribbon on a shelf",
+     "de": "Akten mit rotem Band verschnürt auf einem Regal"
+    }
+   },
+   "gallery-tools": {
+    "hash16": "759158f3d7961223",
+    "sha256": "759158f3d7961223a8cf2f651712c3cef1c17721fd4395471ec62254288d77ff",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "Two hands over a contract, one signing with a fountain pen",
+     "de": "Zwei Hände über einem Vertrag, eine unterschreibt mit dem Füller"
+    }
+   },
+   "gallery-ceramics": {
+    "hash16": "e0a63e3804425f49",
+    "sha256": "e0a63e3804425f490ded05edcf6d8f23b22f82bc9c1f9f889538ccfa43b827e3",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "The heavy wooden entrance door of an old city building",
+     "de": "Die schwere Holztür eines alten Stadthauses"
+    }
+   },
+   "gallery-doorway": {
+    "hash16": "c92ab83490a42c23",
+    "sha256": "c92ab83490a42c2393217a7f1a0e544c5ee781ce542cfdc0aa594467df66891a",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A meeting room with chairs around an oak table in morning light",
+     "de": "Ein Besprechungsraum mit Stühlen um einen Eichentisch im Morgenlicht"
+    }
+   },
+   "gallery-chair": {
+    "hash16": "b1d31bee0270f9ef",
+    "sha256": "b1d31bee0270f9efedd9d919d6400a2cbc4d3a2d5a1ace509e0b31b95333bbf0",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A shelf of old law books with worn spines",
+     "de": "Ein Regal alter Gesetzbücher mit abgegriffenen Rücken"
+    }
+   },
+   "gallery-grain": {
+    "hash16": "b1a357554ab15406",
+    "sha256": "b1a357554ab15406c919a6adc6e2c7dc558a103db51800fb5b8577b60fa1e626",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A tall window over city rooftops, a chair beside it",
+     "de": "Ein hohes Fenster über den Dächern der Stadt, daneben ein Stuhl"
+    }
+   },
+   "gallery-sideboard": {
+    "hash16": "1aca28b37673d3a4",
+    "sha256": "1aca28b37673d3a4ee43dd8878549514cad1cb7336819148c3e3c8f06bd4ac04",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "Two coffee cups and a closed folder after a meeting",
+     "de": "Zwei Kaffeetassen und eine geschlossene Mappe nach einer Besprechung"
+    }
+   },
+   "service-conversation": {
+    "hash16": "553a607c58858c28",
+    "sha256": "553a607c58858c2806ac0f88edba6fb85414f84565ae7a600618501a0728f69e",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A consultation across a table, hands and notes",
+     "de": "Eine Beratung am Tisch, Hände und Notizen"
+    }
+   },
+   "service-work": {
+    "hash16": "66f56f2fdea539b6",
+    "sha256": "66f56f2fdea539b68b8351262962a2b0069ad5a55bcbdd1409c9750b1912b021",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A fountain pen on a printed contract",
+     "de": "Ein Füller auf einem gedruckten Vertrag"
+    }
+   },
+   "service-finish": {
+    "hash16": "edd654b1cdb6a934",
+    "sha256": "edd654b1cdb6a934e66221e80c1c312ca83f3d74ba2d997587a66e28960fc3a0",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A quiet corner with a sofa, tissues and a glass of water",
+     "de": "Eine ruhige Ecke mit Sofa, Taschentüchern und einem Glas Wasser"
+    }
+   },
+   "service-objects": {
+    "hash16": "4b024f2f11fc1a1b",
+    "sha256": "4b024f2f11fc1a1bddbd054a05b80fa5c591824c7efcd793ec6e9db384bf2f16",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A laptop beside company documents and a seal stamp",
+     "de": "Ein Laptop neben Firmenunterlagen und einem Siegelstempel"
+    }
+   },
+   "service-counter": {
+    "hash16": "c996bcec18ae2eb9",
+    "sha256": "c996bcec18ae2eb9289174040a0488755dd1f86fb9fb8df3034872b209678ec9",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A figure in a dark coat walking up the steps of a courthouse",
+     "de": "Eine Person im dunklen Mantel geht die Stufen eines Gerichtsgebäudes hinauf"
+    }
+   },
+   "team-window": {
+    "hash16": "ef32db2f5a8893d1",
+    "sha256": "ef32db2f5a8893d1f1c8d743fb77390d512664d36a4bc337517b9b2ce04c76a2",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A lawyer at a tall window holding a file, seen from behind",
+     "de": "Eine Anwältin am hohen Fenster mit einer Akte, von hinten"
+    }
+   },
+   "team-apron": {
+    "hash16": "bd9a5743d4061ebb",
+    "sha256": "bd9a5743d4061ebb542be86068281119092c810eb49f93addfd8fe02cd261c80",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "Hands with a fountain pen over a notepad",
+     "de": "Hände mit einem Füller über einem Notizblock"
+    }
+   },
+   "team-silhouette": {
+    "hash16": "cd11705709b0a77a",
+    "sha256": "cd11705709b0a77a85913289a65117bdf0c93ef37dbf689b144cfdf54d6f488a",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A lawyer walking down a panelled corridor",
+     "de": "Ein Anwalt geht einen getäfelten Flur entlang"
+    }
+   }
+  },
+  "sport": {
+   "hero": {
+    "hash16": "0c8e9a08fd4ad4ea",
+    "sha256": "0c8e9a08fd4ad4ea07844f7a42e2f0a63559ed4938a9719f99bd810ecc7cc9fc",
+    "width": 2400,
+    "height": 1565,
+    "alt": {
+     "en": "A small strength gym with racks, a person mid-deadlift in daylight",
+     "de": "Ein kleines Kraftstudio mit Racks, eine Person beim Kreuzheben im Tageslicht"
+    }
+   },
+   "gallery-linen": {
+    "hash16": "b29e216a0f3fbf45",
+    "sha256": "b29e216a0f3fbf45b9e9c843c334bd636dd301e6de884c7f7bc5a560c20738fa",
+    "width": 1024,
+    "height": 1024,
+    "alt": {
+     "en": "A bowl of chalk and a chalky hand above it",
+     "de": "Eine Schale Magnesia und eine weisse Hand darüber"
+    }
+   },
+   "gallery-light": {
+    "hash16": "c7441073cd931fbb",
+    "sha256": "c7441073cd931fbbacad8793c44f178b9f3f279ee57b50318527b3b01aeb13c2",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A small group stretching on mats, seen from behind",
+     "de": "Eine kleine Gruppe dehnt sich auf Matten, von hinten"
+    }
+   },
+   "gallery-tools": {
+    "hash16": "a9f4191f990e395a",
+    "sha256": "a9f4191f990e395a8a8b5aa79733331a5653b95cba162ac44f483fe3a7fb2849",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A row of cast-iron kettlebells on a rubber floor",
+     "de": "Eine Reihe Kettlebells aus Gusseisen auf einem Gummiboden"
+    }
+   },
+   "gallery-ceramics": {
+    "hash16": "88a68374e1820f1c",
+    "sha256": "88a68374e1820f1ce04637fa8131b4533fdc0ad83392f874c16b0c58a83c272f",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A jump rope coiled on the floor beside a water bottle",
+     "de": "Ein Springseil auf dem Boden neben einer Wasserflasche"
+    }
+   },
+   "gallery-doorway": {
+    "hash16": "ce7d4dac8ad83d56",
+    "sha256": "ce7d4dac8ad83d560e02ca82cd37d64b326cbdb7e9b3fb8bf377c65100fd807b",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A rowing machine in morning light",
+     "de": "Ein Rudergerät im Morgenlicht"
+    }
+   },
+   "gallery-chair": {
+    "hash16": "15350182a57d0f0a",
+    "sha256": "15350182a57d0f0a9d9fa0976b93e6a47d172a5d1ce08088dba6ed9dcc64dde8",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "Weight plates stacked on a rack",
+     "de": "Hantelscheiben gestapelt auf einem Ständer"
+    }
+   },
+   "gallery-grain": {
+    "hash16": "cb819a2eb181e548",
+    "sha256": "cb819a2eb181e548264520c7c3a7a684f60475e1bf8da0ffd6d168cdb5e75123",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "Dumbbells in a rack, the rows receding",
+     "de": "Kurzhanteln im Ständer, die Reihen nach hinten"
+    }
+   },
+   "gallery-sideboard": {
+    "hash16": "cf3dcefa125751d6",
+    "sha256": "cf3dcefa125751d60da4cfae05515ef1b0f8db4858e1e6b4505340fd8e3fe997",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A towel and a bottle on a bench between sets",
+     "de": "Ein Handtuch und eine Flasche auf einer Bank zwischen den Sätzen"
+    }
+   },
+   "service-conversation": {
+    "hash16": "438e2eb649abe5a7",
+    "sha256": "438e2eb649abe5a7ec665583ff9fe850e68dbd4414de83c12240b8c1158367d0",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "Personal training: a coach spotting a client at the bench press",
+     "de": "Personal Training: ein Coach sichert einen Kunden beim Bankdrücken"
+    }
+   },
+   "service-work": {
+    "hash16": "0f1226aa78bbea8b",
+    "sha256": "0f1226aa78bbea8b4d80e8ddbdb1d508cd403b008a1a6a8be141fe444b2db81a",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A group class doing lunges, seen from behind",
+     "de": "Ein Gruppenkurs bei Ausfallschritten, von hinten"
+    }
+   },
+   "service-finish": {
+    "hash16": "b56b5bb97d35b0ff",
+    "sha256": "b56b5bb97d35b0ffe05e98b8004ffbdd8bfd98e52f8c37fead905567f73478c6",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "Hands gripping a loaded barbell, chalk in the air",
+     "de": "Hände greifen eine beladene Langhantel, Magnesia in der Luft"
+    }
+   },
+   "service-objects": {
+    "hash16": "dea3946efae86383",
+    "sha256": "dea3946efae8638385b8ac0ed8d09a6b15e04afc575700739b1d015b14c072f8",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "A mobility session: stretching on a mat beside a foam roller",
+     "de": "Mobility: Dehnen auf einer Matte neben einer Faszienrolle"
+    }
+   },
+   "service-counter": {
+    "hash16": "48ec040d94cbe793",
+    "sha256": "48ec040d94cbe793b2949e6ccddaef1575f311ade4687275451e86b3afc28590",
+    "width": 1280,
+    "height": 832,
+    "alt": {
+     "en": "An assessment: a coach's hands with a tape measure and a clipboard",
+     "de": "Ein Check-up: die Hände eines Coaches mit Massband und Klemmbrett"
+    }
+   },
+   "team-window": {
+    "hash16": "48329e052dbb5b4a",
+    "sha256": "48329e052dbb5b4ac2b43d5c7e21b3980590decf2e1f9d1cd269a51cea9b9469",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A coach writing on a whiteboard beside a rack of plates, seen from behind",
+     "de": "Ein Coach schreibt an ein Whiteboard neben einem Scheibenständer, von hinten"
+    }
+   },
+   "team-apron": {
+    "hash16": "ea1ac12b2ad30df7",
+    "sha256": "ea1ac12b2ad30df7b8d3432fc7f2b478f689539e7ea6a21c6c1140b94245a9a9",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A coach's hands taping a wrist",
+     "de": "Die Hände eines Coaches tapen ein Handgelenk"
+    }
+   },
+   "team-silhouette": {
+    "hash16": "3407696c6df95ebd",
+    "sha256": "3407696c6df95ebdbe7385d126db867d7f4e7d4cfa8b67a9724c2eab4ff25869",
+    "width": 896,
+    "height": 1152,
+    "alt": {
+     "en": "A coach in profile, arms crossed, by the rack",
+     "de": "Ein Coach im Profil mit verschränkten Armen am Rack"
+    }
+   }
+  }
+ }
+}
