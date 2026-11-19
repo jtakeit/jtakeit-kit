@@ -55,6 +55,7 @@ import { money } from '../lib/money.mjs';
 import { wordsFor, lasting } from '../lib/booking/words.mjs';
 import { dressBooking } from './booking-ui.js';
 import { lacking, linkIn } from '../lib/booking/hooks.mjs';
+import { ymd } from '../lib/booking/parts.mjs';
 
 /**
  * The rules the behaviour cannot work without, whatever the site's own CSS
@@ -593,6 +594,11 @@ export function wireBooking(form) {
     for (const one of empty) add('empty:' + one.slug, words.noneOf.replace('{class}', one.title), true);
     for (const one of resources) {
       const name = one.marks ? `${one.title} · ${one.marks}` : one.title;
+      // Who cannot do what is chosen is not offered (the floor's F7, 19
+      // November 2026) — a list of «Pilates on Saturday — not for this
+      // choice» under Yin Yoga is noise. The one already chosen stays, with
+      // the note, so the person reads why nothing is free.
+      if (one.performs === false && one.slug !== was) continue;
       add(one.slug, one.performs === false ? words.notFor.replace('{who}', name) : name, one.performs === false);
     }
     if ([...resource.options].some((o) => o.value === was)) resource.value = was;
@@ -738,9 +744,82 @@ export function wireBooking(form) {
     }
   }
 
+  // What is chosen, as the platform is asked it — the services, whom, the
+  // class, the party, how many — over a window; null for dates the service
+  // does not allow.
+  /** @param {Date} from @param {Date} to */
+  function choiceParams(from, to) {
+    const params = new URLSearchParams({ from: from.toISOString(), to: to.toISOString() });
+    for (const slug of picked()) params.append('service', slug);
+    if (resourceChosen()) params.set('resource', resourceChosen());
+    if (classChosen()) params.set('class', classChosen());
+    if (!partyField.hidden && party.value) params.set('party', party.value);
+    const n = count();
+    if (Number.isNaN(n)) return null;
+    if (n !== null) params.set('count', String(n));
+    return params;
+  }
+
+  // The days with a free time for what is chosen, over the weeks the strip
+  // shows and the three after them (the floor's F7, 19 November 2026): a
+  // day the business is open and nothing is free for this choice — a class
+  // that meets on Tuesdays, asked on a Friday — is struck out before it is
+  // pressed, rather than answering «nothing free». Asked again when the
+  // choice changes or the strip leaves what was asked; one question for four
+  // weeks, under the platform's limit of 31 days.
+  const DAYS_ASKED = 28;
+  /** @type {{ key: string; from: string; until: string; free: Set<string> } | null} */
+  let daysKnown = null;
+  let weekFrom = '';
+  let daysAsking = 0;
+  /** @type {() => void} */
+  let redrawDays = () => {};
+  /** @param {string} value */
+  function freeOn(value) {
+    if (!daysKnown || value < daysKnown.from || value >= daysKnown.until) return undefined;
+    return daysKnown.free.has(value);
+  }
+  async function markDays() {
+    if (!weekFrom || picked().length === 0) {
+      if (daysKnown) { daysKnown = null; redrawDays(); }
+      return;
+    }
+    const from = new Date(weekFrom + 'T00:00:00');
+    const to = new Date(from);
+    to.setDate(to.getDate() + DAYS_ASKED);
+    const params = choiceParams(from, to);
+    if (params === null) {
+      if (daysKnown) { daysKnown = null; redrawDays(); }
+      return;
+    }
+    const key = [...params.entries()].filter(([k]) => k !== 'from' && k !== 'to').map(([k, v]) => `${k}=${v}`).join('&');
+    // Already known for this choice over the week shown and the next one.
+    const until = new Date(from);
+    until.setDate(until.getDate() + 14);
+    if (daysKnown && daysKnown.key === key && weekFrom >= daysKnown.from && ymd(until) <= daysKnown.until) return;
+    const mine = ++daysAsking;
+    try {
+      const answer = await fetch(api + 'availability?' + params.toString(), { cache: 'no-store', headers: SPOKEN });
+      if (!answer.ok || mine !== daysAsking) return;
+      const data = await answer.json();
+      if (mine !== daysAsking || !Array.isArray(data.slots)) return;
+      const free = new Set();
+      for (const slot of data.slots) {
+        // A slot that names who is free and names nobody is not free.
+        if (Array.isArray(slot.free) && slot.free.length === 0) continue;
+        free.add(ymd(new Date(slot.start)));
+      }
+      daysKnown = { key, from: ymd(from), until: ymd(to), free };
+      redrawDays();
+    } catch {
+      // Not known: the days stay as the hours draw them.
+    }
+  }
+
   // Every question, and once the last one asked is answered, a word to
   // whoever listens if the time chosen changed with it.
   async function load() {
+    void markDays();
     const mine = ++asking;
     try {
       await ask(mine);
@@ -769,17 +848,8 @@ export function wireBooking(form) {
     const from = new Date(day.value + 'T00:00:00');
     const to = new Date(from);
     to.setDate(to.getDate() + 1);
-    const params = new URLSearchParams({
-      from: from.toISOString(),
-      to: to.toISOString(),
-    });
-    for (const slug of picked()) params.append('service', slug);
-    if (resourceChosen()) params.set('resource', resourceChosen());
-    if (classChosen()) params.set('class', classChosen());
-    if (!partyField.hidden && party.value) params.set('party', party.value);
-    const n = count();
-    if (Number.isNaN(n)) { hint.textContent = lengthHint.textContent || words.failed; stayTotal.hidden = true; return; }
-    if (n !== null) params.set('count', String(n));
+    const params = choiceParams(from, to);
+    if (params === null) { hint.textContent = lengthHint.textContent || words.failed; stayTotal.hidden = true; return; }
 
     try {
       const answer = await fetch(api + 'availability?' + params.toString(), { cache: 'no-store', headers: SPOKEN }).finally(() => slots.removeAttribute('aria-busy'));
@@ -925,7 +995,13 @@ export function wireBooking(form) {
   // The look — the steps, the week, the parts of the day, the drawn choice
   // — over the form, where the form asks for it. A time the parts of the
   // day hide is no longer chosen: the element is told, and says so.
-  if (form.dataset.ui) dressBooking(form, words, { unchoose: () => { unchoose(); tell(); } });
+  if (form.dataset.ui) {
+    ({ redrawDays } = dressBooking(form, words, {
+      unchoose: () => { unchoose(); tell(); },
+      free: freeOn,
+      week: (from) => { weekFrom = from; void markDays(); },
+    }));
+  }
   for (const box of boxes) {
     box.addEventListener('change', () => {
       if (single && box.checked) for (const other of boxes) if (other !== box) other.checked = false;

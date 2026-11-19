@@ -29,6 +29,8 @@ after(async () => { await browser?.close(); });
 // The day after tomorrow, on UTC's calendar — the browser runs in UTC too, so
 // the picker's floor and the platform's starts agree.
 const DAY = new Date(Date.now() + 2 * 86_400_000).toISOString().slice(0, 10);
+// The day after it, the only day a manicure is free.
+const NAILS_DAY = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10);
 const HOURS = ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '17:00', '18:00', '19:00'];
 
 const services = [
@@ -40,9 +42,9 @@ const services = [
 /**
  * A page with the kit's form on it, the element from the checkout, and a
  * platform that offers HOURS on DAY and nothing on any other day.
- * @param {{ query?: string; form?: object; style?: string; width?: number }} [options]
+ * @param {{ query?: string; form?: object; style?: string; width?: number; partyMax?: number }} [options]
  */
-async function open({ query = '', form = {}, style = '', width = 1000 } = {}) {
+async function open({ query = '', form = {}, style = '', width = 1000, partyMax = 1 } = {}) {
   const context = await /** @type {import('playwright-core').Browser} */ (browser).newContext({ timezoneId: 'UTC', viewport: { width, height: 900 } });
   const page = await context.newPage();
   /** @type {URLSearchParams[]} */ const asked = [];
@@ -59,9 +61,16 @@ async function open({ query = '', form = {}, style = '', width = 1000 } = {}) {
     if (url.pathname === '/api/turnstile') return route.fulfill({ json: { sitekey: '' } });
     if (url.pathname === '/api/availability') {
       asked.push(url.searchParams);
-      const day = new Date(url.searchParams.get('from') ?? '').toISOString().slice(0, 10);
-      const slots = day === DAY ? HOURS.map((hour) => ({ start: `${DAY}T${hour}:00Z`, ends: `${DAY}T${hour.slice(0, 2)}:45:00Z`, free: ['anna'], costs_minor: 5500 })) : [];
-      return route.fulfill({ json: { zone: 'UTC', slots, party_max: 1, quantity_max: 1 } });
+      // Free on DAY — a manicure on NAILS_DAY instead — wherever the window
+      // asked holds it: a day's question and the strip's four weeks alike.
+      const from = (url.searchParams.get('from') ?? '').slice(0, 10);
+      const to = (url.searchParams.get('to') ?? '').slice(0, 10);
+      const service = url.searchParams.getAll('service');
+      const free = service.includes('nails') ? NAILS_DAY : DAY;
+      const slots = from <= free && free < to ? HOURS.map((hour) => ({ start: `${free}T${hour}:00Z`, ends: `${free}T${hour.slice(0, 2)}:45:00Z`, free: ['anna'], costs_minor: 5500 })) : [];
+      // Ben does no manicures.
+      const resources = [{ slug: 'anna', title: 'Anna', performs: true }, { slug: 'ben', title: 'Ben', performs: !service.includes('nails') }];
+      return route.fulfill({ json: { zone: 'UTC', slots, party_max: partyMax, party_seats: partyMax, quantity_max: 1, resources } });
     }
     return route.fulfill({
       contentType: 'text/html',
@@ -184,5 +193,53 @@ test('the times never push a phone\'s page sideways, whatever the site draws the
   await pills(page).first().waitFor();
   assert.equal(await page.locator('[data-times]').evaluate((el) => getComputedStyle(el).minInlineSize), '0px');
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'no sideways scroll at 320px');
+  await context.close();
+});
+
+test('a day with no free time for what is chosen is struck out, and comes back when the choice changes', async (t) => {
+  if (!browser) return t.skip('no Chrome');
+  const { page, context, asked } = await open();
+  const day = (iso) => page.locator(`[data-day="${iso}"]`);
+  await page.waitForFunction((iso) => document.querySelector(`[data-day="${iso}"]`) && document.querySelectorAll('[data-day][data-full]').length > 0, DAY);
+  assert.ok(await day(DAY).isEnabled(), 'the day with times is pressable');
+  assert.equal(await day(NAILS_DAY).getAttribute('data-full'), '', 'a day with nothing free for a haircut is struck out');
+  assert.ok(await day(NAILS_DAY).isDisabled());
+  assert.equal(await day(NAILS_DAY).getAttribute('aria-disabled'), 'true');
+  const four = asked.find((one) => one.get('service') === 'cut' && (new Date(one.get('to') ?? '').getTime() - new Date(one.get('from') ?? '').getTime()) === 28 * 86_400_000);
+  assert.ok(four, 'the strip asked four weeks at once');
+
+  // A manicure: its day comes back, the haircut's goes.
+  await page.locator('select[name=service]').selectOption('nails');
+  await page.waitForFunction(([nails, cut]) => !document.querySelector(`[data-day="${nails}"]`)?.hasAttribute('data-full') && document.querySelector(`[data-day="${cut}"]`)?.hasAttribute('data-full'), [NAILS_DAY, DAY]);
+  assert.ok(await day(NAILS_DAY).isEnabled());
+  await day(NAILS_DAY).click();
+  await pills(page).first().waitFor();
+  assert.equal(await pills(page).count(), HOURS.length, 'a struck-out day is never the only thing left to press');
+  await context.close();
+});
+
+test('who cannot do what is chosen is not offered, unless already chosen', async (t) => {
+  if (!browser) return t.skip('no Chrome');
+  const resources = [{ slug: 'anna', title: 'Anna', does: ['cut', 'colour', 'nails'] }, { slug: 'ben', title: 'Ben', does: ['cut', 'colour'] }];
+  const { page, context } = await open({ query: `?service=nails&day=${NAILS_DAY}`, form: { resources, ui: 'steps week parts' } });
+  await pills(page).first().waitFor();
+  const offered = await page.locator('select[name=resource] option').evaluateAll((all) => all.map((o) => o.value));
+  assert.ok(offered.includes('anna'), 'Anna does manicures');
+  assert.ok(!offered.includes('ben'), 'Ben, who does none, is not listed with a note');
+  await context.close();
+});
+
+test('how many are coming is chosen like everything else in the form, not from the browser\'s own list', async (t) => {
+  if (!browser) return t.skip('no Chrome');
+  const { page, context, asked } = await open({ query: `?day=${DAY}`, partyMax: 3 });
+  await pills(page).first().waitFor();
+  const field = page.locator('[data-party-field]');
+  await field.waitFor();
+  assert.equal(await field.locator('.booking__dd-trigger').count(), 1, 'drawn as the service and whom are');
+  await field.locator('.booking__dd-trigger').click();
+  await field.locator('.booking__dd-option[data-value="3"]').click();
+  assert.equal(await page.locator('select[name=party]').inputValue(), '3');
+  await pills(page).first().waitFor();
+  assert.ok(asked.some((one) => one.get('party') === '3'), 'and the platform asked for three');
   await context.close();
 });
