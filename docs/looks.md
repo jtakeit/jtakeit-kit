@@ -68,6 +68,31 @@ the same in both:
 | `src/components/site/Look.astro`, `Header.astro`, `Footer.astro`, `Button.astro` | `src/components/site/Hours.astro`, `Label.astro`, `Page.astro`, `words.ts` |
 | every section in `src/components/sections/` | the imprint, the shop's components and pages, every template component |
 
+## A trade's photographs
+
+The example's seventeen photographs of the hero, the gallery, the services and
+the team come in a set per trade, generated for jtakeit in one neutral style
+(jtakeit-core wiki/117): `sessions` (a yoga and pilates studio), `nails`,
+`hair`, `barber`, `clinic` (a dental and medical practice), `lawyers` and
+`sport` (a strength gym). `jtk create` takes one by `--photos <set>`; without
+it the `--vertical` chooses — nails, manicure; hair, hairdresser, salon;
+barber, barbershop; clinic, dental, dentist, medical, practice; law, lawyer,
+legal, notary; sport, gym, fitness, training, crossfit; yoga, pilates, studio,
+sessions — then the `--kit`'s kind (sessions, clinic; salon is hair).
+`--photos default` keeps the example's own, which a trade with no set gets too.
+
+The set is the site's: `jtk/design.json` says it (`photo_set`), and `jtk add`
+lays a section's photographs from the same set. The files are not in the
+package: they are fetched once from the platform's media host
+(`JTK_MEDIA_URL`, production's by default) into `~/.cache/jtakeit/examples`,
+checked against their hash; `JTK_EXAMPLES_DIR` names a directory of them
+instead. Where a set cannot be had — offline, say — the site is laid out with
+the example's own and that is said, never a failed create.
+
+They are placeholders, as every example photograph is: the fingerprints know
+them (`example/prints.json`), `still_to_do` and the launch name them until the
+business's own replace them, in either look.
+
 ## The design is yours: DESIGN.md first
 
 `bare` is a base, not a direction. Before a line of CSS:

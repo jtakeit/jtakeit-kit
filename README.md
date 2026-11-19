@@ -43,6 +43,12 @@ and English, with the example's own photographs. Keep the look or — as is mean
 adapt it: the tokens are `src/styles/tokens.css` ([docs/scaffold.md](docs/scaffold.md)).
 For a design of the site's own, lay it out with `--look bare` — the same site with no
 art direction — and design on it, DESIGN.md first ([docs/looks.md](docs/looks.md)).
+The photographs come in a set per trade — `sessions`, `nails`, `hair`, `barber`,
+`clinic`, `lawyers`, `sport` — chosen by `--photos <set>`, else by the `--vertical`
+(barber, dentist, gym, yoga, …), else by the `--kit`'s kind; `--photos default` keeps
+the example's own. A set is fetched once from the platform's media host and is a
+placeholder like every other example photograph: the business's own replace it
+([docs/looks.md](docs/looks.md#a-trades-photographs)).
 Take out what the brief does not name, add what it does:
 
 ```

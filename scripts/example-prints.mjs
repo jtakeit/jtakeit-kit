@@ -20,7 +20,8 @@
  * rightly keep — and anything that says the business's own name, which is
  * the site's from its first commit.
  *
- * A photograph is printed by the SHA-256 of its file and the first sixteen hex
+ * A photograph — the package's own and every trade's set's (`<set>/<name>`,
+ * lib/units/photoSets.json) — is printed by the SHA-256 of its file and the first sixteen hex
  * digits of it, the media library's key scheme (wiki/108 §2): `hash16`, so
  * `media/<site>/<hash16>.jpg` is the same picture adopted into a site's
  * library, and `slot`, what a site names it by until then.
@@ -34,7 +35,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ORDER } from '../lib/units/index.mjs';
 import { SITE, wordsIn } from '../lib/units/units.mjs';
-import { PHOTOS, MEDIA, slotOf } from '../lib/units/photos.mjs';
+import { PHOTOS, PHOTO_SETS, MEDIA, slotOf } from '../lib/units/photos.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'example', 'prints.json');
@@ -78,6 +79,10 @@ const photos = Object.entries(PHOTOS).map(([name, one]) => {
   const digest = sha(readFileSync(join(MEDIA, one.file)));
   return { name, slot: slotOf(name), sha256: digest, hash16: digest.slice(0, 16), key: `media/jtk-example/${digest.slice(0, 16)}.jpg` };
 });
+// Each trade's set (lib/units/photoSets.json, wiki/117): the same names, `<set>/<name>`, by the hash the set records.
+for (const [set, them] of Object.entries(PHOTO_SETS.sets)) {
+  for (const [name, one] of Object.entries(them)) photos.push({ name: `${set}/${name}`, sha256: one.sha256, hash16: one.hash16, key: `media/jtk-example/${one.hash16}.jpg` });
+}
 
 // Append-only: what an earlier release printed stays.
 const was = existsSync(OUT) ? JSON.parse(readFileSync(OUT, 'utf8')) : {};
