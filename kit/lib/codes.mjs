@@ -135,7 +135,7 @@ export const ADVICE = Object.freeze({
   [W.PANEL_FORM_GUESSED]:
     'The panel placed fields of an entry type by itself: a `form` places no row for some — they are drawn after its sections, under More — or a type of seven fields or more says no `form`, and the panel lays them out in their order, short ones two to a row and pictures aside.',
   [W.SESSION_OUTSIDE_HOURS]:
-    "A resource's own hours — a class, a master, a table — lie outside the business's hours that day (jtk/modules/bookings.json), and the diary offers a resource only inside the business's: the part outside is never offered, and a class wholly outside has no time at all. Widen the business's hours, or move the class.",
+    "A resource's own hours — a class, a master, a table — lie outside the business's hours that day (jtk/modules/bookings.json), and the diary offers a resource only inside the business's: the part outside is never offered, and a class wholly outside has no time at all. Widen the business's hours, or move the row.",
   [W.NOT_LIVE]:
     "The schema does not say `render: \"live\"`: the panel shows the owner a change only after a build, and an entry's card cannot be previewed before it is saved. Keep `RENDER = 'live'` and the scaffold's src/live; take it out only where a page does at build what a server cannot, and say why in BRIEF.md.",
 });

@@ -48,7 +48,7 @@ test('a class after the business closes is said, with its day, its times and the
   ));
   assert.deepEqual(said.map((one) => one.code), [W.SESSION_OUTSIDE_HOURS, W.SESSION_OUTSIDE_HOURS]);
   assert.equal(said[0].path, 'jtk/entries/sessions/yin-abend.json');
-  assert.equal(said[0].says, "sessions/yin-abend: tuesday 18:00–19:15 is outside the business's hours that day (09:00–18:00) — the diary offers only the part inside them; widen the hours in jtk/modules/bookings.json or move the class");
+  assert.equal(said[0].says, "sessions/yin-abend: tuesday 18:00–19:15 is outside the business's hours that day (09:00–18:00) — the diary offers only the part inside them; widen the hours in jtk/modules/bookings.json or move the row");
   assert.match(said[1].says, /^sessions\/yin-abend: thursday 18:00–19:15 is outside/, 'HH:MM rows read as minutes are');
   assert.ok(isAdvice(said[0].code) && ADVICE[said[0].code], 'advice, with its sentence in the table');
 });

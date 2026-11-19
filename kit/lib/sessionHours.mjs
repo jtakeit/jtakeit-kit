@@ -60,7 +60,7 @@ export function sessionsOutsideHours(files) {
       out.push({
         code: W.SESSION_OUTSIDE_HOURS,
         path: where(entry.slug),
-        says: `${collection}/${entry.slug}: ${mine.day} ${clock(mine.from)}–${clock(mine.until)} is outside the business's hours that day (${hours}) — the diary offers only the part inside them; widen the hours in jtk/modules/bookings.json or move the class`,
+        says: `${collection}/${entry.slug}: ${mine.day} ${clock(mine.from)}–${clock(mine.until)} is outside the business's hours that day (${hours}) — the diary offers only the part inside them; widen the hours in jtk/modules/bookings.json or move the row`,
       });
     }
   }
