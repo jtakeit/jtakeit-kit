@@ -52,6 +52,7 @@ import type { Field } from '@jtakeit/kit/content';
 import { copyFor } from '../copy';
 import { site } from '../lib/site';
 import { langOf } from '../lib/locale';
+import { lengthOf } from '../lib/length';
 import { Image } from 'astro:assets';
 import Layout from '../layouts/Layout.astro';
 import { isUpload, uploaded } from '../lib/uploads';
@@ -135,11 +136,8 @@ const cover = coverPicture.src !== ''
  */
 const DRAWN = new Set(['title', 'cover', 'body']);
 
-/** A length as the trade says it: whole days, whole hours, or minutes. */
-function length(minutes: number): string {
-  const [unit, n] = minutes % 1440 === 0 ? ['day', minutes / 1440] : minutes % 60 === 0 ? ['hour', minutes / 60] : ['minute', minutes];
-  return new Intl.NumberFormat(LANG, { style: 'unit', unit, unitDisplay: 'long' }).format(n);
-}
+/** A length as the booking form says it (src/lib/length.ts). */
+const length = (minutes: number): string => lengthOf(minutes, locale);
 
 // In the site's currency, as the platform writes it — never a page's own.
 const money = (value: unknown): string => site.money(value, locale);

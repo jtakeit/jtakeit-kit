@@ -136,6 +136,13 @@ const tagline = footer.text('tagline');
 </footer>
 
 <style>
+  /* A page whose contact section already says where, when and how — the
+     home page — does not hear it again in the foot: the address, the hours
+     and «open now» twice, a screen apart (19 November 2026, a staging site).
+     Every other page keeps them here. The same in Brumy's look. */
+  :global(body:has(.contact__facts)) .site-footer__facts {
+    display: none;
+  }
   .site-footer {
     padding: var(--section-y) var(--gutter) var(--space-5);
     border-block-start: 1px solid var(--line);

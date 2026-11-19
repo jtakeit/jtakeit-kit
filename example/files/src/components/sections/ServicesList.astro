@@ -23,6 +23,7 @@ import Button from '../site/Button.astro';
 import { site } from '../../lib/site';
 import { rowId } from '../../lib/entries';
 import { langOf, withLocale } from '../../lib/locale';
+import { lengthOf } from '../../lib/length';
 import { linkTo } from '../../lib/under';
 import { measureOf, type Surface } from '../../lib/measure';
 
@@ -39,11 +40,8 @@ const limit = Number(block.value('limit') ?? 0);
 const all = site.entries('services', { locale });
 const shown = limit > 0 ? all.slice(0, limit) : all;
 
-/** A length as the trade says it: whole hours, or minutes. */
-const length = (minutes: number): string => {
-  const [unit, n] = minutes % 60 === 0 ? ['hour', minutes / 60] : ['minute', minutes];
-  return new Intl.NumberFormat(langOf(locale), { style: 'unit', unit, unitDisplay: 'long' }).format(n);
-};
+/** A length as the booking form says it (src/lib/length.ts). */
+const length = (minutes: number): string => lengthOf(minutes, locale);
 const listedAt = site.shownOn('services', locale) ?? withLocale(locale, '/services');
 const headed = block.text('eyebrow') || block.text('title') || block.text('lead');
 // A row's name is a heading under the block's; under the page's own (the price
