@@ -237,7 +237,12 @@ form keeps the rules even where it changes the drawing:
    form throughout: with scripts off it is the whole form at once.
 2. **The day is a week of seven**, rolling from today, arrows a week either
    way, the business's closed days (`open`, from the settings' hours)
-   struck out. **Never yesterday**: the input's `min` is written when the site
+   struck out — **and every open day with no free time for what is chosen**
+   (a class that meets on Tuesdays, asked on a Friday), from one question to
+   the platform for four weeks, asked again when the choice changes; the day
+   already chosen stays pressable. Opened with nothing chosen, the week moves
+   on to the first one with a free day. A site that draws its own days reads
+   the same answer: `data-full` on a struck-out day. **Never yesterday**: the input's `min` is written when the site
    is built, and a site built on Friday is read on Saturday — the floor is the
    browser's today, in the browser's own day, not UTC's.
 3. **The times by the part of the day** — morning before noon, afternoon
@@ -247,7 +252,10 @@ form keeps the rules even where it changes the drawing:
 4. **A master chosen greys out the services they do not do** («not with
    Noa»), unticks them, and *Anyone* brings them back. The other direction —
    a service chosen, the masters who do not do it — the platform's answer
-   says. Pass each resource's `does` (the entry's list) for this to work.
+   says, and they are left out of the choice (the one already chosen stays,
+   with «not for this choice»). Pass each resource's `does` (the entry's
+   list) for this to work. How many are coming is drawn as the other
+   choices are, never the browser's own list.
 5. **A time picked stays picked** when a service is added or taken away, if
    the same start is still offered; when it is not, a line says why — the
    visit is a different length now — rather than the pick vanishing.

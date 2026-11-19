@@ -82,6 +82,7 @@ import { unclaimedText } from './lint.mjs';
 import { metaFaults } from './meta3.mjs';
 import { builtPages, prefixBuild, servedFaults, unboundedHeights, unowned } from './served.mjs';
 import { floorAdvice } from './floor.mjs';
+import { sessionsOutsideHours } from './sessionHours.mjs';
 
 export { adviseSchema, judgeSchema };
 
@@ -566,6 +567,9 @@ studio's preview arrangement, which the schema has nothing to say about.`);
   }
   // The judge's advice on a schema it accepts (none on one it refuses): allowed, and unwise.
   const advised = adviseSchema(text);
+  // A class whose own hours are outside the business's (sessionHours.mjs):
+  // valid files, and a class the diary never offers.
+  if (problems.length === 0) advised.push(...sessionsOutsideHours({ ...(await readJtk(root)), '/jtk/schema.json': schema }));
   for (const one of advised) console.log(`  ~ ${one.code}  ${one.path}: ${one.says}`);
   const exam = has('judge') ? await sitTheExam(root, text, problems, advised) : { divergences: 0, ofFiles: 0 };
   if (exam.failed) return 1;

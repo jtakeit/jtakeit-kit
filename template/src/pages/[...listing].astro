@@ -59,6 +59,7 @@ import { FRAME, SECTIONS } from '../lib/sections';
 import { Image } from 'astro:assets';
 import { listsPaged, rowId, type Collection, type Entry } from '../lib/entries';
 import { EVERY_LOCALE, langOf } from '../lib/locale';
+import { lengthOf } from '../lib/length';
 import { site } from '../lib/site';
 import { isUpload, uploaded } from '../lib/uploads';
 import { photo } from '../lib/photos';
@@ -113,11 +114,8 @@ const lang = langOf(locale).slice(0, 2);
 // The diary's settings: its `bookings_config` block, through the door.
 const settings = site.module('bookings');
 
-/** A length as the trade says it: whole days, whole hours, or minutes. */
-function length(minutes: number): string {
-  const [unit, n] = minutes % 1440 === 0 ? ['day', minutes / 1440] : minutes % 60 === 0 ? ['hour', minutes / 60] : ['minute', minutes];
-  return new Intl.NumberFormat(langOf(locale), { style: 'unit', unit, unitDisplay: 'long' }).format(n);
-}
+/** A length as the booking form says it (src/lib/length.ts). */
+const length = (minutes: number): string => lengthOf(minutes, locale);
 
 /** A picture's file: a key in the studio's bucket the build downloaded, or a photograph this repository ships. */
 const fileOf = (src: string): ImageMetadata | undefined => (isUpload(src) ? uploaded(src) : photo(src));

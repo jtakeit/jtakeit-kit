@@ -48,7 +48,7 @@ const styles = (html) =>
   [...html.matchAll(/<link rel="stylesheet" href="[^"]*?(\/_astro\/[^"]+\.css)"/g)].map((one) => read(join('dist', one[1]))).join('\n');
 /** A length and a price, two spans side by side, and the dot between them drawn by the stylesheet. */
 const apart = (html) =>
-  /<span class="listing-row__term"[^>]*>30 Minuten<\/span><span class="listing-row__term"[^>]*>/.test(html) &&
+  /<span class="listing-row__term"[^>]*>30 Min\.<\/span><span class="listing-row__term"[^>]*>/.test(html) &&
   /\.listing-row__term(\[[^\]]+\])?\+\.listing-row__term(\[[^\]]+\])?:?:before\{content:" · "\}/.test(styles(html));
 /** Every fault of a stage said together, then the run stops: one red build says all it found. */
 const faults = [];
@@ -94,7 +94,7 @@ try {
     check(post?.['@context'] === 'https://schema.org', '7 · contract 2: a post\'s Article has no @context');
     check(!ld(page('masters/anna')).some((one) => one['@type'] === 'Article'), '7 · contract 2: a master is typed an Article');
     const services = page('services');
-    check(apart(services), `8 · contract 2: the length and the price run together: ${services.match(/30 Minuten<\/span>.{0,60}/)?.[0]}`);
+    check(apart(services), `8 · contract 2: the length and the price run together: ${services.match(/30 Min\.<\/span>.{0,60}/)?.[0]}`);
     check(services.includes(`id="booking-day" name="day" type="date" min="${day(0)}" max="${day(60)}"`), `9 · contract 2: the last day is not the diary's horizon of 60: ${services.match(/id="booking-day"[^>]*>/)?.[0]}`);
   }
   settle('contract 2, built under /p/probe/');

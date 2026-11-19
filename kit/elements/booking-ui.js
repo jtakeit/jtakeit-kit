@@ -5,11 +5,14 @@
  *   steps   two steps — what and when, then who is coming — with the choice
  *           summarised beside the name, and a way back
  *   week    the day as a row of seven, rolling from today, closed days
- *           struck out, never yesterday
+ *           struck out, never yesterday — and, once the platform has
+ *           answered, every day with no free time for what is chosen
+ *           struck out too (the floor's F7: data shows only an action)
  *   parts   the times by the part of the day — morning, afternoon, evening —
  *           one part showing at a time, so thirty pills become a dozen and
  *           nothing scrolls; a part of one or two times joins its neighbour
- *   select  the choice of whom as a drawn list rather than the browser's own
+ *   select  the choices — whom, what, how many — as drawn lists rather than
+ *           the browser's own
  *
  * `renderBookingForm` turns all four on with `data-ui` on the form; a site
  * passes `ui: false` for the plain form, or names the ones it wants. Every
@@ -25,22 +28,33 @@ import { PARTS, partsOf, parseDay, ymd, DAY_NAMES, to24 } from '../lib/booking/p
 /**
  * @param {HTMLFormElement} form
  * @param {Record<string, string>} words
- * @param {{ unchoose?: () => void }} [element]  what the element is told: a time the parts of the day hide is no longer chosen
+ * @param {{ unchoose?: () => void; free?: (day: string) => boolean | undefined; week?: (from: string) => void }} [element]
+ *   what the element is told and asked: a time the parts of the day hide is
+ *   no longer chosen (`unchoose`); whether a day has a free time for what is
+ *   chosen — true, false, or undefined while unknown (`free`); which week the
+ *   strip now shows, so the element asks for its days (`week`)
+ * @returns {{ redrawDays: () => void }} what the element calls when its answer about the days changed
  */
 export function dressBooking(form, words, element = {}) {
-  if (form.dataset.dressed === '1') return;
+  const none = { redrawDays: () => {} };
+  if (form.dataset.dressed === '1') return none;
   form.dataset.dressed = '1';
+  let redrawDays = none.redrawDays;
   const wants = new Set((form.dataset.ui ?? '').split(/\s+/).filter(Boolean));
   const lang = document.documentElement.lang || form.dataset.locale || 'en';
   if (wants.has('select')) {
-    for (const select of /** @type {NodeListOf<HTMLSelectElement>} */ (form.querySelectorAll('select[name=resource], select[name=service]'))) drawnSelect(select);
+    // Every choice the form offers as a list, drawn alike: the party and how
+    // many were left the browser's own beside two drawn ones (19 November
+    // 2026, a staging site).
+    for (const select of /** @type {NodeListOf<HTMLSelectElement>} */ (form.querySelectorAll('select[name=resource], select[name=service], select[name=party], select[name=quantity], select[name=hours]'))) drawnSelect(select);
   }
   if (wants.has('week')) {
     const day = /** @type {HTMLInputElement | null} */ (form.querySelector('input[name=day]'));
-    if (day) weekStrip(day, { open: (form.dataset.open ?? '').split(',').filter(Boolean), lang, words });
+    if (day) redrawDays = weekStrip(day, { open: (form.dataset.open ?? '').split(',').filter(Boolean), lang, words, free: element.free, week: element.week }).redraw;
   }
   if (wants.has('parts')) partsOfDay(form, words, element.unchoose);
   if (wants.has('steps')) twoSteps(form, words, lang);
+  return { redrawDays };
 }
 
 /**
@@ -49,11 +63,20 @@ export function dressBooking(form, words, element = {}) {
  * The native input stays — hidden — and is what the form submits; a press on
  * a day sets it and fires `change`, which is what the element listens to.
  *
+ * A day the business is closed is struck out by the site's own hours; a day
+ * that is open and has no free time for what is chosen — a class that meets
+ * on Tuesdays and Thursdays, a full Saturday — is struck out once the
+ * element knows (`free`), and drawn again when it learns more (`redraw`).
+ * A day already chosen stays pressable, so the answer under it is read.
+ * Opened with nothing chosen, the strip moves on to the first week that has
+ * a free day, once, as far as the element has asked.
+ *
  * @param {HTMLInputElement} input
- * @param {{ open: string[]; lang: string; words: Record<string, string> }} options
+ * @param {{ open: string[]; lang: string; words: Record<string, string>; free?: (day: string) => boolean | undefined; week?: (from: string) => void }} options
+ * @returns {{ redraw: () => void }}
  */
 export function weekStrip(input, options) {
-  if (input.dataset.week === '1') return;
+  if (input.dataset.week === '1') return { redraw: () => {} };
   input.dataset.week = '1';
   const open = new Set(options.open.length > 0 ? options.open : DAY_NAMES);
   // Today is the browser's, not the build's: `min` was written when the
@@ -82,9 +105,36 @@ export function weekStrip(input, options) {
   input.insertAdjacentElement('afterend', root);
   const chosenAtStart = parseDay(input.value);
   let start = chosenAtStart && chosenAtStart >= floor && chosenAtStart > plus(floor, 6) ? chosenAtStart : new Date(floor);
+  // Whether a day has a free time, as the element last heard: false strikes
+  // it out, true or unknown leaves it to the hours.
+  const freeOf = (value) => (options.free ? options.free(value) : undefined);
+  // Moved on to the first week with a free day at most once, and only while
+  // the person has chosen nothing and pressed no arrow.
+  let settled = Boolean(chosenAtStart);
+  let shown = '';
 
   function draw() {
     const chosen = input.value;
+    if (!settled && !chosen && options.free) {
+      // Forward, a week at a time, over what the element can already say;
+      // a week it cannot say yet stops the walk until it can.
+      let probe = new Date(start);
+      for (let i = 0; i < 5; i++) {
+        const week = Array.from({ length: 7 }, (_, n) => plus(probe, n)).filter((d) => d <= max && choosable(d));
+        const said = week.map((d) => freeOf(ymd(d)));
+        // Not known yet: shown, so the element asks for it, and the walk
+        // goes on when the answer comes.
+        if (said.some((one) => one === undefined)) { start = probe; break; }
+        if (said.some((one) => one === true)) { start = probe; settled = true; break; }
+        const next = plus(probe, 7);
+        if (next > max) { settled = true; break; }
+        probe = next;
+      }
+    }
+    if (ymd(start) !== shown) {
+      shown = ymd(start);
+      options.week?.(shown);
+    }
     const week = Array.from({ length: 7 }, (_, i) => plus(start, i));
     const span = week[0].getMonth() === week[6].getMonth()
       ? monthName.format(week[0])
@@ -100,8 +150,12 @@ export function weekStrip(input, options) {
       <div class="booking__days-row">
         ${week.map((d) => {
           const value = ymd(d);
-          const ok = choosable(d);
-          return `<button type="button" class="booking__day${value === chosen ? ' is-chosen' : ''}" data-day="${value}"${ok ? '' : ' disabled'} aria-pressed="${value === chosen}"><span class="booking__day-wd">${weekday.format(d)}</span> <span class="booking__day-n">${d.getDate()}</span><span class="booking__sr"> ${month.format(d)}</span></button>`;
+          const open = choosable(d);
+          // Open, and nothing free in it for what is chosen: struck out like
+          // a closed day, unless it is the day chosen.
+          const full = open && value !== chosen && freeOf(value) === false;
+          const ok = open && !full;
+          return `<button type="button" class="booking__day${value === chosen ? ' is-chosen' : ''}${full ? ' is-full' : ''}" data-day="${value}"${ok ? '' : ' disabled aria-disabled="true"'}${full ? ' data-full=""' : ''} aria-pressed="${value === chosen}"><span class="booking__day-wd">${weekday.format(d)}</span> <span class="booking__day-n">${d.getDate()}</span><span class="booking__sr"> ${month.format(d)}</span></button>`;
         }).join('')}
       </div>`;
   }
@@ -118,6 +172,7 @@ export function weekStrip(input, options) {
     const target = event.target instanceof Element ? event.target : null;
     const arrow = target?.closest('[data-go]');
     if (arrow instanceof HTMLButtonElement) {
+      settled = true;
       start = plus(start, Number(arrow.dataset.go));
       if (start < floor) start = new Date(floor);
       draw();
@@ -126,6 +181,7 @@ export function weekStrip(input, options) {
     }
     const dayButton = target?.closest('[data-day]');
     if (dayButton instanceof HTMLButtonElement && !dayButton.disabled) {
+      settled = true;
       const value = dayButton.dataset.day ?? '';
       input.value = value;
       input.dispatchEvent(new Event('change', { bubbles: true }));
@@ -144,6 +200,14 @@ export function weekStrip(input, options) {
     refocus('[data-day][aria-pressed="true"]');
   });
   draw();
+  return {
+    redraw() {
+      const had = root.contains(document.activeElement) ? /** @type {HTMLElement} */ (document.activeElement).dataset : null;
+      draw();
+      if (had?.day) refocus(`[data-day="${had.day}"]`);
+      else if (had?.go) refocus(`[data-go="${had.go}"]`);
+    },
+  };
 }
 
 /**

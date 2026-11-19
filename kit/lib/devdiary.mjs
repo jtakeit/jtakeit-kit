@@ -75,7 +75,7 @@ function minutesOf(value) {
  * the day's midnight. A row closing before it opens runs past midnight; a
  * half-typed row is skipped, as the platform skips it (`Openings`).
  */
-function openings(rows) {
+export function openings(rows) {
   const out = [];
   for (const row of rows) {
     const from = minutesOf(row.opens);
