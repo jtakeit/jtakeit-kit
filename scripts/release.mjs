@@ -5,7 +5,7 @@
  *   node scripts/release.mjs bump --kit minor --astro minor   [--dry-run]
  *   node scripts/release.mjs bump --kit 0.3.0 --astro 0.5.0   [--dry-run]
  *   node scripts/release.mjs bump --again                     [--dry-run]
- *   node scripts/release.mjs publish                          [--dry-run]
+ *   node scripts/release.mjs publish [--tag next]             [--dry-run]
  *
  * `bump` sets the kit's version, the scaffold's version, and the kit as a
  * dependency in the two places that name it — the root package and the
@@ -55,8 +55,22 @@ const run = (cmd, args) => {
 };
 
 /** What npm has, or 0.0.0 for a package not yet there. */
-function onNpm(name) {
-  try { return sh(`npm view ${name} version`); } catch { return '0.0.0'; }
+/**
+ * Whether npm holds this version, whatever tag it is under — the version
+ * itself, not "the" version (which is `latest`'s). Asking for `latest` made a
+ * publish under `next` wait for a version that would never be `latest` and
+ * stop between the kit and the scaffold (19 November 2026).
+ */
+function onNpm(name, version) {
+  try { return sh(`npm view ${name}@${version} version`) === version; } catch { return false; }
+}
+
+/** The newest version npm holds under any tag — what a bump must go above. */
+function newestOnNpm(name) {
+  try {
+    const all = JSON.parse(sh(`npm view ${name} versions --json`));
+    return (Array.isArray(all) ? all : [all]).reduce((a, b) => max(a, b), '0.0.0');
+  } catch { return '0.0.0'; }
 }
 
 /**
@@ -67,7 +81,7 @@ function onNpm(name) {
  */
 async function untilNpmHas(name, version) {
   for (let tried = 0; tried < 18; tried++) {
-    if (onNpm(name) === version) return true;
+    if (onNpm(name, version)) return true;
     await new Promise((done) => setTimeout(done, 10_000));
     process.stdout.write('.');
   }
@@ -132,14 +146,14 @@ if (command === 'bump') {
   const root = readJSON(FILES.root), kit = readJSON(FILES.kit), template = readJSON(FILES.template);
   // From the higher of git's and npm's: a release that went out unmerged
   // must not be released again under the same number.
-  const kitNow = max(kit.version, onNpm(kit.name));
-  const astroNow = max(root.version, onNpm(root.name));
+  const kitNow = max(kit.version, newestOnNpm(kit.name));
+  const astroNow = max(root.version, newestOnNpm(root.name));
   if (again && (flag('kit') || flag('astro'))) { console.error('--again moves no version: say it alone, `bump --again`, or say what to bump'); process.exit(1); }
   if (again) {
     // The versions already on the branch, and nothing moved: they must be ones `bump` could have left, above what npm holds or exactly it
     // (a kit already published is then locked as npm holds it), and the three files must agree on the kit.
     if (greater(kitNow, kit.version) || greater(astroNow, root.version)) {
-      console.error(`npm holds ${kit.name}@${onNpm(kit.name)} and ${root.name}@${onNpm(root.name)}, above the ${kit.version} and ${root.version} on this branch: run bump with what to bump`); process.exit(1);
+      console.error(`npm holds ${kit.name}@${newestOnNpm(kit.name)} and ${root.name}@${newestOnNpm(root.name)}, above the ${kit.version} and ${root.version} on this branch: run bump with what to bump`); process.exit(1);
     }
     if (root.dependencies['@jtakeit/kit'] !== kit.version || template.dependencies['@jtakeit/kit'] !== kit.version) {
       console.error(`the kit is ${kit.version} and is depended on as ${root.dependencies['@jtakeit/kit']} (root) / ${template.dependencies['@jtakeit/kit']} (template): run bump with what to bump`); process.exit(1);
@@ -152,8 +166,8 @@ if (command === 'bump') {
   if (!again && astroNext && !greater(astroNext, astroNow)) { console.error(`astro ${astroNext} is not above ${astroNow}`); process.exit(1); }
   if (!again && flag('kit') && !astroNext) { console.error('a new kit needs a new scaffold too (its dependency moves): add --astro patch'); process.exit(1); }
 
-  console.log(`kit   ${kit.version} (npm ${onNpm(kit.name)}) → ${kitNext}${again ? ' (again: no version moves)' : ''}`);
-  console.log(`astro ${root.version} (npm ${onNpm(root.name)}) → ${astroNext ?? root.version}`);
+  console.log(`kit   ${kit.version} (npm ${newestOnNpm(kit.name)}) → ${kitNext}${again ? ' (again: no version moves)' : ''}`);
+  console.log(`astro ${root.version} (npm ${newestOnNpm(root.name)}) → ${astroNext ?? root.version}`);
   console.log(`the kit as a dependency: root ${root.dependencies['@jtakeit/kit']} → ${kitNext}, template ${template.dependencies['@jtakeit/kit']} → ${kitNext}`);
   if (!dry && !again) {
     kit.version = kitNext; writeJSON(FILES.kit, kit);
@@ -166,7 +180,7 @@ if (command === 'bump') {
   // image refused to install, and so would every site laid out from it. npm
   // writes it when the kit is on the registry; before that, the entry is
   // written from the tarball publish will upload (templateLockNamesKit).
-  if (onNpm(kit.name) === kitNext) {
+  if (onNpm(kit.name, kitNext)) {
     run('npm', ['install', '--package-lock-only', '--no-audit', '--no-fund', '--prefix', 'template']);
   } else {
     console.log(`${kit.name}@${kitNext} is not on npm yet: the template's lockfile names the tarball publish will upload`);
@@ -195,6 +209,12 @@ Done. What is left is yours:
 }
 
 if (command === 'publish') {
+  // The dist-tag. A release between the platform's goes out under `next`;
+  // `latest` moves together with the platform's release tag, never alone (the
+  // owner, 18 November 2026).
+  const tag = flag('tag');
+  if (tag !== undefined && !/^[a-z][a-z0-9-]*$/.test(tag)) { console.error(`--tag ${tag}: a dist-tag is a word, like next`); process.exit(1); }
+  const tagged = tag ? ['--tag', tag] : [];
   const branch = sh('git rev-parse --abbrev-ref HEAD');
   const dirty = sh('git status --porcelain');
   if (branch !== 'main' || dirty !== '') { console.error(`publish from a clean main: on ${branch}, ${dirty === '' ? 'clean' : 'with changes'}`); process.exit(1); }
@@ -204,13 +224,13 @@ if (command === 'publish') {
   if (root.dependencies['@jtakeit/kit'] !== kit.version || template.dependencies['@jtakeit/kit'] !== kit.version) {
     console.error(`the kit is ${kit.version} and is depended on as ${root.dependencies['@jtakeit/kit']} (root) / ${template.dependencies['@jtakeit/kit']} (template): run bump`); process.exit(1);
   }
-  if (onNpm(kit.name) === kit.version && onNpm(root.name) === root.version) {
+  if (onNpm(kit.name, kit.version) && onNpm(root.name, root.version)) {
     console.error(`${kit.name}@${kit.version} and ${root.name}@${root.version} are both on npm already: nothing to publish`); process.exit(1);
   }
   run('npm', ['test']);
   // One at a time, the kit first; a package npm already has at this version
   // is skipped, so a run that stopped halfway is picked up where it stopped.
-  if (onNpm(kit.name) === kit.version) {
+  if (onNpm(kit.name, kit.version)) {
     console.log(`${kit.name}@${kit.version} is on npm already — skipping`);
   } else {
     // The template's lockfile was written from a tarball before the kit
@@ -221,7 +241,7 @@ if (command === 'publish') {
     if (named.version === kit.version && named.integrity !== packed.integrity) {
       console.error(`the template's lockfile names a ${kit.name}@${kit.version} tarball this tree no longer packs — the kit changed since bump; run \`npm run release -- bump --again\` (the same versions) and merge that`); process.exit(1);
     }
-    run('npm', ['publish', '--workspace', 'kit', '--access', 'public']);
+    run('npm', ['publish', '--workspace', 'kit', '--access', 'public', ...tagged]);
     if (!dry && !(await untilNpmHas(kit.name, kit.version))) { console.error(`\nnpm still does not have ${kit.name}@${kit.version}; look at npmjs.com, then run publish again`); process.exit(1); }
     if (!dry) {
       const held = sh(`npm view ${kit.name}@${kit.version} dist.integrity`);
@@ -231,10 +251,10 @@ if (command === 'publish') {
       }
     }
   }
-  if (onNpm(root.name) === root.version) {
+  if (onNpm(root.name, root.version)) {
     console.log(`${root.name}@${root.version} is on npm already — skipping`);
   } else {
-    run('npm', ['publish', '--access', 'public']);
+    run('npm', ['publish', '--access', 'public', ...tagged]);
     if (!dry && !(await untilNpmHas(root.name, root.version))) { console.error(`\nnpm still does not have ${root.name}@${root.version}; look at npmjs.com, then run publish again`); process.exit(1); }
   }
   console.log(`
@@ -245,5 +265,5 @@ Next, in jtakeit-core: backend/api/sitebuild/scaffold.version → ${root.version
 
 console.error(`node scripts/release.mjs bump --kit <minor|patch|x.y.z> --astro <minor|patch|x.y.z> [--dry-run]
 node scripts/release.mjs bump --again [--dry-run]       the same versions, the lockfile and the scaffold's hashes written again
-node scripts/release.mjs publish [--dry-run]`);
+node scripts/release.mjs publish [--tag next] [--dry-run]   --tag: the npm dist-tag (default latest); latest moves only with the platform's release`);
 process.exit(1);
