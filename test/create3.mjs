@@ -443,6 +443,14 @@ try {
     {
       const prefixed = spawnSync('node', [bin, 'schema', '--root', example], { encoding: 'utf8' });
       if (prefixed.status !== 0 || !prefixed.stdout.includes('every address it emits stays inside the site')) fail(`9 · the example built under a path:\n${prefixed.stdout}\n${prefixed.stderr}`);
+      // The design floor (wiki/115 §2): the example stands on it — no height in a
+      // viewport unit, every face it names loaded, preloaded and stood in for —
+      // so jtk schema has no advice of the floor's for it.
+      const floor = prefixed.stdout.split('\n').filter((line) => line.includes('~ JTK_LOCAL'));
+      if (floor.length > 0) fail(`9 · the example does not stand on the design floor:\n${floor.join('\n')}`);
+      const axes = json(example, 'jtk/design.json').axes ?? {};
+      const KEYS = ['hero', 'ground', 'measures', 'shape', 'header', 'phone_menu', 'overlap', 'surfaces', 'mark', 'motion', 'fonts', 'hook', 'proof', 'contact'];
+      if (JSON.stringify(Object.keys(axes)) !== JSON.stringify(KEYS) || Object.values(axes).some((one) => one !== '')) fail(`9 · jtk/design.json has not the design's axes, empty: ${JSON.stringify(axes)}`);
       const de = text(example, 'dist/index.html');
       const en = text(example, 'dist/en/index.html');
       if (!de.includes('Gute Arbeit, mit Sorgfalt gemacht.') || !en.includes('Good work, done with care.')) fail('9 · the example\'s home pages are not in their languages');
@@ -541,6 +549,12 @@ try {
     }
     if (!text(bare, 'BRIEF.md').includes('DESIGN.md')) fail('12 · BRIEF.md does not ask for DESIGN.md');
     judged(bare, packed, '12 · the bare look');
+    {
+      const said = spawnSync('node', [bin, 'schema', '--root', bare, '--dist', join(bare, 'dist')], { encoding: 'utf8' });
+      const floor = said.stdout.split('\n').filter((line) => line.includes('~ JTK_LOCAL'));
+      if (floor.length > 0) fail(`12 · the bare look does not stand on the design floor:\n${floor.join('\n')}`);
+      if (Object.keys(json(bare, 'jtk/design.json').axes ?? {}).length !== 14) fail('12 · the bare look\'s jtk/design.json has not the design\'s axes');
+    }
     tidy(bare, '12 · the bare look');
     {
       const de = text(bare, 'dist/index.html');

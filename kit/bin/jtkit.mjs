@@ -19,6 +19,9 @@
  *   jtkit lint [--dist dist] [--root .] [--site-url https://…]
  *       the annotation lint the platform's build runs, on this working tree; on a contract-3 tree,
  *       by key and by id against jtk/schema.json, and every price in the site's currency
+ *   jtkit fonts <file.woff2>… [--fallback Arial] [--weight 400] [--json]
+ *       the stand-in of each face — a local face set to its proportions with size-adjust and the
+ *       ascent, descent and line-gap overrides — so the text does not move when the font arrives
  *   jtkit progress [--root .] [--json]
  *       where the site is, read off the files: the brief, the pages, the entries, what is missing —
  *       contract 2's tree or contract 3's
@@ -64,6 +67,10 @@ switch (command) {
       process.exit(1);
     }
     break;
+  }
+  case 'fonts': {
+    const { main } = await import(pathToFileURL(join(HERE, '..', 'lib', 'fonts.mjs')).href);
+    process.exit(await main(rest));
   }
   case 'session': {
     // The dev session's watch key, kept beside the content and out of git:

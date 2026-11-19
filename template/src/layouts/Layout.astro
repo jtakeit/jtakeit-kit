@@ -309,6 +309,37 @@ const businessSchema = {
       staring at opacity: 0. Wrapped in nothing on purpose — it cannot throw.
     */}
     <script is:inline>document.documentElement.classList.add('js');</script>
+    {/*
+      The height of the screen, measured once before the first paint and
+      held, as `--screen` (global.css, docs/kit.md «The floor»).
+
+      Every height on the page measured against the screen reads this and
+      not a viewport unit. The browsers inside Telegram, Instagram and
+      WhatsApp slide their bar away under a scrolling thumb and back, and
+      every vh, svh and dvh follows it: the hero and every band sized by the
+      screen squeezed and stretched while the page only scrolled
+      (wohlfühl-Raum and Rail-tec, which hold it this way; wiki/115 F1). So
+      it changes only when the width does — a turned phone, a window made
+      wider — and never with the bar or the keyboard. Without scripts the
+      declaration's own value, 100svh, is right everywhere it is honoured.
+    */}
+    <script is:inline>
+      (function () {
+        var root = document.documentElement;
+        var was = 0;
+        var hold = function () {
+          if (window.innerWidth === was) return;
+          was = window.innerWidth;
+          root.style.setProperty('--screen', window.innerHeight + 'px');
+        };
+        hold();
+        addEventListener('resize', hold, { passive: true });
+        addEventListener('orientationchange', function () {
+          was = 0;
+          setTimeout(hold, 120);
+        });
+      })();
+    </script>
     {Look && <Look />}
   </head>
 

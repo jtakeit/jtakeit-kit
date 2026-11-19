@@ -20,5 +20,21 @@
   "photos": {
     "treatment": "",
     "amount": 0
+  },
+  "axes": {
+    "hero": "",
+    "ground": "",
+    "measures": "",
+    "shape": "",
+    "header": "",
+    "phone_menu": "",
+    "overlap": "",
+    "surfaces": "",
+    "mark": "",
+    "motion": "",
+    "fonts": "",
+    "hook": "",
+    "proof": "",
+    "contact": ""
   }
 }

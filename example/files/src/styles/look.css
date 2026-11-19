@@ -253,7 +253,7 @@ html .listing-book {
   display: grid;
   gap: var(--space-4);
   max-inline-size: 48rem;
-  margin-block-end: clamp(2.5rem, 6vh, 4rem);
+  margin-block-end: clamp(2.5rem, calc(var(--screen) * 0.06), 4rem);
 }
 
 .s__title {
@@ -286,14 +286,14 @@ html main.prose h1 {
 }
 
 html main#content {
-  min-block-size: 60svh;
+  min-block-size: calc(var(--screen) * 0.6);
 }
 
 /* Pages without a hero of their own start under the fixed header. */
 html .listing,
 html .entry,
 html main.prose {
-  padding-block-start: clamp(7rem, 16vh, 10rem);
+  padding-block-start: clamp(7rem, calc(var(--screen) * 0.16), 10rem);
 }
 
 /* An entry's own values the template lists under its title — a post's date

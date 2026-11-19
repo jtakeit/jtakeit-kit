@@ -17,6 +17,64 @@
  * `html:root`, not `:root`: global.css says `:root` too, and which of two
  * stylesheets a bundler puts first is not a decision this file should rest on.
  */
+/*
+ * ── the stand-ins: the type doesn't jump ────────────────────────────────────
+ *
+ * While a face loads the page is set in a system face, and when it arrives
+ * every line is set again — longer or shorter, taller or lower — and the page
+ * jumps under the reader. Each face here has a stand-in: a face the visitor
+ * already has, set to the face's proportions, so the swap moves nothing. The
+ * numbers are measured off the @fontsource files by `npx @jtakeit/astro fonts
+ * <file.woff2>` (the kit's lib/fonts.mjs); a design that changes the type
+ * measures its own faces the same way and replaces these. The faces the first
+ * screen shows are preloaded in Look.astro.
+ */
+@font-face {
+  font-family: 'Space Grotesk Fallback';
+  src: local('Arial'), local('ArialMT');
+  font-weight: 400 500;
+  size-adjust: 111.29%;
+  ascent-override: 88.42%;
+  descent-override: 26.24%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Space Grotesk Fallback';
+  src: local('Arial Bold'), local('Arial-BoldMT');
+  font-weight: 600 700;
+  size-adjust: 102.74%;
+  ascent-override: 95.77%;
+  descent-override: 28.42%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial'), local('ArialMT');
+  font-weight: 400;
+  size-adjust: 107.48%;
+  ascent-override: 90.14%;
+  descent-override: 22.44%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial'), local('ArialMT');
+  font-weight: 500 700;
+  size-adjust: 108.61%;
+  ascent-override: 89.2%;
+  descent-override: 22.21%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'JetBrains Mono Fallback';
+  src: local('Courier New'), local('CourierNewPSMT');
+  font-weight: 400 700;
+  size-adjust: 99.98%;
+  ascent-override: 102.02%;
+  descent-override: 30%;
+  line-gap-override: 0%;
+}
+
 html:root {
   /* ── colour: Brumy's «snow» ──────────────────────────────────────────── */
   --paper: #f8f7f4;
@@ -57,9 +115,10 @@ html:root {
   --bloom: 0;
 
   /* ── type ────────────────────────────────────────────────────────────── */
-  --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
-  --font-text: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* Each face, then its measured stand-in (above), then the system's. */
+  --font-display: 'Space Grotesk', 'Space Grotesk Fallback', ui-sans-serif, system-ui, sans-serif;
+  --font-text: 'Inter', 'Inter Fallback', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'JetBrains Mono Fallback', ui-monospace, SFMono-Regular, Menlo, monospace;
   --step--1: clamp(0.82rem, 0.79rem + 0.15vw, 0.9rem);
   --step-0: clamp(1rem, 0.96rem + 0.2vw, 1.1rem);
   --step-1: clamp(1.2rem, 1.1rem + 0.5vw, 1.45rem);
@@ -83,17 +142,27 @@ html:root {
   --space-6: 2.5rem;
   --space-7: 4rem;
   --space-8: 8rem;
-  --section-y: clamp(3.75rem, 9vh, 7rem);
+  --section-y: clamp(3.75rem, calc(var(--screen) * 0.09), 7rem);
   --gutter: clamp(1.25rem, 4vw, 3rem);
   --shell: min(80rem, 100%);
-  --measure: 36rem;
+  /*
+   * The measures (global.css, docs/kit.md «The floor»): a line of text, and a
+   * filled surface — the form, the price list, a card — as wide as the
+   * header's capsule, which is the shell.
+   */
+  --measure-read: 36rem;
+  --measure-object: var(--shell);
+  --measure: var(--measure-read);
 
-  /* ── radius ──────────────────────────────────────────────────────────── */
-  --r-1: 4px;
-  --r-2: 8px;
-  --r-3: 14px;
-  --r-4: 22px;
+  /* ── radius: one base, the steps derived from it ─────────────────────── */
+  --radius: 8px;
+  --r-1: calc(var(--radius) * 0.5);
+  --r-2: var(--radius);
+  --r-3: calc(var(--radius) * 1.75);
+  --r-4: calc(var(--radius) * 2.75);
   --r-pill: 999px;
+  /* A photograph in a post's body is printed square. */
+  --r-figure: 0;
 
   /* ── motion ──────────────────────────────────────────────────────────── */
   --dur: 180ms;

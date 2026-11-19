@@ -98,7 +98,7 @@ const id = `stage-${Math.random().toString(36).slice(2, 8)}`;
     inset-block-start: clamp(1rem, 3vw, 2rem);
     max-inline-size: 30ch;
     padding: 0.35rem 0.7rem;
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     background: rgb(0 0 0 / 0.45);
     backdrop-filter: blur(8px);
     color: #fff;
@@ -127,7 +127,7 @@ const id = `stage-${Math.random().toString(36).slice(2, 8)}`;
     flex: 0 0 clamp(2.5rem, 6vw, 3.75rem);
     overflow: hidden;
     border: 2px solid rgb(255 255 255 / 0.4);
-    border-radius: 0.5rem;
+    border-radius: var(--r-2);
     opacity: 0.55;
     transition:
       opacity 0.3s ease,

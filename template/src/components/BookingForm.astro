@@ -41,6 +41,7 @@
 import { bookingForm } from '@jtakeit/kit/booking';
 import { site } from '../lib/site';
 import { under } from '../lib/under';
+import { measureOf, type Surface } from '../lib/measure';
 
 interface Named {
   slug: string;
@@ -86,9 +87,11 @@ interface Props {
   open?: string[];
   /** The pieces the element draws — `'steps week parts select'`, all by default; `false` for the plain form. */
   ui?: boolean | string;
+  /** What the form is drawn on (src/lib/measure.ts): a filled surface, the object measure, by default. */
+  surface?: Surface;
 }
 
-const { services, resources = [], locale, daysAhead = 30, combine = false, currency = site.currency, scale = '', kind = '', open = [], ui = true } = Astro.props;
+const { services, resources = [], locale, daysAhead = 30, combine = false, currency = site.currency, scale = '', kind = '', open = [], ui = true, surface = 'filled' } = Astro.props;
 
 // Where the form lives, for a tap on it (contract 3; `{}` on contract 2): the diary's settings.
 const from = site.settings('bookings').from()['data-jtk-from'] ?? '';
@@ -96,7 +99,7 @@ const form = bookingForm({ services, resources, locale, daysAhead, combine, curr
 const w = form.words;
 ---
 
-<jtk-booking>
+<jtk-booking data-measure={measureOf(surface)}>
   <form class="form" {...form.attrs}>
     <noscript><p class="note">{w.noScript}</p></noscript>
 
@@ -259,7 +262,10 @@ const w = form.words;
     display: block;
     container-type: inline-size;
   }
+  /* Numbers line up (docs/kit.md, «The floor»): every figure in the form is a
+     time, a day, a length or a price — lining, and each as wide as the next. */
   .form {
+    font-variant-numeric: lining-nums tabular-nums;
     display: grid;
     gap: 0.85rem 1.5rem;
     padding: clamp(1.25rem, 3vw, 2rem);
@@ -348,7 +354,7 @@ const w = form.words;
     height: 1.25rem;
     margin: 0;
     border: 1.5px solid var(--line);
-    border-radius: 0.4rem;
+    border-radius: calc(var(--radius) * 0.8);
     background: var(--paper);
     display: grid;
     place-content: center;
@@ -410,7 +416,7 @@ const w = form.words;
     font: inherit;
     padding: 0.75rem 1.5rem;
     border: 0;
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     background: var(--accent);
     color: var(--on-accent);
     cursor: pointer;
@@ -421,7 +427,7 @@ const w = form.words;
     font: inherit;
     padding: 0.6rem 1.1rem;
     border: 1px solid var(--line);
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     background: transparent;
     color: var(--ink);
     text-decoration: none;
@@ -493,7 +499,7 @@ const w = form.words;
   .form :global(.booking__slot) {
     padding: 0.55rem 0.4rem;
     text-align: center;
-    border-radius: 999px;
+    border-radius: var(--r-pill);
   }
   /* the week of days */
   .form :global(.booking__days-head) {
@@ -543,12 +549,12 @@ const w = form.words;
     width: max-content;
     max-width: 100%;
     background: var(--paper-deep);
-    border-radius: 999px;
+    border-radius: var(--r-pill);
   }
   .form :global(.booking__part) {
     padding: 0.3rem 0.7rem;
     border: 0;
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     background: transparent;
     color: var(--ink-quiet);
   }
@@ -585,7 +591,7 @@ const w = form.words;
     width: 1.4rem;
     height: 1.4rem;
     border: 1px solid currentColor;
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     font-size: 0.8em;
   }
   .form :global(.booking__step:is([data-state='current'], [data-state='done']) .booking__step-n) {
@@ -624,7 +630,7 @@ const w = form.words;
   .form :global(.booking__back) {
     justify-self: start;
     padding: 0.3rem 0.8rem;
-    border-radius: 999px;
+    border-radius: var(--r-pill);
   }
   /* the drawn choice of whom */
   .form :global(.booking__dd) {

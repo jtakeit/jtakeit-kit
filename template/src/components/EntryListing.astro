@@ -61,7 +61,7 @@ const title = current > 1 ? `${named} — ${LISTING.pageOf(current, last)}` : na
             {run.heading && (
               <h2 class="listing-group" {...run.heading.at} {...(run.heading.entry?.fields.lang('title') ?? {})} data-jtk-fixed={run.heading.fixed ? true : undefined}>{run.heading.text}</h2>
             )}
-            <ul class="posts">
+            <ul class="posts" data-measure="object">
               {run.entries.map((entry) => <EntryCard entry={entry} locale={locale} level={isGrouped ? 'h3' : 'h2'} />)}
             </ul>
           </Fragment>

@@ -10,7 +10,7 @@
  * file with the palette, the type and the spacing it decides.
  *
  * The names are global.css's (`--paper`, `--ink`, `--accent`…) and the few
- * the example's components read (`--step-*`, `--space-*`, `--r-*`), so the
+ * the example's components read (`--step-*`, `--space-*`, `--radius`, `--r-*`), so the
  * template's pieces — the form, the diary, the shop, the listings — follow
  * whatever is set here. `jtk/design.json`'s `paper`, `ink` and `accent` still
  * win at runtime: Layout.astro writes them on <html>.
@@ -54,11 +54,19 @@ html:root {
   --section-y: 3rem;
   --gutter: 1.25rem;
   --shell: min(64rem, 100%);
-  --measure: 40rem;
+  /* A line of text, and a filled surface — the form, the price list — the shell's width (docs/kit.md «The floor»). */
+  --measure-read: 40rem;
+  --measure-object: var(--shell);
+  --measure: var(--measure-read);
   /* Where a page without a hero of its own starts: the header is in the flow, so only air. */
   --page-top: var(--space-6);
 
-  /* ── one radius ──────────────────────────────────────────────────────── */
+  /*
+   * ── one radius ────────────────────────────────────────────────────────
+   * The family's base (global.css), every step and the pill the same: the
+   * bare look's one corner. A design gives the steps their proportions back
+   * — calc(var(--radius) * 1.75) — or squares them all at 0.
+   */
   --radius: 4px;
   --r-1: var(--radius);
   --r-2: var(--radius);

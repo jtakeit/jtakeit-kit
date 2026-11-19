@@ -67,7 +67,7 @@ const items = block.rows('items');
     display: grid;
     grid-template-columns: 3.5rem minmax(0, 1fr);
     gap: 0.4rem 1rem;
-    padding-block: clamp(1.4rem, 3vh, 2rem);
+    padding-block: clamp(1.4rem, calc(var(--screen) * 0.03), 2rem);
     border-block-end: 1px solid var(--line);
   }
 

@@ -139,7 +139,7 @@ const { pieces } = Astro.props;
   .sphere__big {
     display: block;
     inline-size: 100%;
-    max-block-size: 75svh;
+    max-block-size: calc(var(--screen) * 0.75);
     object-fit: cover;
   }
 

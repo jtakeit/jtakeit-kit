@@ -44,10 +44,13 @@ nothing else.
 
 ## Everything else is a token too
 
-Radii `--r-1…--r-5`, motion `--dur` / `--ease`, type scale, spacing. A bare
-`150ms ease` or a hand-typed `12px` radius in a new component is a drift, not a
-choice — and drift is precisely what makes a site stop looking designed after
-the third round of edits.
+Radii — one base `--radius`, the steps `--r-1…--r-4` derived from it and
+`--r-pill` — the screen's height `--screen`, the measures `--measure-read` and
+`--measure-object`, motion `--dur` / `--ease`, type scale, spacing: the floor
+([kit.md](kit.md), «The floor»). A bare `150ms ease`, a hand-typed `12px`
+radius or a `70svh` in a new component is a drift, not a choice — and drift is
+precisely what makes a site stop looking designed after the third round of
+edits.
 
 ## Responsive
 

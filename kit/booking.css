@@ -8,6 +8,11 @@
  */
 .booking { display: grid; gap: var(--space-4, 1rem); max-width: 34rem; scroll-margin-top: 5rem; }
 
+/* Numbers that line up: every figure in the form is a time, a day, a length
+   or a price — lining figures, each as wide as the next, so the times stand in
+   columns and a total does not shift as it changes. */
+.booking { font-variant-numeric: lining-nums tabular-nums; }
+
 /* The kind's words, until the platform has said them: the space kept, the
    salon's word not shown at a car rental. */
 .booking--unsaid [data-say], .booking--unsaid [data-say-wait] { visibility: hidden; }
@@ -26,7 +31,7 @@
 .booking__total { margin: 0.25rem 0 0; font-weight: 600; }
 .booking__slots { display: flex; flex-wrap: wrap; gap: 0.4rem; }
 .booking__slot {
-  font: inherit; padding: 0.45rem 0.75rem; border-radius: var(--radius-sm, 0.5rem);
+  font: inherit; padding: 0.45rem 0.75rem; border-radius: var(--radius-sm, var(--r-2, 0.5rem));
   border: 1px solid var(--color-line, currentColor); background: transparent; color: inherit; cursor: pointer;
 }
 .booking__slot.is-chosen { background: var(--color-ink, #111); color: var(--color-bg, #fff); border-color: var(--color-ink, #111); }
@@ -47,7 +52,7 @@
 .booking__days-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin: 0 0 0.4rem; }
 .booking__days-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0.3rem; }
 .booking__day, .booking__days-arrow, .booking__part, .booking__next, .booking__back, .booking__dd-trigger, .booking__dd-option, .booking__keep-copy {
-  font: inherit; color: inherit; background: transparent; border: 1px solid var(--color-line, currentColor); border-radius: var(--radius-sm, 0.5rem); cursor: pointer;
+  font: inherit; color: inherit; background: transparent; border: 1px solid var(--color-line, currentColor); border-radius: var(--radius-sm, var(--r-2, 0.5rem)); cursor: pointer;
 }
 .booking__day { display: grid; gap: 0.1rem; padding: 0.4rem 0.1rem; text-align: center; line-height: 1.2; }
 .booking__day-wd { font-size: 0.7em; text-transform: uppercase; letter-spacing: 0.05em; color: var(--booking-quiet); }
@@ -56,29 +61,29 @@
 .booking__days-arrow { padding: 0.3rem 0.6rem; }
 /* the times by the part of the day */
 .booking__parts { display: flex; flex-wrap: wrap; gap: 0.25rem; margin: 0 0 0.5rem; }
-.booking__part { padding: 0.3rem 0.7rem; border-radius: 999px; }
+.booking__part { padding: 0.3rem 0.7rem; border-radius: var(--r-pill, 999px); }
 .booking__part.is-current { background: var(--color-ink, #111); color: var(--color-bg, #fff); border-color: var(--color-ink, #111); }
 .booking__part-n { font-size: 0.8em; color: var(--booking-quiet); margin-left: 0.35rem; }
 /* the two steps */
 .booking__stepper { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin: 0; padding: 0; list-style: none; color: var(--booking-quiet); }
 .booking__step { display: inline-flex; align-items: center; gap: 0.4rem; }
-.booking__step-n { display: inline-grid; place-items: center; width: 1.4rem; height: 1.4rem; border: 1px solid currentColor; border-radius: 999px; font-size: 0.8em; }
+.booking__step-n { display: inline-grid; place-items: center; width: 1.4rem; height: 1.4rem; border: 1px solid currentColor; border-radius: var(--r-pill, 999px); font-size: 0.8em; }
 .booking__step.is-current { color: inherit; color: var(--ink, currentColor); font-weight: 600; }
 .booking__step.is-current .booking__step-n, .booking__step.is-done .booking__step-n { background: var(--color-ink, #111); color: var(--color-bg, #fff); border-color: var(--color-ink, #111); }
 .booking[data-stage='1'] > [data-step='2'], .booking[data-stage='2'] > [data-step='1'] { display: none; }
 .booking[data-stage='done'] > .booking__stepper, .booking[data-stage='done'] > .booking__summary, .booking[data-stage='done'] > .booking__need, .booking[data-stage='done'] > .booking__next { display: none; }
 .booking__next { padding: 0.6rem 1.2rem; }
 .booking__need { margin: 0; color: var(--color-danger, #b3261e); }
-.booking__summary { display: grid; gap: 0.6rem; padding: 0.9rem 1rem; border: 1px solid var(--line, #e5e1d8); border-radius: var(--radius-sm, 0.5rem); }
+.booking__summary { display: grid; gap: 0.6rem; padding: 0.9rem 1rem; border: 1px solid var(--line, #e5e1d8); border-radius: var(--radius-sm, var(--r-2, 0.5rem)); }
 .booking__summary-label { margin: 0; font-size: 0.75em; letter-spacing: 0.1em; text-transform: uppercase; color: var(--booking-quiet); }
 .booking__summary-list { display: grid; gap: 0.4rem; margin: 0; }
 .booking__summary-row dt { font-size: 0.8em; color: var(--booking-quiet); }
 .booking__summary-row dd { margin: 0; }
-.booking__back { justify-self: start; padding: 0.3rem 0.8rem; border-radius: 999px; }
+.booking__back { justify-self: start; padding: 0.3rem 0.8rem; border-radius: var(--r-pill, 999px); }
 /* the drawn choice of whom */
 .booking__dd { position: relative; }
 .booking__dd-trigger { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; width: 100%; padding: 0.55rem 0.75rem; text-align: left; }
-.booking__dd-list { position: absolute; inset-inline: 0; top: calc(100% + 0.25rem); z-index: 5; display: grid; padding: 0.25rem; background: var(--color-bg, #fff); border: 1px solid var(--line, #e5e1d8); border-radius: var(--radius-sm, 0.5rem); box-shadow: 0 10px 30px -12px rgb(0 0 0 / 0.3); }
+.booking__dd-list { position: absolute; inset-inline: 0; top: calc(100% + 0.25rem); z-index: 5; display: grid; padding: 0.25rem; background: var(--color-bg, #fff); border: 1px solid var(--line, #e5e1d8); border-radius: var(--radius-sm, var(--r-2, 0.5rem)); box-shadow: 0 10px 30px -12px rgb(0 0 0 / 0.3); }
 .booking__dd-option { border: 0; padding: 0.5rem 0.6rem; text-align: left; }
 .booking__dd-option:hover, .booking__dd-option:focus-visible { background: var(--line, #e5e1d8); }
 .booking__dd-option.is-chosen { font-weight: 600; }

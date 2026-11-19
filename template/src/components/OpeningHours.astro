@@ -14,6 +14,7 @@
  * draws nothing and the build goes on.
  */
 import { site } from '../lib/site';
+import { measureOf, type Surface } from '../lib/measure';
 /**
  * One stretch of a working day, as `jtk/bookings.json` stores it: whole
  * minutes from local midnight, which is what the `time_of_day` kind is
@@ -35,8 +36,10 @@ interface Props {
   locale: 'uk' | 'de' | 'en';
   /** The heading over the list; empty draws none. */
   title?: string;
+  /** What the list is drawn on (src/lib/measure.ts): the page's paper, the reading measure, by default. */
+  surface?: Surface;
 }
-const { locale, title = '' } = Astro.props;
+const { locale, title = '', surface = 'paper' } = Astro.props;
 
 const hours = site.module('bookings').hours;
 const rows: Row[] = Array.isArray(hours) ? (hours as Row[]) : [];
@@ -58,7 +61,7 @@ const week = ORDER.map((day) => ({
 }));
 ---
 {rows.length > 0 && (
-  <section class="hours">
+  <section class="hours" data-measure={measureOf(surface)}>
     {title && <h2 class="hours__title">{title}</h2>}
     <dl class="hours__list">
       {week.map((one) => (
@@ -76,5 +79,5 @@ const week = ORDER.map((day) => ({
   .hours__list { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1.25rem; margin: 0; }
   .hours__row { display: contents; }
   .hours__day { margin: 0; }
-  .hours__time { margin: 0; font-variant-numeric: tabular-nums; }
+  .hours__time { margin: 0; font-variant-numeric: lining-nums tabular-nums; }
 </style>

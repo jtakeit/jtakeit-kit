@@ -36,6 +36,13 @@ import { copyFor } from '../copy';
 import { localeOf, langOf, withLocale } from '../lib/locale';
 import { site } from '../lib/site';
 import { under } from '../lib/under';
+import { measureOf, type Surface } from '../lib/measure';
+
+interface Props {
+  /** What the form is drawn on (src/lib/measure.ts): a filled surface, the object measure, by default. */
+  surface?: Surface;
+}
+const { surface = 'filled' } = Astro.props;
 
 const locale = localeOf(Astro.url.pathname);
 const LANG = langOf(locale);
@@ -92,7 +99,7 @@ const asks = declared.map((ask) => {
 const html = renderLeadForm({ action: under('/api/lead'), copy: FORM, asks, paths, langs, photos, lang: LANG, wordsLang: WORDS_LANG });
 ---
 
-<Fragment set:html={html} />
+<div class="lead-measure" data-measure={measureOf(surface)}><Fragment set:html={html} /></div>
 
 <script>
   import '@jtakeit/kit/elements/lead';

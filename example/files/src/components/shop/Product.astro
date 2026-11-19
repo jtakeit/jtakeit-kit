@@ -301,6 +301,14 @@ const details = collection.fields
 </script>
 
 <style>
+  /* Every price on the page — from, the price, what an option adds: figures that line up. */
+  .product__from,
+  .buy__price,
+  .ask__adds,
+  .variants__price {
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+
   /*
    * The look — the scaffold's, and the first thing to change, in the site's
    * tokens. Classes are scoped to this file; what the element draws itself —
@@ -314,7 +322,7 @@ const details = collection.fields
     width: min(var(--shell, 72rem), 100%);
     margin: 0 auto;
     /* Clear of the header that floats over the page, as the example's entries are (look.css, `.entry`) — or as far as the look says (`--page-top`: the bare look's header is in the flow). */
-    padding: var(--page-top, clamp(7rem, 16vh, 10rem)) var(--gutter, 1.25rem) clamp(2.5rem, 6vw, 4.5rem);
+    padding: var(--page-top, clamp(7rem, calc(var(--screen) * 0.16), 10rem)) var(--gutter, 1.25rem) clamp(2.5rem, 6vw, 4.5rem);
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: 'head' 'pictures' 'body';
   }
@@ -414,7 +422,7 @@ const details = collection.fields
     max-width: 100%;
     padding: 0.45rem 0.9rem;
     border: 1px solid var(--line);
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     background: var(--paper);
     cursor: pointer;
     overflow-wrap: anywhere;
@@ -545,7 +553,7 @@ const details = collection.fields
     min-height: 2.75rem;
     padding: 0.7rem 1.4rem;
     border: 0;
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     background: var(--ink);
     color: var(--paper);
     font: inherit;

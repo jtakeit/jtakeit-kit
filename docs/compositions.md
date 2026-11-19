@@ -44,9 +44,42 @@ skeletons below are where to start, in the site's own tokens.
   or `statement`: the section someone remembers. Spend the design there.
 - **A frame keeps its padding.** A `ledger` row, a `tile`, a `people` card: the
   text inside never touches the border or the fill — `jt-check` measures it.
+- **The phone is decided, not left over** — «Phones», below.
 - **The hero is not a composition here** — it is [shapes.md](shapes.md). Its
   own two rules: the headline is at most three lines on a laptop and five on a
   phone, and the one action is on the first screen in a 1440×780 window.
+
+## Phones
+
+A design is drawn at 1440 and read at 393. What a row of things becomes on a
+phone is a choice every section makes; left to the grid, it is made by
+nobody — rows stacked into a tower on one page and squeezed into stamps on the
+next (wiki/115 §1: consistent on four sites of eleven). Four rules, and the
+scaffold's own rows keep them:
+
+- **A row of up to seven things becomes a swipe with a peek.** Tiles, people,
+  products, a week of days: one row that scrolls sideways, each item
+  `min(16rem, 70vw)` or so wide so the next one shows at the edge — the peek is
+  what says there is more. `scroll-snap-type: x mandatory` on the row,
+  `scroll-snap-align: start` on the items, the scrollbar left visible or a
+  count beside it. The `people` skeleton above is one; the booking form's week
+  of days is seven across.
+- **A long list stays a list.** Eight things and more — the price list, the
+  questions, the opening hours, a journal — are rows down the page, never a
+  carousel nobody swipes to the end of. The ledger and `sticky` are lists on
+  every screen.
+- **Thumbnails share the width, never cropped by the row.** Pictures in a row
+  on a phone divide the width between them at their own proportions
+  (`grid-template-columns: repeat(2, 1fr)` with `aspect-ratio` on the frame),
+  or become the swipe above; a row that overflows and clips the last picture
+  in half is the one thing a client screenshots.
+- **A tablet is a large phone, not a narrow desktop.** At 768 a page keeps the
+  phone's order — one column, the swipes — with more air, and turns into the
+  desktop's composition only where two columns genuinely fit (about 60rem and
+  up). A desktop's three columns squeezed to 768 are three columns of four
+  words each.
+
+`jt-check` looks at every page at 393, 768, 1032 and 1440 for these.
 
 ## Skeletons
 
@@ -58,7 +91,7 @@ skeletons below are where to start, in the site's own tokens.
   <figure class="split__media"><Shot name="room" alt="…" /></figure>
 </section>
 <style>
-  .split { display: grid; min-block-size: min(80svh, 46rem); }
+  .split { display: grid; min-block-size: min(calc(var(--screen) * 0.8), 46rem); }
   @media (min-width: 62rem) { .split { grid-template-columns: 1fr 1fr; } }
   .split__words { align-self: center; padding: clamp(2rem, 6vw, 6rem); }
   .split__media { margin: 0; }
@@ -74,7 +107,7 @@ skeletons below are where to start, in the site's own tokens.
   <p class="bleed__line">…one sentence…</p>
 </section>
 <style>
-  .bleed { position: relative; display: grid; place-items: end start; min-block-size: 70svh; isolation: isolate; }
+  .bleed { position: relative; display: grid; place-items: end start; min-block-size: min(calc(var(--screen) * 0.7), 46rem); isolation: isolate; }
   .bleed :global(.bleed__picture) { position: absolute; inset: 0; z-index: -1; }
   .bleed :global(.bleed__picture img) { inline-size: 100%; block-size: 100%; object-fit: cover; }
   .bleed::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(to top, rgb(0 0 0 / 0.65), transparent 60%); }
@@ -85,7 +118,7 @@ skeletons below are where to start, in the site's own tokens.
 ### ledger
 
 ```astro
-<ol class="ledger">
+<ol class="ledger" data-measure="object">
   {services.map((s) => (
     <li class="ledger__row">
       <div><h3>{s.title}</h3><p>{s.excerpt}</p></div>
@@ -99,7 +132,7 @@ skeletons below are where to start, in the site's own tokens.
     padding: clamp(1rem, 2.5vw, 1.5rem) clamp(0.75rem, 2vw, 1.25rem); border-block-end: 1px solid var(--line); }
   .ledger__row h3 { margin: 0; }
   .ledger__row p { margin: 0.25rem 0 0; color: var(--ink-quiet); }
-  .ledger__price { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ledger__price { font-variant-numeric: lining-nums tabular-nums; white-space: nowrap; }
 </style>
 ```
 
@@ -117,7 +150,7 @@ skeletons below are where to start, in the site's own tokens.
     .overlap :global(.overlap__picture) { grid-column: 1 / 9; grid-row: 1; }
     .overlap__card { grid-column: 7 / 13; grid-row: 1; margin-block-end: -4rem; }
   }
-  .overlap__card { position: relative; padding: clamp(1.5rem, 4vw, 3rem); background: var(--panel); border-radius: var(--r-3, 1rem); }
+  .overlap__card { position: relative; padding: clamp(1.5rem, 4vw, 3rem); background: var(--panel); border-radius: var(--r-3); }
 </style>
 ```
 
@@ -135,8 +168,10 @@ skeletons below are where to start, in the site's own tokens.
 <style>
   .people { display: grid; grid-auto-flow: column; grid-auto-columns: min(16rem, 70vw); gap: 1rem;
     overflow-x: auto; scroll-snap-type: x mandatory; margin: 0; padding: 0 0 0.5rem; list-style: none; }
-  .people__card { scroll-snap-align: start; padding: 0.75rem 0.75rem 1.25rem; background: var(--panel); border-radius: var(--r-3, 1rem); }
-  .people__mono { display: grid; place-items: center; aspect-ratio: 4 / 5; border-radius: var(--r-2, 0.75rem);
+  .people__card { --r-outer: var(--r-3); --pad: 0.75rem; scroll-snap-align: start; padding: var(--pad) var(--pad) 1.25rem; background: var(--panel); border-radius: var(--r-outer); }
+  /* The portrait's corner is the card's less the padding between them (.r-nested). */
+  .people__card :global(.shot__frame), .people__mono { border-radius: max(0px, calc(var(--r-outer) - var(--pad))); }
+  .people__mono { display: grid; place-items: center; aspect-ratio: 4 / 5;
     background: color-mix(in srgb, var(--accent) 22%, var(--panel)); font-size: 4rem; }
 </style>
 ```

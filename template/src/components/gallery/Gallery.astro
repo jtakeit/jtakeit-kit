@@ -253,7 +253,7 @@ const sizes =
    * thirty-seven from becoming most of the page.
    */
   .gallery--wall {
-    block-size: var(--gallery-window, min(70svh, 40rem));
+    block-size: var(--gallery-window, min(calc(var(--screen) * 0.7), 40rem));
     overflow: clip;
   }
 

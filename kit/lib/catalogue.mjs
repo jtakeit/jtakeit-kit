@@ -63,6 +63,7 @@ import { tappable } from './content/index.mjs';
 import { contractOf } from './content/node.mjs';
 import { shownAt } from './schedule.mjs';
 import { builtPages, prefixBuild, servedFaults, unboundedHeights, unowned } from './served.mjs';
+import { floorAdvice } from './floor.mjs';
 
 // What this tool calls itself in a catalogue it writes. Bumped when the shape
 // it emits changes; the `contract` beside it moves only when the format does.
@@ -1277,6 +1278,13 @@ if (pages.some(hasBodyPicture)) {
   const unbounded = unboundedHeights(root);
   if (unbounded !== '') contentProblems.push(unbounded);
 }
+
+/*
+ * The design floor (floor.mjs, wiki/115 §2): a height in vh, svh or dvh, a
+ * font named and never loaded or fetched from a third party. Advice, counted
+ * nowhere.
+ */
+for (const one of floorAdvice(root, dist)) console.log(`  ~ ${LOCAL}  ${one.where}: ${one.says}`);
 
 /*
  * A view that says where it can be seen points at a page that exists.

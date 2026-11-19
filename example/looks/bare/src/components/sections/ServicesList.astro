@@ -23,14 +23,17 @@ import { site } from '../../lib/site';
 import { rowId } from '../../lib/entries';
 import { langOf, withLocale } from '../../lib/locale';
 import { linkTo } from '../../lib/under';
+import { measureOf, type Surface } from '../../lib/measure';
 
 interface Props {
   block: Block;
   locale: string;
   first?: boolean;
+  /** What the price list is drawn on (src/lib/measure.ts): a filled surface, the object measure, by default. */
+  surface?: Surface;
 }
 
-const { block, locale, first = false } = Astro.props;
+const { block, locale, first = false, surface = 'filled' } = Astro.props;
 const limit = Number(block.value('limit') ?? 0);
 const all = site.entries('services', { locale });
 const shown = limit > 0 ? all.slice(0, limit) : all;
@@ -59,7 +62,7 @@ const RowTitle = block.text('title') ? 'h3' : 'h2';
       )
     }
 
-    <ul class="services__rows">
+    <ul class="services__rows" data-measure={measureOf(surface)}>
       {
         shown.map((entry) => {
           const { fields } = entry;
@@ -96,6 +99,10 @@ const RowTitle = block.text('title') ? 'h3' : 'h2';
 </section>
 
 <style>
+  /* A price and a length: figures that line up, row under row. */
+  .services__terms {
+    font-variant-numeric: lining-nums tabular-nums;
+  }
   .services__rows {
     display: grid;
     margin: 0;

@@ -23,7 +23,7 @@ const { block } = Astro.props;
 
 <style>
   .intro {
-    padding-block: clamp(7.5rem, 18vh, 11rem) 0;
+    padding-block: clamp(7.5rem, calc(var(--screen) * 0.18), 11rem) 0;
   }
   .intro__in {
     display: grid;

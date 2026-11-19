@@ -81,6 +81,7 @@ import { BY_INDEX, DOCUMENT_ID, ID, drawnOn, isEmpty, KEY, placesIn, seenOn, tap
 import { unclaimedText } from './lint.mjs';
 import { metaFaults } from './meta3.mjs';
 import { builtPages, prefixBuild, servedFaults, unboundedHeights, unowned } from './served.mjs';
+import { floorAdvice } from './floor.mjs';
 
 export { adviseSchema, judgeSchema };
 
@@ -677,6 +678,10 @@ studio's preview arrangement, which the schema has nothing to say about.`);
     console.error(`\njtk schema: the styles do not follow the rules the panel draws the page by\n\n  ✗ ${height}`);
     return capped(1 + before);
   }
+
+  // The design floor (floor.mjs, wiki/115 §2): the screen's height and the
+  // type, read off the source and the build. Advice, counted nowhere.
+  for (const one of floorAdvice(root, dist)) console.log(`  ~ ${LOCAL}  ${one.where}: ${one.says}`);
 
   const advice = [];
   const disagreements = pagesAgainst({ files: await readJtk(root), schema, dist, advice });
