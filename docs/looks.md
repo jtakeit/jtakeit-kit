@@ -109,7 +109,12 @@ business's own replace them, in either look.
    pairing and its scale, the spacing, the radius, the hero's shape
    ([shapes.md](shapes.md)), and for each section the composition it gets
    ([compositions.md](compositions.md)) and the one that carries the page's
-   signature. Say where each choice comes from. Show it to the developer.
+   signature. Say where each choice comes from. Choose on every axis of the
+   platform's design guide (docs.jtakeit.com/guides/design — the hero, the
+   ground, the shape, the overlap, the surfaces, **the mark**: a motif from the
+   business's own material repeated in the interface…) and write them under
+   `axes` in `jtk/design.json`; a custom design with fewer than ten, or no
+   mark, is said by the build (`JTK_W_DESIGN_AXES`). Show it to the developer.
 3. **Set the tokens** in `src/styles/tokens.css` and the fonts in
    `src/components/site/Look.astro` (self-hosted, `@fontsource`); write
    `paper`, `ink` and `accent` into `jtk/design.json`.
@@ -121,7 +126,25 @@ business's own replace them, in either look.
    `rowId`, the `first`/`contact` props. `jtk schema --dist dist` and
    `jtkit lint` say when a value is no longer drawn or annotated.
 5. **Read it** as a visitor and as `npx @jtakeit/astro a11y` does, on a phone
-   and wide, before calling it done.
+   and wide, before calling it done — and as a demanding designer would: could
+   it be any other business's site? The first screen answers (the floor's F8):
+   the heading and the one action on a phone's 390 × 844 and a desktop's
+   1280 × 800 — `preflight` measures it (`JTK_W_FIRST_SCREEN`).
+
+**Directions to choose from.** To show the person two or three designs before
+one is built, declare them in `jtk/design.json` — `"directions": [{"key": "a",
+"name": "…", "axes": {…}}, …]`, the first the default — and style the others
+under `html[data-direction='b']`. The platform writes the attribute for a page
+asked as `?direction=b` by somebody who may see the site, and the previews offer
+the directions by name; never a switch of the site's own. Two directions differ
+on at least three axes, the hero among them (`JTK_W_DIRECTIONS_ALIKE`). Once
+one is chosen, its styles become the site's own and `directions` goes.
+
+**What a model reaches for**, to stay away from unless the business's material
+asks for one by name: Fraunces, Playfair or Cormorant over Inter; linen or cream
+with terracotta, or sage; the photograph in an arch with a glow behind it; pills
+everywhere, every section centred, numbered cards; a hero that is a photograph
+first and the words under the fold.
 
 The gallery's `arrangement`, the hero fields, grounds and entrances are there
 to be chosen in step 2 — `jtk showroom` draws them in the site's colours —
