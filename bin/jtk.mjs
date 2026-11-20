@@ -148,7 +148,8 @@ ${imported.usage()}
   ${fonts.usage()}
   jtk a11y [--dist ./dist] [/path …]
                                   read the built pages against WCAG 2.1 AA in Chrome
-                                  (npm i -D playwright-core axe-core first)
+                                  (its two packages fetched once into ~/.cache/jtakeit/a11y,
+                                  never into the site)
 ${code.usage()}
 ${media.usage()}
 

@@ -15,7 +15,10 @@ npx @jtakeit/astro create <slug> --name "The Business" --look bare     # no art 
 | `bare` | The same site with no design: the system's own type, a few neutral colours, one radius, the focus ring, plain sections in the document's order. | **A custom design** — from the business's own site, its brand, or references the person gave. |
 
 `jtk/design.json` says which (`"look": "brumy"` or `"look": "bare"`), and
-`jtk add` lays a section or a module in the look the site says.
+`jtk add` lays a section or a module in the look the site says. Once the
+design is the site's own, say so: `"look": "custom"`. A section `jtk add`
+lays on it comes in the bare look's structure, to be dressed in the site's
+design, never in Brumy's; any word the kit does not know is taken the same way.
 
 ## A custom design starts on `bare`, never on Brumy's
 
@@ -84,7 +87,8 @@ sessions — then the `--kit`'s kind (sessions, clinic; salon is hair).
 The set is the site's: `jtk/design.json` says it (`photo_set`), and `jtk add`
 lays a section's photographs from the same set. The files are not in the
 package: they are fetched once from the platform's media host
-(`JTK_MEDIA_URL`, production's by default) into `~/.cache/jtakeit/examples`,
+(`JTK_MEDIA_URL`; else the site's `jtk/site.json` `media_base`; else the one
+beside `--api`, so staging's on staging; else production's) into `~/.cache/jtakeit/examples`,
 checked against their hash; `JTK_EXAMPLES_DIR` names a directory of them
 instead. Where a set cannot be had — offline, say — the site is laid out with
 the example's own and that is said, never a failed create.
@@ -105,7 +109,12 @@ business's own replace them, in either look.
    pairing and its scale, the spacing, the radius, the hero's shape
    ([shapes.md](shapes.md)), and for each section the composition it gets
    ([compositions.md](compositions.md)) and the one that carries the page's
-   signature. Say where each choice comes from. Show it to the developer.
+   signature. Say where each choice comes from. Choose on every axis of the
+   platform's design guide (docs.jtakeit.com/guides/design — the hero, the
+   ground, the shape, the overlap, the surfaces, **the mark**: a motif from the
+   business's own material repeated in the interface…) and write them under
+   `axes` in `jtk/design.json`; a custom design with fewer than ten, or no
+   mark, is said by the build (`JTK_W_DESIGN_AXES`). Show it to the developer.
 3. **Set the tokens** in `src/styles/tokens.css` and the fonts in
    `src/components/site/Look.astro` (self-hosted, `@fontsource`); write
    `paper`, `ink` and `accent` into `jtk/design.json`.
@@ -117,7 +126,25 @@ business's own replace them, in either look.
    `rowId`, the `first`/`contact` props. `jtk schema --dist dist` and
    `jtkit lint` say when a value is no longer drawn or annotated.
 5. **Read it** as a visitor and as `npx @jtakeit/astro a11y` does, on a phone
-   and wide, before calling it done.
+   and wide, before calling it done — and as a demanding designer would: could
+   it be any other business's site? The first screen answers (the floor's F8):
+   the heading and the one action on a phone's 390 × 844 and a desktop's
+   1280 × 800 — `preflight` measures it (`JTK_W_FIRST_SCREEN`).
+
+**Directions to choose from.** To show the person two or three designs before
+one is built, declare them in `jtk/design.json` — `"directions": [{"key": "a",
+"name": "…", "axes": {…}}, …]`, the first the default — and style the others
+under `html[data-direction='b']`. The platform writes the attribute for a page
+asked as `?direction=b` by somebody who may see the site, and the previews offer
+the directions by name; never a switch of the site's own. Two directions differ
+on at least three axes, the hero among them (`JTK_W_DIRECTIONS_ALIKE`). Once
+one is chosen, its styles become the site's own and `directions` goes.
+
+**What a model reaches for**, to stay away from unless the business's material
+asks for one by name: Fraunces, Playfair or Cormorant over Inter; linen or cream
+with terracotta, or sage; the photograph in an arch with a glow behind it; pills
+everywhere, every section centred, numbered cards; a hero that is a photograph
+first and the words under the fold.
 
 The gallery's `arrangement`, the hero fields, grounds and entrances are there
 to be chosen in step 2 — `jtk showroom` draws them in the site's colours —

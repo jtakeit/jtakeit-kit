@@ -176,6 +176,19 @@ test('a serif against Georgia, a bold face against the bold stand-in, an italic 
   assert.throws(() => standIn(metricsOf(sfnt(face())), { fallback: 'Comic Sans' }), /not one the kit has measured/);
 });
 
+test('the stand-in is never named as the face it stands in for, and a face of no known kind is said', () => {
+  const m = metricsOf(sfnt(face({ family: 'Gloock', panose: [0, 0] })));
+  const named = standIn(m, { family: 'Gloock' });
+  assert.equal(named.family, 'Gloock Fallback', "--family Gloock printed 'Gloock', 'Gloock' (20 November 2026)");
+  assert.equal(named.renamed, 'Gloock');
+  assert.equal(standIn(m, { family: 'gloock ' }).family, 'Gloock Fallback');
+  assert.equal(standIn(m, { family: 'Shop Display Stand-in' }).family, 'Shop Display Stand-in');
+  assert.equal(standIn(m, { family: 'Shop Display Stand-in' }).renamed, undefined);
+  assert.equal(named.kindUnknown, true, 'neither PANOSE, the class nor the name says serif');
+  assert.equal(standIn(m, { fallback: 'Georgia' }).kindUnknown, undefined, 'a fallback asked for is not guessed');
+  assert.equal(standIn(metricsOf(sfnt(face()))).kindUnknown, undefined);
+});
+
 test('what is not a font is said so', () => {
   assert.throws(() => metricsOf(Buffer.from('<!doctype html><html></html>')), /not a font file/);
 });

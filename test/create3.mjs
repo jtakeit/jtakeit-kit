@@ -574,6 +574,20 @@ try {
     }
     if (text(bare, 'src/components/sections/GallerySection.astro') !== readFileSync(resolve('example/looks/bare/src/components/sections/GallerySection.astro'), 'utf8')) fail('12 · jtk add gallery on the bare look lays Brumy\'s section');
     {
+      // A design of the site's own says «custom» (or any word the kit does not know): never Brumy's sections
+      // (a custom barber's site, 20 November 2026).
+      const design = json(bare, 'jtk/design.json');
+      for (const said of ['custom', 'salon-schnitt']) {
+        writeFileSync(join(bare, 'jtk/design.json'), `${JSON.stringify({ ...design, look: said }, null, 2)}\n`);
+        spawnSync('node', [bin, 'remove', 'gallery', '--root', bare], { encoding: 'utf8' });
+        const ran = spawnSync('node', [bin, 'add', 'gallery', '--root', bare], { encoding: 'utf8' });
+        if (ran.status !== 0) fail(`12 · add gallery on a custom design («${said}»):\n${ran.stdout}\n${ran.stderr}`);
+        if (text(bare, 'src/components/sections/GallerySection.astro') !== readFileSync(resolve('example/looks/bare/src/components/sections/GallerySection.astro'), 'utf8')) fail(`12 · jtk add gallery on a custom design («${said}») does not lay the bare look's section`);
+        if (!ran.stdout.includes('DESIGN.md')) fail(`12 · jtk add on a custom design («${said}») does not say to dress the section in the site's design:\n${ran.stdout}`);
+      }
+      writeFileSync(join(bare, 'jtk/design.json'), `${JSON.stringify(design, null, 2)}\n`);
+    }
+    {
       const ran = spawnSync('node', [bin, 'add', 'shop', '--kit', resolve('kit/test/fixtures/kits/shop.json'), '--root', bare], { encoding: 'utf8' });
       if (ran.status !== 0) fail(`12 · add shop on the bare look:\n${ran.stdout}\n${ran.stderr}`);
       if (text(bare, 'src/components/shop/Product.astro') !== readFileSync(resolve('example/files/src/components/shop/Product.astro'), 'utf8')) fail('12 · the bare look\'s shop is not the example\'s own');
