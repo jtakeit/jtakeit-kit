@@ -120,3 +120,30 @@ test('the fingerprints name every set\'s photographs as the example\'s', () => {
     }
   }
 });
+
+test('the media host is the environment\'s: the variable, the site file, the API beside it, then production\'s', async () => {
+  const { mediaBase } = await import('../lib/units/photos.mjs');
+  const kept = { media: process.env.JTK_MEDIA_URL, api: process.env.JTK_API_URL };
+  delete process.env.JTK_MEDIA_URL;
+  delete process.env.JTK_API_URL;
+  try {
+    const root = mkdtempSync(join(tmpdir(), 'jtk-media-base-'));
+    assert.equal(mediaBase(), 'https://media.jtakeit.com/');
+    assert.equal(mediaBase({ root }), 'https://media.jtakeit.com/', 'no site file');
+    // A create on staging was given --api and fetched production's (20 November 2026).
+    assert.equal(mediaBase({ api: 'https://api.stg.jtakeit.com' }), 'https://media.stg.jtakeit.com/');
+    assert.equal(mediaBase({ api: 'http://localhost:4000' }), 'https://media.jtakeit.com/', 'no media host beside a local API');
+    process.env.JTK_API_URL = 'https://api.stg.jtakeit.com/';
+    assert.equal(mediaBase(), 'https://media.stg.jtakeit.com/');
+    mkdirSync(join(root, 'jtk'));
+    writeFileSync(join(root, 'jtk', 'site.json'), JSON.stringify({ id: 'x', media_base: 'https://media.example.test' }));
+    assert.equal(mediaBase({ root, api: 'https://api.jtakeit.com' }), 'https://media.example.test/', 'the site file over the API');
+    process.env.JTK_MEDIA_URL = 'https://builder.test/m';
+    assert.equal(mediaBase({ root }), 'https://builder.test/m/', 'the builder\'s word over all');
+  } finally {
+    for (const [name, value] of [['JTK_MEDIA_URL', kept.media], ['JTK_API_URL', kept.api]]) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
+});

@@ -15,7 +15,10 @@ npx @jtakeit/astro create <slug> --name "The Business" --look bare     # no art 
 | `bare` | The same site with no design: the system's own type, a few neutral colours, one radius, the focus ring, plain sections in the document's order. | **A custom design** — from the business's own site, its brand, or references the person gave. |
 
 `jtk/design.json` says which (`"look": "brumy"` or `"look": "bare"`), and
-`jtk add` lays a section or a module in the look the site says.
+`jtk add` lays a section or a module in the look the site says. Once the
+design is the site's own, say so: `"look": "custom"`. A section `jtk add`
+lays on it comes in the bare look's structure, to be dressed in the site's
+design, never in Brumy's; any word the kit does not know is taken the same way.
 
 ## A custom design starts on `bare`, never on Brumy's
 
@@ -84,7 +87,8 @@ sessions — then the `--kit`'s kind (sessions, clinic; salon is hair).
 The set is the site's: `jtk/design.json` says it (`photo_set`), and `jtk add`
 lays a section's photographs from the same set. The files are not in the
 package: they are fetched once from the platform's media host
-(`JTK_MEDIA_URL`, production's by default) into `~/.cache/jtakeit/examples`,
+(`JTK_MEDIA_URL`; else the site's `jtk/site.json` `media_base`; else the one
+beside `--api`, so staging's on staging; else production's) into `~/.cache/jtakeit/examples`,
 checked against their hash; `JTK_EXAMPLES_DIR` names a directory of them
 instead. Where a set cannot be had — offline, say — the site is laid out with
 the example's own and that is said, never a failed create.

@@ -72,8 +72,9 @@ Two kinds of finding fail either walk:
     said with where it stopped.
 
 You can run the same on your own build: `npx @jtakeit/astro a11y` reads
-`./dist` (`npm i -D playwright-core axe-core` first, and a Chrome installed or
-named by `CHROME_PATH`). It drives every piece it finds on a page by its root
+`./dist` with a Chrome installed or named by `CHROME_PATH`. The two packages it
+drives Chrome with (playwright-core, axe-core) are the site's where it has them;
+else it fetches them once into `~/.cache/jtakeit/a11y`, never into the site. It drives every piece it finds on a page by its root
 hook — the booking form's and the shop's — so a storefront copied and dressed in
 the site's design is walked the same way: run it before the push. A cart page is
 given a line from the first product's page and driven; read alone, it is held to

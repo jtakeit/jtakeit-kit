@@ -555,10 +555,22 @@ export function standIn(m, options = {}) {
   const size = ours > 0 && theirs > 0 ? ours / theirs : 1;
   const em = m.unitsPerEm * size;
 
-  const family = options.family ?? `${m.family || 'Webfont'} Fallback`;
+  // The stand-in's name is never the face's own: `--family Gloock` printed
+  // `'Gloock', 'Gloock'`, a stack whose second name is the first and whose
+  // @font-face, pasted, shadows the real one (20 November 2026).
+  const fallbackName = `${m.family || 'Webfont'} Fallback`;
+  const asked = typeof options.family === 'string' ? options.family.trim() : '';
+  const own = asked !== '' && asked.toLowerCase() === (m.family || '').trim().toLowerCase();
+  const family = asked === '' || own ? fallbackName : asked;
   const weight = m.axes.find((one) => one.tag === 'wght');
   return {
     family,
+    // Said back where the name asked for was the face's own.
+    ...(own ? { renamed: asked } : {}),
+    // Where neither --fallback nor the face's tables say its kind, the
+    // stand-in is a sans by default — a serif such as Gloock was measured
+    // against Arial with nothing said (20 November 2026).
+    ...(options.fallback === undefined && m.kind === '' ? { kindUnknown: true } : {}),
     fallback,
     local: face.local,
     style: m.style,
@@ -588,7 +600,7 @@ export function fontFaceCSS(face) {
 }
 
 export function usage() {
-  return `jtk fonts <file.woff2>… [--fallback <face>] [--weight 400] [--family <name>] [--json]
+  return `jtk fonts <file.woff2>… [--fallback <face>] [--weight 400] [--family <stand-in's name>] [--json]
                                   measure each face and print the @font-face of the system
                                   face that stands in for it while it loads (size-adjust,
                                   ascent-, descent- and line-gap-override), against
@@ -629,6 +641,8 @@ export async function main(args) {
       const at = wght === undefined ? 'its default instance' : m.varied ? `wght ${m.weight}` : `wght ${wght.default}, its default (the advances do not vary by HVAR)`;
       const variable = m.axes.length > 0 ? `, variable (${m.axes.map((one) => `${one.tag} ${one.min}–${one.max}`).join(', ')}), measured at ${at}` : '';
       console.log(`/* ${m.family || basename(file)} ${m.subfamily} — ${basename(file)}${variable}; against ${face.fallback}${face.width === 'letters' ? '' : ', the width by xAvgCharWidth'} */`);
+      if (face.renamed !== undefined) console.log(`/* --family names the stand-in, and «${face.renamed}» is the face's own name: the stand-in is '${face.family}' */`);
+      if (face.kindUnknown) console.log(`/* the face's tables do not say whether it is a serif: measured against ${face.fallback}. A serif face: --fallback Georgia (or 'Times New Roman') */`);
       console.log(fontFaceCSS(face));
       console.log(`/* then: font-family: '${m.family}', '${face.family}', ${FALLBACKS[face.fallback].kind}; */\n`);
     } catch (why) {
