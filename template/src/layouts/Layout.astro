@@ -414,5 +414,58 @@ const businessSchema = {
         targets.forEach((el) => io.observe(el));
       }
     </script>
+    {/*
+      Where a link in the page lands (the floor's F9, the platform's design
+      guide): the section's first words just under a header that stays, not
+      the section's top padding under it. A tap on «Angebot» in the
+      wohlfühl-Raum's header landed 100–170 px of empty padding above the
+      heading, and the visitor scrolled again (20 November 2026). Each
+      section's offset is the header's height and a little air, less its own
+      top padding — measured, since both are the design's — and measured
+      again as the link is tapped, the header having gathered by then. A
+      target that sets its own offset says `data-land="own"`.
+    */}
+    <script is:inline>
+      (function () {
+        var stays = function () {
+          var all = document.querySelectorAll('[data-header], body > header, header');
+          for (var i = 0; i < all.length; i++) {
+            var p = getComputedStyle(all[i]).position;
+            if (p === 'sticky' || p === 'fixed') return all[i];
+          }
+          return null;
+        };
+        var land = function (target) {
+          if (!target || target.matches('main, body') || target.getAttribute('data-land') === 'own') return;
+          var header = stays();
+          var top = header ? header.getBoundingClientRect().height : 0;
+          var air = (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16) * 1.5;
+          var pad = parseFloat(getComputedStyle(target).paddingTop) || 0;
+          target.style.scrollMarginBlockStart = Math.round(top + air - pad) + 'px';
+        };
+        var every = function () {
+          document.querySelectorAll('section[id], [data-jtk-block][id]').forEach(land);
+        };
+        every();
+        addEventListener('resize', every, { passive: true });
+        document.addEventListener('click', function (event) {
+          var link = event.target instanceof Element ? event.target.closest('a[href*="#"]') : null;
+          if (!link) return;
+          var url = new URL(link.href, location.href);
+          if (url.pathname !== location.pathname || url.hash.length < 2) return;
+          try { land(document.getElementById(decodeURIComponent(url.hash.slice(1)))); } catch (_) {}
+        }, true);
+        // Arrived from another page with a hash: the browser jumped before the
+        // offsets were set, so land again once the page is laid out.
+        if (location.hash.length > 1) {
+          addEventListener('load', function () {
+            try {
+              var target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+              if (target) { land(target); target.scrollIntoView({ block: 'start' }); }
+            } catch (_) {}
+          });
+        }
+      })();
+    </script>
   </body>
 </html>

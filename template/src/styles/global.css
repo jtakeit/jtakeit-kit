@@ -215,9 +215,10 @@
  * Where a link lands. Without this the target's border box goes to the top of
  * the screen — which on a section with generous top padding means arriving at
  * an empty screen, with the heading the visitor came for still below the fold.
- * Every anchor target sets its own offset: a positive one to keep air above a
- * panel's visible edge, a negative one to pull past padding that carries no
- * meaning. See the Composition floor in the astro-kit skill.
+ * Layout.astro sets each section's offset from the header that stays and the
+ * section's own top padding, so its first words land just under the header
+ * (the floor's F9); this is the value without scripts, and for a target that
+ * is not a section. A target that sets its own says `data-land="own"`.
  */
 [id] {
   scroll-margin-block-start: 1.5rem;
