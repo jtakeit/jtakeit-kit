@@ -1,0 +1,307 @@
+---
+/**
+ * The first screen, in the gloss look: the name, one line, «Book» — on a
+ * ground of liquid lacquer, the best photograph standing in it in an arched
+ * frame.
+ *
+ * The ground is the design document's hero field (`field` in jtk/design.json,
+ * docs/hero-motion.md): `lacquer` is this look's, poured in the palette's
+ * `lacquer` and `lacquer-light`; any other field is drawn in the document's
+ * four `colors`, or in the palette's where it gives none; `""` is no field, and
+ * then the first screen is the page's own paper and its ink. The field is
+ * started only after the page has loaded and fades in over a still ground of
+ * the same colours, so the heading, the button and the photograph paint first
+ * — and without WebGL, on a software renderer, with less motion asked for or a
+ * context lost, the still ground is what stays.
+ *
+ * Every value is the block's, annotated through the door (`block.at`); the
+ * photograph is the page's largest picture and the one loaded eagerly. The
+ * Instagram link is the shared contacts' (`social`), drawn where there is one.
+ */
+import type { Block } from '@jtakeit/kit/content';
+import Shot from '../Shot.astro';
+import Button from '../site/Button.astro';
+import HeroField from '../motion/HeroField.astro';
+import type { Field } from '../motion/fields';
+import { site } from '../../lib/site';
+import { linkTo } from '../../lib/under';
+import { withLocale } from '../../lib/locale';
+import design from '../../../jtk/design.json';
+
+interface Props {
+  block: Block;
+  locale: string;
+}
+
+const { block, locale } = Astro.props;
+const shot = block.picture('image');
+/** A link of the content, in this page's language. */
+const go = (href: string): string => {
+  if (!href.startsWith('/') || href.startsWith('//')) return linkTo(href);
+  const [path, hash] = href.split('#');
+  return `${linkTo(withLocale(locale, path || '/'))}${hash ? `#${hash}` : ''}`;
+};
+const title = block.text('title');
+
+// The ground: the document's field, in the lacquer's colours or its own.
+const field = (typeof design.field === 'string' ? design.field : '') as Field | '';
+const own = Array.isArray(design.colors) && design.colors.filter(Boolean).length === 4 ? (design.colors as string[]) : null;
+const colors =
+  field === 'lacquer'
+    ? ['var(--lacquer)', 'var(--lacquer-light)', 'var(--lacquer-deep)', 'var(--lacquer-sheen)']
+    : (own ?? ['var(--lacquer)', 'var(--lacquer-light)', 'var(--accent)', 'var(--lacquer-deep)']);
+const painted = field !== '';
+
+// The business's Instagram, from the shared contacts: the first social link that is one.
+const social = site.facts(locale).rows('social');
+const insta = social.find((row) => /instagram\.com/i.test(row.text('url')));
+const handle = insta ? (/instagram\.com\/([^/?#]+)/i.exec(insta.text('url'))?.[1] ?? '') : '';
+---
+
+<section class:list={['hx', painted ? 'hx--painted' : 'hx--paper', !shot.src && 'hx--bare']} data-ground={painted ? 'dark' : undefined}>
+  {
+    painted && (
+      <HeroField field={field as Field} colors={colors} ground="var(--lacquer-deep)" class="hx__field" grain={0.25} speed={1} />
+    )
+  }
+  {painted && <div class="hx__scrim" aria-hidden="true" />}
+
+  <div class="hx__in">
+    <div class="hx__words">
+      {block.text('eyebrow') && <p class="label hx__eyebrow" {...{ ...block.at('eyebrow'), ...block.lang('eyebrow') }}>{block.text('eyebrow')}</p>}
+      {title && <h1 class="hx__title" {...{ ...block.at('title'), ...block.lang('title') }}>{title}</h1>}
+      {block.text('lead') && <p class="hx__lead" {...{ ...block.at('lead'), ...block.lang('lead') }}>{block.text('lead')}</p>}
+      {
+        (block.text('cta_label') || block.text('more_label')) && (
+          <p class="hx__actions">
+            {block.text('cta_label') && (
+              <Button href={go(block.text('cta_href') || '#book')} label={block.text('cta_label')} at={block.at('cta_label')} lang={block.lang('cta_label')} />
+            )}
+            {block.text('more_label') && (
+              <Button href={go(block.text('more_href') || '#services')} label={block.text('more_label')} at={block.at('more_label')} lang={block.lang('more_label')} quiet />
+            )}
+          </p>
+        )
+      }
+      {
+        insta && (
+          <a class="hx__insta" href={insta.text('url')} rel="noopener me" target="_blank">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="1.6" />
+              <circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.6" />
+              <circle cx="17.4" cy="6.6" r="1.1" fill="currentColor" />
+            </svg>
+            {insta.text('label') ? <span {...{ ...insta.at('label'), ...insta.lang('label') }}>{insta.text('label')}</span> : <span data-jtk-fixed>{handle ? `@${handle}` : 'Instagram'}</span>}
+            <span aria-hidden="true">↗</span>
+          </a>
+        )
+      }
+    </div>
+
+    {
+      shot.src && (
+        <div class="hx__stage">
+          <Shot
+            name={shot.src}
+            alt={shot.alt}
+            lang={shot.lang}
+            path={shot['data-jtk-path']}
+            focus={shot.focus}
+            ratio="4 / 5"
+            class="hx__shot"
+            eager
+            width={900}
+            sizes="(min-width: 60rem) 26rem, 78vw"
+          />
+        </div>
+      )
+    }
+  </div>
+</section>
+
+<style>
+  .hx {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    display: grid;
+    align-items: center;
+    min-block-size: min(calc(var(--screen) * 0.94), 60rem);
+    padding: clamp(6.5rem, calc(var(--screen) * 0.15), 9rem) var(--gutter) clamp(3rem, calc(var(--screen) * 0.08), 5.5rem);
+  }
+
+  /* On the lacquer the words are light, whatever the page's ink. */
+  .hx--painted {
+    --ink: var(--on-lacquer);
+    --ink-quiet: var(--on-lacquer-quiet);
+    color: var(--on-lacquer);
+    background: var(--lacquer-deep);
+  }
+
+  .hx :global(.hx__field) {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+  }
+
+  /*
+   * The scrim: the lacquer is kept quiet where the words are — to the left on
+   * a wide screen, at the top on a phone — so the heading reads in every
+   * frame of it, not only in the first.
+   */
+  .hx__scrim {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      linear-gradient(90deg, color-mix(in srgb, var(--lacquer-deep) 82%, transparent) 0%, color-mix(in srgb, var(--lacquer-deep) 40%, transparent) 42%, transparent 68%),
+      linear-gradient(0deg, color-mix(in srgb, var(--lacquer-deep) 55%, transparent) 0%, transparent 35%);
+  }
+
+  .hx__in {
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    gap: clamp(2rem, 6vw, 6rem);
+    align-items: center;
+    inline-size: var(--shell);
+    margin-inline: auto;
+  }
+
+  .hx--bare .hx__in {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hx__words {
+    display: grid;
+    gap: var(--space-5);
+    justify-items: start;
+  }
+
+  .hx__eyebrow {
+    color: var(--ink-quiet);
+  }
+
+  .hx__title {
+    max-inline-size: 14ch;
+    font-family: var(--font-display);
+    font-size: var(--step-6);
+    font-weight: 400;
+    line-height: var(--leading-display);
+    letter-spacing: var(--tracking-display);
+    color: var(--ink);
+    text-wrap: balance;
+  }
+
+  .hx__lead {
+    margin: 0;
+    max-inline-size: 30rem;
+    font-size: var(--step-1);
+    line-height: 1.5;
+    color: var(--ink-quiet);
+  }
+
+  .hx__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin: var(--space-2) 0 0;
+  }
+
+  /* The quiet button on the lacquer: its glass is the dark one (data-ground). */
+  .hx--painted .hx__actions :global(.b--quiet) {
+    color: var(--on-lacquer);
+  }
+
+  .hx__insta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-block: 0.25rem;
+    color: var(--ink-quiet);
+    font-size: 0.92rem;
+    text-decoration: none;
+    transition: color 200ms var(--ease-out);
+  }
+
+  .hx__insta:hover {
+    color: var(--ink);
+  }
+
+  .hx__stage {
+    position: relative;
+    justify-self: end;
+    inline-size: min(100%, 26rem);
+  }
+
+  /*
+   * The photograph in an arch: the frame a nail studio, a barber's chair or a
+   * treatment room all wear well, and the one shape no Instagram grid has.
+   */
+  .hx__stage :global(.hx__shot .shot__frame) {
+    border-radius: 999px 999px var(--r-3) var(--r-3);
+    box-shadow:
+      0 0 0 1px rgb(255 255 255 / 0.14),
+      0 40px 80px -36px rgb(0 0 0 / 0.65);
+  }
+
+  .hx--paper .hx__stage :global(.hx__shot .shot__frame) {
+    box-shadow: var(--lift-shadow);
+  }
+
+  /* The words arrive once, from where they already are: no hidden first paint. */
+  :global(html.js) .hx__words > * {
+    animation: hx-rise 900ms var(--ease-out) both;
+    animation-delay: calc(var(--n, 0) * 90ms);
+  }
+  .hx__words > :nth-child(2) { --n: 1; }
+  .hx__words > :nth-child(3) { --n: 2; }
+  .hx__words > :nth-child(4) { --n: 3; }
+  .hx__words > :nth-child(5) { --n: 4; }
+
+  @keyframes hx-rise {
+    from {
+      translate: 0 0.6rem;
+    }
+  }
+
+  :global(html.js) .hx__stage {
+    animation: hx-settle 1.2s var(--ease-out) both;
+  }
+
+  @keyframes hx-settle {
+    from {
+      translate: 0 1.25rem;
+      scale: 0.985;
+    }
+  }
+
+  @media (max-width: 860px) {
+    .hx {
+      align-items: start;
+      min-block-size: 0;
+      padding-block-start: clamp(6rem, calc(var(--screen) * 0.14), 8rem);
+    }
+
+    .hx__in {
+      grid-template-columns: minmax(0, 1fr);
+      gap: clamp(2rem, 8vw, 3rem);
+    }
+
+    .hx__stage {
+      justify-self: center;
+      inline-size: min(78vw, 22rem);
+    }
+
+    .hx__scrim {
+      background: linear-gradient(180deg, color-mix(in srgb, var(--lacquer-deep) 70%, transparent) 0%, color-mix(in srgb, var(--lacquer-deep) 35%, transparent) 45%, transparent 70%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(html.js) .hx__words > *,
+    :global(html.js) .hx__stage {
+      animation: none;
+    }
+  }
+</style>

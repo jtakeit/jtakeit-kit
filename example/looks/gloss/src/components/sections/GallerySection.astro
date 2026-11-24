@@ -1,0 +1,157 @@
+---
+/**
+ * The work, in the gloss look: «Works» — the block's pictures, from the site's
+ * media library, opened whole with a tap (the template's Lightbox), each frame
+ * leaning toward the pointer as it passes, and a swipe from one to the next on
+ * a phone.
+ *
+ * The block's `arrangement` is the studio's (docs/gallery.md). `ragged`, the
+ * example's, is drawn here as the look's own wall: frames of one proportion,
+ * as many columns as the pictures fill evenly — the first piece given four
+ * cells where that fills them too — and on a phone one row to swipe, a piece
+ * and the edge of the next on the screen. Any other arrangement is the
+ * template's Gallery, in the same lightbox.
+ *
+ * Each picture carries its own annotation (`images[<key>].src`), so the
+ * owner replaces one, describes one, or adds one in the panel — and a tap the
+ * panel takes for itself opens no lightbox.
+ */
+import type { Block } from '@jtakeit/kit/content';
+import Shot from '../Shot.astro';
+import Gallery from '../gallery/Gallery.astro';
+import Lightbox from '../gallery/Lightbox.astro';
+import { ARRANGEMENTS, type Arrangement } from '../gallery/galleries';
+
+interface Props {
+  block: Block;
+  locale: string;
+  first?: boolean;
+}
+
+const { block, locale, first = false } = Astro.props;
+const pictures = block.gallery('images');
+const asked = String(block.value('arrangement') ?? 'ragged') as Arrangement;
+const arrangement: Arrangement = ARRANGEMENTS.includes(asked) ? asked : 'ragged';
+const wall = arrangement === 'ragged';
+// Columns the pictures fill evenly — and the first piece four cells where that fills them too.
+const columns = [4, 3, 2].find((n) => pictures.length >= n && pictures.length % n === 0) ?? 4;
+const featured = pictures.length >= 7 && (pictures.length + 3) % columns === 0;
+const pieces = pictures.map((one) => ({ name: one.src, alt: one.alt, path: one['data-jtk-path'], lang: one.lang, focus: one.focus }));
+---
+
+<section class="s works" id={first ? 'gallery' : undefined}>
+  <div class="s__in">
+    <div class="s__head works__head" data-reveal="float">
+      {block.text('eyebrow') && <p class="label label--accent" {...{ ...block.at('eyebrow'), ...block.lang('eyebrow') }}>{block.text('eyebrow')}</p>}
+      {block.text('title') && <h2 class="s__title" {...{ ...block.at('title'), ...block.lang('title') }}>{block.text('title')}</h2>}
+    </div>
+    {
+      pieces.length > 0 && (
+        <Lightbox locale={locale} tilt class="works__box">
+          {wall ? (
+            <ul class:list={['works__wall', featured && 'works__wall--featured']} style={`--works-columns:${columns}`}>
+              {pieces.map((piece, at) => (
+                <li class="works__cell" data-reveal="float" style={`--i:${at % columns}`}>
+                  <Shot
+                    name={piece.name}
+                    alt={piece.alt}
+                    lang={piece.lang}
+                    path={piece.path}
+                    focus={piece.focus}
+                    ratio="4 / 5"
+                    width={featured && at === 0 ? 1100 : 640}
+                    sizes={featured && at === 0 ? '(min-width: 62rem) 38rem, 80vw' : '(min-width: 62rem) 19rem, (min-width: 40rem) 30vw, 72vw'}
+                  />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Gallery arrangement={arrangement} items={pieces} />
+          )}
+        </Lightbox>
+      )
+    }
+  </div>
+</section>
+
+<style>
+  .works__wall {
+    display: grid;
+    grid-template-columns: repeat(var(--works-columns, 4), minmax(0, 1fr));
+    gap: clamp(0.75rem, 1.6vw, 1.25rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .works__wall--featured .works__cell:first-child {
+    grid-column: span 2;
+    grid-row: span 2;
+  }
+
+  .works__cell {
+    min-inline-size: 0;
+  }
+
+  .works__cell :global(figure.shot) {
+    margin: 0;
+    overflow: hidden;
+    border-radius: var(--r-3);
+    block-size: 100%;
+  }
+
+  .works__cell :global(.shot__frame) {
+    border-radius: inherit;
+    block-size: 100%;
+  }
+
+  /* The featured piece fills its four cells, whatever its own proportion. */
+  .works__wall--featured .works__cell:first-child :global(.shot__frame) {
+    aspect-ratio: auto !important;
+  }
+
+  .works__cell :global(img) {
+    block-size: 100%;
+  }
+
+  /* A tablet: three columns, the feature dropped — it was cut for the wider wall. */
+  @media (max-width: 61.99rem) {
+    .works__wall {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .works__wall--featured .works__cell:first-child {
+      grid-column: auto;
+      grid-row: auto;
+    }
+    .works__wall--featured .works__cell:first-child :global(.shot__frame) {
+      aspect-ratio: 4 / 5 !important;
+    }
+  }
+
+  /*
+   * A phone: one row to swipe, snapped, a piece and the edge of the next on
+   * the screen (docs/compositions.md, «phones by rule») — never eight
+   * photographs stacked into a page of their own. The row runs to the
+   * screen's edges and starts at the text's.
+   */
+  @media (max-width: 40rem) {
+    .works__wall {
+      grid-template-columns: none;
+      grid-auto-flow: column;
+      grid-auto-columns: 72%;
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      scroll-snap-type: x mandatory;
+      scroll-padding-inline: var(--gutter);
+      margin-inline: calc(var(--gutter) * -1);
+      padding: 0.25rem var(--gutter) 0.75rem;
+      scrollbar-width: none;
+    }
+    .works__wall::-webkit-scrollbar {
+      display: none;
+    }
+    .works__cell {
+      scroll-snap-align: start;
+    }
+  }
+</style>

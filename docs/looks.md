@@ -2,17 +2,19 @@
 
 `jtk create` lays out one site — the same sections, collections, pages,
 shared text, booking, shop and lead behaviour, accessibility, live render,
-door and schema — in one of two looks:
+door and schema — in one of three looks:
 
 ```bash
 npx @jtakeit/astro create <slug> --name "The Business"                 # brumy, the default
 npx @jtakeit/astro create <slug> --name "The Business" --look bare     # no art direction
+npx @jtakeit/astro create <slug> --name "The Business" --look gloss    # the booking page's
 ```
 
 | look | what it is | when |
 | --- | --- | --- |
 | `brumy` | The example in the design system of Brumy (brumy.ch), the company that makes jtakeit: its palette, its three typefaces, the glass, the pill button, the light across the hero's heading, the wordmark at the foot. | The developer is happy to start from Brumy's design: kept, or adapted by its tokens (`src/styles/tokens.css`, [scaffold.md](scaffold.md)). |
 | `bare` | The same site with no design: the system's own type, a few neutral colours, one radius, the focus ring, plain sections in the document's order. | **A custom design** — from the business's own site, its brand, or references the person gave. |
+| `gloss` | The booking page's ([booking-page.md](booking-page.md)): a porcelain page, Fraunces over Inter, the hero in liquid lacquer (`field: "lacquer"`) with the best photograph in an arch, cards for the services, a wall of the work with a lightbox, every block arriving from a visible rest (`float`). Its colours are the palette, below. Seeded from Lacqué (wiki/117 §3, «a gloss look»). | A specialist's page from Instagram — `--kind booking-page` lays it by default — or a site that wants that feel. It draws the hero, the services, the gallery, the contact, the header and the type; any other section is Brumy's structure in its colours. |
 
 `jtk/design.json` says which (`"look": "brumy"` or `"look": "bare"`), and
 `jtk add` lays a section or a module in the look the site says. Once the
@@ -70,6 +72,55 @@ the same in both:
 | `src/styles/tokens.css`, `look.css` | `src/content/blocks.ts`, `src/components/sections/index.ts` |
 | `src/components/site/Look.astro`, `Header.astro`, `Footer.astro`, `Button.astro` | `src/components/site/Hours.astro`, `Label.astro`, `Page.astro`, `words.ts` |
 | every section in `src/components/sections/` | the imprint, the shop's components and pages, every template component |
+
+## The palette
+
+A site's colours are in one place: `palette` in `jtk/design.json`, eight
+names, a six-digit hex each. Layout.astro writes them on `<html>` as the
+look's tokens — every look's components read the same names — so writing
+that one object recolours the whole site, the hero's lacquer included; an
+empty value keeps the look's own token.
+
+```json
+"palette": {
+  "background": "#faf6f3",
+  "surface": "#ffffff",
+  "ink": "#1c1215",
+  "muted": "#6b5a5f",
+  "accent": "#7d0f24",
+  "accent-ink": "#6a0c1e",
+  "lacquer": "#750b1f",
+  "lacquer-light": "#c23a52"
+}
+```
+
+| name | what it colours | the token |
+| --- | --- | --- |
+| `background` | the page | `--paper` |
+| `surface` | a card, the booking form, the header's capsule | `--panel`, `--paper-lift`, `--surface` |
+| `ink` | the words | `--ink` |
+| `muted` | the quieter words: a line under a heading, a length, a label | `--ink-quiet` |
+| `accent` | the button that books, the one colour | `--accent` (the words on it chosen by its lightness: `--on-accent`) |
+| `accent-ink` | the accent as words on the background — a price, a link, the form's filled steps | `--accent-ink`, `--accent-deep` (and `--on-accent-deep` by its lightness) |
+| `lacquer` | the hero's liquid lacquer, its body in shadow | `--lacquer` |
+| `lacquer-light` | the same lacquer where the light lands | `--lacquer-light` |
+
+The lines and the recessed ground are made from `background` and `ink`; the
+lacquer's deep and its sheen from the lacquer pair (`--lacquer-deep`,
+`--lacquer-sheen` in the gloss look's tokens). `ink`, `muted` and `accent-ink`
+should read at 4.5:1 on `background` and `surface`.
+
+**«Use this palette».** A palette widget hands the agent these eight names and
+their values; the agent writes them into `jtk/design.json`'s `palette` as they
+are — one file, no component — and builds. Without a terminal that is one
+`write_files` of `jtk/design.json`, the rest of the document as it was. The
+older `paper`, `ink` and `accent` beside it still work, and the palette wins
+over them where both say.
+
+A booking page starts from its vertical's palette — nails, hair, barber,
+lashes, massage, cosmetology, tattoo, coach, trainer, therapist
+(`lib/units/palettes.mjs`) — a starting point for the trade, to be replaced
+by the business's own colours.
 
 ## A trade's photographs
 

@@ -36,6 +36,7 @@ import { fileURLToPath } from 'node:url';
 import { ORDER } from '../lib/units/index.mjs';
 import { SITE, wordsIn } from '../lib/units/units.mjs';
 import { PHOTOS, PHOTO_SETS, MEDIA, slotOf } from '../lib/units/photos.mjs';
+import { bookingWords } from '../lib/units/bookingPage.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'example', 'prints.json');
@@ -64,6 +65,8 @@ for (const lang of ['en', 'de']) {
     if (unit.examples) values.push(...unit.examples(x));
   }
   values.push(...SITE.shared(x), SITE.index(x), ...Object.values(SITE.pages).map((make) => make(x)));
+  // The booking page's own words over the example's (`jtk create --kind booking-page`).
+  values.push(bookingWords(x));
   for (const [key, text] of values.flatMap((one) => strings(one))) {
     if (SKIP.has(key) || text.includes(NAME)) continue;
     const pieces = [text, ...text.split(/\n+/), ...text.split(/\n\s*\n/)].map(normalise).filter(Boolean);
