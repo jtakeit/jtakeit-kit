@@ -14,12 +14,24 @@ npx @jtakeit/astro create <slug> --kind booking-page --vertical nails --name "St
 | --- | --- |
 | `--kind booking-page` | this kind; without it `jtk create` lays a full site, as always |
 | `--vertical` | nails, hair, barber, lashes, massage, cosmetology, tattoo, coach, trainer, therapist (and their usual words: manicure, brows, spa, tattooist, personal-trainer, psychologist…) — chooses the palette and the trade's example photographs; none is a nail studio's |
-| `--kit` | the booking kit the diary is: `salon` by default — appointments with somebody who does them — or another kind, or a file of one (`--kit ./salon.json`, which is how the platform runs it offline) |
+| `--kit` | the booking kit the diary is: `salon` by default — appointments with somebody who does them, one person laid out who does every service — or another kind, or a file of one (`--kit ./salon.json`, which is how the platform runs it offline). `sessions` for classes (a coach's, a trainer's groups): the price list is on the page the same way, written as the kit's classes, and each class's timetable is the brief's — never made up |
 | `--name`, `--locale`, `--locales`, `--photos`, `--look`, `--out`, `--no-git` | as for any site ([scaffold.md](scaffold.md)) |
 
 `--blog` and `--without` are refused: the page lays its own sections; add or
-take away after it is laid. On the platform, `create_site` with the kind
-`booking-page` runs the same command in its builder.
+take away after it is laid. Any other `--kind` is a booking kit's, as it
+always was; one that is neither is refused and said as such.
+
+On the platform, `create_site` with the kind `booking-page` runs the same
+command in its builder, offline, with what it passes for a full site:
+
+```
+jtk create [<slug>] --kind booking-page --kit <kit-file> --photos <set> --locale <xx> --name <name> --no-git --out <dir>
+```
+
+The slug may be left out there: it is then the directory `--out` names, else
+the business's name made one. Nothing prompts. No currency is needed to build
+or to preview — the prices read as plain numbers until `jtk/site.json` says
+one, as the agent sets it from the business's price list.
 
 ## What is on the page
 
@@ -51,9 +63,9 @@ nothing else — the rest it reads from the Instagram profile and says back:
 2. **Services and prices.** Each one's name, how long it takes and what it
    costs — and the currency, which is `create_site`'s. One entry a service in
    `jtk/entries/services/`, the example's five replaced, not added to.
-3. **Palette.** Their colours — or a palette widget's «Use this palette»:
-   `background`, `surface`, `ink`, `muted`, `accent`, `accent-ink`, `lacquer`,
-   `lacquer-light`, into `palette` in `jtk/design.json` as they come
+3. **Palette.** Their colours — or the palette widget's «Use the palette …»:
+   `bg`, `surface`, `ink`, `muted`, `accent`, `accentInk`, `lacquerA`,
+   `lacquerB`, into `palette` in `jtk/design.json` name for name
    ([looks.md](looks.md#the-palette)). Without an answer the vertical's palette
    stays.
 
@@ -75,7 +87,7 @@ page, Fraunces over Inter, its colours the palette — with motion on by
 default and every bit of it safe to lose:
 
 - **The hero field `lacquer`** ([hero-motion.md](hero-motion.md)): liquid
-  polish in the palette's `lacquer` and `lacquer-light`, the light leaning to
+  polish in the palette's `lacquerA` and `lacquerB`, the light leaning to
   the pointer. Compiled only after the page has loaded and faded in over a
   still ground of the same colours: the heading, the button and the
   photograph paint first. No WebGL, a software renderer, reduced motion, a

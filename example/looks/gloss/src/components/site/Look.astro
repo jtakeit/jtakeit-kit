@@ -24,7 +24,7 @@ import text from '@fontsource/inter/files/inter-latin-400-normal.woff2?url';
 import design from '../../../jtk/design.json';
 
 // The browser's chrome in the page's own colour.
-const said = (design as { palette?: Record<string, unknown> }).palette?.background;
+const said = (design as { palette?: Record<string, unknown> }).palette?.bg;
 const theme = typeof said === 'string' && /^#[0-9a-f]{6}$/i.test(said) ? said : '#faf6f3';
 ---
 

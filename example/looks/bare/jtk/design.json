@@ -8,14 +8,14 @@
   "ink": "#1a1a1a",
   "accent": "#1a1a1a",
   "palette": {
-    "background": "",
+    "bg": "",
     "surface": "",
     "ink": "",
     "muted": "",
     "accent": "",
-    "accent-ink": "",
-    "lacquer": "",
-    "lacquer-light": ""
+    "accentInk": "",
+    "lacquerA": "",
+    "lacquerB": ""
   },
   "surface": {
     "pattern": "",

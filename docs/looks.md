@@ -76,46 +76,52 @@ the same in both:
 ## The palette
 
 A site's colours are in one place: `palette` in `jtk/design.json`, eight
-names, a six-digit hex each. Layout.astro writes them on `<html>` as the
-look's tokens — every look's components read the same names — so writing
-that one object recolours the whole site, the hero's lacquer included; an
-empty value keeps the look's own token.
+names — the palette widget's (`choose_palette`), in its order — a six-digit
+hex each. Layout.astro writes them on `<html>` as the look's tokens — every
+look's components read the same tokens — so writing that one object
+recolours the whole site, the hero's lacquer included; an empty value keeps
+the look's own token.
 
 ```json
 "palette": {
-  "background": "#faf6f3",
+  "bg": "#faf6f3",
   "surface": "#ffffff",
   "ink": "#1c1215",
   "muted": "#6b5a5f",
   "accent": "#7d0f24",
-  "accent-ink": "#6a0c1e",
-  "lacquer": "#750b1f",
-  "lacquer-light": "#c23a52"
+  "accentInk": "#ffffff",
+  "lacquerA": "#750b1f",
+  "lacquerB": "#c23a52"
 }
 ```
 
 | name | what it colours | the token |
 | --- | --- | --- |
-| `background` | the page | `--paper` |
+| `bg` | the page | `--paper` |
 | `surface` | a card, the booking form, the header's capsule | `--panel`, `--paper-lift`, `--surface` |
-| `ink` | the words | `--ink` |
+| `ink` | the words — 7:1 or more on `bg` | `--ink` |
 | `muted` | the quieter words: a line under a heading, a length, a label | `--ink-quiet` |
-| `accent` | the button that books, the one colour | `--accent` (the words on it chosen by its lightness: `--on-accent`) |
-| `accent-ink` | the accent as words on the background — a price, a link, the form's filled steps | `--accent-ink`, `--accent-deep` (and `--on-accent-deep` by its lightness) |
-| `lacquer` | the hero's liquid lacquer, its body in shadow | `--lacquer` |
-| `lacquer-light` | the same lacquer where the light lands | `--lacquer-light` |
+| `accent` | the button that books, every filled control, the one colour | `--accent`, `--accent-deep` |
+| `accentInk` | the words on the accent — 4.5:1 or more on it | `--on-accent`, `--on-accent-deep` |
+| `lacquerA` | the hero's liquid lacquer, its body in shadow | `--lacquer` |
+| `lacquerB` | the same lacquer where the light lands | `--lacquer-light` |
 
-The lines and the recessed ground are made from `background` and `ink`; the
-lacquer's deep and its sheen from the lacquer pair (`--lacquer-deep`,
-`--lacquer-sheen` in the gloss look's tokens). `ink`, `muted` and `accent-ink`
-should read at 4.5:1 on `background` and `surface`.
+Made from them, not written: the accent as words on the page — a price, a
+link — from `accent` and `ink` (`--accent-ink`); the lines and the recessed
+ground from `bg` and `ink`; the lacquer's deep and its sheen from the lacquer
+pair (`--lacquer-deep`, `--lacquer-sheen` in the gloss look's tokens). Without
+`accentInk` the words on the accent are chosen by its lightness.
 
-**«Use this palette».** A palette widget hands the agent these eight names and
-their values; the agent writes them into `jtk/design.json`'s `palette` as they
-are — one file, no component — and builds. Without a terminal that is one
-`write_files` of `jtk/design.json`, the rest of the document as it was. The
-older `paper`, `ink` and `accent` beside it still work, and the palette wins
-over them where both say.
+**«Use the palette».** The widget's message names the eight with their values —
+«Use the palette "Blush": bg #f7ece9, surface #fffaf8, ink #2a1215, muted
+#6e4f52, accent #8e1b2c, accentInk #ffffff, lacquerA #b0243a, lacquerB
+#f2b8c0» — and the agent writes them into `jtk/design.json`'s `palette`, name
+for name, value for value: one file, no component, the rest of the document
+as it was. Without a terminal that is one `write_files` of `jtk/design.json`,
+then a build. The older `paper`, `ink` and `accent` beside it still work, and
+the palette wins over them where both say; a palette written in the CSS-minded
+names (`background`, `accent-ink`, `lacquer`, `lacquer-light`) is read as the
+same, but the eight above are the ones to write.
 
 A booking page starts from its vertical's palette — nails, hair, barber,
 lashes, massage, cosmetology, tattoo, coach, trainer, therapist

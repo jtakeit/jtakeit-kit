@@ -143,32 +143,35 @@ const luminance = (hex: string): number | null => {
 
 /*
  * The palette (docs/looks.md, «The palette»): one object in jtk/design.json,
- * eight colours by name — what an agent writes once, and what a palette widget's
- * «Use this palette» hands it — read here and nowhere else:
+ * eight colours by the palette widget's names — what its «Use the palette …»
+ * says and an agent writes once, one to one — read here and nowhere else:
  *
- *   background     the page                       → --paper
- *   surface        a card, the form, the header   → --panel, --paper-lift
- *   ink            the words                      → --ink
- *   muted          the quieter words              → --ink-quiet
- *   accent         the button, the one colour     → --accent (the words on it chosen by its lightness)
- *   accent-ink     the accent as words on the page → --accent-ink, --accent-deep
- *   lacquer        the hero's polish, in shadow   → --lacquer
- *   lacquer-light  the same polish, lit           → --lacquer-light
+ *   bg         the page                                → --paper
+ *   surface    a card, the form, the header           → --panel, --paper-lift, --surface
+ *   ink        the words                              → --ink
+ *   muted      the quieter words                      → --ink-quiet
+ *   accent     the button that books, the one colour  → --accent, --accent-deep
+ *   accentInk  the words on the accent                → --on-accent, --on-accent-deep
+ *   lacquerA   the hero's lacquer, its body           → --lacquer
+ *   lacquerB   the same lacquer, lit                  → --lacquer-light
  *
  * A six-digit hex each; an empty one keeps the look's own token. It wins over
- * the older `paper`, `ink` and `accent` beside it, which it replaces.
+ * the older `paper`, `ink` and `accent` beside it, which it replaces. The
+ * CSS-minded names an agent may reach for (`background`, `accent-ink`,
+ * `lacquer`, `lacquer-light`) are read as the palette's own.
  */
 const SAID = ((DESIGN as { palette?: Record<string, unknown> }).palette ?? {}) as Record<string, unknown>;
 const hexOf = (value: unknown): string => (typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value.trim()) ? value.trim() : '');
+const said = (...names: string[]): string => names.map((one) => hexOf(SAID[one])).find(Boolean) ?? '';
 const PALETTE = {
-  background: hexOf(SAID.background) || DESIGN.paper || '',
-  surface: hexOf(SAID.surface),
-  ink: hexOf(SAID.ink) || DESIGN.ink || '',
-  muted: hexOf(SAID.muted),
-  accent: hexOf(SAID.accent) || DESIGN.accent || '',
-  accentInk: hexOf(SAID['accent-ink']),
-  lacquer: hexOf(SAID.lacquer),
-  lacquerLight: hexOf(SAID['lacquer-light']),
+  background: said('bg', 'background') || DESIGN.paper || '',
+  surface: said('surface'),
+  ink: said('ink') || DESIGN.ink || '',
+  muted: said('muted'),
+  accent: said('accent') || DESIGN.accent || '',
+  onAccent: said('accentInk', 'accent-ink'),
+  lacquer: said('lacquerA', 'lacquer'),
+  lacquerLight: said('lacquerB', 'lacquer-light'),
 };
 
 const paperLuma = PALETTE.background ? luminance(PALETTE.background) : null;
@@ -221,19 +224,25 @@ if (PALETTE.surface) {
   palette['--surface'] = PALETTE.surface;
 }
 if (PALETTE.muted) palette['--ink-quiet'] = PALETTE.muted;
-if (PALETTE.accentInk) {
-  palette['--accent-ink'] = PALETTE.accentInk;
-  palette['--accent-deep'] = PALETTE.accentInk;
-  // A control filled with it (the booking form's steps) carries words too: by its lightness, as on the accent.
-  palette['--on-accent-deep'] = (luminance(PALETTE.accentInk) ?? 0) > 0.195 ? '#16130f' : '#ffffff';
+/*
+ * The words on the accent, where the palette says them (the widget holds them
+ * at 4.5:1): on the button and on every filled control — the deep accent is
+ * the accent itself then, so the pair it was checked as is the pair drawn.
+ * The accent as words on the page is made from it and the ink.
+ */
+if (PALETTE.onAccent) {
+  palette['--on-accent'] = PALETTE.onAccent;
+  palette['--on-accent-deep'] = PALETTE.onAccent;
+  if (PALETTE.accent) palette['--accent-deep'] = PALETTE.accent;
 }
+if (said('accent')) palette['--accent-ink'] = 'color-mix(in srgb, var(--accent) 72%, var(--ink))';
 if (PALETTE.accent) {
   const n = parseInt(PALETTE.accent.slice(1), 16);
   palette['--glow'] = `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`;
 }
 if (PALETTE.lacquer) palette['--lacquer'] = PALETTE.lacquer;
 if (PALETTE.lacquerLight) palette['--lacquer-light'] = PALETTE.lacquerLight;
-if (hexOf(SAID.background)) {
+if (said('bg', 'background')) {
   palette['--line'] = 'color-mix(in srgb, var(--ink) 13%, var(--paper))';
   if (!invertedPage) palette['--paper-deep'] = 'color-mix(in srgb, var(--paper) 94%, var(--ink))';
 }

@@ -11,7 +11,7 @@ import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PALETTES, TOKENS, paletteFaults, paletteFor } from '../lib/units/palettes.mjs';
+import { PALETTES, TOKENS, namedOver, paletteFaults, paletteFor, paletteFromMessage } from '../lib/units/palettes.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const JTK = join(ROOT, 'bin', 'jtk.mjs');
@@ -76,6 +76,20 @@ test('--kind booking-page lays one page: four sections, the diary on /, the pric
   assert.match(text('studio-probe', 'BRIEF.md'), /The three questions/);
 });
 
+test('the builder\'s form: no slug, the directory named by --out, every flag a full site takes', () => {
+  const out = join(dir, 'anna-nails');
+  const run = spawnSync(process.execPath, [JTK, 'create', '--kind', 'booking-page', '--kit', KIT, '--photos', 'default', '--locale', 'de-CH', '--name', 'Nägel by Anna', '--no-git', '--out', out], { cwd: dir, encoding: 'utf8' });
+  assert.equal(run.status, 0, run.stderr);
+  assert.equal(JSON.parse(readFileSync(join(out, 'package.json'), 'utf8')).name, 'anna-nails');
+  // An unknown kind is refused and said as one, with or without --kit.
+  const unknown = create('probe-unknown', '--kind', 'booking_page');
+  assert.notEqual(unknown.status, 0);
+  assert.match(unknown.stderr, /booking-page/);
+  const alone = spawnSync(process.execPath, [JTK, 'create', 'probe-alone', '--no-git', '--kind', 'florist', '--api', 'http://127.0.0.1:9'], { cwd: dir, encoding: 'utf8' });
+  assert.notEqual(alone.status, 0);
+  assert.match(alone.stderr, /neither booking-page nor a booking kit/);
+});
+
 test('--kind <anything else> is still a booking kit, and the booking page refuses what is not for it', () => {
   const blog = create('probe-blog', '--kind', 'booking-page', '--blog');
   assert.notEqual(blog.status, 0);
@@ -89,7 +103,12 @@ test('--kind <anything else> is still a booking kit, and the booking page refuse
 });
 
 test('a palette is eight hex colours by name; every vertical has one, and an unknown one is the look\'s', () => {
-  assert.deepEqual(TOKENS, ['background', 'surface', 'ink', 'muted', 'accent', 'accent-ink', 'lacquer', 'lacquer-light']);
+  // The palette widget's names, in its order (choose_palette).
+  assert.deepEqual(TOKENS, ['bg', 'surface', 'ink', 'muted', 'accent', 'accentInk', 'lacquerA', 'lacquerB']);
+  const blush = paletteFromMessage('Use the palette "Blush": bg #f7ece9, surface #fffaf8, ink #2a1215, muted #6e4f52, accent #8e1b2c, accentInk #ffffff, lacquerA #b0243a, lacquerB #f2b8c0. (choose_palette: … — set all 8 as the site\'s colour tokens.)');
+  assert.deepEqual(Object.keys(blush), TOKENS);
+  assert.deepEqual(paletteFaults(blush), []);
+  assert.deepEqual(namedOver({ background: '#ffffff', 'lacquer-light': '#000000' }), { bg: '#ffffff', lacquerB: '#000000' });
   for (const [vertical, palette] of Object.entries(PALETTES)) assert.deepEqual(paletteFaults(palette), [], vertical);
   assert.deepEqual(paletteFor('Lash & Brow'.replace(' & ', '-')), PALETTES.lashes);
   assert.deepEqual(paletteFor('florist'), PALETTES.nails);

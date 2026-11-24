@@ -9,8 +9,8 @@
  * landing — named for what it is, not for whose it was (jtakeit-core wiki/117 §3).
  *
  * The colours here are the look's own, a cherry lacquer. A site's are not
- * written here: they are `palette` in jtk/design.json — background, surface,
- * ink, muted, accent, accent-ink, lacquer and lacquer-light — which Layout.astro
+ * written here: they are `palette` in jtk/design.json — bg, surface, ink,
+ * muted, accent, accentInk, lacquerA and lacquerB — which Layout.astro
  * writes over these on <html> (docs/looks.md, «The palette»). Every name is the
  * one Brumy's look and global.css use, so every component of the example
  * follows.
