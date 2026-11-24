@@ -157,9 +157,14 @@ a tap on the dark to close, focus back on the frame it came from.
   (`defaultPrevented`) opens nothing, so a picture is still replaced by
   tapping it. Without a script the frames are pictures.
 - Its few words (close, previous, next) are the component's, in nine languages.
+- **A picture inside a link is the link's** (`<a href>` around it — a post on
+  Instagram): it opens where the link goes, is no frame of the lightbox, and
+  is not counted among them.
 
-The gloss look's gallery (the booking page's «Works») is a wall of one
-proportion in it, and on a phone one row to swipe.
+The gloss look's gallery (the booking page's «Latest posts») is a wall of one
+proportion in it, and on a phone one row to swipe; a picture with `href` is a
+link to its post, and the block's `instagram` puts `@handle` beside the
+heading ([booking-page.md](booking-page.md#the-posts)).
 
 ## What it does not do
 

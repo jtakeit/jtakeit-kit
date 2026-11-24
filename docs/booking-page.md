@@ -42,14 +42,45 @@ Top to bottom, every word and picture content — none of it in a component:
 | **Hero** | the name, one line, «Book a time» and «Prices»; the best photograph in an arch; the Instagram link — on liquid lacquer | `jtk/pages/index.json`, block `hero0001` (`title`, `lead`, `eyebrow`, `cta_label`, `more_label`, `image`); the link from the contacts' `social` |
 | **Services and prices** | a card each: photograph, name, a line, how long, the price, «Book» — which chooses it in the form | `jtk/entries/services/<slug>.json` (`title`, `about`, `photo`, `takes` in minutes, `costs` as `{ "minor": 9500 }`); the head in block `serv0001` |
 | **The booking** | the template's booking form, under the services, at `#book` | the diary: `jtk/modules/bookings.json` (`page: "/"`, the hours, the rules); who does the services: `jtk/entries/masters/<slug>.json` — one entry is a solo business |
-| **Works** | the pictures from the media library, a wall that opens each whole (lightbox, a swipe between them on a phone, a tilt under a mouse) | block `gall0001`, `images`: `[{ "_key", "src": "media/<site>/<hash>.jpg", "alt" }]` |
+| **Latest posts** | the business's Instagram posts from the media library, a wall: a picture with its post opens the post in a new tab, a small Instagram glyph over it on hover; one without opens whole (lightbox, a swipe between them on a phone, a tilt under a mouse); `@handle` beside the heading, linked to the profile | block `gall0001`: `title`, `instagram`, `images`: `[{ "_key", "src": "media/<site>/<hash>.jpg", "alt", "href" }]` — see [the posts](#the-posts) |
 | **Location** | the address and a map link, the hours with «open now», the telephone and email, Instagram | `jtk/shared.json`: `contacts` (`street`, `postal_code`, `city`, `country`, `phone`, `email`, `maps`, `social`); the hours are the diary's (`jtk/modules/bookings.json`, `hours`); the heading in block `ctab0001` |
 | **Legal** | the imprint and the privacy page, linked from the foot | `jtk/pages/imprint.json` — the business's own lines; the privacy page is the template's, with the platform's processing link (`PROCESSING_URL`; jtakeit-core wiki/116) |
 
 Every one of them is placeholder until written: «Studio Muster», Musterstrasse
 1, «One line about what you do and for whom — say it in your own words», the
-example's prices, the trade's example photographs. The platform's advice says
+example's prices, the trade's example photographs, the handle `your_instagram`
+and its posts `https://www.instagram.com/p/your_post_1/` and on. The platform's advice says
 a page still shows them (`JTK_W_EXAMPLE_LEFT`).
+
+### The posts
+
+The gallery block, `gall0001` in `jtk/pages/index.json`, is what the platform
+writes when it builds the page from the business's Instagram (the owner,
+24 November 2026):
+
+| field | where | |
+| --- | --- | --- |
+| `instagram` | on the block | the handle, without `@` — `"annas.nails"`. Shows `@annas.nails` with the Instagram glyph beside the heading, linked to `https://www.instagram.com/annas.nails/`. Declared in `src/content/blocks.ts` as an optional text field (`client_editable`, `no_tap_target`, `beside: 'title'`, `localized: false`): the owner changes it in the panel from the heading; a translation never gives it |
+| `href` | on each picture in `images` | the post's address — `https://www.instagram.com/p/ABC123/`. A tap opens it in a new tab (`target="_blank" rel="noopener"`), never the lightbox; a key and a screen reader hear «Open this post on Instagram» in the page's language (`post` in `src/components/site/words.ts`), then the picture's own `alt`. Only an `https://` address is followed. A picture without one keeps the lightbox. Not declared: a gallery's picture is the platform's `{ _key, src, alt }`, and `href` rides on it; a translation's pictures are the original's, so the posts are the same in every language |
+| `title` | on the block | «Latest posts» in the site's language — «Neueste Beiträge», «Derniers posts», «Ultimi post», «Últimas publicaciones», «Últimas publicações», «Последние посты», «Najnowsze posty», «Останні пости» — the same words the platform writes, so never counted as the example's |
+
+```json
+{
+  "_key": "gall0001",
+  "type": "gallery",
+  "v": 1,
+  "title": "Latest posts",
+  "instagram": "annas.nails",
+  "arrangement": "ragged",
+  "images": [
+    { "_key": "gall0101", "src": "media/<site>/<hash>.jpg", "alt": "French manicure, almond shape", "href": "https://www.instagram.com/p/ABC123/" }
+  ]
+}
+```
+
+The links are the gloss look's wall (`arrangement: "ragged"`, the page's);
+another arrangement draws the template's Gallery, which opens every picture
+in the lightbox.
 
 ## Three questions
 
@@ -59,7 +90,8 @@ nothing else — the rest it reads from the Instagram profile and says back:
 1. **Photos.** The best one for the first screen, and up to twelve of the
    work. From their Instagram (the profile the conversation started from), or
    their own through `media_link`. They go into the site's media library and
-   their keys into `image` and `images`.
+   their keys into `image` and `images` — a post's address into its picture's
+   `href`, the handle into the block's `instagram`.
 2. **Services and prices.** Each one's name, how long it takes and what it
    costs — and the currency, which is `create_site`'s. One entry a service in
    `jtk/entries/services/`, the example's five replaced, not added to.
@@ -97,7 +129,8 @@ default and every bit of it safe to lose:
   rest and readable; only one below the screen is armed to rise into place
   as it is reached. Nothing in the first screen ever waits.
 - **The gallery** ([gallery.md](gallery.md)): a lightbox, a tilt under a mouse,
-  a swipe on a phone — the row itself one to swipe there.
+  a swipe on a phone — the row itself one to swipe there; a picture that is a
+  post leans into a faint veil and its Instagram glyph instead.
 - **`prefers-reduced-motion`**: the finished page — no field running, no
   entrance, no tilt, no slide in the lightbox.
 

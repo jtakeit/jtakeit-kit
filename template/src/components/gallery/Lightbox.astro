@@ -11,7 +11,9 @@
  * What it opens is what is drawn: every `<figure>` inside that holds an
  * `<img>` and is not a duplicate pass (`aria-hidden`) — the picture's largest
  * file from its own `srcset`, its own `alt` as the words under it. Nothing is
- * passed twice and nothing is fetched until a picture is opened.
+ * passed twice and nothing is fetched until a picture is opened. A picture
+ * inside a link (`<a href>`, a post on Instagram) is the link's: it opens
+ * where the link goes, is no frame here, and is not counted among them.
  *
  * `tilt` leans a frame toward the pointer as it moves over it — a few
  * degrees, the picture shifting inside its frame and a sheen crossing it — on
@@ -323,7 +325,7 @@ const wordsLang = WORDS[lang] ? undefined : 'en';
     // The frames, in the order they are drawn: the outermost figure holding a
     // picture (a gallery's frame around a <Shot>'s own), never a duplicate pass.
     const frames = [...root.querySelectorAll<HTMLElement>('figure')].filter((one) => {
-      if (dialog.contains(one) || !one.querySelector('img') || one.closest('[aria-hidden="true"]')) return false;
+      if (dialog.contains(one) || !one.querySelector('img') || one.closest('[aria-hidden="true"]') || one.closest('a[href]')) return false;
       const outer = one.parentElement?.closest('figure');
       return !outer || !root.contains(outer);
     });

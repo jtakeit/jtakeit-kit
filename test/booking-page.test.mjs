@@ -42,6 +42,26 @@ test('--kind booking-page lays one page: four sections, the diary on /, the pric
   assert.equal(en.blocks.find((one) => one._key === 'hero0001').cta_label, 'Book a time');
   assert.equal(en.blocks.find((one) => one._key === 'hero0001').cta_href, undefined);
 
+  // The gallery is the business's posts: «Latest posts» in the site's language, the
+  // handle beside it, each picture its post — placeholders, plainly so (the owner, 24 November 2026).
+  const gallery = home.blocks[2];
+  assert.equal(gallery.title, 'Neueste Beiträge');
+  assert.equal(gallery.eyebrow, undefined);
+  assert.equal(gallery.instagram, 'your_instagram');
+  assert.ok(gallery.images.length > 0);
+  gallery.images.forEach((one, at) => assert.equal(one.href, `https://www.instagram.com/p/your_post_${at + 1}/`));
+  const enGallery = en.blocks.find((one) => one._key === 'gall0001');
+  assert.equal(enGallery.title, 'Latest posts');
+  assert.equal(enGallery.instagram, undefined, 'the handle is the original\'s');
+  assert.ok(enGallery.images.every((one) => one.href === undefined), 'the posts are the original\'s');
+  assert.match(text('studio-probe', 'src/content/blocks.ts'), /type: 'gallery',[\s\S]*?`href`[\s\S]*?\{ key: 'instagram', label: 'Instagram handle, without @', kind: 'text', max: 30, client_editable: true, no_tap_target: true, beside: 'title', localized: false \}/);
+  assert.ok(json('studio-probe', 'jtk/schema.json').blocks.find((one) => one.type === 'gallery').fields.some((one) => one.key === 'instagram'));
+  const section = text('studio-probe', 'src/components/sections/GallerySection.astro');
+  assert.match(section, /target="_blank" rel="noopener"/);
+  assert.match(section, /W\.post/);
+  assert.match(text('studio-probe', 'src/components/site/words.ts'), /post: 'Diesen Beitrag auf Instagram öffnen'/);
+  assert.match(text('studio-probe', 'src/components/gallery/Lightbox.astro'), /closest\('a\[href\]'\)/);
+
   // The price list is on the page; its own page is gone.
   assert.ok(!existsSync(join(dir, 'studio-probe', 'jtk/pages/services.json')));
   assert.ok(!existsSync(join(dir, 'studio-probe', 'jtk/pages/services.en.json')));
@@ -74,6 +94,21 @@ test('--kind booking-page lays one page: four sections, the diary on /, the pric
   for (const gone of ['TeamList', 'Testimonials', 'Questions', 'Values']) assert.ok(!sections.includes(gone), gone);
   assert.ok(existsSync(join(dir, 'studio-probe', 'jtk/schema.json')));
   assert.match(text('studio-probe', 'BRIEF.md'), /The three questions/);
+});
+
+test('«Latest posts» is said in the site\'s language, and never counted as the example\'s words', async () => {
+  const { LATEST_POSTS, latestPosts } = await import('../lib/units/bookingPage.mjs');
+  assert.deepEqual(
+    ['en', 'de-CH', 'fr', 'it', 'es', 'pt-BR', 'ru', 'pl', 'uk', 'ja'].map(latestPosts),
+    ['Latest posts', 'Neueste Beiträge', 'Derniers posts', 'Ultimi post', 'Últimas publicaciones', 'Últimas publicações', 'Последние посты', 'Najnowsze posty', 'Останні пости', 'Latest posts'],
+  );
+  const run = create('probe-ru', '--kind', 'booking-page', '--name', 'Probe', '--locale', 'ru');
+  assert.equal(run.status, 0, run.stderr);
+  assert.equal(json('probe-ru', 'jtk/pages/index.json').blocks.find((one) => one._key === 'gall0001').title, 'Последние посты');
+  const { createHash } = await import('node:crypto');
+  const prints = JSON.parse(readFileSync(join(ROOT, 'example', 'prints.json'), 'utf8'));
+  const printed = new Set([...prints.words.en, ...prints.words.de]);
+  for (const words of Object.values(LATEST_POSTS)) assert.ok(!printed.has(createHash('sha256').update(words).digest('hex')), words);
 });
 
 test('the builder\'s form: no slug, the directory named by --out, every flag a full site takes', () => {

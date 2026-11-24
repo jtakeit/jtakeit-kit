@@ -18,7 +18,9 @@
  * blocks, the pages, the entries, the shared text. What is not: a single word
  * («Team», «Questions»), the navigation's labels, links — words an owner may
  * rightly keep — and anything that says the business's own name, which is
- * the site's from its first commit.
+ * the site's from its first commit. Nor the booking page's «Latest posts» in
+ * any language: the platform writes the same heading over the business's
+ * own posts.
  *
  * A photograph — the package's own and every trade's set's (`<set>/<name>`,
  * lib/units/photoSets.json) — is printed by the SHA-256 of its file and the first sixteen hex
@@ -36,7 +38,7 @@ import { fileURLToPath } from 'node:url';
 import { ORDER } from '../lib/units/index.mjs';
 import { SITE, wordsIn } from '../lib/units/units.mjs';
 import { PHOTOS, PHOTO_SETS, MEDIA, slotOf } from '../lib/units/photos.mjs';
-import { bookingWords } from '../lib/units/bookingPage.mjs';
+import { LATEST_POSTS, bookingWords } from '../lib/units/bookingPage.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'example', 'prints.json');
@@ -52,8 +54,9 @@ function strings(value, key = '', out = []) {
   return out;
 }
 
-const SKIP = new Set(['_key', 'type', 'src', 'link', 'cta_link', 'cta_href', 'more_href', 'maps', 'url', 'path', 'slug', 'collection', 'rank', 'day', 'country', 'postal_code', 'arrangement']);
+const SKIP = new Set(['_key', 'type', 'src', 'href', 'instagram', 'link', 'cta_link', 'cta_href', 'more_href', 'maps', 'url', 'path', 'slug', 'collection', 'rank', 'day', 'country', 'postal_code', 'arrangement']);
 
+const KEPT = new Set(Object.values(LATEST_POSTS).map(normalise));
 const words = { en: new Set(), de: new Set() };
 for (const lang of ['en', 'de']) {
   const x = wordsIn(lang, NAME);
@@ -68,7 +71,7 @@ for (const lang of ['en', 'de']) {
   // The booking page's own words over the example's (`jtk create --kind booking-page`).
   values.push(bookingWords(x));
   for (const [key, text] of values.flatMap((one) => strings(one))) {
-    if (SKIP.has(key) || text.includes(NAME)) continue;
+    if (SKIP.has(key) || text.includes(NAME) || KEPT.has(normalise(text))) continue;
     const pieces = [text, ...text.split(/\n+/), ...text.split(/\n\s*\n/)].map(normalise).filter(Boolean);
     for (const piece of new Set(pieces)) {
       if (!/\s/.test(piece) && !/@/.test(piece)) continue; // a single word is anybody's

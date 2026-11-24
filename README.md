@@ -52,7 +52,7 @@ placeholder like every other example photograph: the business's own replace it
 **A booking page** instead of a site — one page a specialist books from, made
 by an agent in a few writes from the business's Instagram: the name, a line and
 «Book» on a hero of liquid lacquer; the services and prices, bookable, the form
-under them; «Works» with a lightbox; where to find them — in the `gloss` look,
+under them; their latest Instagram posts, each a link to its post; where to find them — in the `gloss` look,
 in the vertical's palette, and grown into a site later with `jtk add`
 ([docs/booking-page.md](docs/booking-page.md)):
 
