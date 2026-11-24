@@ -17,6 +17,15 @@
  * Every value is the block's, annotated through the door (`block.at`); the
  * photograph is the page's largest picture and the one loaded eagerly. The
  * Instagram link is the shared contacts' (`social`), drawn where there is one.
+ *
+ * On a phone (under 40rem) the photograph comes first, a compact rounded
+ * portrait of about two fifths of the screen's height, cropped on the
+ * picture's own `focus` or, where it has none, on its upper middle — a face,
+ * a hand, a set of nails — with the lacquer around it; under it the line,
+ * the name in two lines at most however long («YULIYA BRI | NAILS • GENEVA»),
+ * the lead in three, and the buttons, which a 390×844 screen shows without a
+ * scroll (the owner, 24 November 2026). A wider screen keeps the arch on the
+ * right.
  */
 import type { Block } from '@jtakeit/kit/content';
 import Shot from '../Shot.astro';
@@ -100,7 +109,7 @@ const handle = insta ? (/instagram\.com\/([^/?#]+)/i.exec(insta.text('url'))?.[1
 
     {
       shot.src && (
-        <div class="hx__stage">
+        <div class:list={['hx__stage', !shot.focus && 'hx__stage--top']}>
           <Shot
             name={shot.src}
             alt={shot.alt}
@@ -111,7 +120,7 @@ const handle = insta ? (/instagram\.com\/([^/?#]+)/i.exec(insta.text('url'))?.[1
             class="hx__shot"
             eager
             width={900}
-            sizes="(min-width: 60rem) 26rem, 78vw"
+            sizes="(min-width: 60rem) 26rem, (max-width: 40rem) 60vw, 78vw"
           />
         </div>
       )
@@ -295,6 +304,81 @@ const handle = insta ? (/instagram\.com\/([^/?#]+)/i.exec(insta.text('url'))?.[1
 
     .hx__scrim {
       background: linear-gradient(180deg, color-mix(in srgb, var(--lacquer-deep) 70%, transparent) 0%, color-mix(in srgb, var(--lacquer-deep) 35%, transparent) 45%, transparent 70%);
+    }
+  }
+
+  /*
+   * A phone: the photograph first, compact, and the words and the buttons in
+   * the first screen under it. Heights are the screen's (`--screen`, the
+   * design floor's), never a viewport unit that a phone's bars change.
+   */
+  @media (max-width: 40rem) {
+    .hx {
+      padding-block: clamp(5rem, calc(var(--screen) * 0.1), 6rem) clamp(2.25rem, calc(var(--screen) * 0.05), 3rem);
+    }
+
+    .hx__in {
+      gap: clamp(1.1rem, calc(var(--screen) * 0.025), 1.5rem);
+    }
+
+    .hx__stage {
+      order: -1;
+      justify-self: start;
+      block-size: clamp(13rem, calc(var(--screen) * 0.38), 22rem);
+      inline-size: auto;
+      aspect-ratio: 4 / 5;
+      max-inline-size: 100%;
+    }
+
+    .hx__stage :global(.hx__shot),
+    .hx__stage :global(.hx__shot .shot__frame) {
+      block-size: 100%;
+    }
+
+    /* A rounded portrait, not the tall arch: the arch needs the height a phone gives the words. */
+    .hx__stage :global(.hx__shot .shot__frame) {
+      aspect-ratio: auto !important;
+      border-radius: calc(var(--r-3) * 1.6);
+    }
+
+    /* No focus of its own: the upper middle, where a face or the work usually is. */
+    .hx .hx__stage--top :global(img) {
+      object-position: 50% 28%;
+    }
+
+    .hx__words {
+      gap: 0.8rem;
+    }
+
+    .hx__title {
+      max-inline-size: none;
+      font-size: clamp(1.9rem, 8.2vw, 2.75rem);
+      line-height: 1.02;
+      overflow-wrap: anywhere;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      overflow: hidden;
+    }
+
+    .hx__lead {
+      font-size: 1.02rem;
+      line-height: 1.45;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+      line-clamp: 3;
+      overflow: hidden;
+    }
+
+    .hx__actions {
+      margin-block-start: 0.25rem;
+    }
+
+    /* The lacquer kept quiet below, where the words now are. */
+    .hx__scrim {
+      background: linear-gradient(0deg, color-mix(in srgb, var(--lacquer-deep) 78%, transparent) 0%, color-mix(in srgb, var(--lacquer-deep) 42%, transparent) 45%, transparent 72%);
     }
   }
 

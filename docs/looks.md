@@ -112,6 +112,18 @@ ground from `bg` and `ink`; the lacquer's deep and its sheen from the lacquer
 pair (`--lacquer-deep`, `--lacquer-sheen` in the gloss look's tokens). Without
 `accentInk` the words on the accent are chosen by its lightness.
 
+**A dark palette.** Which way up the page is comes from `bg` alone
+(`src/lib/ground.mjs`): dark where near-white words read further from it than
+near-black ones. A dark palette's page says so — `data-ground="dark"` on
+`<html>` — so every glass a look draws is its dark one, and the header's glass
+and words are made from the palette (`--bar-glass`, `--bar-solid`,
+`--bar-ink`, `--bar-ink-quiet`): a light glass under dark words, or a dark one
+under light words, the palette's `ink` and `muted` where they read at 4.5:1 on
+it over whatever passes behind, near-black or near-white where they do not.
+The booking card, its chips and the posts' handle are `surface` under `ink`
+and `muted`, and a filled control the accent under `accentInk`: a palette
+holds each of those pairs at 4.5:1 (the kit's ten do, and the test says so).
+
 **«Use the palette».** The widget's message names the eight with their values —
 «Use the palette "Blush": bg #f7ece9, surface #fffaf8, ink #2a1215, muted
 #6e4f52, accent #8e1b2c, accentInk #ffffff, lacquerA #b0243a, lacquerB

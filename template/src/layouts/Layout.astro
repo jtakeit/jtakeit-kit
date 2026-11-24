@@ -17,6 +17,7 @@ import { localeOf, langOf } from '../lib/locale';
 import Languages from '../components/Languages.astro';
 import { RASTER_MARK } from '../lib/icon';
 import { FRAME } from '../lib/sections';
+import { GLASS, SOLID, groundOf, rgbOf } from '../lib/ground.mjs';
 import '../styles/global.css';
 
 interface Props {
@@ -262,6 +263,24 @@ if (invertedPage) {
   palette['--photo-light'] = 'var(--ink)';
 }
 
+/*
+ * Which way up the palette is, from its own `bg`, and the header's glass and
+ * words made from it (src/lib/ground.mjs): a dark palette's page says it is
+ * dark, so a look draws its dark glass, and the header's words read at 4.5:1
+ * on its glass over anything — a dark palette's header was the light
+ * porcelain under the palette's light words, 1.05:1 (24 November 2026).
+ * `--bar-*` are every look's to read; one that does not keeps its own.
+ */
+const ground = groundOf({ bg: PALETTE.background, ink: PALETTE.ink, muted: PALETTE.muted });
+if (ground) {
+  const rgb = (hex: string, alpha: number) => `rgb(${(rgbOf(hex) ?? [0, 0, 0]).join(' ')} / ${alpha})`;
+  palette['--bar-glass'] = rgb(ground.glass, GLASS);
+  palette['--bar-solid'] = rgb(ground.solid, SOLID);
+  palette['--bar-ground'] = ground.solid;
+  palette['--bar-ink'] = ground.ink;
+  palette['--bar-ink-quiet'] = ground.quiet;
+}
+
 const rootStyle = Object.entries(palette)
   .map(([name, value]) => `${name}:${value}`)
   .join(';');
@@ -301,7 +320,7 @@ const businessSchema = {
 ---
 
 <!doctype html>
-<html lang={META.lang} style={rootStyle || undefined}>
+<html lang={META.lang} style={rootStyle || undefined} data-ground={ground?.dark ? 'dark' : undefined}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

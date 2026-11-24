@@ -12,6 +12,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PALETTES, TOKENS, namedOver, paletteFaults, paletteFor, paletteFromMessage } from '../lib/units/palettes.mjs';
+import { AA, contrast, groundOf, isDark, over } from '../template/src/lib/ground.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const JTK = join(ROOT, 'bin', 'jtk.mjs');
@@ -152,4 +153,50 @@ test('a palette is eight hex colours by name; every vertical has one, and an unk
   assert.deepEqual(paletteFor(''), PALETTES.nails);
   assert.ok(paletteFaults({ ...PALETTES.nails, accent: 'red' }).some((one) => one.startsWith('accent:')));
   assert.ok(paletteFaults({ ...PALETTES.nails, extra: '#000000' }).some((one) => one.startsWith('extra:')));
+});
+
+test('every palette\'s words read at 4.5:1 — the header\'s glass, the booking card, its chips, the posts\' handle — a dark one too', () => {
+  // The owner's dark palette (24 November 2026): the light porcelain header under its light ink read 1.05:1.
+  const DARK = { bg: '#1d1312', surface: '#2a1d1b', ink: '#f4e9e5', muted: '#c9b5ae', accent: '#e3a59b', accentInk: '#1d1312', lacquerA: '#4a1219', lacquerB: '#a8434f' };
+  const palettes = { ...PALETTES, dark: DARK };
+  assert.equal(Object.keys(PALETTES).length, 10);
+  for (const [name, palette] of Object.entries(palettes)) {
+    const ground = groundOf(palette);
+    assert.ok(ground, name);
+    assert.equal(ground.dark, isDark(palette.bg), name);
+    // The header: its words on its glass, alone and over the worst that can pass behind it.
+    for (const on of ground.grounds) {
+      assert.ok(contrast(ground.ink, on) >= AA, `${name}: the header's words ${ground.ink} on ${on} read ${contrast(ground.ink, on).toFixed(2)}`);
+      assert.ok(contrast(ground.quiet, on) >= AA, `${name}: the header's navigation ${ground.quiet} on ${on} read ${contrast(ground.quiet, on).toFixed(2)}`);
+    }
+    // The booking card and its chips are the surface under the ink and the muted; a chosen chip and a button are the accent under its words.
+    assert.ok(contrast(palette.ink, palette.surface) >= AA, `${name}: ink on the card`);
+    assert.ok(contrast(palette.muted, palette.surface) >= AA, `${name}: the quieter words on the card`);
+    assert.ok(contrast(palette.accentInk, palette.accent) >= AA, `${name}: the words on the accent`);
+    // The posts' handle: the ink on the surface at 72% over the page.
+    assert.ok(contrast(palette.ink, over(palette.surface, palette.bg, 0.72)) >= AA, `${name}: the posts' handle`);
+  }
+  assert.equal(groundOf(DARK).dark, true);
+  assert.equal(groundOf(PALETTES.tattoo).dark, true);
+  assert.equal(groundOf(PALETTES.nails).dark, false);
+  // A palette whose words do not read on its own paper still gets a header that does.
+  const muddy = groundOf({ bg: '#777777', ink: '#888888', muted: '#7a7a7a' });
+  for (const on of muddy.grounds) assert.ok(contrast(muddy.ink, on) >= AA && contrast(muddy.quiet, on) >= AA, on);
+  assert.equal(groundOf({}), null, 'no bg: the look\'s own tokens stand');
+
+  // The build reads it: the page says it is dark, the header draws the palette's glass and words.
+  const layout = readFileSync(join(ROOT, 'template/src/layouts/Layout.astro'), 'utf8');
+  assert.match(layout, /from '\.\.\/lib\/ground\.mjs'/);
+  assert.match(layout, /data-ground=\{ground\?\.dark \? 'dark' : undefined\}/);
+  const header = readFileSync(join(ROOT, 'example/looks/gloss/src/components/site/Header.astro'), 'utf8');
+  for (const token of ['--bar-glass', '--bar-solid', '--bar-ink', '--bar-ink-quiet']) assert.ok(header.includes(`var(${token}`), token);
+});
+
+test('the phone\'s first screen: the photograph first and compact, the name in two lines, the lead in three', () => {
+  const hero = readFileSync(join(ROOT, 'example/looks/gloss/src/components/sections/Hero.astro'), 'utf8');
+  const phone = hero.slice(hero.indexOf('@media (max-width: 40rem)'));
+  assert.match(phone, /\.hx__stage \{[^}]*order: -1;[^}]*block-size: clamp\(13rem, calc\(var\(--screen\) \* 0\.38\), 22rem\)/);
+  assert.match(phone, /\.hx__title \{[^}]*-webkit-line-clamp: 2;/);
+  assert.match(phone, /\.hx__lead \{[^}]*-webkit-line-clamp: 3;/);
+  assert.match(hero, /!shot\.focus && 'hx__stage--top'/);
 });

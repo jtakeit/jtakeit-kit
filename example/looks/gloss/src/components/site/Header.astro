@@ -112,19 +112,26 @@ const cta = header.text('cta_label');
       backdrop-filter 360ms;
   }
 
-  /* Over the lacquer the capsule is porcelain, mostly opaque, so the words read
-     on the dark; once the page passes under it, nearly solid. */
+  /*
+   * Over the lacquer the capsule is the page's paper, mostly opaque, so the
+   * words read on the dark; once the page passes under it, nearly solid. Its
+   * glass and its words are the palette's, made by Layout.astro from the
+   * palette's own `bg` (src/lib/ground.mjs, `--bar-*`): a light glass under
+   * dark words on a light palette, a dark glass under light ones on a dark
+   * palette, each held at 4.5:1 over whatever passes behind it.
+   */
   .bar__in {
-    background: color-mix(in srgb, var(--paper) 86%, transparent);
+    color: var(--bar-ink, var(--ink));
+    background: var(--bar-glass, color-mix(in srgb, var(--paper) 86%, transparent));
   }
   .bar.is-over .bar__in,
   .bar[data-open] .bar__in {
-    background: var(--glass-solid);
+    background: var(--bar-solid, var(--glass-solid));
   }
 
   .bar__mark {
     margin-inline-end: auto;
-    color: var(--ink);
+    color: var(--bar-ink, var(--ink));
     font-family: var(--font-display);
     font-size: 1.3rem;
     font-weight: 500;
@@ -151,7 +158,7 @@ const cta = header.text('cta_label');
   .bar__nav a {
     position: relative;
     padding-block: 0.4rem;
-    color: var(--ink-quiet);
+    color: var(--bar-ink-quiet, var(--ink-quiet));
     font-size: 0.9rem;
     font-weight: 500;
     text-decoration: none;
@@ -172,7 +179,7 @@ const cta = header.text('cta_label');
 
   .bar__nav a:hover,
   .bar__nav a[aria-current='page'] {
-    color: var(--ink);
+    color: var(--bar-ink, var(--ink));
   }
   .bar__nav a:hover::after,
   .bar__nav a[aria-current='page']::after {
@@ -186,7 +193,7 @@ const cta = header.text('cta_label');
     padding: 0.2rem;
     border: 0;
     border-radius: var(--r-pill);
-    background: color-mix(in srgb, var(--ink) 5%, transparent);
+    background: color-mix(in srgb, var(--bar-ink, var(--ink)) 6%, transparent);
     font-family: var(--font-text);
     font-size: 0.7rem;
     font-weight: 500;
@@ -196,15 +203,15 @@ const cta = header.text('cta_label');
   .bar__in :global(.bar__lang a) {
     padding: 0.35rem 0.55rem;
     border-radius: var(--r-pill);
-    color: var(--ink-quiet);
+    color: var(--bar-ink-quiet, var(--ink-quiet));
     text-decoration: none;
   }
   .bar__in :global(.bar__lang a:hover) {
-    color: var(--ink);
+    color: var(--bar-ink, var(--ink));
   }
   .bar__in :global(.bar__lang a[aria-current]) {
-    background: var(--paper-lift);
-    color: var(--ink);
+    background: var(--bar-ground, var(--paper-lift));
+    color: var(--bar-ink, var(--ink));
     box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 8%, transparent);
   }
 
@@ -214,8 +221,8 @@ const cta = header.text('cta_label');
     padding: 0 1rem;
     border: 0;
     border-radius: var(--r-pill);
-    background: var(--ink);
-    color: var(--paper);
+    background: var(--bar-ink, var(--ink));
+    color: var(--bar-ground, var(--paper));
     font: 500 0.85rem/1 var(--font-text);
     cursor: pointer;
   }
@@ -244,8 +251,8 @@ const cta = header.text('cta_label');
     .bar__nav a {
       padding-block: 0.7rem;
       font-size: 1.05rem;
-      color: var(--ink);
-      border-block-start: 1px solid var(--line);
+      color: var(--bar-ink, var(--ink));
+      border-block-start: 1px solid color-mix(in srgb, var(--bar-ink, var(--ink)) 14%, transparent);
     }
     .bar__nav a::after {
       display: none;
