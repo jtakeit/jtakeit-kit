@@ -141,8 +141,38 @@ const luminance = (hex: string): number | null => {
     .reduce((sum, c, i) => sum + c * [0.2126, 0.7152, 0.0722][i], 0);
 };
 
-const paperLuma = DESIGN.paper ? luminance(DESIGN.paper) : null;
-const inkLuma = DESIGN.ink ? luminance(DESIGN.ink) : null;
+/*
+ * The palette (docs/looks.md, «The palette»): one object in jtk/design.json,
+ * eight colours by name — what an agent writes once, and what a palette widget's
+ * «Use this palette» hands it — read here and nowhere else:
+ *
+ *   background     the page                       → --paper
+ *   surface        a card, the form, the header   → --panel, --paper-lift
+ *   ink            the words                      → --ink
+ *   muted          the quieter words              → --ink-quiet
+ *   accent         the button, the one colour     → --accent (the words on it chosen by its lightness)
+ *   accent-ink     the accent as words on the page → --accent-ink, --accent-deep
+ *   lacquer        the hero's polish, in shadow   → --lacquer
+ *   lacquer-light  the same polish, lit           → --lacquer-light
+ *
+ * A six-digit hex each; an empty one keeps the look's own token. It wins over
+ * the older `paper`, `ink` and `accent` beside it, which it replaces.
+ */
+const SAID = ((DESIGN as { palette?: Record<string, unknown> }).palette ?? {}) as Record<string, unknown>;
+const hexOf = (value: unknown): string => (typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value.trim()) ? value.trim() : '');
+const PALETTE = {
+  background: hexOf(SAID.background) || DESIGN.paper || '',
+  surface: hexOf(SAID.surface),
+  ink: hexOf(SAID.ink) || DESIGN.ink || '',
+  muted: hexOf(SAID.muted),
+  accent: hexOf(SAID.accent) || DESIGN.accent || '',
+  accentInk: hexOf(SAID['accent-ink']),
+  lacquer: hexOf(SAID.lacquer),
+  lacquerLight: hexOf(SAID['lacquer-light']),
+};
+
+const paperLuma = PALETTE.background ? luminance(PALETTE.background) : null;
+const inkLuma = PALETTE.ink ? luminance(PALETTE.ink) : null;
 const invertedPage = paperLuma !== null && inkLuma !== null && paperLuma < inkLuma;
 
 /*
@@ -157,8 +187,8 @@ const invertedPage = paperLuma !== null && inkLuma !== null && paperLuma < inkLu
  * whether the page is light or dark, so `--lift` says which way a panel rises:
  * towards white on a light page, towards the ink on a dark one.
  */
-if (DESIGN.paper) palette['--paper'] = DESIGN.paper;
-if (DESIGN.paper) palette['--lift'] = invertedPage ? 'var(--ink)' : '#ffffff';
+if (PALETTE.background) palette['--paper'] = PALETTE.background;
+if (PALETTE.background) palette['--lift'] = invertedPage ? 'var(--ink)' : '#ffffff';
 /*
  * And which way «recessed» goes. `--paper-deep` is a light grey in global.css,
  * right below white and a pale band under a dark page's light words — an FAQ
@@ -166,9 +196,9 @@ if (DESIGN.paper) palette['--lift'] = invertedPage ? 'var(--ink)' : '#ffffff';
  * darker.
  */
 // A light page keeps global.css's grey, which is what every site has drawn.
-if (DESIGN.paper && invertedPage) palette['--paper-deep'] = 'color-mix(in srgb, var(--paper) 82%, #000000)';
-if (DESIGN.ink) palette['--ink'] = DESIGN.ink;
-if (DESIGN.accent) palette['--accent'] = DESIGN.accent;
+if (PALETTE.background && invertedPage) palette['--paper-deep'] = 'color-mix(in srgb, var(--paper) 82%, #000000)';
+if (PALETTE.ink) palette['--ink'] = PALETTE.ink;
+if (PALETTE.accent) palette['--accent'] = PALETTE.accent;
 /*
  * The words a button carries on the accent, by the accent's own lightness:
  * near-black on a light accent, white on a dark one — whichever reads further
@@ -176,8 +206,37 @@ if (DESIGN.accent) palette['--accent'] = DESIGN.accent;
  * whatever the accent, and white on a dark page's amber read 1.98:1
  * (12 October 2026). A variant may still set --on-accent itself.
  */
-const accentLuma = DESIGN.accent ? luminance(DESIGN.accent) : null;
+const accentLuma = PALETTE.accent ? luminance(PALETTE.accent) : null;
 if (accentLuma !== null) palette['--on-accent'] = accentLuma > 0.195 ? '#16130f' : '#ffffff';
+/*
+ * The rest of the palette, where it is said: a look's tokens are named the
+ * same in every look (docs/looks.md), so these reach every component. A
+ * palette that names its background gets its lines and its recessed ground
+ * from it too, rather than a look's fixed grey that was drawn for another
+ * paper.
+ */
+if (PALETTE.surface) {
+  palette['--panel'] = PALETTE.surface;
+  palette['--paper-lift'] = PALETTE.surface;
+  palette['--surface'] = PALETTE.surface;
+}
+if (PALETTE.muted) palette['--ink-quiet'] = PALETTE.muted;
+if (PALETTE.accentInk) {
+  palette['--accent-ink'] = PALETTE.accentInk;
+  palette['--accent-deep'] = PALETTE.accentInk;
+  // A control filled with it (the booking form's steps) carries words too: by its lightness, as on the accent.
+  palette['--on-accent-deep'] = (luminance(PALETTE.accentInk) ?? 0) > 0.195 ? '#16130f' : '#ffffff';
+}
+if (PALETTE.accent) {
+  const n = parseInt(PALETTE.accent.slice(1), 16);
+  palette['--glow'] = `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`;
+}
+if (PALETTE.lacquer) palette['--lacquer'] = PALETTE.lacquer;
+if (PALETTE.lacquerLight) palette['--lacquer-light'] = PALETTE.lacquerLight;
+if (hexOf(SAID.background)) {
+  palette['--line'] = 'color-mix(in srgb, var(--ink) 13%, var(--paper))';
+  if (!invertedPage) palette['--paper-deep'] = 'color-mix(in srgb, var(--paper) 94%, var(--ink))';
+}
 if (DESIGN.ground) palette['--jtk-ground'] = DESIGN.ground;
 (DESIGN.colors ?? []).forEach((colour: string, i: number) => {
   if (colour) palette[`--jtk-c${i + 1}`] = colour;
@@ -392,6 +451,11 @@ const businessSchema = {
         );
       };
 
+      /* `float` starts at rest and is armed only where it is out of sight below
+         the screen (surface.css), never under reduced motion. */
+      const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const seen = new WeakSet<Element>();
+
       if (!('IntersectionObserver' in window)) {
         targets.forEach((el) => {
           order(el);
@@ -401,7 +465,14 @@ const businessSchema = {
         const io = new IntersectionObserver(
           (entries) => {
             for (const entry of entries) {
-              if (!entry.isIntersecting) continue;
+              const first = !seen.has(entry.target);
+              seen.add(entry.target);
+              if (!entry.isIntersecting) {
+                if (first && !still && (entry.target as HTMLElement).dataset.reveal === 'float' && entry.boundingClientRect.top > 0) {
+                  entry.target.classList.add('is-armed');
+                }
+                continue;
+              }
               order(entry.target as HTMLElement);
               entry.target.classList.add('is-in');
               io.unobserve(entry.target);

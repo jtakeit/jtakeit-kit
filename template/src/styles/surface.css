@@ -292,6 +292,31 @@ html.js [data-reveal='develop'] {
 }
 
 /*
+ * Float: the entrance that starts from a visible resting state. Every other one
+ * here hides its block until the observer sees it; this one never hides
+ * anything that has not been checked to be out of sight. The block is drawn at
+ * rest — readable before any script runs, in a photograph of the whole page,
+ * on a slow line, in the first screen — and only one the observer has found
+ * *below* the screen is armed: set a little lower and fainter, where nobody
+ * can see it, to rise and sharpen into place as it is reached. A block in the
+ * first screen is never armed, so it never moves and never delays the largest
+ * paint. `--i` on a block staggers it after the one before (`style="--i:2"`).
+ */
+html.js [data-reveal='float'].is-armed {
+  opacity: 0.45;
+  transform: translateY(var(--reveal-float, 2rem)) scale(0.985);
+}
+
+html.js [data-reveal='float'].is-armed.is-in {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity calc(var(--reveal-dur) * 1.2) var(--ease-out, var(--ease)),
+    transform calc(var(--reveal-dur) * 1.2) var(--ease-out, var(--ease));
+  transition-delay: calc(var(--i, 0) * var(--reveal-step));
+}
+
+/*
  * The children, in order. `--i` is set by the observer as the row enters, so a
  * list rendered from a document does not have to carry an index into its
  * markup — which is the version of this that gets forgotten on the second list.

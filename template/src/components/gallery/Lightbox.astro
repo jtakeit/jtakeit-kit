@@ -1,0 +1,443 @@
+---
+/**
+ * A picture opened whole: wrap any set of pictures — a gallery's frames, a
+ * grid of the work — and a tap or a key on one opens it at the screen's size,
+ * with the next and the one before a swipe, an arrow key or a button away.
+ *
+ *   <Lightbox locale={locale} tilt>
+ *     <Gallery arrangement="ragged" items={pieces} />
+ *   </Lightbox>
+ *
+ * What it opens is what is drawn: every `<figure>` inside that holds an
+ * `<img>` and is not a duplicate pass (`aria-hidden`) — the picture's largest
+ * file from its own `srcset`, its own `alt` as the words under it. Nothing is
+ * passed twice and nothing is fetched until a picture is opened.
+ *
+ * `tilt` leans a frame toward the pointer as it moves over it — a few
+ * degrees, the picture shifting inside its frame and a sheen crossing it — on
+ * a mouse or a pen only, and never under reduced motion.
+ *
+ * Every way it fails is the page as it was: without a script the frames are
+ * pictures, and a click the panel's editor takes for itself
+ * (`defaultPrevented`) opens nothing — a picture is replaced in the panel by
+ * tapping it, and that is not taken away.
+ */
+interface Props {
+  /** The page's language, for the dialog's few words. */
+  locale?: string;
+  /** Lean a frame toward the pointer on hover. */
+  tilt?: boolean;
+  class?: string;
+}
+
+const { locale = 'en', tilt = false, class: className } = Astro.props;
+
+/** The dialog's words: interface, not content — the same for every business. */
+const WORDS: Record<string, { open: string; close: string; previous: string; next: string; of: string }> = {
+  en: { open: 'Open picture', close: 'Close', previous: 'Previous picture', next: 'Next picture', of: 'of' },
+  de: { open: 'Bild öffnen', close: 'Schliessen', previous: 'Vorheriges Bild', next: 'Nächstes Bild', of: 'von' },
+  fr: { open: 'Ouvrir l’image', close: 'Fermer', previous: 'Image précédente', next: 'Image suivante', of: 'sur' },
+  it: { open: 'Apri l’immagine', close: 'Chiudi', previous: 'Immagine precedente', next: 'Immagine successiva', of: 'di' },
+  es: { open: 'Abrir imagen', close: 'Cerrar', previous: 'Imagen anterior', next: 'Imagen siguiente', of: 'de' },
+  pt: { open: 'Abrir imagem', close: 'Fechar', previous: 'Imagem anterior', next: 'Imagem seguinte', of: 'de' },
+  pl: { open: 'Otwórz zdjęcie', close: 'Zamknij', previous: 'Poprzednie zdjęcie', next: 'Następne zdjęcie', of: 'z' },
+  uk: { open: 'Відкрити фото', close: 'Закрити', previous: 'Попереднє фото', next: 'Наступне фото', of: 'з' },
+  ru: { open: 'Открыть фото', close: 'Закрыть', previous: 'Предыдущее фото', next: 'Следующее фото', of: 'из' },
+};
+const lang = String(locale).toLowerCase().split('-')[0];
+const w = WORDS[lang] ?? WORDS.en;
+const wordsLang = WORDS[lang] ? undefined : 'en';
+---
+
+<div class:list={['lb', className]} data-lightbox data-tilt={tilt ? '' : undefined} data-words={JSON.stringify(w)}>
+  <slot />
+  <dialog class="lb__dialog" aria-label={w.open} lang={wordsLang} data-jtk-fixed>
+    <figure class="lb__figure">
+      <img class="lb__img" alt="" decoding="async" />
+      <figcaption class="lb__caption"><span class="lb__count"></span><span class="lb__alt"></span></figcaption>
+    </figure>
+    <button type="button" class="lb__btn lb__close" data-lb="close" aria-label={w.close}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+    </button>
+    <button type="button" class="lb__btn lb__prev" data-lb="prev" aria-label={w.previous}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
+    </button>
+    <button type="button" class="lb__btn lb__next" data-lb="next" aria-label={w.next}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
+    </button>
+  </dialog>
+</div>
+
+<style>
+  .lb :global(figure[data-lb-frame]) {
+    position: relative;
+    cursor: zoom-in;
+  }
+
+  .lb :global(figure[data-lb-frame]:focus-visible) {
+    outline: 2px solid var(--accent, currentColor);
+    outline-offset: 3px;
+  }
+
+  /* ── the tilt: a frame leaning toward the pointer ─────────────────────────── */
+
+  .lb[data-tilt] :global(figure[data-lb-frame]) {
+    transform: perspective(900px) rotateX(var(--lb-rx, 0deg)) rotateY(var(--lb-ry, 0deg));
+    transition: transform 420ms var(--ease-out, ease);
+    will-change: transform;
+  }
+
+  .lb[data-tilt] :global(figure[data-lb-frame].is-leaning) {
+    transition: transform 90ms linear;
+  }
+
+  .lb[data-tilt] :global(figure[data-lb-frame] img) {
+    transform: translate3d(var(--lb-px, 0px), var(--lb-py, 0px), 0) scale(var(--lb-zoom, 1));
+    transition: transform 520ms var(--ease-out, ease);
+  }
+
+  .lb[data-tilt] :global(figure[data-lb-frame].is-leaning img) {
+    --lb-zoom: 1.06;
+    transition: transform 160ms linear;
+  }
+
+  /* The sheen: a soft light where the pointer is, over the picture. */
+  .lb[data-tilt] :global(figure[data-lb-frame]::after) {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(60% 50% at var(--lb-sx, 50%) var(--lb-sy, 0%), rgb(255 255 255 / 0.22), transparent 70%);
+    opacity: 0;
+    transition: opacity 300ms var(--ease, ease);
+  }
+
+  .lb[data-tilt] :global(figure[data-lb-frame].is-leaning::after) {
+    opacity: 1;
+  }
+
+  /* ── the dialog ───────────────────────────────────────────────────────────── */
+
+  /* The whole screen, by its edges rather than a viewport unit (the panel's frame is the document's height). */
+  .lb__dialog {
+    position: fixed;
+    inset: 0;
+    inline-size: auto;
+    block-size: auto;
+    max-inline-size: none;
+    max-block-size: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: rgb(10 8 9 / 0.94);
+    color: #f6f1ee;
+    overflow: hidden;
+    overscroll-behavior: contain;
+  }
+
+  .lb__dialog::backdrop {
+    background: rgb(10 8 9 / 0.6);
+  }
+
+  .lb__dialog[open] {
+    display: grid;
+    place-items: center;
+    animation: lb-in 260ms var(--ease-out, ease) both;
+  }
+
+  @keyframes lb-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  .lb__figure {
+    display: grid;
+    gap: 0.75rem;
+    justify-items: center;
+    margin: 0;
+    padding: clamp(3.5rem, 8vh, 5rem) clamp(0.75rem, 6vw, 6rem) clamp(1rem, 4vh, 2rem);
+    max-block-size: 100%;
+    touch-action: pan-y;
+  }
+
+  .lb__img {
+    display: block;
+    max-inline-size: 100%;
+    max-block-size: calc(var(--screen, 40rem) - 9rem);
+    inline-size: auto;
+    block-size: auto;
+    object-fit: contain;
+    border-radius: var(--r-2, 6px);
+    box-shadow: 0 30px 80px -30px rgb(0 0 0 / 0.8);
+    user-select: none;
+    -webkit-user-drag: none;
+    transition:
+      transform 280ms var(--ease-out, ease),
+      opacity 280ms var(--ease-out, ease);
+  }
+
+  .lb__img.is-leaving-left {
+    transform: translateX(-6%);
+    opacity: 0;
+  }
+
+  .lb__img.is-leaving-right {
+    transform: translateX(6%);
+    opacity: 0;
+  }
+
+  .lb__caption {
+    display: flex;
+    gap: 0.75rem;
+    align-items: baseline;
+    max-inline-size: 42rem;
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: rgb(246 241 238 / 0.78);
+    text-align: center;
+  }
+
+  .lb__count {
+    flex: none;
+    font-variant-numeric: tabular-nums;
+    color: rgb(246 241 238 / 0.55);
+  }
+
+  .lb__btn {
+    position: absolute;
+    display: grid;
+    place-items: center;
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+    padding: 0;
+    border: 1px solid rgb(255 255 255 / 0.18);
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.08);
+    color: inherit;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: background-color 160ms var(--ease, ease);
+  }
+
+  .lb__btn:hover {
+    background: rgb(255 255 255 / 0.18);
+  }
+
+  .lb__btn:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+  }
+
+  .lb__btn svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .lb__close {
+    inset-block-start: max(0.75rem, env(safe-area-inset-top));
+    inset-inline-end: max(0.75rem, env(safe-area-inset-right));
+  }
+
+  .lb__prev,
+  .lb__next {
+    inset-block-start: 50%;
+    translate: 0 -50%;
+  }
+
+  .lb__prev {
+    inset-inline-start: max(0.75rem, env(safe-area-inset-left));
+  }
+
+  .lb__next {
+    inset-inline-end: max(0.75rem, env(safe-area-inset-right));
+  }
+
+  /* A phone swipes: the arrows move to the foot, out of the picture's way. */
+  @media (max-width: 40rem) {
+    .lb__prev,
+    .lb__next {
+      inset-block-start: auto;
+      inset-block-end: max(0.75rem, env(safe-area-inset-bottom));
+      translate: none;
+    }
+
+    .lb__img {
+      max-block-size: calc(var(--screen, 40rem) - 11rem);
+    }
+  }
+
+  .lb__dialog[data-single] .lb__prev,
+  .lb__dialog[data-single] .lb__next {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lb__dialog[open] {
+      animation: none;
+    }
+
+    .lb__img,
+    .lb[data-tilt] :global(figure[data-lb-frame]),
+    .lb[data-tilt] :global(figure[data-lb-frame] img) {
+      transition: none;
+      transform: none;
+    }
+  }
+</style>
+
+<script>
+  type Words = { open: string; close: string; previous: string; next: string; of: string };
+
+  /** The largest file a picture has, from its own srcset; its current one where it says none. */
+  function largest(img: HTMLImageElement): string {
+    const set = img.getAttribute('srcset') ?? '';
+    let best = img.currentSrc || img.src;
+    let width = 0;
+    for (const part of set.split(',')) {
+      const [url, size] = part.trim().split(/\s+/);
+      const n = parseFloat(size ?? '');
+      if (url && Number.isFinite(n) && n > width) {
+        width = n;
+        best = url;
+      }
+    }
+    return best;
+  }
+
+  function setup(root: HTMLElement) {
+    const dialog = root.querySelector<HTMLDialogElement>('.lb__dialog');
+    if (!dialog || typeof dialog.showModal !== 'function') return;
+    const words = JSON.parse(root.dataset.words ?? '{}') as Words;
+    const big = dialog.querySelector<HTMLImageElement>('.lb__img')!;
+    const count = dialog.querySelector<HTMLElement>('.lb__count')!;
+    const alt = dialog.querySelector<HTMLElement>('.lb__alt')!;
+
+    // The frames, in the order they are drawn: the outermost figure holding a
+    // picture (a gallery's frame around a <Shot>'s own), never a duplicate pass.
+    const frames = [...root.querySelectorAll<HTMLElement>('figure')].filter((one) => {
+      if (dialog.contains(one) || !one.querySelector('img') || one.closest('[aria-hidden="true"]')) return false;
+      const outer = one.parentElement?.closest('figure');
+      return !outer || !root.contains(outer);
+    });
+    if (frames.length === 0) return;
+    frames.forEach((frame, i) => {
+      frame.dataset.lbFrame = String(i);
+      frame.tabIndex = 0;
+      frame.setAttribute('role', 'button');
+      const own = frame.querySelector('img')?.getAttribute('alt') ?? '';
+      frame.setAttribute('aria-label', own ? `${words.open}: ${own}` : `${words.open} ${i + 1} ${words.of} ${frames.length}`);
+    });
+    if (frames.length === 1) dialog.dataset.single = '';
+
+    let at = 0;
+    let opener: HTMLElement | null = null;
+    const show = (i: number, from?: 'left' | 'right') => {
+      at = (i + frames.length) % frames.length;
+      const img = frames[at].querySelector('img')!;
+      const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const swap = () => {
+        big.src = largest(img);
+        big.alt = img.alt;
+        alt.textContent = img.alt;
+        count.textContent = `${at + 1} ${words.of} ${frames.length}`;
+        big.classList.remove('is-leaving-left', 'is-leaving-right');
+      };
+      if (from && !reduce && dialog.open) {
+        big.classList.add(from === 'left' ? 'is-leaving-left' : 'is-leaving-right');
+        setTimeout(swap, 180);
+      } else swap();
+    };
+    const open = (frame: HTMLElement) => {
+      opener = frame;
+      show(Number(frame.dataset.lbFrame));
+      dialog.showModal();
+    };
+
+    root.addEventListener('click', (event) => {
+      if (event.defaultPrevented) return;
+      const frame = (event.target as Element | null)?.closest<HTMLElement>('figure[data-lb-frame]');
+      if (!frame || !root.contains(frame) || dialog.contains(frame)) return;
+      if ((event.target as Element).closest('a, button')) return;
+      open(frame);
+    });
+    root.addEventListener('keydown', (event) => {
+      const frame = (event.target as Element | null)?.closest<HTMLElement>('figure[data-lb-frame]');
+      if (!frame || event.target !== frame || (event.key !== 'Enter' && event.key !== ' ')) return;
+      event.preventDefault();
+      open(frame);
+    });
+
+    dialog.addEventListener('click', (event) => {
+      const button = (event.target as Element).closest<HTMLElement>('[data-lb]');
+      if (button?.dataset.lb === 'close') dialog.close();
+      else if (button?.dataset.lb === 'prev') show(at - 1, 'right');
+      else if (button?.dataset.lb === 'next') show(at + 1, 'left');
+      // A click on the dark around the picture closes it.
+      else if (event.target === dialog || (event.target as Element).classList.contains('lb__figure')) dialog.close();
+    });
+    dialog.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowRight') show(at + 1, 'left');
+      else if (event.key === 'ArrowLeft') show(at - 1, 'right');
+    });
+    dialog.addEventListener('close', () => {
+      opener?.focus({ preventScroll: true });
+    });
+
+    // A swipe: a horizontal drag of more than a sixth of the picture, or a quick flick.
+    let x0 = 0;
+    let y0 = 0;
+    let t0 = 0;
+    dialog.addEventListener('pointerdown', (event) => {
+      x0 = event.clientX;
+      y0 = event.clientY;
+      t0 = performance.now();
+    });
+    dialog.addEventListener('pointerup', (event) => {
+      if (!t0) return;
+      const dx = event.clientX - x0;
+      const dy = event.clientY - y0;
+      const quick = performance.now() - t0 < 280;
+      t0 = 0;
+      if (Math.abs(dx) < Math.abs(dy) * 1.2) return;
+      if (Math.abs(dx) > Math.max(48, big.clientWidth / 6) || (quick && Math.abs(dx) > 28)) {
+        event.preventDefault();
+        show(at + (dx < 0 ? 1 : -1), dx < 0 ? 'left' : 'right');
+      }
+    });
+
+    // The tilt: a mouse or a pen, never under reduced motion.
+    if (root.dataset.tilt === undefined) return;
+    const fine = matchMedia('(hover: hover) and (pointer: fine)');
+    const still = matchMedia('(prefers-reduced-motion: reduce)');
+    const MAX = 5;
+    for (const frame of frames) {
+      frame.addEventListener('pointermove', (event) => {
+        if (!fine.matches || still.matches || event.pointerType === 'touch') return;
+        const box = frame.getBoundingClientRect();
+        const x = (event.clientX - box.left) / box.width - 0.5;
+        const y = (event.clientY - box.top) / box.height - 0.5;
+        frame.classList.add('is-leaning');
+        frame.style.setProperty('--lb-ry', `${(x * MAX * 2).toFixed(2)}deg`);
+        frame.style.setProperty('--lb-rx', `${(-y * MAX * 2).toFixed(2)}deg`);
+        frame.style.setProperty('--lb-px', `${(-x * 10).toFixed(1)}px`);
+        frame.style.setProperty('--lb-py', `${(-y * 10).toFixed(1)}px`);
+        frame.style.setProperty('--lb-sx', `${((x + 0.5) * 100).toFixed(0)}%`);
+        frame.style.setProperty('--lb-sy', `${((y + 0.5) * 100).toFixed(0)}%`);
+      });
+      frame.addEventListener('pointerleave', () => {
+        frame.classList.remove('is-leaning');
+        for (const one of ['--lb-rx', '--lb-ry', '--lb-px', '--lb-py']) frame.style.removeProperty(one);
+      });
+    }
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-lightbox]').forEach(setup);
+</script>

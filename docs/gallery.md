@@ -133,6 +133,34 @@ stopped on frame one). All of them live in the component.
 five labels read out in a row are worse than one sentence. Put `role="img"` and
 an `aria-label` on the container and leave the clips unlabelled.
 
+## Opened whole: the lightbox
+
+`src/components/gallery/Lightbox.astro` wraps any set of pictures — a
+`<Gallery>` in any arrangement that draws its frames as figures, a grid of the
+section's own — and opens one at the screen's size on a tap, Enter or Space:
+the next and the one before a swipe, an arrow key or a button away, Escape or
+a tap on the dark to close, focus back on the frame it came from.
+
+```astro
+<Lightbox locale={locale} tilt>
+  <Gallery arrangement="ragged" items={pieces} />
+</Lightbox>
+```
+
+- **It opens what is drawn**: the outermost `<figure>` holding an `<img>` that is
+  not a duplicate pass — the picture's largest file from its own `srcset`, its
+  own `alt` under it. Nothing is passed twice; nothing is fetched until opened.
+- **`tilt`** leans a frame toward the pointer — a few degrees, the picture
+  shifting in its frame, a sheen where the pointer is — on a mouse or a pen
+  only, never under reduced motion.
+- **It takes nothing from the panel**: a click the editor has taken
+  (`defaultPrevented`) opens nothing, so a picture is still replaced by
+  tapping it. Without a script the frames are pictures.
+- Its few words (close, previous, next) are the component's, in nine languages.
+
+The gloss look's gallery (the booking page's «Works») is a wall of one
+proportion in it, and on a phone one row to swipe.
+
 ## What it does not do
 
 No arrangement crops a photograph to a shape it is not, and none of them puts a

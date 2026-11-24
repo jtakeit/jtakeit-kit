@@ -17,6 +17,9 @@
  *   u_grain       0–1
  *   u_colors[4]   the variant's tokens, in the order they were passed
  *   u_bg          the ground colour
+ *   u_pointer     where the pointer is over the field, 0–1 from the bottom
+ *                 left, eased; the middle where nobody points — `lacquer`
+ *                 leans its light toward it
  */
 
 export type Field =
@@ -29,6 +32,7 @@ export type Field =
   | 'smoke'
   | 'riso'
   | 'veil'
+  | 'lacquer'
   | 'ribbons';
 
 /** The fields drawn by a fragment shader. `ribbons` is Canvas 2D and is not one. */
@@ -53,6 +57,7 @@ uniform float u_time;
 uniform float u_grain;
 uniform vec3 u_colors[4];
 uniform vec3 u_bg;
+uniform vec2 u_pointer;
 
 // Even, unstructured noise for the grain. A multiply hash shows a faint
 // axis-aligned mesh at integer fragment coordinates, which reads as a net.
@@ -417,6 +422,88 @@ void main() {
 }
 `;
 
+/**
+ * Lacquer. Liquid polish, slowly flowing: a height field warped twice through
+ * itself, lit like a wet surface — a broad diffuse light, a tight highlight and
+ * a rim where the surface turns away — with the light leaning toward the
+ * pointer. Ported from Lacqué's hero on the jtakeit landing (lacquer.ts).
+ *
+ * It is the one field with *depth*: the others are colour laid flat, this is a
+ * surface the light moves over, which is why it reads as a material rather than
+ * as a gradient. It is also the heaviest — three samples of a twice-warped fbm a
+ * pixel — so HeroField gives it a smaller pixel budget, refuses a software
+ * renderer, and starts it only after the page has loaded.
+ *
+ * The four colours are the polish, not a ramp:
+ *
+ *   u_colors[0]  the lacquer — the polish's body, in shadow
+ *   u_colors[1]  the lacquer lit — the same polish where the light lands
+ *   u_colors[2]  the deep — what the polish is poured over; nearly black
+ *   u_colors[3]  the sheen — the highlight's own colour; nearly white
+ *
+ * The lower left of the frame is kept quiet (toward the deep), so a heading
+ * set there reads in every frame.
+ */
+const LACQUER = `
+float lqHash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+float lqNoise(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(lqHash(i), lqHash(i + vec2(1.0, 0.0)), u.x), mix(lqHash(i + vec2(0.0, 1.0)), lqHash(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+float lqFbm(vec2 p) {
+  float v = 0.0, a = 0.5;
+  mat2 r = mat2(0.8, 0.6, -0.6, 0.8);
+  for (int i = 0; i < 4; i++) { v += a * lqNoise(p); p = r * p * 2.02; a *= 0.5; }
+  return v;
+}
+float lqHeight(vec2 p) {
+  // Forty seconds in, as the landing starts it: the first frame is already a
+  // poured surface, not the noise's grid at rest.
+  float t = (u_time + 40.0) * 0.06;
+  vec2 q = vec2(lqFbm(p + vec2(0.0, t)), lqFbm(p + vec2(5.2, 1.3) - t));
+  vec2 w = vec2(lqFbm(p + 3.0 * q + vec2(1.7, 9.2) + t * 0.7), lqFbm(p + 3.0 * q + vec2(8.3, 2.8) - t * 0.5));
+  return lqFbm(p + 2.1 * w);
+}
+
+void main() {
+  vec2 uv = gl_FragCoord.xy / u_resolution;
+  vec2 p = (gl_FragCoord.xy - 0.5 * u_resolution) / min(u_resolution.x, u_resolution.y);
+  p *= 0.9;
+
+  float e = 0.004;
+  float h = lqHeight(p);
+  float hx = lqHeight(p + vec2(e, 0.0));
+  float hy = lqHeight(p + vec2(0.0, e));
+  vec3 n = normalize(vec3((h - hx) / e * 0.9, (h - hy) / e * 0.9, 1.0));
+
+  vec2 m = (u_pointer - 0.5) * vec2(u_resolution.x / u_resolution.y, 1.0);
+  vec3 L = normalize(vec3(m * 1.6 - p * 0.35 + vec2(0.4, 0.5), 0.9));
+  vec3 H = normalize(L + vec3(0.0, 0.0, 1.0));
+
+  vec3 lacq = u_colors[0];
+  vec3 bright = u_colors[1];
+  vec3 deep = u_colors[2];
+  vec3 pearl = u_colors[3];
+
+  float diff = clamp(dot(n, L), 0.0, 1.0);
+  float spec = pow(max(dot(n, H), 0.0), 90.0);
+  float soft = pow(max(dot(n, H), 0.0), 12.0);
+  float fres = pow(1.0 - max(n.z, 0.0), 2.2);
+
+  vec3 col = mix(deep, lacq, smoothstep(0.22, 0.72, h));
+  col = mix(col, bright, diff * diff * 0.7 * smoothstep(0.3, 0.8, h));
+  col += pearl * (spec * 1.1 + soft * 0.12);
+  col += mix(pearl, bright, 0.5) * fres * 0.35;
+
+  float quiet = smoothstep(0.0, 0.75, uv.x) * smoothstep(0.0, 0.55, uv.y);
+  col = mix(deep * 1.1, col, 0.35 + 0.65 * quiet);
+
+  col += (grainHash(gl_FragCoord.xy + vec2(u_time * 17.0)) - 0.5) * (1.0 + u_grain * 3.0) / 255.0;
+  gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+}
+`;
+
 export const FRAGMENT: Record<ShaderField, string> = {
   drift: HEAD + VALUE_NOISE + DRIFT,
   aurora: HEAD + SIMPLEX + AURORA,
@@ -427,4 +514,15 @@ export const FRAGMENT: Record<ShaderField, string> = {
   smoke: HEAD + VALUE_NOISE + PALETTE + SMOKE,
   riso: HEAD + VALUE_NOISE + PALETTE + RISO,
   veil: HEAD + VALUE_NOISE + PALETTE + VEIL,
+  lacquer: HEAD + LACQUER,
 };
+
+/**
+ * The fields that cost more than the rest a pixel: drawn on a smaller budget,
+ * never on a software renderer, and started only once the page has loaded,
+ * so they never race the first paint.
+ */
+export const HEAVY: ReadonlySet<Field> = new Set<Field>(['lacquer']);
+
+/** The fields whose light leans toward the pointer unless told not to. */
+export const LEANS: ReadonlySet<Field> = new Set<Field>(['lacquer']);
