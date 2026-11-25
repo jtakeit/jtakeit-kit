@@ -1,7 +1,7 @@
 ---
 /**
  * The first screen, in the gloss look: the name, one line, «Book» — on a
- * ground of liquid lacquer, the best photograph standing in it in an arched
+ * ground of liquid lacquer, the best photograph standing in it in a rounded
  * frame.
  *
  * The ground is the design document's hero field (`field` in jtk/design.json,
@@ -24,7 +24,7 @@
  * a hand, a set of nails — with the lacquer around it; under it the line,
  * the name in two lines at most however long («YULIYA BRI | NAILS • GENEVA»),
  * the lead in three, and the buttons, which a 390×844 screen shows without a
- * scroll (the owner, 24 November 2026). A wider screen keeps the arch on the
+ * scroll (the owner, 24 November 2026). A wider screen keeps the photograph on the
  * right.
  */
 import type { Block } from '@jtakeit/kit/content';
@@ -255,11 +255,11 @@ const handle = insta ? (/instagram\.com\/([^/?#]+)/i.exec(insta.text('url'))?.[1
   }
 
   /*
-   * The photograph in an arch: the frame a nail studio, a barber's chair or a
-   * treatment room all wear well, and the one shape no Instagram grid has.
+   * The photograph a rounded rectangle, as on a phone (the owner, 25 November
+   * 2026: not the arch — the same calm frame at every width).
    */
   .hx__stage :global(.hx__shot .shot__frame) {
-    border-radius: 999px 999px var(--r-3) var(--r-3);
+    border-radius: calc(var(--r-3) * 1.6);
     box-shadow:
       0 0 0 1px rgb(255 255 255 / 0.14),
       0 40px 80px -36px rgb(0 0 0 / 0.65);
@@ -347,7 +347,7 @@ const handle = insta ? (/instagram\.com\/([^/?#]+)/i.exec(insta.text('url'))?.[1
       block-size: 100%;
     }
 
-    /* A rounded portrait, not the tall arch: the arch needs the height a phone gives the words. */
+    /* A compact portrait: a phone gives the words the height. */
     .hx__stage :global(.hx__shot .shot__frame) {
       aspect-ratio: auto !important;
       border-radius: calc(var(--r-3) * 1.6);
