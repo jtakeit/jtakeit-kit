@@ -162,13 +162,19 @@ const luminance = (hex: string): number | null => {
  * CSS-minded names an agent may reach for (`background`, `accent-ink`,
  * `lacquer`, `lacquer-light`) are read as the palette's own.
  *
- * Drawn live, the design is the draft's where it carries one: a person's
- * page drawn by the platform's booking-page template before any account is
- * in their colours (jtakeit-core media/teaserpage.go). A site's own draft
- * carries none, and the design is the build's, as ever.
+ * The colours the person chose are content, not code (jtakeit-core
+ * sites/sitePalette.go): `palette` in jtk/site.json — the platform writes it
+ * on every save and in every draft, so a change is drawn live with no build
+ * — over jtk/design.json's, which stays the designing agent's default. Drawn
+ * live, the draft's site.json; built, the checkout's.
  */
-const DESIGN_NOW = ((draft()?.files?.['/jtk/design.json'] as typeof DESIGN | undefined) ?? DESIGN);
-const SAID =((DESIGN_NOW as { palette?: Record<string, unknown> }).palette ?? {}) as Record<string, unknown>;
+const DESIGN_NOW = DESIGN;
+const BUILT_SITE = (import.meta.glob('/jtk/site.json', { eager: true, import: 'default' })['/jtk/site.json'] ?? {}) as { palette?: Record<string, unknown> };
+const SITE_NOW = ((draft()?.files?.['/jtk/site.json'] as typeof BUILT_SITE | undefined) ?? BUILT_SITE);
+const SAID = {
+  ...(((DESIGN_NOW as { palette?: Record<string, unknown> }).palette ?? {}) as Record<string, unknown>),
+  ...(SITE_NOW.palette ?? {}),
+} as Record<string, unknown>;
 const hexOf = (value: unknown): string => (typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value.trim()) ? value.trim() : '');
 const said = (...names: string[]): string => names.map((one) => hexOf(SAID[one])).find(Boolean) ?? '';
 const PALETTE = {
