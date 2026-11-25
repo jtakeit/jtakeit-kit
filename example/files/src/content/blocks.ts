@@ -504,6 +504,10 @@ export const HEADER: Block = {
   label: 'Header',
   fields: [
     { key: 'logo', label: 'Logo', kind: 'media', client_editable: true, hint: 'Empty: the business\'s name, as the contacts say it.' },
+    // The person's own picture beside the name — a booking page's profile
+    // picture, as the teaser showed it (the owner, 25 November 2026). Drawn by
+    // the gloss look's header; a logo, where there is one, stands instead.
+    { key: 'avatar', label: 'Your picture', kind: 'media', client_editable: true, hint: 'A small round picture beside the name. Empty: the name alone.' },
     {
       key: 'nav',
       label: 'Navigation',

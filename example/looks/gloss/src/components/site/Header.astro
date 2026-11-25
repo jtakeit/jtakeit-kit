@@ -34,6 +34,7 @@ const header = site.shared(locale).block('header');
 const facts = site.facts(locale);
 const name = facts.text('name');
 const logo = header.picture('logo');
+const avatar = header.picture('avatar');
 
 /** A link of the content, in this page's language and under the base. */
 const go = (href: string): string => {
@@ -45,16 +46,24 @@ const here = Astro.url.pathname.replace(/\/$/, '');
 const current = (href: string) => !href.includes('#') && go(href).replace(/\/$/, '') === here;
 const nav = header.rows('nav');
 const cta = header.text('cta_label');
+// A page whose navigation only moves within itself (a booking page's
+// «Prices», «Posts», «Location»): on a phone the strip is one row — the
+// picture, the name, «Book» — with no menu to open; its places are a scroll
+// away (the owner, 25 November 2026, as the teaser showed it).
+const inPage = nav.length > 0 && nav.every((row) => /^\/?#/.test(row.text('link')));
 ---
 
-<header class="bar" data-bar>
+<header class:list={['bar', inPage && 'bar--in-page']} data-bar>
   <div class="bar__in glass">
-    <a class="bar__mark" href={go('/')} aria-label={name ? undefined : W.home}>
+    <a class:list={['bar__mark', avatar.src && !logo.src && 'bar__mark--face']} href={go('/')} aria-label={name ? undefined : W.home}>
       {
         logo.src ? (
           <Shot name={logo.src} alt={logo.alt || name} path={logo['data-jtk-path']} class="bar__logo" width={320} fit="contain" />
         ) : (
-          <span {...facts.at('name')}>{name}</span>
+          <>
+            {avatar.src && <Shot name={avatar.src} alt={avatar.alt || ''} path={avatar['data-jtk-path']} class="bar__avatar" width={96} ratio="1 / 1" />}
+            <span class="bar__name" {...facts.at('name')}>{name}</span>
+          </>
         )
       }
     </a>
@@ -142,6 +151,34 @@ const cta = header.text('cta_label');
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .bar__mark--face {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-inline-start: -0.85rem;
+  }
+  .bar__name {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .bar__mark :global(.bar__avatar) {
+    flex: none;
+    inline-size: 2.15rem;
+    block-size: 2.15rem;
+    overflow: hidden;
+    border-radius: 50%;
+  }
+  .bar__mark :global(.bar__avatar .shot__frame),
+  .bar__mark :global(.bar__avatar img) {
+    inline-size: 100%;
+    block-size: 100%;
+    aspect-ratio: auto !important;
+    border-radius: 50%;
+    object-fit: cover;
   }
 
   .bar__mark :global(.bar__logo) {
@@ -271,6 +308,23 @@ const cta = header.text('cta_label');
     }
     .bar[data-open] .bar__toggle-shut {
       display: inline;
+    }
+  }
+
+  /* A page that only moves within itself keeps one row on a phone: the
+     picture, the name cut with an ellipsis, «Book» — no menu, no second row. */
+  @media (max-width: 860px) {
+    .bar--in-page .bar__in {
+      flex-wrap: nowrap;
+      border-radius: var(--r-pill);
+    }
+    .bar--in-page .bar__nav,
+    :global(html.js) .bar--in-page .bar__toggle,
+    .bar--in-page .bar__toggle {
+      display: none;
+    }
+    .bar--in-page .bar__in :global(.bar__cta) {
+      flex: none;
     }
   }
 

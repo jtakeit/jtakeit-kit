@@ -100,7 +100,13 @@ const handle = insta ? (/instagram\.com\/([^/?#]+)/i.exec(insta.text('url'))?.[1
               <circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.6" />
               <circle cx="17.4" cy="6.6" r="1.1" fill="currentColor" />
             </svg>
-            {insta.text('label') ? <span {...{ ...insta.at('label'), ...insta.lang('label') }}>{insta.text('label')}</span> : <span data-jtk-fixed>{handle ? `@${handle}` : 'Instagram'}</span>}
+            {/* The handle, as the teaser showed it: «@name», never the word «Instagram» a
+                label of the platform's says — a label of the person's own stands. */}
+            {insta.text('label') && !(handle && /^instagram$/i.test(insta.text('label').trim())) ? (
+              <span {...{ ...insta.at('label'), ...insta.lang('label') }}>{insta.text('label')}</span>
+            ) : (
+              <span {...insta.at('label')}>{handle ? `@${handle}` : 'Instagram'}</span>
+            )}
             <span aria-hidden="true">↗</span>
           </a>
         )
@@ -191,10 +197,15 @@ const handle = insta ? (/instagram\.com\/([^/?#]+)/i.exec(insta.text('url'))?.[1
     color: var(--ink-quiet);
   }
 
+  /* The name at most two lines beside the arch, however long a business
+     calls itself («YULIYA BRI | NAILS • GENEVA» took three, huge): the
+     column's width, a size that stops at what two lines hold (the owner,
+     25 November 2026, as the teaser drew it). */
   .hx__title {
-    max-inline-size: 14ch;
+    max-inline-size: 100%;
     font-family: var(--font-display);
-    font-size: var(--step-6);
+    font-size: clamp(2.4rem, 1.2rem + 3.6vw, 4.6rem);
+    overflow-wrap: anywhere;
     font-weight: 400;
     line-height: var(--leading-display);
     letter-spacing: var(--tracking-display);
@@ -321,10 +332,11 @@ const handle = insta ? (/instagram\.com\/([^/?#]+)/i.exec(insta.text('url'))?.[1
       gap: clamp(1.1rem, calc(var(--screen) * 0.025), 1.5rem);
     }
 
+    /* Centred and compact, as the teaser has it: a third of the screen at most. */
     .hx__stage {
       order: -1;
-      justify-self: start;
-      block-size: clamp(13rem, calc(var(--screen) * 0.38), 22rem);
+      justify-self: center;
+      block-size: min(calc(var(--screen) * 0.32), 17rem);
       inline-size: auto;
       aspect-ratio: 4 / 5;
       max-inline-size: 100%;
