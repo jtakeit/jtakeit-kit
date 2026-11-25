@@ -1,5 +1,6 @@
 ---
 import DESIGN from '../../jtk/design.json';
+import { draft } from '@jtakeit/kit/live';
 /**
  * The document. Written once, derived from data, never repeated per page.
  *
@@ -160,16 +161,22 @@ const luminance = (hex: string): number | null => {
  * the older `paper`, `ink` and `accent` beside it, which it replaces. The
  * CSS-minded names an agent may reach for (`background`, `accent-ink`,
  * `lacquer`, `lacquer-light`) are read as the palette's own.
+ *
+ * Drawn live, the design is the draft's where it carries one: a person's
+ * page drawn by the platform's booking-page template before any account is
+ * in their colours (jtakeit-core media/teaserpage.go). A site's own draft
+ * carries none, and the design is the build's, as ever.
  */
-const SAID = ((DESIGN as { palette?: Record<string, unknown> }).palette ?? {}) as Record<string, unknown>;
+const DESIGN_NOW = ((draft()?.files?.['/jtk/design.json'] as typeof DESIGN | undefined) ?? DESIGN);
+const SAID =((DESIGN_NOW as { palette?: Record<string, unknown> }).palette ?? {}) as Record<string, unknown>;
 const hexOf = (value: unknown): string => (typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value.trim()) ? value.trim() : '');
 const said = (...names: string[]): string => names.map((one) => hexOf(SAID[one])).find(Boolean) ?? '';
 const PALETTE = {
-  background: said('bg', 'background') || DESIGN.paper || '',
+  background: said('bg', 'background') || DESIGN_NOW.paper || '',
   surface: said('surface'),
-  ink: said('ink') || DESIGN.ink || '',
+  ink: said('ink') || DESIGN_NOW.ink || '',
   muted: said('muted'),
-  accent: said('accent') || DESIGN.accent || '',
+  accent: said('accent') || DESIGN_NOW.accent || '',
   onAccent: said('accentInk', 'accent-ink'),
   lacquer: said('lacquerA', 'lacquer'),
   lacquerLight: said('lacquerB', 'lacquer-light'),
@@ -247,8 +254,8 @@ if (said('bg', 'background')) {
   palette['--line'] = 'color-mix(in srgb, var(--ink) 13%, var(--paper))';
   if (!invertedPage) palette['--paper-deep'] = 'color-mix(in srgb, var(--paper) 94%, var(--ink))';
 }
-if (DESIGN.ground) palette['--jtk-ground'] = DESIGN.ground;
-(DESIGN.colors ?? []).forEach((colour: string, i: number) => {
+if (DESIGN_NOW.ground) palette['--jtk-ground'] = DESIGN_NOW.ground;
+(DESIGN_NOW.colors ?? []).forEach((colour: string, i: number) => {
   if (colour) palette[`--jtk-c${i + 1}`] = colour;
 });
 
