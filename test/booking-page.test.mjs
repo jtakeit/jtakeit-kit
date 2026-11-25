@@ -192,10 +192,11 @@ test('every palette\'s words read at 4.5:1 — the header\'s glass, the booking 
   for (const token of ['--bar-glass', '--bar-solid', '--bar-ink', '--bar-ink-quiet']) assert.ok(header.includes(`var(${token}`), token);
 });
 
-test('the phone\'s first screen: the photograph first and compact, the name in two lines, the lead in three', () => {
+test('the phone\'s first screen: the photograph first, centred and compact, the name in two lines, the lead in three', () => {
   const hero = readFileSync(join(ROOT, 'example/looks/gloss/src/components/sections/Hero.astro'), 'utf8');
   const phone = hero.slice(hero.indexOf('@media (max-width: 40rem)'));
-  assert.match(phone, /\.hx__stage \{[^}]*order: -1;[^}]*block-size: clamp\(13rem, calc\(var\(--screen\) \* 0\.38\), 22rem\)/);
+  // Centred and compact, as the teaser has it: a third of the screen at most (25 November 2026).
+  assert.match(phone, /\.hx__stage \{[^}]*order: -1;[^}]*justify-self: center;[^}]*block-size: min\(calc\(var\(--screen\) \* 0\.32\), 17rem\)/);
   assert.match(phone, /\.hx__title \{[^}]*-webkit-line-clamp: 2;/);
   assert.match(phone, /\.hx__lead \{[^}]*-webkit-line-clamp: 3;/);
   assert.match(hero, /!shot\.focus && 'hx__stage--top'/);
