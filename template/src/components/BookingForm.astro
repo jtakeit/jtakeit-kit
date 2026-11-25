@@ -248,6 +248,8 @@ const w = form.words;
 
 <script>
   import '@jtakeit/kit/elements/booking';
+  import { months } from './booking-month';
+  months();
 </script>
 
 <style>
@@ -506,20 +508,21 @@ const w = form.words;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
-    margin: 0 0 0.4rem;
+    gap: 0.75rem;
+    margin: 0 0 0.75rem;
   }
   .form :global(.booking__days-row) {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 0.3rem;
+    gap: clamp(0.35rem, 1vw, 0.6rem);
   }
   .form :global(.booking__day) {
     display: grid;
-    gap: 0.1rem;
-    padding: 0.4rem 0.1rem;
+    gap: 0.2rem;
+    padding: 0.65rem 0.1rem 0.6rem;
     text-align: center;
     line-height: 1.2;
+    border-radius: 0.9rem;
   }
   .form :global(.booking__day-wd) {
     font-size: 0.7em;
@@ -536,8 +539,16 @@ const w = form.words;
   .form :global(.booking__day-n) {
     font-size: 1.125rem;
   }
+  /* the week's arrows: two round buttons with room between them, as the rows' arrows */
   .form :global(.booking__days-arrow) {
-    padding: 0.3rem 0.6rem;
+    display: inline-grid;
+    place-items: center;
+    inline-size: 2.25rem;
+    block-size: 2.25rem;
+    padding: 0;
+    border-radius: 999px;
+    font-size: 1.15rem;
+    line-height: 1;
   }
   /* the parts of the day */
   .form :global(.booking__parts) {
@@ -695,14 +706,19 @@ const w = form.words;
     .form > :global(:is(.booking__stepper, noscript, [data-done])) {
       grid-column: 1 / 4;
     }
+    /* As many rows as the right column holds on that step, no more: a row
+       left empty is a gap of nothing under the form (the day, the times and
+       «Continue» on the first; the name, the contacts, the check and «Book»
+       on the second). */
     .form > .field:has([name='service']),
     .form[data-stage='2'] > :global(.booking__summary) {
       grid-column: 1;
-      grid-row: 2 / span 9;
+      grid-row: 2 / span 3;
       padding-right: clamp(0.5rem, 2vw, 2rem);
       border-right: 1px solid var(--line);
     }
     .form[data-stage='2'] > :global(.booking__summary) {
+      grid-row: 2 / span 6;
       border: 1px solid var(--line);
       padding: 1rem 1.1rem;
     }
@@ -713,6 +729,164 @@ const w = form.words;
     }
     .form > .field:has([name='email']) {
       grid-column: 3;
+    }
+  }
+
+  /* ── the month (booking-month.ts): its name and «More dates» open it ───── */
+  .form :global(.booking__days-month[data-month-open]) {
+    cursor: pointer;
+    text-decoration: underline dotted color-mix(in srgb, currentColor 45%, transparent);
+    text-underline-offset: 0.25em;
+  }
+  .form :global(.booking__days-month[data-month-open]:hover) {
+    color: var(--accent-ink, var(--ink));
+  }
+  .form :global(.booking__days-more) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-inline-end: 0.3rem;
+    min-block-size: 2.25rem;
+    padding-inline: 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  .form :global(.booking__days-more:hover) {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+    color: var(--accent-ink, var(--ink));
+  }
+  .form :global(.booking__days-nav) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  :global(dialog.bmc) {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    max-inline-size: none;
+    max-block-size: none;
+    overflow: visible;
+    color: var(--ink);
+  }
+  :global(dialog.bmc::backdrop) {
+    background: color-mix(in srgb, var(--ink) 28%, transparent);
+    backdrop-filter: blur(2px);
+  }
+  :global(.bmc__card) {
+    position: relative;
+    inline-size: min(22rem, calc(100vw - 2rem));
+    padding: 1.1rem 1.1rem 1.25rem;
+    border-radius: var(--r-3, 1rem);
+    background: var(--panel, #fff);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 8%, transparent), 0 30px 70px -30px rgb(0 0 0 / 0.45);
+    font-family: var(--font-body, inherit);
+  }
+  :global(.bmc__head) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-block-end: 0.75rem;
+    padding-inline-end: 2.25rem;
+  }
+  :global(.bmc__month) {
+    margin: 0;
+    font-family: var(--font-display, inherit);
+    font-size: 1.15rem;
+  }
+  :global(.bmc__arrow),
+  :global(.bmc__close) {
+    display: grid;
+    place-items: center;
+    inline-size: 2.25rem;
+    block-size: 2.25rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink);
+    font-size: 1.1rem;
+    cursor: pointer;
+  }
+  :global(.bmc__arrow:disabled) {
+    opacity: 0.3;
+    cursor: default;
+  }
+  :global(.bmc__head .bmc__arrow:first-child) {
+    order: 0;
+  }
+  :global(.bmc__close) {
+    position: absolute;
+    inset-block-start: 1.1rem;
+    inset-inline-end: 1.1rem;
+    border-color: transparent;
+  }
+  :global(.bmc__grid) {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.25rem;
+  }
+  :global(.bmc__wd) {
+    padding-block: 0.25rem;
+    text-align: center;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+  }
+  :global(.bmc__day) {
+    aspect-ratio: 1;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-variant-numeric: lining-nums tabular-nums;
+    cursor: pointer;
+    transition: background-color 160ms var(--ease-out, ease), color 160ms var(--ease-out, ease);
+  }
+  :global(.bmc__day:hover:not(:disabled)) {
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+  :global(.bmc__day.is-today) {
+    border-color: var(--line);
+  }
+  :global(.bmc__day.is-other) {
+    color: var(--ink-quiet);
+  }
+  :global(.bmc__day[aria-pressed='true']) {
+    background: var(--accent-deep, var(--accent));
+    color: var(--on-accent-deep, #fff);
+  }
+  :global(.bmc__day:disabled) {
+    opacity: 0.3;
+    cursor: default;
+    text-decoration: line-through;
+    text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+  }
+  :global(.bmc__day:focus-visible),
+  :global(.bmc__arrow:focus-visible),
+  :global(.bmc__close:focus-visible) {
+    outline: 2px solid var(--accent-ink, var(--ink));
+    outline-offset: 2px;
+  }
+  /* A phone: a sheet from the foot of the screen. */
+  @media (max-width: 40rem) {
+    :global(dialog.bmc) {
+      margin: auto 0 0;
+      inline-size: 100%;
+    }
+    :global(.bmc__card) {
+      inline-size: 100%;
+      border-end-start-radius: 0;
+      border-end-end-radius: 0;
+      padding-block-end: calc(1.25rem + env(safe-area-inset-bottom));
     }
   }
 </style>

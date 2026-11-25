@@ -30,14 +30,15 @@ test('--kind booking-page lays one page: four sections, the diary on /, the pric
   assert.match(run.stdout, /booking page/);
 
   const home = json('studio-probe', 'jtk/pages/index.json');
-  assert.deepEqual(home.blocks.map((one) => one.type), ['hero', 'services_list', 'gallery', 'cta_banner']);
+  // Where to find the business before its posts (the owner, 25 November 2026).
+  assert.deepEqual(home.blocks.map((one) => one.type), ['hero', 'services_list', 'cta_banner', 'gallery']);
   const hero = home.blocks[0];
   assert.equal(hero.title, 'Studio Probe');
   assert.equal(hero.cta_href, '#book');
   assert.equal(hero.cta_label, 'Termin wählen');
   assert.equal(home.blocks[1].limit, 0);
   assert.equal(home.blocks[1].more_label, undefined);
-  assert.equal(home.blocks[3].form, false);
+  assert.equal(home.blocks.find((one) => one.type === 'cta_banner').form, false);
   // The translation holds the same blocks' words, and only words.
   const en = json('studio-probe', 'jtk/pages/index.en.json');
   assert.equal(en.blocks.find((one) => one._key === 'hero0001').cta_label, 'Book a time');
@@ -45,7 +46,7 @@ test('--kind booking-page lays one page: four sections, the diary on /, the pric
 
   // The gallery is the business's posts: «Latest posts» in the site's language, the
   // handle beside it, each picture its post — placeholders, plainly so (the owner, 24 November 2026).
-  const gallery = home.blocks[2];
+  const gallery = home.blocks.find((one) => one.type === 'gallery');
   assert.equal(gallery.title, 'Neueste Beiträge');
   assert.equal(gallery.eyebrow, undefined);
   assert.equal(gallery.instagram, 'your_instagram');
@@ -70,6 +71,8 @@ test('--kind booking-page lays one page: four sections, the diary on /, the pric
 
   // The diary books on the page, and one person does every service.
   assert.equal(json('studio-probe', 'jtk/modules/bookings.json').settings.page, '/');
+  // A diary with no zone offers no time: the example's address's, until the business's own.
+  assert.equal(json('studio-probe', 'jtk/modules/bookings.json').settings.zone, 'Europe/Zurich');
   const person = json('studio-probe', 'jtk/entries/masters/alex-muster.json');
   assert.equal(person.collection, 'masters');
   assert.ok(person.id);
@@ -77,7 +80,7 @@ test('--kind booking-page lays one page: four sections, the diary on /, the pric
 
   // The navigation is the page's anchors, the button books.
   const header = json('studio-probe', 'jtk/shared.json').blocks.find((one) => one.type === 'header');
-  assert.deepEqual(header.nav.map((one) => one.link), ['/#services', '/#gallery', '/#contact']);
+  assert.deepEqual(header.nav.map((one) => one.link), ['/#services', '/#contact', '/#gallery']);
   assert.equal(header.cta_link, '/#book');
 
   // The gloss look, the lacquer field, the vertical's palette.

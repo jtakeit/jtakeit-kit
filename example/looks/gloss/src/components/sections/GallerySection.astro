@@ -28,6 +28,7 @@ import type { Block } from '@jtakeit/kit/content';
 import Shot from '../Shot.astro';
 import Gallery from '../gallery/Gallery.astro';
 import Lightbox from '../gallery/Lightbox.astro';
+import RailArrows from '../site/RailArrows.astro';
 import { ARRANGEMENTS, type Arrangement } from '../gallery/galleries';
 import { frameLang, frameWords } from '../site/words';
 import { langOf } from '../../lib/locale';
@@ -43,9 +44,6 @@ const pictures = block.gallery('images');
 const asked = String(block.value('arrangement') ?? 'ragged') as Arrangement;
 const arrangement: Arrangement = ARRANGEMENTS.includes(asked) ? asked : 'ragged';
 const wall = arrangement === 'ragged';
-// Columns the pictures fill evenly — and the first piece four cells where that fills them too.
-const columns = [4, 3, 2].find((n) => pictures.length >= n && pictures.length % n === 0) ?? 4;
-const featured = pictures.length >= 7 && (pictures.length + 3) % columns === 0;
 // Each picture's post, where it has one: read beside the pictures, in their order (a gallery's
 // picture is `{ _key, src, alt }` to the door, which keeps nothing else; `href` is the block's).
 const raw = block.value('images');
@@ -67,11 +65,12 @@ const wordsLang = frameLang(lang);
 
 <section class="s works" id={first ? 'gallery' : undefined}>
   <div class="s__in">
-    <div class:list={['s__head works__head', insta && 'works__head--posts']} data-reveal="float">
+    <div class="s__head works__head works__head--posts" data-reveal="float">
       <div class="works__words">
         {block.text('eyebrow') && <p class="label label--accent" {...{ ...block.at('eyebrow'), ...block.lang('eyebrow') }}>{block.text('eyebrow')}</p>}
         {block.text('title') && <h2 class="s__title" {...{ ...block.at('title'), ...block.lang('title') }}>{block.text('title')}</h2>}
       </div>
+      <div class="works__side">
       {
         insta && (
           <a class="works__handle" href={`https://www.instagram.com/${insta}/`} rel="noopener me" target="_blank">
@@ -85,14 +84,17 @@ const wordsLang = frameLang(lang);
           </a>
         )
       }
+      {wall && pieces.length > 0 && <RailArrows for="posts-rail" locale={locale} />}
+      </div>
     </div>
     {
       pieces.length > 0 && (
         <Lightbox locale={locale} tilt class="works__box">
           {wall ? (
-            <ul class:list={['works__wall', featured && 'works__wall--featured']} style={`--works-columns:${columns}`}>
-              {pieces.map((piece, at) => (
-                <li class="works__cell" data-reveal="float" style={`--i:${at % columns}`}>
+            <div class="works__rail" id="posts-rail" data-rail data-reveal="float">
+            <ul class="works__wall" data-rail-track>
+              {pieces.map((piece) => (
+                <li class="works__cell">
                   {piece.href ? (
                     <a class="works__post" href={piece.href} target="_blank" rel="noopener">
                       {/* What a key and a screen reader hear: «Open this post on Instagram», then the picture's own words. */}
@@ -104,8 +106,8 @@ const wordsLang = frameLang(lang);
                         path={piece.path}
                         focus={piece.focus}
                         ratio="4 / 5"
-                        width={featured && at === 0 ? 1100 : 640}
-                        sizes={featured && at === 0 ? '(min-width: 62rem) 38rem, 80vw' : '(min-width: 62rem) 19rem, (min-width: 40rem) 30vw, 72vw'}
+                        width={640}
+                        sizes="(min-width: 62rem) 17rem, (min-width: 40rem) 30vw, 64vw"
                       />
                       <span class="works__glyph" aria-hidden="true">
                         <svg viewBox="0 0 24 24" width="16" height="16">
@@ -123,13 +125,14 @@ const wordsLang = frameLang(lang);
                       path={piece.path}
                       focus={piece.focus}
                       ratio="4 / 5"
-                      width={featured && at === 0 ? 1100 : 640}
-                      sizes={featured && at === 0 ? '(min-width: 62rem) 38rem, 80vw' : '(min-width: 62rem) 19rem, (min-width: 40rem) 30vw, 72vw'}
+                      width={640}
+                      sizes="(min-width: 62rem) 17rem, (min-width: 40rem) 30vw, 64vw"
                     />
                   )}
                 </li>
               ))}
             </ul>
+            </div>
           ) : (
             <Gallery arrangement={arrangement} items={pieces} />
           )}
@@ -155,6 +158,13 @@ const wordsLang = frameLang(lang);
     justify-content: space-between;
     gap: var(--space-4) var(--space-5);
     max-inline-size: none;
+  }
+
+  .works__side {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: none;
   }
 
   .works__head--posts .works__words {
@@ -311,23 +321,42 @@ const wordsLang = frameLang(lang);
     }
   }
 
-  /* ── the wall ─────────────────────────────────────────────────────────────── */
+  /* ── the row ──────────────────────────────────────────────────────────────
+   * The posts as one row the width of the screen, drifting by itself and
+   * scrolled under a hand (site/rail.ts), as the services above them are. */
 
-  .works__wall {
-    display: grid;
-    grid-template-columns: repeat(var(--works-columns, 4), minmax(0, 1fr));
-    gap: clamp(0.75rem, 1.6vw, 1.25rem);
-    margin: 0;
-    padding: 0;
-    list-style: none;
+  .works__rail {
+    --edge: max(var(--gutter), calc((100vw - 76rem) / 2));
+    margin-inline: calc(50% - 50vw);
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - min(5rem, var(--edge))), transparent 100%);
+    mask-image: linear-gradient(to right, #000 calc(100% - min(5rem, var(--edge))), transparent 100%);
   }
 
-  .works__wall--featured .works__cell:first-child {
-    grid-column: span 2;
-    grid-row: span 2;
+  .works__rail[data-at-end] {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .works__wall {
+    display: flex;
+    gap: clamp(0.75rem, 1.6vw, 1.25rem);
+    margin: 0;
+    padding: 0.25rem var(--edge) 0.75rem;
+    scroll-padding-inline: var(--edge);
+    scroll-snap-type: x proximity;
+    list-style: none;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .works__wall::-webkit-scrollbar {
+    display: none;
   }
 
   .works__cell {
+    flex: 0 0 clamp(12.5rem, 19vw, 17rem);
+    scroll-snap-align: start;
     min-inline-size: 0;
   }
 
@@ -343,53 +372,18 @@ const wordsLang = frameLang(lang);
     block-size: 100%;
   }
 
-  /* The featured piece fills its four cells, whatever its own proportion. */
-  .works__wall--featured .works__cell:first-child :global(.shot__frame) {
-    aspect-ratio: auto !important;
-  }
-
   .works__cell :global(img) {
     block-size: 100%;
   }
 
-  /* A tablet: three columns, the feature dropped — it was cut for the wider wall. */
-  @media (max-width: 61.99rem) {
-    .works__wall {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-    .works__wall--featured .works__cell:first-child {
-      grid-column: auto;
-      grid-row: auto;
-    }
-    .works__wall--featured .works__cell:first-child :global(.shot__frame) {
-      aspect-ratio: 4 / 5 !important;
-    }
-  }
-
-  /*
-   * A phone: one row to swipe, snapped, a piece and the edge of the next on
-   * the screen (docs/compositions.md, «phones by rule») — never eight
-   * photographs stacked into a page of their own. The row runs to the
-   * screen's edges and starts at the text's.
-   */
   @media (max-width: 40rem) {
-    .works__wall {
-      grid-template-columns: none;
-      grid-auto-flow: column;
-      grid-auto-columns: 72%;
-      overflow-x: auto;
-      overscroll-behavior-x: contain;
-      scroll-snap-type: x mandatory;
-      scroll-padding-inline: var(--gutter);
-      margin-inline: calc(var(--gutter) * -1);
-      padding: 0.25rem var(--gutter) 0.75rem;
-      scrollbar-width: none;
-    }
-    .works__wall::-webkit-scrollbar {
-      display: none;
-    }
     .works__cell {
-      scroll-snap-align: start;
+      flex-basis: 64vw;
     }
   }
 </style>
+
+<script>
+  import { rails } from '../site/rail';
+  rails();
+</script>

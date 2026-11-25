@@ -61,32 +61,6 @@ const form = block.value('form') === true;
           </div>
         )
       }
-      {
-        !form && social.length > 0 && (
-          <ul class="visit__social">
-            {social.map((row) => {
-              const url = row.text('url');
-              const insta = /instagram\.com/i.test(url);
-              const handle = insta ? (/instagram\.com\/([^/?#]+)/i.exec(url)?.[1] ?? '') : '';
-              return (
-                <li>
-                  <a class="visit__follow" href={url} rel="noopener me" target="_blank">
-                    {insta && (
-                      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-                        <rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="1.5" />
-                        <circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.5" />
-                        <circle cx="17.4" cy="6.6" r="1.1" fill="currentColor" />
-                      </svg>
-                    )}
-                    {row.text('label') ? <span {...{ ...row.at('label'), ...row.lang('label') }}>{row.text('label')}</span> : <span data-jtk-fixed>{handle ? `@${handle}` : url.replace(/^https?:\/\/(www\.)?/, '')}</span>}
-                    <span aria-hidden="true">↗</span>
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
-        )
-      }
     </div>
 
     <aside class="visit__card reach__card" {...facts.from()} data-reveal="float" style="--i:1">
@@ -117,13 +91,41 @@ const form = block.value('form') === true;
         <Hours locale={locale} />
       </div>
       {
-        (phone || email) && (
+        (phone || email || social.length > 0) && (
           <div class="visit__part">
             <Label of={contacts} field="reach_label" standIn={W.write} standInLang={wordsLang} />
-            <p class="visit__lines">
-              {phone && <a href={`tel:${phone.replace(/[^+\d]/g, '')}`} {...facts.at('phone')}>{phone}</a>}
-              {email && <a href={`mailto:${email}`} {...facts.at('email')}>{email}</a>}
-            </p>
+            {(phone || email) && (
+              <p class="visit__lines">
+                {phone && <a href={`tel:${phone.replace(/[^+\d]/g, '')}`} {...facts.at('phone')}>{phone}</a>}
+                {email && <a href={`mailto:${email}`} {...facts.at('email')}>{email}</a>}
+              </p>
+            )}
+        {
+          social.length > 0 && (
+            <ul class="visit__social">
+              {social.map((row) => {
+                const url = row.text('url');
+                const insta = /instagram\.com/i.test(url);
+                const handle = insta ? (/instagram\.com\/([^/?#]+)/i.exec(url)?.[1] ?? '') : '';
+                return (
+                  <li>
+                    <a class="visit__follow" href={url} rel="noopener me" target="_blank">
+                      {insta && (
+                        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                          <rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="1.5" />
+                          <circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.5" />
+                          <circle cx="17.4" cy="6.6" r="1.1" fill="currentColor" />
+                        </svg>
+                      )}
+                      {row.text('label') ? <span {...{ ...row.at('label'), ...row.lang('label') }}>{row.text('label')}</span> : <span data-jtk-fixed>{handle ? `@${handle}` : url.replace(/^https?:\/\/(www\.)?/, '')}</span>}
+                      <span aria-hidden="true">↗</span>
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          )
+        }
           </div>
         )
       }
@@ -144,7 +146,65 @@ const form = block.value('form') === true;
   }
 
   .visit__head {
-    margin-block-end: var(--space-6);
+    margin-block-end: 0;
+  }
+
+  /*
+   * Without the form: the heading and its sentence across the top, as the
+   * services' are — the heading on one line where it fits, the sentence as
+   * wide — and under them one card the content's width, in three columns:
+   * where, when, how to reach (the phone, the email and the profiles
+   * together). A column of its own for one Instagram link left the left half
+   * of the section empty (the owner, 25 November 2026).
+   */
+  .visit:not(.visit--form) .visit__in {
+    grid-template-columns: minmax(0, 1fr);
+    gap: clamp(2rem, calc(var(--screen) * 0.05), 3.25rem);
+  }
+
+  .visit:not(.visit--form) .visit__head {
+    inline-size: max-content;
+    max-inline-size: 100%;
+  }
+
+  .visit:not(.visit--form) .visit__head :global(.s__lead) {
+    inline-size: 0;
+    min-inline-size: 100%;
+    max-inline-size: none;
+  }
+
+  .visit:not(.visit--form) .visit__card {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0;
+    padding: 0;
+  }
+
+  .visit:not(.visit--form) .visit__part {
+    align-content: start;
+    padding: clamp(1.5rem, 3vw, 2.5rem);
+  }
+
+  .visit:not(.visit--form) .visit__part + .visit__part {
+    border-inline-start: 1px solid var(--line);
+  }
+
+  .visit__part .visit__social {
+    margin-block-start: 0.5rem;
+  }
+
+  .visit__part .visit__follow {
+    font-family: inherit;
+    font-size: var(--step-0);
+  }
+
+  @media (max-width: 860px) {
+    .visit:not(.visit--form) .visit__card {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .visit:not(.visit--form) .visit__part + .visit__part {
+      border-inline-start: 0;
+      border-block-start: 1px solid var(--line);
+    }
   }
 
   .visit__social {

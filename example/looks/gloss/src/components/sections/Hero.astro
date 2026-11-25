@@ -51,6 +51,9 @@ const go = (href: string): string => {
   return `${linkTo(withLocale(locale, path || '/'))}${hash ? `#${hash}` : ''}`;
 };
 const title = block.text('title');
+// How long the name is, for the first guess at the size that sets it in two
+// lines (the script below then fits it exactly, once the face has loaded).
+const chars = Math.max(6, [...title].length);
 
 // The ground: the document's field, in the lacquer's colours or its own.
 const field = (typeof design.field === 'string' ? design.field : '') as Field | '';
@@ -78,7 +81,7 @@ const handle = insta ? (/instagram\.com\/([^/?#]+)/i.exec(insta.text('url'))?.[1
   <div class="hx__in">
     <div class="hx__words">
       {block.text('eyebrow') && <p class="label hx__eyebrow" {...{ ...block.at('eyebrow'), ...block.lang('eyebrow') }}>{block.text('eyebrow')}</p>}
-      {title && <h1 class="hx__title" {...{ ...block.at('title'), ...block.lang('title') }}>{title}</h1>}
+      {title && <h1 class="hx__title" data-fit-lines="2" style={`--chars:${chars}`} {...{ ...block.at('title'), ...block.lang('title') }}>{title}</h1>}
       {block.text('lead') && <p class="hx__lead" {...{ ...block.at('lead'), ...block.lang('lead') }}>{block.text('lead')}</p>}
       {
         (block.text('cta_label') || block.text('more_label')) && (
@@ -141,7 +144,8 @@ const handle = insta ? (/instagram\.com\/([^/?#]+)/i.exec(insta.text('url'))?.[1
     overflow: hidden;
     display: grid;
     align-items: center;
-    min-block-size: min(calc(var(--screen) * 0.94), 60rem);
+    /* the whole first screen, the page starting under its foot */
+    min-block-size: var(--screen, 100svh);
     padding: clamp(6.5rem, calc(var(--screen) * 0.15), 9rem) var(--gutter) clamp(3rem, calc(var(--screen) * 0.08), 5.5rem);
   }
 
@@ -191,21 +195,29 @@ const handle = insta ? (/instagram\.com\/([^/?#]+)/i.exec(insta.text('url'))?.[1
     display: grid;
     gap: var(--space-5);
     justify-items: start;
+    /* the name is sized against this column: container units below */
+    container-type: inline-size;
+    min-inline-size: 0;
   }
 
   .hx__eyebrow {
     color: var(--ink-quiet);
   }
 
-  /* The name at most two lines beside the arch, however long a business
-     calls itself («YULIYA BRI | NAILS • GENEVA» took three, huge): the
-     column's width, a size that stops at what two lines hold (the owner,
-     25 November 2026, as the teaser drew it). */
+  /*
+   * The name in two lines at most, however long it is: its size is worked out
+   * from its length against the column (about half an em a letter, two lines
+   * of the column's width), never above the scale's largest step — a short
+   * name stands large on one line, «Yuliya Bri | Nails • Geneva» comes down
+   * until it fits in two. The script under the section then measures the
+   * lines the face actually made and steps the size down where a long word
+   * still broke into a third.
+   */
   .hx__title {
     max-inline-size: 100%;
     font-family: var(--font-display);
-    font-size: clamp(2.4rem, 1.2rem + 3.6vw, 4.6rem);
-    overflow-wrap: anywhere;
+    font-size: clamp(1.6rem, calc(380cqi / var(--chars, 12)), var(--step-6));
+    overflow-wrap: break-word;
     font-weight: 400;
     line-height: var(--leading-display);
     letter-spacing: var(--tracking-display);
@@ -254,12 +266,9 @@ const handle = insta ? (/instagram\.com\/([^/?#]+)/i.exec(insta.text('url'))?.[1
     inline-size: min(100%, 26rem);
   }
 
-  /*
-   * The photograph a rounded rectangle, as on a phone (the owner, 25 November
-   * 2026: not the arch — the same calm frame at every width).
-   */
+  /* The photograph upright and rectangular, its corners the cards' own. */
   .hx__stage :global(.hx__shot .shot__frame) {
-    border-radius: calc(var(--r-3) * 1.6);
+    border-radius: var(--r-3);
     box-shadow:
       0 0 0 1px rgb(255 255 255 / 0.14),
       0 40px 80px -36px rgb(0 0 0 / 0.65);
@@ -328,6 +337,7 @@ const handle = insta ? (/instagram\.com\/([^/?#]+)/i.exec(insta.text('url'))?.[1
       padding-block: clamp(5rem, calc(var(--screen) * 0.1), 6rem) clamp(2.25rem, calc(var(--screen) * 0.05), 3rem);
     }
 
+
     .hx__in {
       gap: clamp(1.1rem, calc(var(--screen) * 0.025), 1.5rem);
     }
@@ -362,11 +372,11 @@ const handle = insta ? (/instagram\.com\/([^/?#]+)/i.exec(insta.text('url'))?.[1
       gap: 0.8rem;
     }
 
+    /* Sized to two lines by its length (and the script below); cut at two
+       only as the last resort, where no script runs. */
     .hx__title {
-      max-inline-size: none;
-      font-size: clamp(1.9rem, 8.2vw, 2.75rem);
-      line-height: 1.02;
-      overflow-wrap: anywhere;
+      font-size: clamp(1.5rem, calc(360cqi / var(--chars, 12)), 2.9rem);
+      line-height: 1.04;
       display: -webkit-box;
       -webkit-box-orient: vertical;
       -webkit-line-clamp: 2;
@@ -401,3 +411,39 @@ const handle = insta ? (/instagram\.com\/([^/?#]+)/i.exec(insta.text('url'))?.[1
     }
   }
 </style>
+
+<script>
+  /*
+   * The name in two lines: the size the style guessed from its length is
+   * held to the lines the face really made — stepped down while a third line
+   * shows (a long word, a wide face), once the face has loaded and again when
+   * the column changes width. Without a script the guess stands.
+   */
+  const fit = (title: HTMLElement) => {
+    const most = Number(title.dataset.fitLines || 2);
+    title.style.fontSize = '';
+    // Measured whole: the phone's cut at two lines would hide the third it is looking for.
+    title.style.setProperty('-webkit-line-clamp', 'none');
+    title.style.setProperty('line-clamp', 'none');
+    title.style.display = 'block';
+    let size = parseFloat(getComputedStyle(title).fontSize);
+    const lines = () => Math.round(title.getBoundingClientRect().height / (parseFloat(getComputedStyle(title).lineHeight) || size * 1.05));
+    let guard = 24;
+    while (lines() > most && size > 18 && guard-- > 0) {
+      size *= 0.94;
+      title.style.fontSize = `${size}px`;
+    }
+    title.style.removeProperty('-webkit-line-clamp');
+    title.style.removeProperty('line-clamp');
+    title.style.removeProperty('display');
+  };
+  const all = () => document.querySelectorAll<HTMLElement>('.hx__title[data-fit-lines]').forEach(fit);
+  document.fonts?.ready.then(all);
+  all();
+  let width = innerWidth;
+  addEventListener('resize', () => {
+    if (innerWidth === width) return;
+    width = innerWidth;
+    all();
+  }, { passive: true });
+</script>
