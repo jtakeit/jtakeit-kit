@@ -1,0 +1,389 @@
+---
+/**
+ * The work, in the gloss look: «Works» — the block's pictures, from the site's
+ * media library, opened whole with a tap (the template's Lightbox), each frame
+ * leaning toward the pointer as it passes, and a swipe from one to the next on
+ * a phone.
+ *
+ * The block's `arrangement` is the studio's (docs/gallery.md). `ragged`, the
+ * example's, is drawn here as the look's own wall: frames of one proportion,
+ * as many columns as the pictures fill evenly — the first piece given four
+ * cells where that fills them too — and on a phone one row to swipe, a piece
+ * and the edge of the next on the screen. Any other arrangement is the
+ * template's Gallery, in the same lightbox.
+ *
+ * Each picture carries its own annotation (`images[<key>].src`), so the
+ * owner replaces one, describes one, or adds one in the panel — and a tap the
+ * panel takes for itself opens no lightbox.
+ *
+ * The business's Instagram posts (the owner, 24 November 2026): a picture
+ * that carries `href` — its post, `https://www.instagram.com/p/<code>/`, as
+ * the platform writes it when it builds a page from the profile — is a link
+ * to it, in a new tab, with a small Instagram glyph over it on hover, and not
+ * the lightbox's; one without keeps the lightbox. The block's `instagram`, the
+ * handle without its @, puts `@handle` and the glyph beside the heading,
+ * linked to the profile. Only an `https://` address is followed.
+ */
+import type { Block } from '@jtakeit/kit/content';
+import Shot from '../Shot.astro';
+import Gallery from '../gallery/Gallery.astro';
+import Lightbox from '../gallery/Lightbox.astro';
+import RailArrows from '../site/RailArrows.astro';
+import { ARRANGEMENTS, type Arrangement } from '../gallery/galleries';
+import { frameLang, frameWords } from '../site/words';
+import { langOf } from '../../lib/locale';
+
+interface Props {
+  block: Block;
+  locale: string;
+  first?: boolean;
+}
+
+const { block, locale, first = false } = Astro.props;
+const pictures = block.gallery('images');
+const asked = String(block.value('arrangement') ?? 'ragged') as Arrangement;
+const arrangement: Arrangement = ARRANGEMENTS.includes(asked) ? asked : 'ragged';
+const wall = arrangement === 'ragged';
+// Each picture's post, where it has one: read beside the pictures, in their order (a gallery's
+// picture is `{ _key, src, alt }` to the door, which keeps nothing else; `href` is the block's).
+const raw = block.value('images');
+const posts = (Array.isArray(raw) ? (raw as unknown[]) : [])
+  .filter((item): item is Record<string, unknown> => item !== null && typeof item === 'object' && typeof (item as { src?: unknown }).src === 'string' && String((item as { src: string }).src).trim() !== '')
+  .map((item) => (typeof item.href === 'string' && /^https:\/\/[^\s"<>]+$/i.test(item.href.trim()) ? item.href.trim() : ''));
+const pieces = pictures.map((one, at) => ({ name: one.src, alt: one.alt, path: one['data-jtk-path'], lang: one.lang, focus: one.focus, href: posts[at] ?? '' }));
+// The handle, without its @ — and the same said as a link or with one, read as the handle.
+const handle = (block.text('instagram') ?? '')
+  .trim()
+  .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '')
+  .replace(/^@/, '')
+  .replace(/[/?#].*$/, '');
+const insta = /^[A-Za-z0-9._]{1,30}$/.test(handle) ? handle : '';
+const lang = langOf(locale);
+const W = frameWords(lang);
+const wordsLang = frameLang(lang);
+---
+
+<section class="s works" id={first ? 'gallery' : undefined}>
+  <div class="s__in">
+    <div class="s__head works__head works__head--posts" data-reveal="float">
+      <div class="works__words">
+        {block.text('eyebrow') && <p class="label label--accent" {...{ ...block.at('eyebrow'), ...block.lang('eyebrow') }}>{block.text('eyebrow')}</p>}
+        {block.text('title') && <h2 class="s__title" {...{ ...block.at('title'), ...block.lang('title') }}>{block.text('title')}</h2>}
+      </div>
+      <div class="works__side">
+      {
+        insta && (
+          <a class="works__handle" href={`https://www.instagram.com/${insta}/`} rel="noopener me" target="_blank">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="1.6" />
+              <circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.6" />
+              <circle cx="17.4" cy="6.6" r="1.1" fill="currentColor" />
+            </svg>
+            <span data-jtk-fixed>@{insta}</span>
+            <span class="works__away" aria-hidden="true">↗</span>
+          </a>
+        )
+      }
+      {wall && pieces.length > 0 && <RailArrows for="posts-rail" locale={locale} />}
+      </div>
+    </div>
+    {
+      pieces.length > 0 && (
+        <Lightbox locale={locale} tilt class="works__box">
+          {wall ? (
+            <div class="works__rail" id="posts-rail" data-rail data-reveal="float">
+            <ul class="works__wall" data-rail-track>
+              {pieces.map((piece) => (
+                <li class="works__cell">
+                  {piece.href ? (
+                    <a class="works__post" href={piece.href} target="_blank" rel="noopener">
+                      {/* What a key and a screen reader hear: «Open this post on Instagram», then the picture's own words. */}
+                      <span class="works__said" lang={wordsLang} data-jtk-fixed>{W.post}</span>
+                      <Shot
+                        name={piece.name}
+                        alt={piece.alt}
+                        lang={piece.lang}
+                        path={piece.path}
+                        focus={piece.focus}
+                        ratio="4 / 5"
+                        width={640}
+                        sizes="(min-width: 62rem) 17rem, (min-width: 40rem) 30vw, 64vw"
+                      />
+                      <span class="works__glyph" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="16" height="16">
+                          <rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="1.8" />
+                          <circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8" />
+                          <circle cx="17.4" cy="6.6" r="1.2" fill="currentColor" />
+                        </svg>
+                      </span>
+                    </a>
+                  ) : (
+                    <Shot
+                      name={piece.name}
+                      alt={piece.alt}
+                      lang={piece.lang}
+                      path={piece.path}
+                      focus={piece.focus}
+                      ratio="4 / 5"
+                      width={640}
+                      sizes="(min-width: 62rem) 17rem, (min-width: 40rem) 30vw, 64vw"
+                    />
+                  )}
+                </li>
+              ))}
+            </ul>
+            </div>
+          ) : (
+            <Gallery arrangement={arrangement} items={pieces} />
+          )}
+        </Lightbox>
+      )
+    }
+  </div>
+</section>
+
+<style>
+  /* ── the head: the heading, and the handle beside it ─────────────────────── */
+
+  .works__words {
+    display: grid;
+    gap: var(--space-4);
+  }
+
+  .works__head--posts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    align-items: last baseline;
+    justify-content: space-between;
+    gap: var(--space-4) var(--space-5);
+    max-inline-size: none;
+  }
+
+  .works__side {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: none;
+  }
+
+  .works__head--posts .works__words {
+    max-inline-size: 46rem;
+  }
+
+  .works__handle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.95rem 0.5rem 0.8rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--surface) 72%, transparent);
+    color: var(--ink);
+    font-size: 0.92rem;
+    line-height: 1.2;
+    text-decoration: none;
+    white-space: nowrap;
+    transition:
+      color 200ms var(--ease-out),
+      border-color 200ms var(--ease-out),
+      background-color 200ms var(--ease-out);
+  }
+
+  .works__handle svg {
+    flex: none;
+    color: var(--accent-ink);
+  }
+
+  .works__away {
+    color: var(--ink-quiet);
+    transition: translate 200ms var(--ease-out);
+  }
+
+  .works__handle:hover {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+    background: var(--surface);
+  }
+
+  .works__handle:hover .works__away {
+    translate: 2px -2px;
+  }
+
+  .works__handle:focus-visible,
+  .works__post:focus-visible {
+    outline: 2px solid var(--accent-ink);
+    outline-offset: 3px;
+  }
+
+  /* ── a picture that is its post ──────────────────────────────────────────── */
+
+  .works__post {
+    position: relative;
+    display: block;
+    block-size: 100%;
+    border-radius: var(--r-3);
+    color: #fff;
+    text-decoration: none;
+    isolation: isolate;
+  }
+
+  .works__post :global(img) {
+    transition: transform 700ms var(--ease-out);
+  }
+
+  .works__said {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* The veil: a breath of the ink from below, never a curtain over the work. */
+  .works__post::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(to top, rgb(12 8 10 / 0.38), rgb(12 8 10 / 0.06) 46%, transparent 70%);
+    opacity: 0;
+    transition: opacity 320ms var(--ease-out);
+  }
+
+  .works__glyph {
+    position: absolute;
+    z-index: 2;
+    inset-block-end: 0.7rem;
+    inset-inline-end: 0.7rem;
+    display: grid;
+    place-items: center;
+    inline-size: 2rem;
+    block-size: 2rem;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.16);
+    border: 1px solid rgb(255 255 255 / 0.32);
+    backdrop-filter: blur(8px) saturate(1.3);
+    -webkit-backdrop-filter: blur(8px) saturate(1.3);
+    opacity: 0;
+    translate: 0 4px;
+    transition:
+      opacity 320ms var(--ease-out),
+      translate 320ms var(--ease-out);
+  }
+
+  .works__glyph svg {
+    display: block;
+  }
+
+  @media (hover: hover) {
+    .works__post:hover :global(img) {
+      transform: scale(1.035);
+    }
+    .works__post:hover::after,
+    .works__post:hover .works__glyph {
+      opacity: 1;
+      translate: 0 0;
+    }
+  }
+
+  .works__post:focus-visible::after,
+  .works__post:focus-visible .works__glyph {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  /* A touch screen has no hover: the glyph stays, small and quiet, saying where a tap goes. */
+  @media (hover: none) {
+    .works__glyph {
+      opacity: 0.9;
+      translate: 0 0;
+      inline-size: 1.75rem;
+      block-size: 1.75rem;
+    }
+    .works__glyph svg {
+      inline-size: 14px;
+      block-size: 14px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .works__post :global(img),
+    .works__post::after,
+    .works__glyph,
+    .works__away {
+      transition: none;
+    }
+    .works__post:hover :global(img) {
+      transform: none;
+    }
+  }
+
+  /* ── the row ──────────────────────────────────────────────────────────────
+   * The posts as one row the width of the screen, drifting by itself and
+   * scrolled under a hand (site/rail.ts), as the services above them are. */
+
+  .works__rail {
+    --edge: max(var(--gutter), calc((100vw - 76rem) / 2));
+    margin-inline: calc(50% - 50vw);
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - min(5rem, var(--edge))), transparent 100%);
+    mask-image: linear-gradient(to right, #000 calc(100% - min(5rem, var(--edge))), transparent 100%);
+  }
+
+  .works__rail[data-at-end] {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .works__wall {
+    display: flex;
+    gap: clamp(0.75rem, 1.6vw, 1.25rem);
+    margin: 0;
+    padding: 0.25rem var(--edge) 0.75rem;
+    scroll-padding-inline: var(--edge);
+    scroll-snap-type: x proximity;
+    list-style: none;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .works__wall::-webkit-scrollbar {
+    display: none;
+  }
+
+  .works__cell {
+    flex: 0 0 clamp(12.5rem, 19vw, 17rem);
+    scroll-snap-align: start;
+    min-inline-size: 0;
+  }
+
+  .works__cell :global(figure.shot) {
+    margin: 0;
+    overflow: hidden;
+    border-radius: var(--r-3);
+    block-size: 100%;
+  }
+
+  .works__cell :global(.shot__frame) {
+    border-radius: inherit;
+    block-size: 100%;
+  }
+
+  .works__cell :global(img) {
+    block-size: 100%;
+  }
+
+  @media (max-width: 40rem) {
+    .works__cell {
+      flex-basis: 64vw;
+    }
+  }
+</style>
+
+<script>
+  import { rails } from '../site/rail';
+  rails();
+</script>

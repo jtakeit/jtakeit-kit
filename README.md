@@ -49,6 +49,17 @@ The photographs come in a set per trade — `sessions`, `nails`, `hair`, `barber
 the example's own. A set is fetched once from the platform's media host and is a
 placeholder like every other example photograph: the business's own replace it
 ([docs/looks.md](docs/looks.md#a-trades-photographs)).
+**A booking page** instead of a site — one page a specialist books from, made
+by an agent in a few writes from the business's Instagram: the name, a line and
+«Book» on a hero of liquid lacquer; the services and prices, bookable, the form
+under them; their latest Instagram posts, each a link to its post; where to find them — in the `gloss` look,
+in the vertical's palette, and grown into a site later with `jtk add`
+([docs/booking-page.md](docs/booking-page.md)):
+
+```
+npx @jtakeit/astro create <slug> --kind booking-page --vertical nails --name "The Business"
+```
+
 Take out what the brief does not name, add what it does:
 
 ```

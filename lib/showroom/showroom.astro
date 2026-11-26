@@ -35,6 +35,7 @@ const FIELDS: [Field, string][] = [
   ['smoke', 'Large plumes folding over each other.'],
   ['riso', 'Flat bands with a ragged, printed edge.'],
   ['veil', 'A curtain thinning as it rises.'],
+  ['lacquer', 'Liquid polish, lit; the light leans to the pointer. The colours: body, lit, deep, sheen.'],
   ['ribbons', 'Stacked lines, not colour. Canvas 2D.'],
 ];
 
@@ -64,6 +65,7 @@ const REVEALS: [string, string][] = [
   ['wipe', 'Uncovered from one edge.'],
   ['develop', 'Out of focus, then not.'],
   ['stagger', 'The children in order.'],
+  ['float', 'From a visible rest: rises the last stretch.'],
 ];
 
 /**
@@ -250,6 +252,8 @@ const SECTIONS = [
         el.style.transition = 'none';
         el.style.animation = 'none';
         el.classList.remove('is-in');
+        // `float` starts at rest and is armed only out of sight: armed here, to be seen arriving.
+        if (el.dataset.reveal === 'float') el.classList.add('is-armed');
       });
       void (section as HTMLElement).offsetHeight;
       played.forEach((el) => {

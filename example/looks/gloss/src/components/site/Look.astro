@@ -1,0 +1,33 @@
+---
+/**
+ * The look, in the head: the two typefaces, the tokens and what is made of
+ * them. Drawn by Layout.astro where this file is (src/lib/sections.ts).
+ *
+ * Fraunces for what is said — the headings, the prices — and Inter for what is
+ * read: the site's own files (`@fontsource/*`, SIL Open Font License 1.1,
+ * exact versions in package.json), served with the build, never from Google's
+ * servers (LG München I, 20 January 2022, 3 O 17493/20). The heading's weight
+ * and the text's are preloaded, so the first screen is not drawn twice.
+ *
+ * Adapting the design: the colours are `palette` in jtk/design.json, not
+ * here; the type is these imports and tokens.css's `--font-*`.
+ */
+import '@fontsource/fraunces/400.css';
+import '@fontsource/fraunces/400-italic.css';
+import '@fontsource/fraunces/500.css';
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '../../styles/tokens.css';
+import '../../styles/look.css';
+import display from '@fontsource/fraunces/files/fraunces-latin-400-normal.woff2?url';
+import text from '@fontsource/inter/files/inter-latin-400-normal.woff2?url';
+import design from '../../../jtk/design.json';
+
+// The browser's chrome in the page's own colour.
+const said = (design as { palette?: Record<string, unknown> }).palette?.bg;
+const theme = typeof said === 'string' && /^#[0-9a-f]{6}$/i.test(said) ? said : '#faf6f3';
+---
+
+<link rel="preload" href={display} as="font" type="font/woff2" crossorigin />
+<link rel="preload" href={text} as="font" type="font/woff2" crossorigin />
+<meta name="theme-color" content={theme} />

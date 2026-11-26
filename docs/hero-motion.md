@@ -26,7 +26,7 @@ see below.
 
 ## The set
 
-Ten fields, and they are not ten skins of one look — each is here because it
+Eleven fields, and they are not eleven skins of one look — each is here because it
 does something the others cannot. Pick from the design.
 
 | `field` | What it is | Wants |
@@ -40,6 +40,7 @@ does something the others cannot. Pick from the design.
 | `smoke` | Two rounds of domain warping: a handful of large plumes folding over each other. The field with an inside. | A palette with a real dark in it — the plumes need somewhere to be deep — and a hero tall enough to show one whole plume. |
 | `riso` | A wave through the palette, dithered by a coarse quantised noise *before* the lookup: neighbouring bands of flat colour with a ragged, printed border. The one field that is not a smooth gradient. | Two or three colours far enough apart to make bands, and a design that can carry something graphic. It is the loudest here after `plasma`. |
 | `veil` | A curtain hanging from the horizontal, thinning as it rises, the ground showing through where it is not. | A dark ground worth showing through, and copy that sits in the quiet upper part of the frame. |
+| `lacquer` | Liquid polish, slowly flowing: a height field warped twice through itself and lit like a wet surface — a broad light, a tight highlight, a rim where it turns away — the light leaning toward the pointer. The one field with depth: a material, not a gradient. Ported from Lacqué's hero on the jtakeit landing. | Its four colours are the polish, not a ramp: `[lacquer, lacquer lit, the deep it is poured over, the sheen of the highlight]` — the palette's `lacquerA` and `lacquerB`, the gloss look making the other two from them. A heading on the lower left, where it is kept quiet. |
 | `ribbons` | Stacked sine curves drawn as lines, not as colour. Canvas 2D, so it is also the field that survives where WebGL does not. | A dark ground, thin type, a design that is already linear. |
 
 Two pairs in that table are close, and knowing which is which is the difference
@@ -81,6 +82,42 @@ React components, three WebGL hosts we already had, and three fixed palettes —
 one of which was a purple-and-cyan gradient that would have shipped on somebody's
 site. Each was then retuned against the field it was closest to, because a
 shader that is *nearly* one we already have is worse than not adding it.
+
+### Lacquer, the heavy one
+
+`lacquer` costs more a pixel than the rest — three samples of a twice-warped
+fbm — so `HeroField` treats it as heavy (`HEAVY` in `fields.ts`):
+
+- **it is not even compiled until the page has loaded**, then fades in over the
+  still ground: the heading, the button and the photograph are the first paint
+  and the largest, never the canvas;
+- **a smaller budget** (a million pixels, not two) and **a measured quality**:
+  frames that run long draw it at fewer pixels, down to a floor that still
+  reads as liquid, and back up when there is room;
+- **no software renderer**: the context is asked with
+  `failIfMajorPerformanceCaveat`, and SwiftShader, llvmpipe or a «software»
+  renderer that answers anyway is refused — a frame of it on the CPU costs
+  seconds of the page's main thread;
+- **its still ground is a picture of the lacquer** — the polish pooled where
+  the light would be, on the deep, in the same four colours — not a dark
+  rectangle: it is what no WebGL, a software renderer, reduced motion and a
+  lost context all end at.
+
+Its light leans toward a mouse or a pen (`pointer`, on unless `pointer={false}`);
+a phone gets the still light. Any site uses it with `"field": "lacquer"` in
+`jtk/design.json` and the four colours in `colors`; the gloss look's hero
+draws it from the palette by itself:
+
+```astro
+<HeroField
+  field="lacquer"
+  colors={['var(--lacquer)', 'var(--lacquer-light)', 'var(--lacquer-deep)', 'var(--lacquer-sheen)']}
+  ground="var(--lacquer-deep)"
+/>
+```
+
+A colour given as `color-mix()` works in every field: a value a 2D context does
+not take is resolved by the style engine instead.
 
 A canvas is also not the only way to move a hero. A CSS-only ground — two
 `radial-gradient`s on long `@keyframes`, a conic sweep, a grain overlay — costs

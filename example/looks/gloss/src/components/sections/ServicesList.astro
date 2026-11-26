@@ -1,0 +1,465 @@
+---
+/**
+ * The services and what they cost, in the gloss look: a card each — its
+ * photograph, its name, a line about it, how long and how much, and «Book» —
+ * and, on the page the diary books on, the booking form under them.
+ *
+ * Each card is its entry, annotated as drawn on this page (`entry:<id>:title`),
+ * at the entry's anchor (`#services-<slug>`), where the collection says its
+ * entries are shown (`shown_on`). On a booking page that is the home page
+ * itself; on a full site a `services_list` block's `limit` cuts the list short
+ * and its `more_label` leads to the whole list, and `services_all` draws every
+ * service on the list's own page.
+ *
+ * The form is drawn here where the diary's settings say its page is the home
+ * page (`jtk/modules/bookings.json`, `page: "/"`, as a booking page has it) —
+ * the template's BookingForm, at `#book`, with the same services the cards
+ * show; a page of the services' own draws it under its list itself
+ * (`[...listing].astro`). Only there: the
+ * panel's «Try booking» opens that page, and the platform's preflight books
+ * through the form it finds on it. «Book» on a card chooses its service in the
+ * form, by the form's own hook (`name="service"`), and brings the form up.
+ */
+import type { Block, Page } from '@jtakeit/kit/content';
+import { bookingForm } from '@jtakeit/kit/booking';
+import Shot from '../Shot.astro';
+import Button from '../site/Button.astro';
+import RailArrows from '../site/RailArrows.astro';
+import BookingForm from '../BookingForm.astro';
+import { site } from '../../lib/site';
+import { rowId } from '../../lib/entries';
+import { langOf, withLocale } from '../../lib/locale';
+import { lengthOf } from '../../lib/length';
+import { linkTo } from '../../lib/under';
+
+interface Props {
+  block: Block;
+  page?: Page;
+  locale: string;
+  first?: boolean;
+}
+
+const { block, page, locale, first = false } = Astro.props;
+const limit = Number(block.value('limit') ?? 0);
+const all = site.entries('services', { locale });
+const shown = limit > 0 ? all.slice(0, limit) : all;
+
+/** A length as the booking form says it (src/lib/length.ts). */
+const length = (minutes: number): string => lengthOf(minutes, locale);
+const listedAt = site.shownOn('services', locale) ?? withLocale(locale, '/services');
+const headed = block.text('eyebrow') || block.text('title') || block.text('lead');
+const RowTitle = block.text('title') ? 'h3' : 'h2';
+
+// ── the booking form, where the diary books ─────────────────────────────────
+const bookings = site.rolesOf('bookings');
+const settings = site.module('bookings');
+const sells = bookings?.services === 'services';
+const bare = (address: string) => address.replace(/\/+$/, '') || '/';
+const bookingAt = sells && typeof settings.page === 'string' && settings.page !== '' ? bare(site.inLocale(locale, settings.page)) : undefined;
+// On the home page only: a page of its own (/services) is drawn by the
+// template's listing, which puts the form under it itself — drawn here too,
+// the page would have two.
+const home = page !== undefined && bare(page.address) === bare(site.inLocale(locale, '/'));
+const booksHere = bookingAt !== undefined && home && bare(page.address) === bookingAt;
+const lang = langOf(locale).slice(0, 2);
+const formLocale = (['uk', 'de', 'en'].includes(lang) ? lang : 'en') as 'uk' | 'de' | 'en';
+const bookable = all.filter((entry) => typeof entry.fields.value('takes') === 'number');
+const form = booksHere
+  ? {
+      services: bookable.map((entry) => ({
+        slug: entry.baseSlug,
+        title: String(entry.fields.value('title') ?? entry.slug),
+        lang: entry.fields.lang('title').lang,
+        takes: entry.fields.value('takes') as number,
+        costs: entry.fields.minor('costs'),
+      })),
+      resources: bookings?.resources
+        ? site.entries(bookings.resources, { locale }).map((entry) => ({
+            slug: entry.baseSlug,
+            title: String(entry.fields.value('title') ?? entry.slug),
+            lang: entry.fields.lang('title').lang,
+            does: entry.fields.refs('does').map((one) => one.baseSlug),
+          }))
+        : [],
+      open: [...new Set((Array.isArray(settings.hours) ? (settings.hours as { day: string }[]) : []).map((row) => row.day))],
+    }
+  : undefined;
+const horizon = typeof settings.horizon === 'number' && settings.horizon > 0 ? Math.floor(settings.horizon) : 730;
+// «Book» on a card: the form's own word for it, in the page's language.
+const book = form ? bookingForm({ services: form.services, locale: formLocale }).words.book : '';
+---
+
+<section class="s menu" id={first ? 'services' : undefined}>
+  <div class="s__in">
+    <div class="rail-head">
+    {
+      headed && (
+        <div class="s__head" data-reveal="float">
+          {block.text('eyebrow') && <p class="label label--accent" {...{ ...block.at('eyebrow'), ...block.lang('eyebrow') }}>{block.text('eyebrow')}</p>}
+          {block.text('title') && <h2 class="s__title" {...{ ...block.at('title'), ...block.lang('title') }}>{block.text('title')}</h2>}
+          {block.text('lead') && <p class="s__lead" {...{ ...block.at('lead'), ...block.lang('lead') }}>{block.text('lead')}</p>}
+        </div>
+      )
+    }
+    <RailArrows for="services-rail" locale={locale} />
+    </div>
+
+    <div class="menu__rail" id="services-rail" data-rail data-reveal="float">
+    <ul class="menu__cards" data-rail-track>
+      {
+        shown.map((entry) => {
+          const { fields } = entry;
+          const photo = fields.picture('photo');
+          const takes = fields.value('takes');
+          const costs = fields.value('costs');
+          const canBook = form !== undefined && typeof takes === 'number';
+          return (
+            <li class="menu__card" id={rowId(entry) || undefined}>
+              {photo.src && (
+                <Shot name={photo.src} alt={photo.alt} lang={photo.lang} path={photo['data-jtk-path']} focus={photo.focus} ratio="4 / 3" class="menu__shot" width={640} sizes="(min-width: 60rem) 22rem, (min-width: 40rem) 45vw, 88vw" />
+              )}
+              <div class="menu__body">
+                <div class="menu__top">
+                  {fields.text('title') && <RowTitle class="menu__title" {...{ ...fields.at('title'), ...fields.lang('title') }}>{fields.text('title')}</RowTitle>}
+                  {costs !== undefined && <span class="menu__price" {...fields.at('costs')}>{site.money(costs, locale)}</span>}
+                </div>
+                {fields.text('about') && <p class="menu__about" {...{ ...fields.at('about'), ...fields.lang('about') }}>{fields.text('about')}</p>}
+                <div class="menu__foot">
+                  {typeof takes === 'number' && (
+                    <span class="menu__takes" {...fields.at('takes')}>
+                      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.3" /><path d="M8 4.6V8l2.2 1.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" /></svg>
+                      {length(takes)}
+                    </span>
+                  )}
+                  {canBook && (
+                    <a class="menu__book" href="#book" data-choose={entry.baseSlug} data-jtk-fixed lang={formLocale !== lang ? formLocale : undefined}>
+                      {book} <span aria-hidden="true">→</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+            </li>
+          );
+        })
+      }
+    </ul>
+    </div>
+
+    {
+      block.text('more_label') && !booksHere && (
+        <p class="menu__more">
+          <Button href={linkTo(listedAt)} label={block.text('more_label')} at={block.at('more_label')} lang={block.lang('more_label')} quiet />
+        </p>
+      )
+    }
+
+    {
+      form && form.services.length > 0 && (
+        <div class="menu__form" id="book" data-reveal="float">
+          <BookingForm
+            services={form.services}
+            resources={form.resources}
+            open={form.open}
+            locale={formLocale}
+            daysAhead={horizon}
+            combine={settings.combine === true}
+            scale={typeof settings.scale === 'string' ? settings.scale : ''}
+            kind={typeof settings.kind === 'string' ? settings.kind : ''}
+            currency={site.currency || undefined}
+          />
+        </div>
+      )
+    }
+  </div>
+</section>
+
+<style>
+  /*
+   * One row, the width of the screen, that drifts by itself (site/rail.ts) and
+   * scrolls under a hand; it starts at the text's edge and fades out at both
+   * of the screen's. The room above and below the cards is for the lift and
+   * its shadow, which the row's scroll would otherwise cut.
+   */
+  /*
+   * The heading on one line where it fits, the sentence under it as wide as
+   * the heading (it takes no width of its own: `inline-size: 0` and the
+   * column's), and the arrows level with the sentence's last line, at the
+   * head's own distance above the cards.
+   */
+  .rail-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-4) var(--space-5);
+    margin-block-end: clamp(2rem, calc(var(--screen) * 0.05), 3.25rem);
+  }
+
+  .rail-head :global(.s__head) {
+    inline-size: max-content;
+    max-inline-size: 100%;
+    margin-block-end: 0;
+  }
+
+  .rail-head :global(.s__lead) {
+    inline-size: 0;
+    min-inline-size: 100%;
+    max-inline-size: none;
+  }
+
+  /*
+   * One row the width of the screen, starting at the text's edge with the
+   * first card whole; the arrows beside the heading move it (site/rail.ts),
+   * and a hand scrolls it. Only its right edge fades, where there is more.
+   * The room under the cards is the lifted card's shadow's: the row's scroll
+   * would cut it on a line otherwise.
+   */
+  .menu__rail {
+    --edge: max(var(--gutter), calc((100vw - 76rem) / 2));
+    margin-inline: calc(50% - 50vw);
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - min(5rem, var(--edge))), transparent 100%);
+    mask-image: linear-gradient(to right, #000 calc(100% - min(5rem, var(--edge))), transparent 100%);
+  }
+
+  .menu__rail[data-at-end] {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .menu__cards {
+    --rail-gap: clamp(1rem, 2vw, 1.5rem);
+    display: flex;
+    align-items: stretch;
+    gap: var(--rail-gap);
+    margin: -1.5rem 0 -4.5rem;
+    padding: 1.5rem var(--edge) 4.5rem;
+    scroll-padding-inline: var(--edge);
+    scroll-snap-type: x proximity;
+    list-style: none;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .menu__cards::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Three cards are the content's width — as wide, together, as the form
+     under them — and the fourth shows at the screen's edge that there is more. */
+  .menu__card {
+    flex: 0 0 clamp(16.5rem, 24vw, 21rem);
+    scroll-snap-align: start;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    overflow: hidden;
+    border-radius: var(--r-3);
+    background: var(--panel);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--ink) 7%, transparent),
+      var(--lift-shadow);
+    scroll-margin-block-start: 6rem;
+    /* the lift and the photograph's closing in: one movement, one pace */
+    transition:
+      translate 700ms var(--ease-out),
+      box-shadow 700ms var(--ease-out);
+  }
+
+  .menu__card:hover {
+    translate: 0 -6px;
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent),
+      0 30px 60px -34px rgb(var(--glow) / 0.55);
+  }
+
+  .menu__card :global(.menu__shot .shot__frame) {
+    border-radius: 0;
+  }
+
+  .menu__card :global(.menu__shot img) {
+    transition: scale 700ms var(--ease-out);
+  }
+
+  .menu__card:hover :global(.menu__shot img) {
+    scale: 1.04;
+  }
+
+  .menu__body {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 0.6rem;
+    padding: clamp(1.1rem, 2vw, 1.5rem);
+  }
+
+  .menu__top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .menu__title {
+    font-size: var(--step-2);
+    line-height: 1.1;
+  }
+
+  .menu__price {
+    flex: none;
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    color: var(--accent-ink);
+    font-variant-numeric: lining-nums tabular-nums;
+    white-space: nowrap;
+  }
+
+  .menu__about {
+    margin: 0;
+    color: var(--ink-quiet);
+    line-height: 1.5;
+  }
+
+  .menu__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-block-start: 0.75rem;
+    border-block-start: 1px solid var(--line);
+  }
+
+  .menu__takes {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--ink-quiet);
+    font-size: 0.9rem;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+
+  .menu__book {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-block-size: 2.5rem;
+    padding: 0 1rem;
+    border-radius: var(--r-pill);
+    background: color-mix(in srgb, var(--accent) 9%, transparent);
+    color: var(--accent-ink);
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+    transition:
+      background-color 200ms var(--ease-out),
+      color 200ms var(--ease-out);
+  }
+
+  .menu__book:hover,
+  .menu__book:focus-visible {
+    background: var(--accent-deep);
+    color: var(--on-accent-deep);
+  }
+
+  .menu__more {
+    margin: clamp(1.75rem, 4vw, 2.5rem) 0 0;
+  }
+
+  /* The form under the list, as wide as a form reads well: its own surface is the form's (BookingForm), lifted. */
+  .menu__form {
+    max-inline-size: 46rem;
+    margin: clamp(2.5rem, 6vw, 4.5rem) auto 0;
+    border-radius: var(--r-4);
+    scroll-margin-block-start: 6rem;
+  }
+
+  .menu__form :global(jtk-booking > form) {
+    box-shadow: var(--lift-shadow);
+  }
+
+  /* A card chosen from the list is lit for a moment as the form comes up. */
+  .menu__form:global(.is-chosen) {
+    animation: menu-chosen 1.4s var(--ease-out);
+  }
+
+  @keyframes menu-chosen {
+    from {
+      box-shadow:
+        0 0 0 2px var(--accent),
+        var(--lift-shadow);
+    }
+  }
+
+  /*
+   * A desktop: the form takes the content's width, the services on the left
+   * and the day and the time beside them on the right — one look, no scroll
+   * between choosing and the time (the owner, 25 November 2026).
+   */
+  @media (min-width: 62rem) {
+    .menu__form {
+      max-inline-size: none;
+    }
+    .menu__card {
+      flex-basis: calc((min(76rem, 100vw - 2 * var(--gutter)) - 2 * var(--rail-gap)) / 3);
+    }
+  }
+
+  /* A phone: the same row, a card and the edge of the next one on the screen. */
+  @media (max-width: 40rem) {
+    .menu__card {
+      flex-basis: 78vw;
+    }
+    .menu__body {
+      gap: 0.45rem;
+      padding: 1rem 1.1rem;
+    }
+    .menu__title {
+      font-size: var(--step-1);
+    }
+    .menu__about {
+      font-size: 0.92rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .menu__card,
+    .menu__card :global(.menu__shot img),
+    .menu__form:global(.is-chosen) {
+      transition: none;
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+  /*
+   * «Book» on a card: its service chosen in the form — by the form's own hook,
+   * the `service` input, never a class — and the form brought up. Without a
+   * script it is a link to #book, and the visitor chooses there.
+   */
+  import { rails } from '../site/rail';
+  rails();
+
+  // Delegated: one listener for every card's «Book».
+  document.addEventListener('click', (event) => {
+    const link = (event.target as Element | null)?.closest<HTMLAnchorElement>('a[data-choose]');
+    if (!link) return;
+    {
+      const slug = link.dataset.choose ?? '';
+      const book = document.getElementById('book');
+      const form = book?.querySelector('form');
+      if (!form || !slug) return;
+      const select = form.querySelector<HTMLSelectElement>('select[name="service"]');
+      const box = form.querySelector<HTMLInputElement>(`input[name="service"][value="${CSS.escape(slug)}"]`);
+      if (select && [...select.options].some((one) => one.value === slug)) {
+        select.value = slug;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      } else if (box && box.type === 'checkbox' && !box.checked) {
+        box.click();
+      } else if (box && box.type === 'radio') {
+        box.click();
+      }
+      book?.classList.remove('is-chosen');
+      void book?.offsetWidth;
+      book?.classList.add('is-chosen');
+    }
+  });
+</script>

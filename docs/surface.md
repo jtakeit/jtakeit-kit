@@ -140,6 +140,7 @@ finished page rather than a column of invisible sections. The observer that adds
 | `wipe` | Uncovered from one edge rather than moved. | A graphic page, a print register, anything already linear. |
 | `develop` | Out of focus, then not. Photographic. | Pages carrying photographs — put it on the picture, not on the section around it. |
 | `stagger` | The children in order. `--i` is set by the observer, so a list rendered from a document does not carry an index into its markup. | Grids, price lists, an `index` page form. |
+| `float` | From a visible resting state: the block is drawn at rest — readable with no script, in a photograph of the whole page, in the first screen — and only one the observer finds *below* the screen is armed, a little lower and fainter, to rise and sharpen into place as it is reached. `style="--i:2"` staggers it after the one before. The gloss look's (the booking page's). | Any page that must never show an empty band: a booking page, a page shot whole for a preview. It is the one entrance that is safe in the first screen, because there it does nothing. |
 | `draw` | Line art draws itself. Every figure needs `pathLength="1"`, and then one rule covers a circle, a line and a 56-point contour alike. | A page whose signature is drawn rather than photographed. |
 
 Three rules:

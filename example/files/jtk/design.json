@@ -7,6 +7,16 @@
   "paper": "#f8f7f4",
   "ink": "#111110",
   "accent": "#e2431f",
+  "palette": {
+    "bg": "",
+    "surface": "",
+    "ink": "",
+    "muted": "",
+    "accent": "",
+    "accentInk": "",
+    "lacquerA": "",
+    "lacquerB": ""
+  },
   "surface": {
     "pattern": "",
     "scope": "page",

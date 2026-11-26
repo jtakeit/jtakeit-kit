@@ -357,6 +357,27 @@ export const BLOCKS: Block[] = [
       { key: 'body', label: 'Register, VAT number, responsible person', kind: 'textarea', max: 2000, client_editable: true },
     ],
   },
+  {
+    /*
+     * The privacy page's own words (jtk/pages/privacy.json), the business's to
+     * change (the owner, 26 November 2026: «the privacy and imprint texts
+     * editable»). Each empty field stands in with the page's default in the
+     * site's language (src/pages/[...lang]/privacy.astro); who else holds
+     * what a visitor sends — the platform, with its processing link — is the
+     * platform's part and stays as it is.
+     */
+    type: 'privacy',
+    v: 1,
+    label: 'Privacy',
+    fields: [
+      { key: 'title', label: 'Heading', kind: 'text', max: 80, client_editable: true },
+      { key: 'intro', label: 'First paragraph', kind: 'textarea', max: 1200, client_editable: true },
+      { key: 'form_title', label: 'Heading over what a visitor sends', kind: 'text', max: 80, client_editable: true },
+      { key: 'form_body', label: 'What a visitor sends, and what becomes of it', kind: 'textarea', max: 2400, client_editable: true },
+      { key: 'ask_title', label: 'Heading over asking the business', kind: 'text', max: 80, client_editable: true },
+      { key: 'ask_body', label: 'How to ask what is held, or to have it deleted', kind: 'textarea', max: 1200, client_editable: true },
+    ],
+  },
 ];
 
 /**
@@ -504,6 +525,10 @@ export const HEADER: Block = {
   label: 'Header',
   fields: [
     { key: 'logo', label: 'Logo', kind: 'media', client_editable: true, hint: 'Empty: the business\'s name, as the contacts say it.' },
+    // The person's own picture beside the name — a booking page's profile
+    // picture, as the teaser showed it (the owner, 25 November 2026). Drawn by
+    // the gloss look's header; a logo, where there is one, stands instead.
+    { key: 'avatar', label: 'Your picture', kind: 'media', client_editable: true, hint: 'A small round picture beside the name. Empty: the name alone.' },
     {
       key: 'nav',
       label: 'Navigation',

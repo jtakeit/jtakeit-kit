@@ -1,0 +1,487 @@
+---
+/**
+ * The header: a capsule of porcelain glass that stays at the top while the
+ * page moves under it — frosted from the first screen, since the first screen
+ * is the lacquer and clear glass over it would leave the words on the dark;
+ * a little more opaque once the page has scrolled under it (one class, set
+ * from a frame). Brumy's strip, in the gloss look.
+ *
+ * Every word in it is the shared text's (`header` in jtk/shared.json), tapped
+ * and translated in the panel: the navigation, the button, and a logo where
+ * one is given — the business's name from the contacts where it is not. The
+ * language switch is the template's, drawn from the languages the site has.
+ *
+ * A link the content gives (`/services`, `/#team`) is written in this page's
+ * language and under the build's base, so the preview's `/p/<slug>/` holds.
+ */
+import Button from './Button.astro';
+import Languages from '../Languages.astro';
+import Shot from '../Shot.astro';
+import { frameWords, frameLang } from './words';
+import { site } from '../../lib/site';
+import { langOf, withLocale } from '../../lib/locale';
+import { under } from '../../lib/under';
+
+interface Props {
+  languages: { locale: string; address: string }[];
+  locale: string;
+}
+
+const { languages, locale } = Astro.props;
+const W = frameWords(langOf(locale));
+const wordsLang = frameLang(langOf(locale));
+const header = site.shared(locale).block('header');
+const facts = site.facts(locale);
+const name = facts.text('name');
+const logo = header.picture('logo');
+const avatar = header.picture('avatar');
+
+/** A link of the content, in this page's language and under the base. */
+const go = (href: string): string => {
+  if (!href.startsWith('/') || href.startsWith('//')) return href;
+  const [path, hash] = href.split('#');
+  return `${under(withLocale(locale, path || '/'))}${hash ? `#${hash}` : ''}`;
+};
+const here = Astro.url.pathname.replace(/\/$/, '');
+const current = (href: string) => !href.includes('#') && go(href).replace(/\/$/, '') === here;
+const nav = header.rows('nav');
+const cta = header.text('cta_label');
+// A page whose navigation only moves within itself (a booking page's
+// «Prices», «Posts», «Location»): on a phone the strip is one row — the
+// picture, the name, «Book» — with no menu to open; its places are a scroll
+// away (the owner, 25 November 2026, as the teaser showed it).
+const inPage = nav.length > 0 && nav.every((row) => /^\/?#/.test(row.text('link')));
+---
+
+<header class:list={['bar', inPage && 'bar--in-page']} data-bar>
+  <div class="bar__in glass">
+    <a class:list={['bar__mark', avatar.src && !logo.src && 'bar__mark--face']} href={go('/')} aria-label={name ? undefined : W.home}>
+      {
+        logo.src ? (
+          <Shot name={logo.src} alt={logo.alt || name} path={logo['data-jtk-path']} class="bar__logo" width={320} fit="contain" />
+        ) : (
+          <>
+            {avatar.src && <Shot name={avatar.src} alt={avatar.alt || ''} path={avatar['data-jtk-path']} class="bar__avatar" width={96} ratio="1 / 1" />}
+            <span class="bar__name" {...facts.at('name')}>{name}</span>
+          </>
+        )
+      }
+    </a>
+
+    {
+      nav.length > 0 && (
+        <nav class="bar__nav" id="bar-nav" aria-label={W.navigation}>
+          {nav.map((row) => (
+            <a href={go(row.text('link'))} aria-current={current(row.text('link')) ? 'page' : undefined} {...{ ...row.at('label'), ...row.lang('label') }}>
+              {row.text('label')}
+            </a>
+          ))}
+        </nav>
+      )
+    }
+
+    <Languages alternates={languages} current={locale} class="bar__lang" label={W.language} />
+
+    {cta && <Button href={go(header.text('cta_link') || '/#contact')} label={cta} at={header.at('cta_label')} lang={header.lang('cta_label')} small class="bar__cta" />}
+
+    {
+      nav.length > 0 && (
+        <button class="bar__toggle" type="button" aria-controls="bar-nav" aria-expanded="false" data-jtk-fixed lang={wordsLang}>
+          <span class="bar__toggle-open">{W.menu}</span>
+          <span class="bar__toggle-shut">{W.close}</span>
+        </button>
+      )
+    }
+  </div>
+</header>
+
+<style>
+  .bar {
+    position: fixed;
+    inset-block-start: 0;
+    inset-inline: 0;
+    z-index: 50;
+    padding: 0.75rem var(--gutter) 0;
+    pointer-events: none;
+  }
+
+  .bar__in {
+    display: flex;
+    align-items: center;
+    gap: clamp(0.75rem, 2.2vw, 1.75rem);
+    inline-size: var(--shell);
+    margin-inline: auto;
+    padding: 0.35rem 0.35rem 0.35rem 1.25rem;
+    border-radius: var(--r-pill);
+    pointer-events: auto;
+    transition:
+      background 360ms var(--ease-out),
+      box-shadow 360ms var(--ease-out),
+      -webkit-backdrop-filter 360ms,
+      backdrop-filter 360ms;
+  }
+
+  /*
+   * Over the lacquer the capsule is the page's paper, mostly opaque, so the
+   * words read on the dark; once the page passes under it, nearly solid. Its
+   * glass and its words are the palette's, made by Layout.astro from the
+   * palette's own `bg` (src/lib/ground.mjs, `--bar-*`): a light glass under
+   * dark words on a light palette, a dark glass under light ones on a dark
+   * palette, each held at 4.5:1 over whatever passes behind it.
+   */
+  .bar__in {
+    color: var(--bar-ink, var(--ink));
+    background: var(--bar-glass, color-mix(in srgb, var(--paper) 86%, transparent));
+  }
+  .bar[data-open] .bar__in {
+    background: var(--bar-solid, var(--glass-solid));
+  }
+
+  .bar__lens {
+    position: absolute;
+    inline-size: 0;
+    block-size: 0;
+    overflow: hidden;
+  }
+
+  /*
+   * Liquid glass: the capsule nearly clear, what passes behind it bent a
+   * little, blurred and lit — a sheen along its top edge, a rim of light
+   * round it, a soft shadow under it. Over the paper it is a light glass
+   * under the page's ink; over the lacquer (`data-on-dark`, set by the script
+   * from what is under it) a dark one under the lacquer's light words, so
+   * the words keep their contrast whatever passes behind.
+   */
+  .bar__in {
+    --lg-tint: color-mix(in srgb, var(--paper) 46%, transparent);
+    --lg-sheen: rgb(255 255 255 / 0.55);
+    position: relative;
+    isolation: isolate;
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.28), rgb(255 255 255 / 0.04) 55%, rgb(255 255 255 / 0.1)),
+      var(--lg-tint);
+    box-shadow:
+      inset 0 1px 0 var(--lg-sheen),
+      inset 0 -1px 0 rgb(255 255 255 / 0.14),
+      inset 0 0 0 1px rgb(255 255 255 / 0.22),
+      inset 0 10px 18px -14px rgb(255 255 255 / 0.5);
+    -webkit-backdrop-filter: blur(14px) saturate(185%) brightness(1.05);
+    backdrop-filter: blur(14px) saturate(185%) brightness(1.05);
+    /*
+     * The glass inside the capsule and nowhere else: a page shown smaller in
+     * a frame (the panel's previews, the editor) had Chrome draw the blur —
+     * and the SVG bend it went through — as a square past the capsule's
+     * edges (the owner, 26 November 2026). The bend is gone, the glass is
+     * clipped to the capsule's own shape; the shadow under it went with the
+     * clip, its rim of light is inside it and stays.
+     */
+    --bar-r: var(--r-pill);
+    clip-path: inset(0 round var(--bar-r));
+  }
+
+  /* the light caught on its rim, brightest at the upper left */
+  .bar__in::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+      radial-gradient(120% 140% at 12% -30%, rgb(255 255 255 / 0.42), transparent 46%),
+      radial-gradient(90% 120% at 92% 140%, rgb(255 255 255 / 0.16), transparent 50%);
+    mix-blend-mode: soft-light;
+  }
+
+  .bar[data-on-dark] .bar__in {
+    --lg-tint: color-mix(in srgb, var(--lacquer-deep, #1c0b10) 34%, transparent);
+    --lg-sheen: rgb(255 255 255 / 0.32);
+    --bar-ink: var(--on-lacquer, #fbf7f4);
+    --bar-ink-quiet: var(--on-lacquer-quiet, #d9cfcb);
+    color: var(--bar-ink);
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.16), rgb(255 255 255 / 0.02) 55%, rgb(255 255 255 / 0.06)),
+      var(--lg-tint);
+  }
+
+  .bar.is-over:not([data-on-dark]) .bar__in {
+    --lg-tint: color-mix(in srgb, var(--paper) 62%, transparent);
+  }
+
+  .bar__mark {
+    margin-inline-end: auto;
+    color: var(--bar-ink, var(--ink));
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 500;
+    letter-spacing: var(--tracking-tight);
+    line-height: 1;
+    text-decoration: none;
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .bar__mark--face {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-inline-start: -0.85rem;
+  }
+  .bar__name {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .bar__mark :global(.bar__avatar) {
+    flex: none;
+    inline-size: 2.15rem;
+    block-size: 2.15rem;
+    overflow: hidden;
+    border-radius: 50%;
+  }
+  .bar__mark :global(.bar__avatar .shot__frame),
+  .bar__mark :global(.bar__avatar img) {
+    inline-size: 100%;
+    block-size: 100%;
+    aspect-ratio: auto !important;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .bar__mark :global(.bar__logo) {
+    display: block;
+    block-size: 2rem;
+    inline-size: auto;
+  }
+
+  .bar__nav {
+    display: flex;
+    gap: clamp(1rem, 2.2vw, 1.9rem);
+  }
+
+  .bar__nav a {
+    position: relative;
+    padding-block: 0.4rem;
+    color: var(--bar-ink-quiet, var(--ink-quiet));
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 220ms var(--ease-out);
+  }
+
+  .bar__nav a::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 0.15rem;
+    block-size: 1px;
+    background: currentColor;
+    scale: 0 1;
+    transform-origin: left;
+    transition: scale 320ms var(--ease-out);
+  }
+
+  .bar__nav a:hover,
+  .bar__nav a[aria-current='page'] {
+    color: var(--bar-ink, var(--ink));
+  }
+  .bar__nav a:hover::after,
+  .bar__nav a[aria-current='page']::after {
+    scale: 1 1;
+  }
+
+  /* The template's switch, in the strip: two letters each, the one being read in ink. */
+  .bar__in :global(.bar__lang) {
+    display: flex;
+    gap: 0.1rem;
+    padding: 0.2rem;
+    border: 0;
+    border-radius: var(--r-pill);
+    background: color-mix(in srgb, var(--bar-ink, var(--ink)) 6%, transparent);
+    font-family: var(--font-text);
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .bar__in :global(.bar__lang a) {
+    padding: 0.35rem 0.55rem;
+    border-radius: var(--r-pill);
+    color: var(--bar-ink-quiet, var(--ink-quiet));
+    text-decoration: none;
+  }
+  .bar__in :global(.bar__lang a:hover) {
+    color: var(--bar-ink, var(--ink));
+  }
+  .bar__in :global(.bar__lang a[aria-current]) {
+    background: var(--bar-ground, var(--paper-lift));
+    color: var(--bar-ink, var(--ink));
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 8%, transparent);
+  }
+
+  .bar__toggle {
+    display: none;
+    min-block-size: 2.6rem;
+    padding: 0 1rem;
+    border: 0;
+    border-radius: var(--r-pill);
+    background: var(--bar-ink, var(--ink));
+    color: var(--bar-ground, var(--paper));
+    font: 500 0.85rem/1 var(--font-text);
+    cursor: pointer;
+  }
+  .bar__toggle-shut {
+    display: none;
+  }
+
+  /*
+   * A phone: the navigation folds under one button and opens as a panel of
+   * the same glass below the strip. Without a script it is simply shown,
+   * wrapped under the strip — never a menu nobody can open.
+   */
+  @media (max-width: 860px) {
+    .bar__in {
+      flex-wrap: wrap;
+      --bar-r: var(--r-4);
+      border-radius: var(--r-4);
+      padding-inline-start: 1rem;
+    }
+    .bar__nav {
+      order: 10;
+      flex-basis: 100%;
+      flex-direction: column;
+      gap: 0;
+      padding: 0.25rem 0.75rem 0.75rem 0;
+    }
+    .bar__nav a {
+      padding-block: 0.7rem;
+      font-size: 1.05rem;
+      color: var(--bar-ink, var(--ink));
+      border-block-start: 1px solid color-mix(in srgb, var(--bar-ink, var(--ink)) 14%, transparent);
+    }
+    .bar__nav a::after {
+      display: none;
+    }
+    :global(html.js) .bar__nav {
+      display: none;
+    }
+    :global(html.js) .bar[data-open] .bar__nav {
+      display: flex;
+    }
+    :global(html.js) .bar__toggle {
+      display: inline-block;
+    }
+    .bar[data-open] .bar__toggle-open {
+      display: none;
+    }
+    .bar[data-open] .bar__toggle-shut {
+      display: inline;
+    }
+  }
+
+  /* A page that only moves within itself keeps one row on a phone: the
+     picture, the name cut with an ellipsis, «Book» — no menu, no second row. */
+  @media (max-width: 860px) {
+    .bar--in-page .bar__in {
+      flex-wrap: nowrap;
+      border-radius: var(--r-pill);
+    }
+    .bar--in-page .bar__nav,
+    :global(html.js) .bar--in-page .bar__toggle,
+    .bar--in-page .bar__toggle {
+      display: none;
+    }
+    .bar--in-page .bar__in :global(.bar__cta) {
+      flex: none;
+    }
+  }
+
+  /* A phone keeps the button that books — it is what the page is for — as a
+     plain pill without its disc, beside the menu. */
+  @media (max-width: 520px) {
+    .bar__in {
+      gap: 0.5rem;
+    }
+    .bar__in :global(.bar__cta) {
+      --b-h: 2.4rem;
+      padding-inline: 0.95rem;
+    }
+    .bar__in :global(.bar__cta .b__disc) {
+      display: none;
+    }
+    .bar__toggle {
+      padding: 0 0.8rem;
+    }
+    .bar__mark {
+      font-size: 1.1rem;
+    }
+    /* The language switch moves into the menu: the strip keeps the name, «Book» and the menu. */
+    :global(html.js) .bar:not([data-open]) .bar__in :global(.bar__lang) {
+      display: none;
+    }
+    .bar[data-open] .bar__in :global(.bar__lang) {
+      order: 11;
+      margin: 0 0 0.75rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bar__in,
+    .bar__nav a::after {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  /*
+   * The strip frosts once the page has scrolled under it — one class, set
+   * from a frame and only when it would change — and the menu opens and
+   * shuts on a phone; a link chosen in it shuts it again.
+   */
+  const bar = document.querySelector<HTMLElement>('[data-bar]');
+  if (bar) {
+    let queued = false;
+    const set = () => {
+      queued = false;
+      const over = scrollY > 24;
+      if (bar.classList.contains('is-over') !== over) bar.classList.toggle('is-over', over);
+      // What passes under the capsule: the lacquer (or any ground that says
+      // it is dark) gives it the dark glass and the light words.
+      const box = bar.querySelector('.bar__in')?.getBoundingClientRect();
+      if (box) {
+        const under = document.elementsFromPoint(box.left + box.width / 2, box.top + box.height / 2).find((one) => !bar.contains(one));
+        const dark = Boolean(under?.closest('[data-ground="dark"]'));
+        if (bar.hasAttribute('data-on-dark') !== dark) bar.toggleAttribute('data-on-dark', dark);
+      }
+    };
+    set();
+    addEventListener(
+      'scroll',
+      () => {
+        if (!queued) {
+          queued = true;
+          requestAnimationFrame(set);
+        }
+      },
+      { passive: true },
+    );
+    const toggle = bar.querySelector<HTMLButtonElement>('.bar__toggle');
+    const shut = () => {
+      bar.removeAttribute('data-open');
+      toggle?.setAttribute('aria-expanded', 'false');
+    };
+    toggle?.addEventListener('click', () => {
+      const open = !bar.hasAttribute('data-open');
+      bar.toggleAttribute('data-open', open);
+      toggle.setAttribute('aria-expanded', String(open));
+    });
+    bar.querySelectorAll('.bar__nav a').forEach((link) => link.addEventListener('click', shut));
+    addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') shut();
+    });
+  }
+</script>

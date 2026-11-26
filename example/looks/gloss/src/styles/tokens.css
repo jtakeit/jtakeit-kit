@@ -1,0 +1,192 @@
+/*
+ * ── the look, as tokens: gloss ──────────────────────────────────────────────
+ *
+ * The booking page's look (`jtk create --kind booking-page`, docs/booking-page.md),
+ * and a look any site may be laid out in (`--look gloss`): a porcelain page,
+ * one deep colour, a soft serif for what is said and a plain sans for what is
+ * read, and the hero poured in liquid lacquer (`field: "lacquer"`,
+ * docs/hero-motion.md). Seeded from Lacqué, the nail studio on the jtakeit
+ * landing — named for what it is, not for whose it was (jtakeit-core wiki/117 §3).
+ *
+ * The colours here are the look's own, a cherry lacquer. A site's are not
+ * written here: they are `palette` in jtk/design.json — bg, surface, ink,
+ * muted, accent, accentInk, lacquerA and lacquerB — which Layout.astro
+ * writes over these on <html> (docs/looks.md, «The palette»). Every name is the
+ * one Brumy's look and global.css use, so every component of the example
+ * follows.
+ *
+ * `html:root`, not `:root`: global.css says `:root` too, and which of two
+ * stylesheets a bundler puts first is not a decision this file should rest on.
+ */
+/*
+ * ── the stand-ins: the type doesn't jump ────────────────────────────────────
+ *
+ * Measured off the @fontsource files by `npx @jtakeit/astro fonts <file.woff2>`
+ * — Fraunces against Georgia, a serif against a serif; Inter against Arial.
+ */
+@font-face {
+  font-family: 'Fraunces Fallback';
+  src: local('Georgia');
+  font-weight: 400;
+  size-adjust: 105.96%;
+  ascent-override: 92.3%;
+  descent-override: 24.07%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Fraunces Fallback';
+  src: local('Georgia');
+  font-weight: 500 700;
+  size-adjust: 107.69%;
+  ascent-override: 90.82%;
+  descent-override: 23.68%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Fraunces Fallback';
+  src: local('Georgia Italic'), local('Georgia-Italic');
+  font-style: italic;
+  font-weight: 400;
+  size-adjust: 98.95%;
+  ascent-override: 98.83%;
+  descent-override: 25.77%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial'), local('ArialMT');
+  font-weight: 400;
+  size-adjust: 107.48%;
+  ascent-override: 90.14%;
+  descent-override: 22.44%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial'), local('ArialMT');
+  font-weight: 500 700;
+  size-adjust: 108.61%;
+  ascent-override: 89.2%;
+  descent-override: 22.21%;
+  line-gap-override: 0%;
+}
+
+html:root {
+  /* ── colour: a cherry lacquer on porcelain ────────────────────────────── */
+  --paper: #faf6f3;
+  --paper-lift: #ffffff;
+  --surface: #ffffff;
+  --panel: #ffffff;
+  --paper-deep: #f1e9e4;
+  --ink: #1c1215;
+  --ink-quiet: #6b5a5f;
+  --line: #e7dcd7;
+  --accent: #7d0f24;
+  --accent-deep: #6a0c1e;
+  --accent-ink: #6a0c1e;
+  --accent-hot: #c23a52;
+  --on-accent: #ffffff;
+  --on-accent-deep: #ffffff;
+  --glow: 125 15 36;
+  --ok: #2f8f4e;
+  --bloom: 0;
+  /*
+   * The lacquer the hero is poured in: its body in shadow, and the same polish
+   * where the light lands. The deep it is poured over and the sheen of its
+   * highlight are made from them, so a palette sets two colours, not four.
+   */
+  --lacquer: #750b1f;
+  --lacquer-light: #c23a52;
+  --lacquer-deep: color-mix(in srgb, var(--lacquer) 16%, #070405);
+  --lacquer-sheen: color-mix(in srgb, var(--lacquer-light) 22%, #fff6f2);
+  /* The words that stand on the lacquer: near white, warmed by its light. */
+  --on-lacquer: color-mix(in srgb, var(--lacquer-light) 8%, #fbf7f4);
+  --on-lacquer-quiet: color-mix(in srgb, var(--lacquer-light) 14%, #d9cfcb);
+
+  /* ── type ────────────────────────────────────────────────────────────── */
+  --font-display: 'Fraunces', 'Fraunces Fallback', Georgia, 'Times New Roman', serif;
+  --font-text: 'Inter', 'Inter Fallback', ui-sans-serif, system-ui, sans-serif;
+  /* The look has no mono voice: what labels is the text face, small and spaced. */
+  --font-mono: var(--font-text);
+  --step--1: clamp(0.82rem, 0.79rem + 0.15vw, 0.9rem);
+  --step-0: clamp(1rem, 0.96rem + 0.2vw, 1.08rem);
+  --step-1: clamp(1.15rem, 1.07rem + 0.4vw, 1.4rem);
+  --step-2: clamp(1.4rem, 1.22rem + 0.9vw, 1.95rem);
+  --step-3: clamp(1.75rem, 1.4rem + 1.8vw, 2.75rem);
+  --step-4: clamp(2.2rem, 1.55rem + 3.2vw, 4.1rem);
+  --step-5: clamp(2.7rem, 1.4rem + 6vw, 6.4rem);
+  --step-6: clamp(3rem, 1rem + 7.4vw, 8rem);
+  --tracking-display: -0.025em;
+  --tracking-tight: -0.035em;
+  --tracking-label: 0.18em;
+  --leading-display: 0.98;
+
+  /* ── space ───────────────────────────────────────────────────────────── */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2.5rem;
+  --space-7: 4rem;
+  --space-8: 8rem;
+  --section-y: clamp(4rem, calc(var(--screen) * 0.1), 7.5rem);
+  --gutter: clamp(1rem, 4vw, 3rem);
+  --shell: min(76rem, 100%);
+  --measure-read: 36rem;
+  --measure-object: var(--shell);
+  --measure: var(--measure-read);
+
+  /* ── radius: soft, one base ──────────────────────────────────────────── */
+  --radius: 12px;
+  --r-1: calc(var(--radius) * 0.5);
+  --r-2: var(--radius);
+  --r-3: calc(var(--radius) * 1.6);
+  --r-4: calc(var(--radius) * 2.4);
+  --r-pill: 999px;
+  --r-figure: var(--r-2);
+
+  /* ── motion ──────────────────────────────────────────────────────────── */
+  --dur: 200ms;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 0.84, 0.24, 1);
+  --ease-enter: cubic-bezier(0.19, 0.78, 0.18, 1);
+  --sweep-dur: 1150ms;
+  --reveal-dur: 0.75s;
+  --reveal-step: 90ms;
+
+  /* ── material: porcelain glass ───────────────────────────────────────── */
+  --glass-fill:
+    linear-gradient(180deg, rgb(255 255 255 / 0.72), rgb(255 255 255 / 0.42) 62%, rgb(255 255 255 / 0.52)),
+    rgb(255 255 255 / 0.3);
+  --glass-edge:
+    inset 0 1px 0 rgb(255 255 255 / 0.9),
+    inset 0 0 0 1px rgb(255 255 255 / 0.5),
+    inset 0 -1px 0 rgb(28 18 21 / 0.05);
+  --glass-shadow:
+    0 0 0 1px rgb(28 18 21 / 0.06),
+    0 1px 2px rgb(28 18 21 / 0.05),
+    0 18px 40px -24px rgb(28 18 21 / 0.3);
+  --glass-blur: 18px;
+  --glass-saturate: 160%;
+  --glass-solid: rgb(255 255 255 / 0.94);
+  /* A card that is lifted off the page: the form, a service. */
+  --lift-shadow:
+    0 1px 2px rgb(28 18 21 / 0.05),
+    0 24px 48px -32px rgb(28 18 21 / 0.35);
+}
+
+/* The glass on a dark ground — the lacquer, or a page that says it is dark. */
+[data-ground='dark'] {
+  --glass-fill:
+    linear-gradient(180deg, rgb(255 255 255 / 0.16), rgb(255 255 255 / 0.06) 62%, rgb(255 255 255 / 0.09)),
+    rgb(20 12 14 / 0.3);
+  --glass-edge:
+    inset 0 1px 0 rgb(255 255 255 / 0.2),
+    inset 0 0 0 1px rgb(255 255 255 / 0.1),
+    inset 0 -1px 0 rgb(0 0 0 / 0.3);
+  --glass-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.25),
+    0 18px 40px -24px rgb(0 0 0 / 0.6);
+  --glass-solid: rgb(28 18 21 / 0.92);
+}
