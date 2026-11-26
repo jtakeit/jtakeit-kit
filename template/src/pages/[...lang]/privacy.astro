@@ -63,31 +63,89 @@ const who =
         [fact('postal_code', BUSINESS.postalCode), fact('city', BUSINESS.city)].filter(Boolean).join(' '),
         [fact('phone', BUSINESS.phoneDisplay), fact('email', BUSINESS.email)].filter(Boolean).join(' · '),
       ].filter(Boolean);
+// The business's own words, where the site has the page (jtk/pages/privacy.json,
+// the owner, 26 November 2026: «the privacy text editable»): each field its
+// words, or the default above standing in until it is written — annotated
+// either way, so a tap opens the field. A site without the page keeps the
+// default, as code.
+const page = site.page('/privacy', locale);
+const own = page.blocks.some((one) => one.type === 'privacy');
+const block = page.block('privacy');
+const said = (key: string, standIn: string) => {
+  const text = own ? block.text(key) : '';
+  return {
+    text: text || standIn,
+    attrs: own ? { ...block.at(key), ...(text ? block.lang(key) : { lang: WORDS_LANG || undefined }) } : { 'data-jtk-fixed': true, lang: WORDS_LANG || undefined },
+  };
+};
+// Who «we» are is the shared contacts' — a tap opens them; on a site that
+// keeps them in code, the lines are the design's.
+// Each value its own span, annotated with its field where the contacts hold
+// it (a tap opens it, as on the imprint); the code's where they do not.
+const value = (role: string, own: string) => {
+  const held = contract3Fact(role);
+  return { text: held || own, attrs: held ? facts.at(role) : { 'data-jtk-fixed': true } };
+};
+function contract3Fact(role: string): string {
+  return site.contract === 3 ? facts.text(role).trim() : '';
+}
+const whoLines =
+  site.contract !== 3
+    ? []
+    : [
+        [value('name', BUSINESS.name)],
+        [value('street', BUSINESS.street)],
+        [value('postal_code', BUSINESS.postalCode), value('city', BUSINESS.city)],
+        [value('phone', BUSINESS.phoneDisplay), value('email', BUSINESS.email)],
+      ]
+        .map((line) => line.filter((one) => one.text !== ''))
+        .filter((line) => line.length > 0);
+const title = said('title', PRIVACY.title);
+const intro = said('intro', PRIVACY.intro);
+const formTitle = said('form_title', PRIVACY.formTitle);
+const formBody = said('form_body', PRIVACY.formBody);
+const askTitle = said('ask_title', PRIVACY.askTitle);
+const askBody = said('ask_body', PRIVACY.askBody);
 ---
 
-<Layout title={PRIVACY.title} description={PRIVACY.intro} alternates={alternates}>
-  <main id="content" class="prose" data-jtk-fixed lang={WORDS_LANG || undefined}>
-    <h1>{PRIVACY.title}</h1>
-    <p class="lead">{PRIVACY.intro}</p>
+<Layout title={title.text} description={intro.text} alternates={alternates}>
+  <main id="content" class="prose">
+    <h1 {...title.attrs}>{title.text}</h1>
+    <p class="lead" {...intro.attrs}>{intro.text}</p>
 
-    <h2>{PRIVACY.formTitle}</h2>
-    <p>{PRIVACY.formBody}</p>
-    {takesPhotos && <p>{photosSentence}</p>}
+    <h2 {...formTitle.attrs}>{formTitle.text}</h2>
+    <p {...formBody.attrs}>{formBody.text}</p>
+    {takesPhotos && <p data-jtk-fixed lang={WORDS_LANG || undefined}>{photosSentence}</p>}
 
-    <h2>{PRIVACY.whoTitle}</h2>
-    <p>
+    {/* The platform's part — who else holds what a visitor sends — as it is. */}
+    <h2 data-jtk-fixed lang={WORDS_LANG || undefined}>{PRIVACY.whoTitle}</h2>
+    <p data-jtk-fixed lang={WORDS_LANG || undefined}>
       {PRIVACY.whoBody}{' '}
       <a href={PROCESSING_URL} rel="noreferrer">{PROCESSING_URL.replace('https://', '')}</a>
     </p>
 
-    <h2>{PRIVACY.askTitle}</h2>
-    <p>{PRIVACY.askBody}</p>
+    <h2 {...askTitle.attrs}>{askTitle.text}</h2>
+    <p {...askBody.attrs}>{askBody.text}</p>
 
     {/*
       The business's own. Left visible rather than commented out, so that an
       empty one is noticed before launch rather than after.
     */}
-    <h2>{PRIVACY.ownTitle}</h2>
-    {who.length > 0 && <address>{who.map((line, i) => (<Fragment>{i > 0 && <br />}{line}</Fragment>))}</address>}
+    <h2 data-jtk-fixed lang={WORDS_LANG || undefined}>{PRIVACY.ownTitle}</h2>
+    {whoLines.length > 0 && (
+      <address>
+        {whoLines.map((line, i) => (
+          <Fragment>
+            {i > 0 && <br />}
+            {line.map((one, at) => (
+              <Fragment>
+                {at > 0 && <span data-jtk-fixed>{i === 3 ? ' · ' : ' '}</span>}
+                <span {...one.attrs}>{one.text}</span>
+              </Fragment>
+            ))}
+          </Fragment>
+        ))}
+      </address>
+    )}
   </main>
 </Layout>

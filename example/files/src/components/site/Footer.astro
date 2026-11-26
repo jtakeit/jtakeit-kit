@@ -1,10 +1,12 @@
 ---
 /**
  * The foot of every page: the business's name at the size of a building's
- * lettering, a line of its own, and a card of glass with where it is, when it
- * is open, how to reach it and where it is elsewhere — then the legal pages
- * and «built on jtakeit». Brumy's foot, as design; every fact the business's,
- * from the shared text (`contacts`, `hours`, `footer`).
+ * lettering — in two lines at most, sized by its length — a line of its own,
+ * and a card of glass with where it is, when it is open, how to reach it and
+ * where it is elsewhere — then the legal pages. Brumy's foot, as design; every
+ * fact the business's, from the shared text (`contacts`, `hours`, `footer`).
+ * No «built on jtakeit»: the business pays for its site, and its foot is its
+ * own (the owner, 26 November 2026).
  *
  * The year is the build's (`virtual:jtk/build`), never the clock's at render:
  * the page drawn live from a draft must be the page the build made.
@@ -61,12 +63,23 @@ const legal = [
   ...(imprint.file !== undefined || imprint.blocks.length > 0 ? [{ href: under(withLocale(locale, '/imprint')), label: imprint.name || W.imprint }] : []),
 ];
 const tagline = footer.text('tagline');
+// The name in two lines at most (the owner, 26 November 2026: «Манікюр
+// Педикюр Львів» stood in three): the longer line of its best cut in two,
+// in letters, and the size the line's width gives that many — about 0.58 em
+// a letter in the display face — never larger than the lettering's own.
+const words = name.trim().split(/\s+/).filter(Boolean);
+const lettersOf = (some: string[]) => [...some.join(' ')].length;
+let longest = lettersOf(words);
+for (let cut = 1; cut < words.length; cut += 1) {
+  longest = Math.min(longest, Math.max(lettersOf(words.slice(0, cut)), lettersOf(words.slice(cut))));
+}
+const markLetters = Math.max(4, longest);
 ---
 
 <footer class="foot">
   <div class="foot__in">
     <div class="foot__top">
-      <p class="foot__mark" aria-hidden="true" {...facts.at('name')}>{name}</p>
+      <p class="foot__mark" aria-hidden="true" style={`--letters: ${markLetters}`} {...facts.at('name')}>{name}</p>
       {
         tagline && (
           <p class="foot__tagline" {...{ ...footer.at('tagline'), ...footer.lang('tagline') }}>
@@ -132,9 +145,6 @@ const tagline = footer.text('tagline');
       <nav class="foot__legal" aria-label={W.legal} lang={wordsLang} data-jtk-fixed>
         {legal.map((one) => <a href={one.href}>{one.label}</a>)}
       </nav>
-      <span lang={wordsLang} data-jtk-fixed>
-        {W.built} <a href="https://jtakeit.com" rel="noopener" target="_blank">jtakeit</a>
-      </span>
     </div>
   </div>
 </footer>
@@ -160,6 +170,7 @@ const tagline = footer.text('tagline');
   }
 
   .foot__top {
+    container-type: inline-size;
     display: flex;
     flex-wrap: wrap;
     align-items: end;
@@ -172,12 +183,21 @@ const tagline = footer.text('tagline');
     margin: 0;
     max-inline-size: 100%;
     font-family: var(--font-display);
-    font-size: clamp(3.4rem, 1rem + 11vw, 13rem);
+    /* The line's width over its letters, so the longer line of two fits. */
+    font-size: min(13rem, calc(100cqi / (var(--letters, 10) * 0.58)));
     font-weight: 700;
     line-height: 0.92;
     letter-spacing: -0.055em;
     color: color-mix(in srgb, var(--ink) 90%, transparent);
     overflow-wrap: anywhere;
+    text-wrap: balance;
+    /* Two lines, whatever a face wider than the guess does: cut at two. */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    padding-block-end: 0.08em;
   }
 
   .foot__tagline {

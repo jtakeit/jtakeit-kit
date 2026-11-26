@@ -87,6 +87,19 @@ html :focus-visible {
   }
 }
 
+/*
+ * The glass of a button drawn inside its pill and nowhere else: a page shown
+ * smaller in a frame (the panel's previews, the editor) had Chrome draw its
+ * backdrop's blur as a square past the pill (the owner, 26 November 2026).
+ * Clipped to the shape, it cannot; the focus ring is drawn unclipped.
+ */
+.b.glass {
+  clip-path: inset(0 round 999px);
+}
+.b.glass:focus-visible {
+  clip-path: none;
+}
+
 /* ── the button: clear glass, the accent one disc carrying the arrow ──────── */
 
 .b {

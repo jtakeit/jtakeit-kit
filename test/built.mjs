@@ -262,7 +262,9 @@ try {
     check(/<label class="field__label" for="lead-topic"[^>]*lang="de-CH"[^>]*>Worum es geht/.test(en) || !en.includes('Worum es geht'), `17 · /en's ask label is not marked de-CH: ${en.match(/<label[^>]*>Worum es geht/)?.[0]}`);
     // The form's words are content: a translation that has none of them shows the original's, marked, still tappable.
     check(en.includes('<span data-jtk-path="blocks[ctab0001].contact_label" lang="de-CH">Telefon oder E-Mail</span>'), `17 · /en's contact label is not the original's, marked: ${en.match(/<span[^>]*contact_label[^>]*>[^<]*<\/span>/)?.[0]}`);
-    check(/<main id="content" class="prose" data-jtk-fixed lang="de-CH"/.test(page('en/privacy')), '17 · /en/privacy is not marked de-CH');
+    // The privacy page's words stand in each in its own element, the language
+    // they are in marked on each (the business's to change, 26 November 2026).
+    check(/<h1[^>]*lang="de-CH"[^>]*>Datenschutz<\/h1>/.test(page('en/privacy')), '17 · /en/privacy is not marked de-CH');
     check(!/(?<![a-z])lang="de-CH"/.test(page('privacy').replace(/<html[^>]*>/, '').replace(/<a [^>]*hreflang[^>]*>/g, '')), '17 · the original\'s privacy page marks its own words');
     const missingCopy = JSON.parse(spawnSync('node', [join(site, 'node_modules/@jtakeit/kit/bin/jtkit.mjs'), 'progress', '--root', site, '--json'], { encoding: 'utf8' }).stdout || '{}').missing ?? [];
     check(missingCopy.some((one) => one.startsWith('src/copy/en.ts is not written')), `17 · jtkit progress does not name the English copy: ${JSON.stringify(missingCopy)}`);
@@ -287,7 +289,9 @@ try {
     check(!sitemap3.includes('/en/masters/beat/') && sitemap3.includes('/en/masters/anna/'), '20 · the sitemap lists an untranslated entry at its English address, or not a translated one');
 
     // 21 · the privacy page says who «we» are under its last heading.
-    check(/<address>Coiffure Langstrasse<br>Langstrasse 12<br>8004 Zürich<br>\+41 44 123 45 67 · hallo@salon-probe\.example<\/address>/.test(page('privacy')), `21 · /privacy says nobody under «Über uns»: ${page('privacy').match(/<h2>[^<]*<\/h2>\s*(<address>[\s\S]*?<\/address>)?\s*<\/main>/)?.[0]}`);
+    // Each value its own span, as on the imprint: read as the words they make.
+    const whoSaid = (page('privacy').match(/<address>([\s\S]*?)<\/address>/)?.[1] ?? '').replace(/<br>/g, '\n').replace(/<[^>]+>/g, '');
+    check(whoSaid === 'Coiffure Langstrasse\nLangstrasse 12\n8004 Zürich\n+41 44 123 45 67 · hallo@salon-probe.example', `21 · /privacy says nobody under «Über uns»: ${JSON.stringify(whoSaid)}`);
 
     // 22 · English's copy, written by the kit, and nothing of it falls back.
     const copied = spawnSync('node', [bin, 'copy', 'en', '--root', site], { encoding: 'utf8' });
@@ -296,7 +300,7 @@ try {
     const en2 = page('en');
     check(/<a class="skip-link" href="#content" data-jtk-fixed>Skip to content<\/a>/.test(en2), `22 · /en's skip link after jtk copy: ${en2.match(/<a class="skip-link"[^>]*>[^<]*<\/a>/)?.[0]}`);
     check(/<p class="lead__status" role="status" data-status>/.test(en2), '22 · /en\'s form messages are still marked after jtk copy');
-    check(/<main id="content" class="prose" data-jtk-fixed>/.test(page('en/privacy')) && !page('en/privacy').includes('Datenschutz'), '22 · /en/privacy is not in English after jtk copy');
+    check(/<h1[^>]*>Privacy<\/h1>/.test(page('en/privacy')) && !/<h1[^>]*lang="de-CH"/.test(page('en/privacy')) && !page('en/privacy').includes('Datenschutz'), '22 · /en/privacy is not in English after jtk copy');
     check(/<p class="lead" [^>]*lang="de-CH">Seit 1998 an der Langstrasse<\/p>/.test(en2), '22 · the untranslated lead lost its mark');
     // jtk copy writes the form's words into English's translation, in the kit's: English, tappable, unmarked.
     check(json('jtk/pages/index.en.json').title === undefined && json('jtk/pages/index.en.json').name === 'Home', '22 · jtk copy en wrote over the translation');

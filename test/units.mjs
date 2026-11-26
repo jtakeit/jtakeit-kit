@@ -181,7 +181,9 @@ try {
     same(site, base, 'add booking then remove booking');
   }
   {
-    const aliased = create('aliased', '--locale', 'de-CH', '--locales', 'en', '--blog', '--kit', kitFile);
+    // The photographs held to the example's own: a kit picks its trade's set
+    // at create (lib/create.mjs `setFor`), and this is about the units.
+    const aliased = create('aliased', '--locale', 'de-CH', '--locales', 'en', '--blog', '--kit', kitFile, '--photos', 'default');
     const commanded = copy(base, 'commanded');
     ok(commanded, 'add', 'blog');
     ok(commanded, 'add', 'booking', '--kit', kitFile);

@@ -2,7 +2,7 @@
 /**
  * The foot of every page: a line of the business's own, then its address,
  * its hours and how to reach it in three plain columns that stack on a phone
- * — then the legal pages and «built on jtakeit». Every fact the business's,
+ * — then the legal pages (no «built on jtakeit»: the business pays for its site). Every fact the business's,
  * from the shared text (`contacts`, `hours`, `footer`).
  *
  * The year is the build's (`virtual:jtk/build`), never the clock's at render:
@@ -128,9 +128,6 @@ const tagline = footer.text('tagline');
       <nav class="site-footer__legal" aria-label={W.legal} lang={wordsLang} data-jtk-fixed>
         {legal.map((one) => <a href={one.href}>{one.label}</a>)}
       </nav>
-      <span lang={wordsLang} data-jtk-fixed>
-        {W.built} <a href="https://jtakeit.com" rel="noopener" target="_blank">jtakeit</a>
-      </span>
     </div>
   </div>
 </footer>

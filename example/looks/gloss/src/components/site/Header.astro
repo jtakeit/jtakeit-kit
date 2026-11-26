@@ -54,16 +54,6 @@ const inPage = nav.length > 0 && nav.every((row) => /^\/?#/.test(row.text('link'
 ---
 
 <header class:list={['bar', inPage && 'bar--in-page']} data-bar>
-  <!-- The glass's bend: what passes behind the capsule is pushed a little by a
-       slow ripple before it is blurred (Chromium draws it; elsewhere the glass
-       is the blur and the light alone). -->
-  <svg class="bar__lens" aria-hidden="true" focusable="false" width="0" height="0">
-    <filter id="bar-liquid" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
-      <feTurbulence type="fractalNoise" baseFrequency="0.006 0.018" numOctaves="2" seed="7" result="ripple" />
-      <feGaussianBlur in="ripple" stdDeviation="2" result="soft" />
-      <feDisplacementMap in="SourceGraphic" in2="soft" scale="34" xChannelSelector="R" yChannelSelector="G" />
-    </filter>
-  </svg>
   <div class="bar__in glass">
     <a class:list={['bar__mark', avatar.src && !logo.src && 'bar__mark--face']} href={go('/')} aria-label={name ? undefined : W.home}>
       {
@@ -174,11 +164,19 @@ const inPage = nav.length > 0 && nav.every((row) => /^\/?#/.test(row.text('link'
       inset 0 1px 0 var(--lg-sheen),
       inset 0 -1px 0 rgb(255 255 255 / 0.14),
       inset 0 0 0 1px rgb(255 255 255 / 0.22),
-      inset 0 10px 18px -14px rgb(255 255 255 / 0.5),
-      0 12px 32px -14px rgb(0 0 0 / 0.32);
+      inset 0 10px 18px -14px rgb(255 255 255 / 0.5);
     -webkit-backdrop-filter: blur(14px) saturate(185%) brightness(1.05);
     backdrop-filter: blur(14px) saturate(185%) brightness(1.05);
-    backdrop-filter: url(#bar-liquid) blur(12px) saturate(185%) brightness(1.05);
+    /*
+     * The glass inside the capsule and nowhere else: a page shown smaller in
+     * a frame (the panel's previews, the editor) had Chrome draw the blur —
+     * and the SVG bend it went through — as a square past the capsule's
+     * edges (the owner, 26 November 2026). The bend is gone, the glass is
+     * clipped to the capsule's own shape; the shadow under it went with the
+     * clip, its rim of light is inside it and stays.
+     */
+    --bar-r: var(--r-pill);
+    clip-path: inset(0 round var(--bar-r));
   }
 
   /* the light caught on its rim, brightest at the upper left */
@@ -347,6 +345,7 @@ const inPage = nav.length > 0 && nav.every((row) => /^\/?#/.test(row.text('link'
   @media (max-width: 860px) {
     .bar__in {
       flex-wrap: wrap;
+      --bar-r: var(--r-4);
       border-radius: var(--r-4);
       padding-inline-start: 1rem;
     }
