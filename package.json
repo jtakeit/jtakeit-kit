@@ -37,15 +37,15 @@
   },
   "dependencies": {
     "@jtakeit/kit": "0.18.0",
-    "ignore": "7.0.14"
+    "ignore": "7.0.16"
   },
   "workspaces": [
     "kit"
   ],
   "devDependencies": {
-    "axe-core": "4.14.0",
-    "playwright-core": "1.64.0",
-    "typescript": "6.0.3"
+    "axe-core": "4.14.1",
+    "playwright-core": "1.65.1",
+    "typescript": "7.0.2"
   },
   "bugs": {
     "url": "https://github.com/jtakeit/jtakeit-kit/issues"
